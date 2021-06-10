@@ -1,0 +1,141 @@
+run:
+  deadline: 4m
+  build-tags:
+    - netgo
+  modules-download-mode: readonly
+
+linters-settings:
+  dupl:
+    threshold: 50
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  exhaustive:
+    default-signifies-exhaustive: true
+  funlen:
+    lines: 30
+    statements: 20
+  gocognit:
+    min-complexity: 8
+  nestif:
+    min-complexity: 2
+  gocyclo:
+    min-complexity: 5
+  govet:
+    check-shadowing: true
+    enable-all: true
+    disable-all: false
+    disable:
+      - fieldalignment
+  lll:
+    line-length: 120
+  misspell:
+    locale: UK
+  nakedret:
+    max-func-lines: 20
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: true
+  unparam:
+    check-exported: true
+  unused:
+    check-exported: false
+  whitespace:
+    multi-if: true
+    multi-func: false
+  wsl:
+    allow-cuddle-declarations: false
+    force-err-cuddling: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - funlen
+    - path: clog.go
+      linters:
+        - gochecknoinits
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new-from-rev: master
+
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+    - cyclop
+    - dogsled
+    - dupl
+    - errorlint
+    - exportloopref
+    - exhaustive
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goerr113
+    - goimports
+    - golint
+    - gomnd
+    - gosec
+    - ifshort
+    - importas
+    - lll
+    - makezero
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nlreturn
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - rowserrcheck
+    - stylecheck
+    - thelper
+    - unconvert
+    - unparam
+    - wastedassign
+    - whitespace
+    - wsl
+  # disable:
+  #   - asciicheck
+  #   - bodyclose
+  #   - depguard
+  #   - durationcheck
+  #   - exhaustivestruct
+  #   - gofmt
+  #   - gofumpt
+  #   - goheader
+  #   - gomoddirectives
+  #   - gomodguard
+  #   - goprintffuncname
+  #   - interfacer
+  #   - maligned
+  #   - paralleltest
+  #   - promlinter
+  #   - revive
+  #   - sqlclosecheck
+  #   - tagliatelle
+  #   - testpackage
+  #   - tparallel
+  #   - wrapcheck
