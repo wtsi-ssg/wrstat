@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// options for this cmd
+// options for this cmd.
 var workDir string
 var finalDir string
 

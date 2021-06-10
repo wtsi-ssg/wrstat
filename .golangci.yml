@@ -53,9 +53,14 @@ issues:
     - path: _test\.go
       linters:
         - funlen
-    - path: clog.go
+    - path: cmd
       linters:
         - gochecknoinits
+        - gochecknoglobals
+        - dupl
+    - path: version.go
+      linters:
+        - forbidigo
   max-issues-per-linter: 0
   max-same-issues: 0
   new-from-rev: master

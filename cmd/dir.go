@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// options for this cmd
+// options for this cmd.
 var outputDir string
 var depGroup string
 
