@@ -27,6 +27,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/hashdir"
 )
 
 // options for this cmd.
@@ -64,6 +65,15 @@ completed (eg. by adding your own job that depends on that group, such as a
 		if len(args) != 1 {
 			die("exactly 1 directory of interest must be supplied")
 		}
+
+		desiredDir := args[0]
+
+		h := hashdir.New(hashdir.RecommendedLevels)
+		outFile, err := h.MkDirHashed(outputDir, desiredDir)
+		if err != nil {
+			die("failed to create output file: %s", err)
+		}
+		defer outFile.Close()
 
 		die("not yet implemented")
 	},
