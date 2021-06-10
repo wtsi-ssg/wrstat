@@ -20,7 +20,7 @@ linters-settings:
   nestif:
     min-complexity: 2
   gocyclo:
-    min-complexity: 5
+    min-complexity: 6
   govet:
     check-shadowing: true
     enable-all: true

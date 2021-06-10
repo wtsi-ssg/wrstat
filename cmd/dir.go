@@ -26,8 +26,12 @@
 package cmd
 
 import (
+	"io/fs"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/hashdir"
+	"github.com/wtsi-ssg/wrstat/stat"
 )
 
 // options for this cmd.
@@ -40,11 +44,36 @@ var dirCmd = &cobra.Command{
 	Short: "Get stats on the contents of a directory",
 	Long: `Get stats on the contents of a directory.
 
+wr manager must have been started before running this.
+
 Within the given output directory, hashed folders are created to contain the
 output file.
 
 For each file in the directory of interest, stats about the file are written to
 the output file.
+
+The output file format is 11 tab separated columns with the following contents:
+1. Base64 encoded path to the file.
+2. File size in bytes. If this is greater than the number of bytes in blocks
+   allocated, this will be the number of bytes in allocated blocks. (This is to
+   account for files with holes in them; as a byproduct, symbolic links will
+   be reported as 0 size.)
+3. UID.
+4. GID.
+5. Atime (time of most recent access expressed in seconds).
+6. Mtime (time of most recent content modification expressed in seconds.)
+7. Ctime (on unix, the time of most recent metadata change in seconds).
+8. Filetype:
+   'f': regular file
+   'l': symbolic link
+   's': socket
+   'b': block special device file
+   'c': character special device file
+   'F': FIFO (named pipe)
+   'X': anything else
+9. Inode number (on unix).
+10. Number of hard links.
+11. Identifier of the device on which this file resides.
 
 For each sub directory within the directory of interest, a job is added to wr's
 queue that calls this command again with all the same arguments, changing only
@@ -56,24 +85,14 @@ retrieved. You should wait until all jobs in the given dependency group have
 completed (eg. by adding your own job that depends on that group, such as a
 'wrstat combine' call).`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if outputDir == "" {
-			die("--output_directory is required")
-		}
-		if depGroup == "" {
-			die("--dependecy_group is required")
-		}
-		if len(args) != 1 {
-			die("exactly 1 directory of interest must be supplied")
-		}
+		desiredDir := checkArgs(outputDir, depGroup, args)
 
-		desiredDir := args[0]
-
-		h := hashdir.New(hashdir.RecommendedLevels)
-		outFile, err := h.MkDirHashed(outputDir, desiredDir)
-		if err != nil {
-			die("failed to create output file: %s", err)
-		}
+		outFile := createOutputFile(outputDir, desiredDir)
 		defer outFile.Close()
+
+		files, _ := getFilesAndDirs(desiredDir)
+
+		outputFileStats(outFile, desiredDir, files)
 
 		die("not yet implemented")
 	},
@@ -88,4 +107,70 @@ func init() {
 		&depGroup,
 		"dependency_group", "d", "",
 		"dependency group that recursive jobs added to wr will belong to")
+}
+
+// checkArgs checks we have required args and returns desired dir.
+func checkArgs(out, dep string, args []string) string {
+	if out == "" {
+		die("--output_directory is required")
+	}
+
+	if dep == "" {
+		die("--dependecy_group is required")
+	}
+
+	if len(args) != 1 {
+		die("exactly 1 directory of interest must be supplied")
+	}
+
+	return args[0]
+}
+
+// createOutputFile creates an output file within out in hashed location based
+// on desired.
+func createOutputFile(out, desired string) *os.File {
+	h := hashdir.New(hashdir.RecommendedLevels)
+
+	outFile, err := h.MkDirHashed(out, desired)
+	if err != nil {
+		die("failed to create output file: %s", err)
+	}
+
+	return outFile
+}
+
+// getFilesAndDirs reads the contents of the given directory and returns the
+// file entries and the directory entries seperatly.
+func getFilesAndDirs(desired string) ([]fs.DirEntry, []fs.DirEntry) {
+	entries, err := os.ReadDir(desired)
+	if err != nil {
+		die("failed to read the contents of [%s]: %s", desired, err)
+	}
+
+	var files, dirs []fs.DirEntry
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			dirs = append(dirs, entry)
+		} else {
+			files = append(files, entry)
+		}
+	}
+
+	return files, dirs
+}
+
+// outputFileStats outputs file stats in our desired format to the output file.
+func outputFileStats(out *os.File, desired string, files []fs.DirEntry) {
+	for _, entry := range files {
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+
+		_, err = out.WriteString(stat.File(desired, info).ToString())
+		if err != nil {
+			die("failed to write to output file: %s", err)
+		}
+	}
 }
