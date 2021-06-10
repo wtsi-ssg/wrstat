@@ -85,6 +85,21 @@ func TestDirHasher(t *testing.T) {
 				So(err, ShouldNotBeNil)
 				So(file, ShouldBeNil)
 			})
+
+			Convey("unless given a relative baseDir and we're in a non-existent dir", func() {
+				tmpDir, err := os.MkdirTemp("", "wrstat_dirhasher_test")
+				So(err, ShouldBeNil)
+				cwd, err := os.Getwd()
+				So(err, ShouldBeNil)
+				err = os.Chdir(tmpDir)
+				So(err, ShouldBeNil)
+				defer os.Chdir(cwd)
+				os.RemoveAll(tmpDir)
+
+				file, err = h.MkDirHashed("", apath)
+				So(err, ShouldNotBeNil)
+				So(file, ShouldBeNil)
+			})
 		})
 
 		Convey("MkDirHashed() also works with relative baseDirs", func() {
