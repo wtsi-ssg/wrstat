@@ -93,7 +93,12 @@ func TestDirHasher(t *testing.T) {
 				So(err, ShouldBeNil)
 				err = os.Chdir(tmpDir)
 				So(err, ShouldBeNil)
-				defer os.Chdir(cwd)
+				defer func() {
+					err = os.Chdir(cwd)
+					if err != nil {
+						t.Logf("Chdir failed: %s", err)
+					}
+				}()
 				os.RemoveAll(tmpDir)
 
 				file, err = h.MkDirHashed("", apath)
