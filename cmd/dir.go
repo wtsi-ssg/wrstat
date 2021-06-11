@@ -26,9 +26,15 @@
 package cmd
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"sync"
+	"time"
 
+	"github.com/VertebrateResequencing/wr/jobqueue"
+	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/hashdir"
 	"github.com/wtsi-ssg/wrstat/stat"
@@ -38,13 +44,28 @@ import (
 var outputDir string
 var depGroup string
 
+const jobRetries uint8 = 3
+const reqRAM = 50
+const reqTime = 2 * time.Second
+const reqCores = 1
+const reqDiesk = 1
+
+var req = &scheduler.Requirements{
+	RAM:   reqRAM,
+	Time:  reqTime,
+	Cores: reqCores,
+	Disk:  reqDiesk,
+}
+
 // dirCmd represents the dir command.
 var dirCmd = &cobra.Command{
 	Use:   "dir",
 	Short: "Get stats on the contents of a directory",
 	Long: `Get stats on the contents of a directory.
 
-wr manager must have been started before running this.
+wr manager must have been started before running this. If the manager can run
+commands on multiple nodes, be sure to set wr's ManagerHost config option to
+the host you started the manager on.
 
 Within the given output directory, hashed folders are created to contain the
 output file.
@@ -87,14 +108,34 @@ completed (eg. by adding your own job that depends on that group, such as a
 	Run: func(cmd *cobra.Command, args []string) {
 		desiredDir := checkArgs(outputDir, depGroup, args)
 
+		jq, err := jobqueue.ConnectUsingConfig(deployment, connectTimeout, appLogger)
+		if err != nil {
+			die("could not connect to the wr manager: %s", err)
+		}
+		defer func() {
+			err = jq.Disconnect()
+		}()
+
 		outFile := createOutputFile(outputDir, desiredDir)
 		defer outFile.Close()
 
-		files, _ := getFilesAndDirs(desiredDir)
+		files, dirs := getFilesAndDirs(desiredDir)
 
-		outputFileStats(outFile, desiredDir, files)
+		var wg sync.WaitGroup
 
-		die("not yet implemented")
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			outputFileStats(outFile, desiredDir, files)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			recurseSubDirs(jq, outputDir, desiredDir, depGroup, dirs)
+		}()
+
+		wg.Wait()
 	},
 }
 
@@ -165,6 +206,8 @@ func outputFileStats(out *os.File, desired string, files []fs.DirEntry) {
 	for _, entry := range files {
 		info, err := entry.Info()
 		if err != nil {
+			warn("failed to get file information for %s: %s", filepath.Join(desired, entry.Name()), err)
+
 			continue
 		}
 
@@ -172,5 +215,49 @@ func outputFileStats(out *os.File, desired string, files []fs.DirEntry) {
 		if err != nil {
 			die("failed to write to output file: %s", err)
 		}
+	}
+}
+
+// recurseSubDirs adds more calls of ourself to wr's queue for each dir.
+func recurseSubDirs(jq *jobqueue.Client, out, desired, depg string, dirs []fs.DirEntry) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		die("failed to get working directory: %s", err)
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		die("failed to get wrstat's path: %s", err)
+	}
+
+	depGroups := []string{depg}
+
+	jobs := make([]*jobqueue.Job, len(dirs))
+
+	for i, entry := range dirs {
+		jobs[i] = &jobqueue.Job{
+			Cmd:          fmt.Sprintf("%s dir -o %s -d %s %s", exe, out, depg, filepath.Join(desired, entry.Name())),
+			Cwd:          cwd,
+			CwdMatters:   true,
+			RepGroup:     "wrstat-dir-recurse",
+			ReqGroup:     "wrstat-dir",
+			Requirements: req,
+			DepGroups:    depGroups,
+			Retries:      jobRetries,
+		}
+	}
+
+	addJobsToQueue(jq, jobs)
+}
+
+// addJobsToQueue adds the jobs to wr's queue.
+func addJobsToQueue(jq *jobqueue.Client, jobs []*jobqueue.Job) {
+	inserts, dups, err := jq.Add(jobs, os.Environ(), false)
+	if err != nil {
+		die("failed to add jobs to wr's queue: %s", err)
+	}
+
+	if inserts != len(jobs) {
+		warn("not all jobs were added to wr's queue; %d were duplicates", dups)
 	}
 }

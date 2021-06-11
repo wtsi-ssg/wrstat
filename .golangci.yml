@@ -58,7 +58,7 @@ issues:
         - gochecknoinits
         - gochecknoglobals
         - dupl
-    - path: version.go
+    - path: version\.go
       linters:
         - forbidigo
   max-issues-per-linter: 0
