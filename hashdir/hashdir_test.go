@@ -68,12 +68,12 @@ func TestDirHasher(t *testing.T) {
 			So(leaf, ShouldEqual, "601fe3ce8e586565fcbde2094cdaf")
 		})
 
-		Convey("MkDirHashed() creates the correct subdirs and file", func() {
+		Convey("CreateFileInHashedDir() creates the correct subdirs and file", func() {
 			baseDir, err := os.MkdirTemp("", "wrstat_dirhasher_test")
 			So(err, ShouldBeNil)
 			defer os.RemoveAll(baseDir)
 
-			file, err := h.MkDirHashed(baseDir, apath)
+			file, err := h.CreateFileInHashedDir(baseDir, apath, "")
 			So(err, ShouldBeNil)
 			defer file.Close()
 			So(file.Name(), ShouldEqual, baseDir+"/4/a/5/601fe3ce8e586565fcbde2094cdaf")
@@ -81,7 +81,7 @@ func TestDirHasher(t *testing.T) {
 			Convey("unless given an unwritable baseDir", func() {
 				baseDir = "/~/"
 
-				file, err = h.MkDirHashed(baseDir, apath)
+				file, err = h.CreateFileInHashedDir(baseDir, apath, "")
 				So(err, ShouldNotBeNil)
 				So(file, ShouldBeNil)
 			})
@@ -101,13 +101,13 @@ func TestDirHasher(t *testing.T) {
 				}()
 				os.RemoveAll(tmpDir)
 
-				file, err = h.MkDirHashed("", apath)
+				file, err = h.CreateFileInHashedDir("", apath, "")
 				So(err, ShouldNotBeNil)
 				So(file, ShouldBeNil)
 			})
 		})
 
-		Convey("MkDirHashed() also works with relative baseDirs", func() {
+		Convey("CreateFileInHashedDir() also works with relative baseDirs", func() {
 			cwd, err := os.Getwd()
 			So(err, ShouldBeNil)
 
@@ -116,10 +116,10 @@ func TestDirHasher(t *testing.T) {
 			defer os.RemoveAll(baseDir)
 			rel := filepath.Base(baseDir)
 
-			file, err := h.MkDirHashed(rel, apath)
+			file, err := h.CreateFileInHashedDir(rel, apath, ".1")
 			So(err, ShouldBeNil)
 			defer file.Close()
-			So(file.Name(), ShouldEqual, baseDir+"/4/a/5/601fe3ce8e586565fcbde2094cdaf")
+			So(file.Name(), ShouldEqual, baseDir+"/4/a/5/601fe3ce8e586565fcbde2094cdaf.1")
 		})
 	})
 }

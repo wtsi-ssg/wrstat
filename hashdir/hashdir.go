@@ -73,18 +73,28 @@ func (h *DirHasher) HashDir(baseDir, value string) (string, string, error) {
 }
 
 // MkDirHashed uses HashDir() on the inputs, creates the returned
-// subdirectories, creates a file named after the leaf, opens it writing and
-// returns it.
-func (h *DirHasher) MkDirHashed(baseDir, value string) (*os.File, error) {
+// subdirectories, and returns the path to the leaf file.
+func (h *DirHasher) MkDirHashed(baseDir, value string) (string, error) {
 	dirs, leaf, err := h.HashDir(baseDir, value)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = os.MkdirAll(dirs, os.ModePerm)
 	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dirs, leaf), nil
+}
+
+// CreateFileInHashedDir calls MkDirHashed() and creates the leaf file,
+// appending the given string to the leaf file name.
+func (h *DirHasher) CreateFileInHashedDir(baseDir, value, suffix string) (*os.File, error) {
+	leaf, err := h.MkDirHashed(baseDir, value)
+	if err != nil {
 		return nil, err
 	}
 
-	return os.Create(filepath.Join(dirs, leaf))
+	return os.Create(leaf + suffix)
 }
