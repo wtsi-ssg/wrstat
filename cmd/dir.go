@@ -119,23 +119,7 @@ completed (eg. by adding your own job that depends on that group, such as a
 		outFile := createOutputFile(outputDir, desiredDir)
 		defer outFile.Close()
 
-		files, dirs := getFilesAndDirs(desiredDir)
-
-		var wg sync.WaitGroup
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			outputFileStats(outFile, desiredDir, files)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			recurseSubDirs(jq, outputDir, desiredDir, depGroup, dirs)
-		}()
-
-		wg.Wait()
+		statDir(desiredDir, outFile, outputDir, depGroup, jq)
 	},
 }
 
@@ -178,6 +162,43 @@ func createOutputFile(out, desired string) *os.File {
 	}
 
 	return outFile
+}
+
+// statDir does the main work.
+func statDir(desiredDir string, outFile *os.File, outputDir, depGroup string, jq *jobqueue.Client) {
+	files, dirs := getFilesAndDirs(desiredDir)
+
+	var extraDir string
+
+	if len(dirs) > 0 {
+		// we'll do one of the directories ourselves instead of scheduling it,
+		// for efficiency
+		var dirEntry fs.DirEntry
+		dirEntry, dirs = dirs[0], dirs[1:]
+		extraDir = filepath.Join(desiredDir, dirEntry.Name())
+	}
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		outputFileStats(outFile, desiredDir, files)
+
+		if extraDir != "" {
+			statDir(extraDir, outFile, outputDir, depGroup, jq)
+		}
+	}()
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		recurseSubDirs(jq, outputDir, desiredDir, depGroup, dirs)
+	}()
+
+	wg.Wait()
 }
 
 // getFilesAndDirs reads the contents of the given directory and returns the
@@ -252,7 +273,7 @@ func recurseSubDirs(jq *jobqueue.Client, out, desired, depg string, dirs []fs.Di
 
 // addJobsToQueue adds the jobs to wr's queue.
 func addJobsToQueue(jq *jobqueue.Client, jobs []*jobqueue.Job) {
-	inserts, dups, err := jq.Add(jobs, os.Environ(), false)
+	inserts, dups, err := jq.Add(jobs, os.Environ(), true)
 	if err != nil {
 		die("failed to add jobs to wr's queue: %s", err)
 	}
