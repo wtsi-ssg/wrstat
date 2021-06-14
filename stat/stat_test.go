@@ -56,12 +56,13 @@ func TestStatFile(t *testing.T) {
 
 	Convey("modeToType() works correctly", t, func() {
 		So(modeToType(fs.FileMode(0)), ShouldEqual, "f")
+		So(modeToType(fs.ModeDir), ShouldEqual, "d")
 		So(modeToType(fs.ModeSymlink), ShouldEqual, "l")
 		So(modeToType(fs.ModeSocket), ShouldEqual, "s")
 		So(modeToType(fs.ModeDevice), ShouldEqual, "b")
 		So(modeToType(fs.ModeCharDevice), ShouldEqual, "c")
 		So(modeToType(fs.ModeNamedPipe), ShouldEqual, "F")
-		So(modeToType(fs.ModeDir), ShouldEqual, "X")
+		So(modeToType(fs.ModeIrregular), ShouldEqual, "X")
 	})
 
 	Convey("base64Encode() works correctly", t, func() {

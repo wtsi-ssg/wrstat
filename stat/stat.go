@@ -41,6 +41,7 @@ type FileType string
 const (
 	FileTypeRegular FileType = "f"
 	FileTypeLink    FileType = "l"
+	FileTypeDir     FileType = "d"
 	FileTypeSocket  FileType = "s"
 	FileTypeBlock   FileType = "b"
 	FileTypeChar    FileType = "c"
@@ -129,6 +130,8 @@ func modeToType(mode io.FileMode) FileType {
 // our FileType constants.
 func nonRegularTypeToFileType(fileMode io.FileMode) FileType {
 	switch fileMode {
+	case io.ModeDir:
+		return FileTypeDir
 	case io.ModeSymlink:
 		return FileTypeLink
 	case io.ModeSocket:
