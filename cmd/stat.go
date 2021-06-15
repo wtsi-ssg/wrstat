@@ -88,7 +88,9 @@ func statPathsInFile(inputPath string) {
 
 	defer func() {
 		err = input.Close()
-		warn("failed to close input file: %s", err)
+		if err != nil {
+			warn("failed to close input file: %s", err)
+		}
 	}()
 
 	scanAndStatInput(input, createStatOutputFile(inputPath))
