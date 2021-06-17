@@ -58,6 +58,7 @@ issues:
         - gochecknoinits
         - gochecknoglobals
         - dupl
+        - forbidigo
     - path: version\.go
       linters:
         - forbidigo
