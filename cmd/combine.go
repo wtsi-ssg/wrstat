@@ -26,33 +26,116 @@
 package cmd
 
 import (
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"runtime"
+
+	"github.com/klauspost/pgzip"
 	"github.com/spf13/cobra"
 )
+
+const bytesInMB = 1000000
+const pgzipWriterBlocksMultiplier = 2
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
 	Use:   "combine",
-	Short: "Combine the output files produced by 'wrstat dir'",
-	Long: `Combine the output files produced by 'wrstat dir'.
+	Short: "Combine the .stats files produced by 'wrstat walk'",
+	Long: `Combine the .stats files produced by 'wrstat walk'.
 
-Within the given output directory, all the files produced by an invocation of
-'wrstat dir' will be concatenated and placed at the root of the output
-directory.
-
-On success, all the individual original output files will be deleted, along with
-the hashed dirs they were within.
+Within the given output directory, all the 'wrstat stat' files produced
+following an invocation of 'wrstat walk' will be concatenated, compressed and
+placed at the root of the output directory in a file called 'combine.out.gz'.
 
 NB: only call this by adding it to wr with a dependency on the dependency group
-you supplied 'wrstat dir'.`,
+you supplied 'wrstat walk'.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			die("exactly 1 'wrstat dir' output directory must be supplied")
+			die("exactly 1 'wrstat walk' output directory must be supplied")
 		}
 
-		die("not yet implemented")
+		paths := findStatFilePaths(args[0])
+		inputs := openFiles(paths)
+		output := createCombineOutputFile(args[0])
+
+		concatenateAndCompress(inputs, output)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(combineCmd)
+}
+
+// findStatFilePaths looks through all subdirs of given dir and returns absolute
+// paths to entries named with a '.stats' suffix.
+func findStatFilePaths(dir string) []string {
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*/*/*/*.stats", dir))
+	if err != nil {
+		die("failed to find .stats files: %s", err)
+	}
+
+	return paths
+}
+
+// openFiles opens the given files for reading.
+func openFiles(paths []string) []*os.File {
+	files := make([]*os.File, len(paths))
+
+	for i, path := range paths {
+		file, err := os.Open(path)
+		if err != nil {
+			die("failed to open a .stats files: %s", err)
+		}
+
+		files[i] = file
+	}
+
+	return files
+}
+
+// createCombineOutputFile creates an output file in the given dir.
+func createCombineOutputFile(dir string) *os.File {
+	file, err := os.Create(filepath.Join(dir, "combine.out.gz"))
+	if err != nil {
+		die("failed to create output file: %s", err)
+	}
+
+	return file
+}
+
+// concatenateAndCompress concatenates and compresses the inputs and stores in
+// the output.
+func concatenateAndCompress(inputs []*os.File, output *os.File) {
+	zw := pgzip.NewWriter(output)
+
+	err := zw.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
+	if err != nil {
+		die("failed to set up compression: %s", err)
+	}
+
+	buf := make([]byte, bytesInMB)
+
+	for _, input := range inputs {
+		_, err = io.CopyBuffer(zw, input, buf)
+		if err != nil {
+			die("failed to concatenate and compress: %s", err)
+		}
+
+		err = input.Close()
+		if err != nil {
+			warn("failed to close an input file: %s", err)
+		}
+	}
+
+	err = zw.Close()
+	if err != nil {
+		die("failed to close output file: %s", err)
+	}
+
+	err = output.Close()
+	if err != nil {
+		die("failed to close output file: %s", err)
+	}
 }
