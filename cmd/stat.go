@@ -47,6 +47,7 @@ const lstatRetries = 3
 const lstatSlowErr = Error("taking longer than 1 second")
 const reportFrequency = 10 * time.Second
 const nanosecondsInSecond = 1000000000
+const statOutputFileSuffix = ".stats"
 
 var statDebug bool
 
@@ -116,7 +117,7 @@ func statPathsInFile(inputPath string, debug bool) {
 
 // createStatOutputFile creates a file named input.stats.
 func createStatOutputFile(input string) *os.File {
-	output, err := os.Create(input + ".stats")
+	output, err := os.Create(input + statOutputFileSuffix)
 	if err != nil {
 		die("failed to create output file: %s", err)
 	}

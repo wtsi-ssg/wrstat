@@ -28,25 +28,28 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/karrick/godirwalk"
+	"github.com/rs/xid"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/hashdir"
 )
 
 // options for this cmd.
 var outputDir string
 var depGroup string
 var nJobs int
+var walkID string
 
 const jobRetries uint8 = 3
 const reqRAM = 50
 const reqTime = 2 * time.Second
 const reqCores = 1
 const reqDiesk = 1
+const userOnlyPerm = 0700
 
 var req = &scheduler.Requirements{
 	RAM:   reqRAM,
@@ -67,11 +70,15 @@ the host you started the manager on. Or run this from the same node that you
 started the manager on.
 
 For each entry recursively within the directory of interest, their paths are
-written to --parallel_jobs output files (stored in hashed subdirectories of the
-given output directory).
+written to --parallel_jobs output files in the given output directory.
 
 For each output file, a 'wrstat stat' job is then added to wr's queue with the
 given dependency group.
+
+(When jobs are added to wr's queue to get the work done, they are given a
+--rep_grp of wrstat-stat-[id], so you can use
+'wr status -i wrstat-stat -z -o s' to get information on how long everything or
+particular subsets of jobs took.)
 
 NB: when this exits, that does not mean all stats have necessarily been
 retrieved. You should wait until all jobs in the given dependency group have
@@ -88,7 +95,11 @@ completed (eg. by adding your own job that depends on that group, such as a
 			err = jq.Disconnect()
 		}()
 
-		walkDirAndScheduleStats(desiredDir, outputDir, nJobs, depGroup, jq)
+		if walkID == "" {
+			walkID = statRepGrp(desiredDir, uniqueStr())
+		}
+
+		walkDirAndScheduleStats(desiredDir, outputDir, nJobs, depGroup, walkID, jq)
 	},
 }
 
@@ -98,6 +109,9 @@ func init() {
 	// flags specific to this sub-command
 	walkCmd.Flags().IntVarP(&nJobs, "parallel_jobs", "n", 64, "number of parallel jobs to run at once")
 	walkCmd.Flags().StringVarP(&outputDir, "output_directory", "o", "", "base directory for output files")
+	walkCmd.Flags().StringVarP(&walkID,
+		"id", "i", "",
+		"rep_grp suffix when adding jobs (default [directory_basename]-[date]-[unique])")
 	walkCmd.Flags().StringVarP(
 		&depGroup,
 		"dependency_group", "d", "",
@@ -121,10 +135,34 @@ func checkArgs(out, dep string, args []string) string {
 	return args[0]
 }
 
+// uniqueStr returns a 20 character unique string that could be included in a
+// rep_grp etc.
+func uniqueStr() string {
+	return xid.New().String()
+}
+
+// statRepGrp returns a rep_grp that can be used for the stat jobs walk will
+// create.
+func statRepGrp(dir, unique string) string {
+	return repGrp("stat", dir, unique)
+}
+
+// repGrp returns a rep_grp that can be used for a wrstat job we will create.
+func repGrp(cmd, dir, unique string) string {
+	return fmt.Sprintf("wrstat-%s-%s-%s-%s", cmd, filepath.Base(dir), dateStamp(), unique)
+}
+
+// dateStamp returns today's date in the form YYYYMMDD.
+func dateStamp() string {
+	t := time.Now()
+
+	return t.Format("20060102")
+}
+
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, n int, depGroup string, jq *jobqueue.Client) {
+func walkDirAndScheduleStats(desiredDir, outputDir string, n int, depGroup, repGroup string, jq *jobqueue.Client) {
 	outPaths := writeAllPathsToFiles(desiredDir, outputDir, n)
-	scheduleStatJobs(outPaths, depGroup, jq)
+	scheduleStatJobs(outPaths, depGroup, repGroup, jq)
 }
 
 // writeAllPathsToFiles quickly traverses the entire file tree, writing out
@@ -135,7 +173,7 @@ func writeAllPathsToFiles(desiredDir, outputDir string, n int) []string {
 
 	files := make([]*os.File, n)
 	for i := range files {
-		files[i] = createWalkOutputFile(outputDir, desiredDir, i)
+		files[i] = createWalkOutputFile(outputDir, i)
 		defer func(num int) {
 			err := files[num].Close()
 			if err != nil {
@@ -154,12 +192,14 @@ func writeAllPathsToFiles(desiredDir, outputDir string, n int) []string {
 	return outPaths
 }
 
-// createWalkOutputFile creates an output file within out in hashed location
-// based on desired. It appends the given int to the filename.
-func createWalkOutputFile(out, desired string, n int) *os.File {
-	h := hashdir.New(hashdir.RecommendedLevels)
+// createWalkOutputFile creates an output file named 'walk.n' within the
+// out directory. Creates out directory if necessary.
+func createWalkOutputFile(out string, n int) *os.File {
+	if err := os.MkdirAll(out, userOnlyPerm); err != nil {
+		die("failed to create output directory: %s", err)
+	}
 
-	outFile, err := h.CreateFileInHashedDir(out, desired, fmt.Sprintf(".%d", n))
+	outFile, err := os.Create(filepath.Join(out, fmt.Sprintf("walk.%d", n)))
 	if err != nil {
 		die("failed to create output file: %s", err)
 	}
@@ -188,8 +228,8 @@ func walkDir(desiredDir string, files []*os.File) error {
 }
 
 // scheduleStatJobs adds a 'wrstat stat' job to wr's queue for each out path.
-// The jobs are added with the given dep group.
-func scheduleStatJobs(outPaths []string, depGroup string, jq *jobqueue.Client) {
+// The jobs are added with the given dep and rep groups.
+func scheduleStatJobs(outPaths []string, depGroup string, repGrp string, jq *jobqueue.Client) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		die("failed to get working directory: %s", err)
@@ -208,7 +248,7 @@ func scheduleStatJobs(outPaths []string, depGroup string, jq *jobqueue.Client) {
 			Cmd:          fmt.Sprintf("%s stat %s", exe, path),
 			Cwd:          cwd,
 			CwdMatters:   true,
-			RepGroup:     "wrstat-stat",
+			RepGroup:     repGrp,
 			ReqGroup:     "wrstat-stat",
 			Requirements: req,
 			DepGroups:    depGroups,

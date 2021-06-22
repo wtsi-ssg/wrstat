@@ -38,6 +38,7 @@ import (
 
 const bytesInMB = 1000000
 const pgzipWriterBlocksMultiplier = 2
+const combineOutputFileBasename = "combine.gz"
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
@@ -47,7 +48,7 @@ var combineCmd = &cobra.Command{
 
 Within the given output directory, all the 'wrstat stat' files produced
 following an invocation of 'wrstat walk' will be concatenated, compressed and
-placed at the root of the output directory in a file called 'combine.out.gz'.
+placed at the root of the output directory in a file called 'combine.gz'.
 
 NB: only call this by adding it to wr with a dependency on the dependency group
 you supplied 'wrstat walk'.`,
@@ -56,9 +57,14 @@ you supplied 'wrstat walk'.`,
 			die("exactly 1 'wrstat walk' output directory must be supplied")
 		}
 
-		paths := findStatFilePaths(args[0])
+		sourceDir, err := filepath.Abs(args[0])
+		if err != nil {
+			die("could not get the absolute path to [%s]: %s", args[0], err)
+		}
+
+		paths := findStatFilePaths(sourceDir)
 		inputs := openFiles(paths)
-		output := createCombineOutputFile(args[0])
+		output := createCombineOutputFile(sourceDir)
 
 		concatenateAndCompress(inputs, output)
 	},
@@ -68,11 +74,11 @@ func init() {
 	RootCmd.AddCommand(combineCmd)
 }
 
-// findStatFilePaths looks through all subdirs of given dir and returns absolute
-// paths to entries named with a '.stats' suffix.
+// findStatFilePaths returns files in the given dir named with a '.stats'
+// suffix.
 func findStatFilePaths(dir string) []string {
-	paths, err := filepath.Glob(fmt.Sprintf("%s/*/*/*/*.stats", dir))
-	if err != nil {
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*%s", dir, statOutputFileSuffix))
+	if err != nil || len(paths) == 0 {
 		die("failed to find .stats files: %s", err)
 	}
 
@@ -97,7 +103,7 @@ func openFiles(paths []string) []*os.File {
 
 // createCombineOutputFile creates an output file in the given dir.
 func createCombineOutputFile(dir string) *os.File {
-	file, err := os.Create(filepath.Join(dir, "combine.out.gz"))
+	file, err := os.Create(filepath.Join(dir, combineOutputFileBasename))
 	if err != nil {
 		die("failed to create output file: %s", err)
 	}
