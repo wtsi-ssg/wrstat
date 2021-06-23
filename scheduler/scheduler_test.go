@@ -253,25 +253,7 @@ func serve(t *testing.T, config jobqueue.ServerConfig) *jobqueue.Server {
 
 	server, _, _, err := jobqueue.Serve(config)
 	if err != nil {
-		limit := time.After(5 * time.Second)
-		ticker := time.NewTicker(500 * time.Millisecond)
-	RETRY:
-		for {
-			select {
-			case <-ticker.C:
-				server, _, _, err = jobqueue.Serve(config)
-				if err != nil {
-					continue
-				}
-				ticker.Stop()
-
-				break RETRY
-			case <-limit:
-				ticker.Stop()
-
-				break RETRY
-			}
-		}
+		server, err = serveWithRetries(t, config)
 	}
 
 	if err != nil {
@@ -279,4 +261,30 @@ func serve(t *testing.T, config jobqueue.ServerConfig) *jobqueue.Server {
 	}
 
 	return server
+}
+
+// serveWithRetries does the retrying part of serve().
+func serveWithRetries(t *testing.T, config jobqueue.ServerConfig) (server *jobqueue.Server, err error) {
+	t.Helper()
+
+	limit := time.After(5 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
+
+	for {
+		select {
+		case <-ticker.C:
+			server, _, _, err = jobqueue.Serve(config)
+			if err != nil {
+				continue
+			}
+
+			ticker.Stop()
+
+			return
+		case <-limit:
+			ticker.Stop()
+
+			return
+		}
+	}
 }
