@@ -99,7 +99,6 @@ func init() {
 	// flags specific to this sub-command
 	tidyCmd.Flags().StringVarP(&tidyDir, "final_output", "f", "", "final output directory")
 	tidyCmd.Flags().StringVarP(&tidyDate, "date", "d", "", "datestamp of when 'wrstat multi' was called")
-
 }
 
 // moveAndDelete does the main work of this cmd.

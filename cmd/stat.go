@@ -257,7 +257,7 @@ func (r *Reporter) Report() {
 	r.Lock()
 	defer r.Unlock()
 
-	fmt.Printf("%d %s operations in last %s (%s ops/s)\n",
+	info("%d %s operations in last %s (%s ops/s)\n",
 		r.currentCount,
 		r.Operation,
 		r.currentDuration,
@@ -271,17 +271,18 @@ func (r *Reporter) Report() {
 
 // ReportFinal reports overall and failed timings.
 func (r *Reporter) ReportFinal() {
-	fmt.Printf("Overall, %d operations in %s (%s ops/s)\n",
+	info("Overall, %d operations in %s (%s ops/s)\n",
 		r.totalCount,
 		time.Since(r.start),
 		opsPerSecond(r.totalCount, time.Since(r.start)))
-	fmt.Printf("Spent %s in actual %s calls (%s ops/s)\n",
+
+	info("Spent %s in actual %s calls (%s ops/s)\n",
 		r.totalDuration,
 		r.Operation,
 		opsPerSecond(r.totalCount, r.totalDuration))
 
 	if r.failedCount > 0 {
-		fmt.Printf("There were %d failed %s operations not considered above, which took %s (%s ops/s)\n",
+		warn("There were %d failed %s operations not considered above, which took %s (%s ops/s)\n",
 			r.failedCount,
 			r.Operation,
 			r.failedDuration,

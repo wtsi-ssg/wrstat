@@ -32,7 +32,12 @@ import (
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/scheduler"
 )
+
+// desiredToJobsMultiplier is how many more jobs we create from a given number
+// of desired directories.
+const desiredToJobsMultiplier = 2
 
 // options for this cmd.
 var workDir string
@@ -87,23 +92,18 @@ deleted.`,
 			die("at least 1 directory of interest must be supplied")
 		}
 
-		jq, err := jobqueue.ConnectUsingConfig(deployment, connectTimeout, appLogger)
-		if err != nil {
-			die("could not connect to the wr manager: %s", err)
-		}
-		defer func() {
-			err = jq.Disconnect()
-		}()
+		s, d := newScheduler()
+		defer d()
 
-		unique := uniqueStr()
+		unique := scheduler.UniqueString()
 		outputRoot := filepath.Join(workDir, unique)
-		err = os.MkdirAll(outputRoot, userOnlyPerm)
+		err := os.MkdirAll(outputRoot, userOnlyPerm)
 		if err != nil {
 			die("failed to create working dir: %s", err)
 		}
 
-		scheduleWalkJobs(outputRoot, args, unique, multiJobs, jq)
-		scheduleTidyJob(outputRoot, finalDir, unique, jq)
+		scheduleWalkJobs(outputRoot, args, unique, multiJobs, s)
+		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	},
 }
 
@@ -118,71 +118,28 @@ func init() {
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
 // path.
-func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string, n int, jq *jobqueue.Client) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		die("failed to get working directory: %s", err)
-	}
-
-	exe, err := os.Executable()
-	if err != nil {
-		die("failed to get wrstat's path: %s", err)
-	}
-
-	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
-	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
+func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string, n int, s *scheduler.Scheduler) {
+	jobs := make([]*jobqueue.Job, desiredToJobsMultiplier*len(desiredPaths))
 
 	for i, path := range desiredPaths {
-		thisUnique := uniqueStr()
+		thisUnique := scheduler.UniqueString()
 		outDir := filepath.Join(outputRoot, filepath.Base(path), thisUnique)
 
-		walkJobs[i] = &jobqueue.Job{
-			Cmd: fmt.Sprintf("%s walk -d %s -o %s -i %s -n %d %s",
-				exe, thisUnique, outDir, statRepGrp(path, unique), n, path),
-			Cwd:          cwd,
-			CwdMatters:   true,
-			RepGroup:     walkRepGrp(path, unique),
-			ReqGroup:     "wrstat-walk",
-			Requirements: req,
-			Retries:      jobRetries,
-		}
+		jobs[i*2] = s.NewJob(fmt.Sprintf("%s walk -d %s -o %s -i %s -n %d %s",
+			s.Executable(), thisUnique, outDir, statRepGrp(path, unique), n, path),
+			walkRepGrp(path, unique), "wrstat-walk", "", "")
 
-		combineJobs[i] = createCombineJob(outDir, thisUnique, path, unique)
+		jobs[i*2+1] = s.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
+			combineRepGrp(path, unique), "wrstat-stat", unique, thisUnique)
 	}
 
-	addJobsToQueue(jq, walkJobs)
-	addJobsToQueue(jq, combineJobs)
+	addJobsToQueue(s, jobs)
 }
 
 // walkRepGrp returns a rep_grp that can be used for the walk jobs multi will
 // create.
 func walkRepGrp(dir, unique string) string {
 	return repGrp("walk", dir, unique)
-}
-
-// createCombineJob creates a 'wrstat combine' job.
-func createCombineJob(dir, dep, repPath, group string) *jobqueue.Job {
-	cwd, err := os.Getwd()
-	if err != nil {
-		die("failed to get working directory: %s", err)
-	}
-
-	exe, err := os.Executable()
-	if err != nil {
-		die("failed to get wrstat's path: %s", err)
-	}
-
-	return &jobqueue.Job{
-		Cmd:          fmt.Sprintf("%s combine %s", exe, dir),
-		Cwd:          cwd,
-		CwdMatters:   true,
-		RepGroup:     combineRepGrp(repPath, group),
-		ReqGroup:     "wrstat-stat",
-		Requirements: req,
-		DepGroups:    []string{group},
-		Dependencies: jobqueue.Dependencies{{DepGroup: dep}},
-		Retries:      jobRetries,
-	}
 }
 
 // combineRepGrp returns a rep_grp that can be used for the combine jobs multi
@@ -194,25 +151,9 @@ func combineRepGrp(dir, unique string) string {
 // scheduleTidyJob adds a job to wr's queue that for each working directory
 // subdir moves the output to the final location and then deletes the working
 // directory.
-func scheduleTidyJob(outputRoot, finalDir, unique string, jq *jobqueue.Client) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		die("failed to get working directory: %s", err)
-	}
+func scheduleTidyJob(outputRoot, finalDir, unique string, s *scheduler.Scheduler) {
+	job := s.NewJob(fmt.Sprintf("%s tidy -f %s -d %s %s", s.Executable(), finalDir, dateStamp(), outputRoot),
+		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique)
 
-	exe, err := os.Executable()
-	if err != nil {
-		die("failed to get wrstat's path: %s", err)
-	}
-
-	addJobsToQueue(jq, []*jobqueue.Job{{
-		Cmd:          fmt.Sprintf("%s tidy -f %s -d %s %s", exe, finalDir, dateStamp(), outputRoot),
-		Cwd:          cwd,
-		CwdMatters:   true,
-		RepGroup:     repGrp("tidy", finalDir, unique),
-		ReqGroup:     "wrstat-tidy",
-		Requirements: req,
-		Dependencies: jobqueue.Dependencies{{DepGroup: unique}},
-		Retries:      0,
-	}})
+	addJobsToQueue(s, []*jobqueue.Job{job})
 }

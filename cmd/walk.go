@@ -29,13 +29,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
-	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/karrick/godirwalk"
-	"github.com/rs/xid"
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/scheduler"
 )
 
 // options for this cmd.
@@ -43,20 +41,6 @@ var outputDir string
 var depGroup string
 var nJobs int
 var walkID string
-
-const jobRetries uint8 = 3
-const reqRAM = 50
-const reqTime = 2 * time.Second
-const reqCores = 1
-const reqDiesk = 1
-const userOnlyPerm = 0700
-
-var req = &scheduler.Requirements{
-	RAM:   reqRAM,
-	Time:  reqTime,
-	Cores: reqCores,
-	Disk:  reqDiesk,
-}
 
 // walkCmd represents the walk command.
 var walkCmd = &cobra.Command{
@@ -87,19 +71,14 @@ completed (eg. by adding your own job that depends on that group, such as a
 	Run: func(cmd *cobra.Command, args []string) {
 		desiredDir := checkArgs(outputDir, depGroup, args)
 
-		jq, err := jobqueue.ConnectUsingConfig(deployment, connectTimeout, appLogger)
-		if err != nil {
-			die("could not connect to the wr manager: %s", err)
-		}
-		defer func() {
-			err = jq.Disconnect()
-		}()
+		s, d := newScheduler()
+		defer d()
 
 		if walkID == "" {
-			walkID = statRepGrp(desiredDir, uniqueStr())
+			walkID = statRepGrp(desiredDir, scheduler.UniqueString())
 		}
 
-		walkDirAndScheduleStats(desiredDir, outputDir, nJobs, depGroup, walkID, jq)
+		walkDirAndScheduleStats(desiredDir, outputDir, nJobs, depGroup, walkID, s)
 	},
 }
 
@@ -135,34 +114,16 @@ func checkArgs(out, dep string, args []string) string {
 	return args[0]
 }
 
-// uniqueStr returns a 20 character unique string that could be included in a
-// rep_grp etc.
-func uniqueStr() string {
-	return xid.New().String()
-}
-
 // statRepGrp returns a rep_grp that can be used for the stat jobs walk will
 // create.
 func statRepGrp(dir, unique string) string {
 	return repGrp("stat", dir, unique)
 }
 
-// repGrp returns a rep_grp that can be used for a wrstat job we will create.
-func repGrp(cmd, dir, unique string) string {
-	return fmt.Sprintf("wrstat-%s-%s-%s-%s", cmd, filepath.Base(dir), dateStamp(), unique)
-}
-
-// dateStamp returns today's date in the form YYYYMMDD.
-func dateStamp() string {
-	t := time.Now()
-
-	return t.Format("20060102")
-}
-
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, n int, depGroup, repGroup string, jq *jobqueue.Client) {
+func walkDirAndScheduleStats(desiredDir, outputDir string, n int, depGroup, repGroup string, s *scheduler.Scheduler) {
 	outPaths := writeAllPathsToFiles(desiredDir, outputDir, n)
-	scheduleStatJobs(outPaths, depGroup, repGroup, jq)
+	scheduleStatJobs(outPaths, depGroup, repGroup, s)
 }
 
 // writeAllPathsToFiles quickly traverses the entire file tree, writing out
@@ -229,44 +190,13 @@ func walkDir(desiredDir string, files []*os.File) error {
 
 // scheduleStatJobs adds a 'wrstat stat' job to wr's queue for each out path.
 // The jobs are added with the given dep and rep groups.
-func scheduleStatJobs(outPaths []string, depGroup string, repGrp string, jq *jobqueue.Client) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		die("failed to get working directory: %s", err)
-	}
-
-	exe, err := os.Executable()
-	if err != nil {
-		die("failed to get wrstat's path: %s", err)
-	}
-
-	depGroups := []string{depGroup}
+func scheduleStatJobs(outPaths []string, depGroup string, repGrp string, s *scheduler.Scheduler) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
 	for i, path := range outPaths {
-		jobs[i] = &jobqueue.Job{
-			Cmd:          fmt.Sprintf("%s stat %s", exe, path),
-			Cwd:          cwd,
-			CwdMatters:   true,
-			RepGroup:     repGrp,
-			ReqGroup:     "wrstat-stat",
-			Requirements: req,
-			DepGroups:    depGroups,
-			Retries:      jobRetries,
-		}
+		jobs[i] = s.NewJob(fmt.Sprintf("%s stat %s", s.Executable(), path),
+			repGrp, "wrstat-stat", depGroup, "")
 	}
 
-	addJobsToQueue(jq, jobs)
-}
-
-// addJobsToQueue adds the jobs to wr's queue.
-func addJobsToQueue(jq *jobqueue.Client, jobs []*jobqueue.Job) {
-	inserts, dups, err := jq.Add(jobs, os.Environ(), false)
-	if err != nil {
-		die("failed to add jobs to wr's queue: %s", err)
-	}
-
-	if inserts != len(jobs) {
-		warn("not all jobs were added to wr's queue; %d were duplicates", dups)
-	}
+	addJobsToQueue(s, jobs)
 }
