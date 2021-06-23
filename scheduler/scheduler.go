@@ -85,6 +85,12 @@ func New(deployment string, timeout time.Duration, logger log15.Logger) (*Schedu
 	}, err
 }
 
+// Executable is a convenience function that returns the same as
+// os.Executable(), but without the error.
+func (s *Scheduler) Executable() string {
+	return s.exe
+}
+
 // NewJob is a convenience function for creating Jobs. It sets the job's Cwd
 // to the current working directory, sets CwdMatters to true, applies a minimal
 // Requirements, and sets Retries to 3.

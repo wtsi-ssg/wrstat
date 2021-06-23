@@ -72,7 +72,7 @@ func TestStatFile(t *testing.T) {
 
 			exe, err := os.Executable()
 			So(err, ShouldBeNil)
-			So(s.exe, ShouldEqual, exe)
+			So(s.Executable(), ShouldEqual, exe)
 
 			So(s.jq, ShouldNotBeNil)
 
