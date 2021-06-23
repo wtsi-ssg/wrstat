@@ -127,7 +127,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string, n
 
 		jobs[i*2] = s.NewJob(fmt.Sprintf("%s walk -d %s -o %s -i %s -n %d %s",
 			s.Executable(), thisUnique, outDir, statRepGrp(path, unique), n, path),
-			walkRepGrp(path, unique), "wrstat-walk", "", "")
+			walkRepGrp(path, unique), "wrstat-walk", thisUnique, "")
 
 		jobs[i*2+1] = s.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
 			combineRepGrp(path, unique), "wrstat-stat", unique, thisUnique)
