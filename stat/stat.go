@@ -58,7 +58,7 @@ func WithTimeout(timeout time.Duration, maxAttempts int, logger log15.Logger) *S
 	}
 }
 
-// Lstat calls os.Lstat() on the given path, but times it out after out
+// Lstat calls os.Lstat() on the given path, but times it out after our
 // configured timeout, retrying until we've hit our maxAttempts. NB: this is NOT
 // thread safe, don't call this concurrently.
 func (s *Statter) Lstat(path string) (info fs.FileInfo, err error) {
