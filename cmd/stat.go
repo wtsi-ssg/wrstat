@@ -27,14 +27,13 @@ package cmd
 
 import (
 	"bufio"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/reporter"
 	"github.com/wtsi-ssg/wrstat/stat"
 )
 
@@ -46,7 +45,6 @@ const lstatTimeout = 10 * time.Second
 const lstatRetries = 3
 const lstatSlowErr = Error("taking longer than 1 second")
 const reportFrequency = 10 * time.Second
-const nanosecondsInSecond = 1000000000
 const statOutputFileSuffix = ".stats"
 
 var statDebug bool
@@ -130,9 +128,9 @@ func createStatOutputFile(input string) *os.File {
 func scanAndStatInput(input, output *os.File, debug bool) {
 	scanner := bufio.NewScanner(input)
 
-	r := &Reporter{Operation: "lstat"}
+	r := reporter.New("lstat", appLogger)
 	if debug {
-		r.StartReporting()
+		r.StartReporting(reportFrequency)
 		defer r.StopReporting()
 	}
 
@@ -143,7 +141,8 @@ func scanAndStatInput(input, output *os.File, debug bool) {
 	}
 }
 
-func scanLoop(scanner *bufio.Scanner, output *os.File, r *Reporter) {
+// scanLoop reads the input line by line and calls lstat on each path.
+func scanLoop(scanner *bufio.Scanner, output *os.File, r *reporter.Reporter) {
 	for scanner.Scan() {
 		path := scanner.Text()
 
@@ -197,132 +196,4 @@ func lstat(path string, attempts int) (info fs.FileInfo, err error) {
 
 		return
 	}
-}
-
-// Reporter can be used to output timing information on how long something is
-// taking.
-type Reporter struct {
-	Operation       string // the name of the operation you will Time(), output in Report()
-	currentDuration time.Duration
-	totalDuration   time.Duration
-	failedDuration  time.Duration
-	currentCount    int64
-	totalCount      int64
-	failedCount     int64
-	start           time.Time
-	started         bool
-	stopCh          chan struct{}
-	doneCh          chan struct{}
-	sync.Mutex
-}
-
-// StartReporting calls Report() regularly.
-func (r *Reporter) StartReporting() {
-	r.started = true
-	r.start = time.Now()
-	r.stopCh = make(chan struct{})
-	r.doneCh = make(chan struct{})
-	ticker := time.NewTicker(reportFrequency)
-
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				r.Report()
-			case <-r.stopCh:
-				ticker.Stop()
-				r.Report()
-				r.ReportFinal()
-				close(r.doneCh)
-
-				return
-			}
-		}
-	}()
-}
-
-// StopReporting stops the regular calling of Report() and triggers
-// ReportFinal().
-func (r *Reporter) StopReporting() {
-	if !r.started {
-		return
-	}
-
-	close(r.stopCh)
-	<-r.doneCh
-}
-
-// Report outputs timings collected since the last Report() call.
-func (r *Reporter) Report() {
-	r.Lock()
-	defer r.Unlock()
-
-	info("%d %s operations in last %s (%s ops/s)\n",
-		r.currentCount,
-		r.Operation,
-		r.currentDuration,
-		opsPerSecond(r.currentCount, r.currentDuration))
-
-	r.totalCount += r.currentCount
-	r.totalDuration += r.currentDuration
-	r.currentCount = 0
-	r.currentDuration = 0
-}
-
-// ReportFinal reports overall and failed timings.
-func (r *Reporter) ReportFinal() {
-	info("Overall, %d operations in %s (%s ops/s)\n",
-		r.totalCount,
-		time.Since(r.start),
-		opsPerSecond(r.totalCount, time.Since(r.start)))
-
-	info("Spent %s in actual %s calls (%s ops/s)\n",
-		r.totalDuration,
-		r.Operation,
-		opsPerSecond(r.totalCount, r.totalDuration))
-
-	if r.failedCount > 0 {
-		warn("There were %d failed %s operations not considered above, which took %s (%s ops/s)\n",
-			r.failedCount,
-			r.Operation,
-			r.failedDuration,
-			opsPerSecond(r.failedCount, r.failedDuration))
-	}
-}
-
-// opsPerSecond returns operations/d.Seconds rounded to 2 decimal places, or n/a
-// if either is 0.
-func opsPerSecond(ops int64, d time.Duration) string {
-	if ops == 0 || d == 0 {
-		return "n/a"
-	}
-
-	return fmt.Sprintf("%.2f", float64(ops)/float64(d.Nanoseconds())*nanosecondsInSecond)
-}
-
-// TimeOperation, if StartReporting() has not yet been called, will simply call
-// your given func and return its error. If StartReporting() has been called,
-// it will time how long your func takes to run, so that Report() can report
-// details about your func.
-func (r *Reporter) TimeOperation(f func() error) error {
-	if !r.started {
-		return f()
-	}
-
-	t := time.Now()
-	err := f()
-	d := time.Since(t)
-
-	r.Lock()
-	defer r.Unlock()
-
-	if err != nil {
-		r.failedCount++
-		r.failedDuration += d
-	} else {
-		r.currentCount++
-		r.currentDuration += d
-	}
-
-	return err
 }
