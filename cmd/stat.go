@@ -37,15 +37,10 @@ import (
 	"github.com/wtsi-ssg/wrstat/stat"
 )
 
-type Error string
-
-func (e Error) Error() string { return string(e) }
-
-const lstatTimeout = 10 * time.Second
-const lstatRetries = 3
-const lstatSlowErr = Error("taking longer than 1 second")
 const reportFrequency = 10 * time.Second
 const statOutputFileSuffix = ".stats"
+const lstatTimeout = 10 * time.Second
+const lstatAttempts = 3
 
 var statDebug bool
 
@@ -143,6 +138,8 @@ func scanAndStatInput(input, output *os.File, debug bool) {
 
 // scanLoop reads the input line by line and calls lstat on each path.
 func scanLoop(scanner *bufio.Scanner, output *os.File, r *reporter.Reporter) {
+	statter := stat.WithTimeout(lstatTimeout, lstatAttempts, appLogger)
+
 	for scanner.Scan() {
 		path := scanner.Text()
 
@@ -150,7 +147,7 @@ func scanLoop(scanner *bufio.Scanner, output *os.File, r *reporter.Reporter) {
 
 		err := r.TimeOperation(func() error {
 			var lerr error
-			info, lerr = lstat(path, 0)
+			info, lerr = statter.Lstat(path)
 
 			return lerr
 		})
@@ -162,38 +159,5 @@ func scanLoop(scanner *bufio.Scanner, output *os.File, r *reporter.Reporter) {
 		if err != nil {
 			die("problem writing to output file: %s", err)
 		}
-	}
-}
-
-// lstat calls os.Lstat() on the given path, but times it out after 1 second and
-// retries up to 4 attempts.
-func lstat(path string, attempts int) (info fs.FileInfo, err error) {
-	infoCh := make(chan fs.FileInfo, 1)
-	errCh := make(chan error, 1)
-
-	go func() {
-		linfo, lerr := os.Lstat(path)
-		infoCh <- linfo
-		errCh <- lerr
-	}()
-
-	select {
-	case err = <-errCh:
-		info = <-infoCh
-
-		return
-	case <-time.After(lstatTimeout):
-		if attempts < lstatRetries {
-			warn("an lstat call took longer than 10s, will retry")
-			attempts++
-
-			return lstat(path, attempts)
-		}
-
-		warn("an lstat call took longer than 10s, giving up")
-
-		err = lstatSlowErr
-
-		return
 	}
 }
