@@ -267,7 +267,7 @@ func serve(t *testing.T, config jobqueue.ServerConfig) *jobqueue.Server {
 func serveWithRetries(t *testing.T, config jobqueue.ServerConfig) (server *jobqueue.Server, err error) {
 	t.Helper()
 
-	limit := time.After(5 * time.Second)
+	limit := time.After(10 * time.Second)
 	ticker := time.NewTicker(500 * time.Millisecond)
 
 	for {
