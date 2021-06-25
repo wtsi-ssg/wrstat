@@ -87,26 +87,26 @@ func TestStatFile(t *testing.T) {
 			err = file.Close()
 			So(err, ShouldBeNil)
 
-			testFileStats(reg, "L2EvcGF0aC9yZWc=", 1, "f")
+			testFileStats(reg, 1, "f")
 
 			Convey("and a symlink", func() {
 				link := filepath.Join(dir, "link")
 				err := os.Symlink(reg, link)
 				So(err, ShouldBeNil)
 
-				testFileStats(link, "L2EvcGF0aC9saW5r", 0, "l")
+				testFileStats(link, 0, "l")
 			})
 		})
 	})
 }
 
-func testFileStats(path string, bp string, size int64, filetype string) {
+func testFileStats(path string, size int64, filetype string) {
 	info, err := os.Lstat(path)
 	So(err, ShouldBeNil)
 
-	stats := File("/a/path/", info)
+	stats := File("/abs/path/to/file", info)
 	So(stats, ShouldNotBeNil)
-	So(stats.Base64Path, ShouldEqual, bp)
+	So(len(stats.Base64Path), ShouldBeGreaterThan, 0)
 	So(stats.Size, ShouldEqual, size)
 
 	stat, ok := info.Sys().(*syscall.Stat_t)
@@ -123,7 +123,7 @@ func testFileStats(path string, bp string, size int64, filetype string) {
 
 	So(stats.ToString(), ShouldEqual, fmt.Sprintf(
 		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
-		bp, size, stat.Uid, stat.Gid,
+		"L2Ficy9wYXRoL3RvL2ZpbGU=", size, stat.Uid, stat.Gid,
 		stat.Atim.Sec, stat.Mtim.Sec, stat.Ctim.Sec,
 		filetype, stat.Ino, stat.Nlink, stat.Dev))
 }

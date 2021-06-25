@@ -30,9 +30,8 @@ package stat
 import (
 	"encoding/base64"
 	"fmt"
-	io "io/fs"
+	"io/fs"
 	"os"
-	"path/filepath"
 	"syscall"
 )
 
@@ -85,11 +84,11 @@ func (fs *FileStats) correctSize(stat *syscall.Stat_t) {
 
 // File interprets the given file info to produce a FileStats.
 //
-// You provide the directory path the file is in so that Base64Path can be
-// calculated for the full file path.
-func File(dir string, info os.FileInfo) *FileStats {
+// You provide the absolute path to the file so that Base64Path can be
+// calculated correctly (the info only contains the basename).
+func File(absPath string, info os.FileInfo) *FileStats {
 	fs := &FileStats{
-		Base64Path: base64Encode(filepath.Join(dir, info.Name())),
+		Base64Path: base64Encode(absPath),
 		Size:       info.Size(),
 		Type:       modeToType(info.Mode()),
 	}
@@ -117,7 +116,7 @@ func base64Encode(val string) string {
 
 // modeToType turns a FileMode retrieved from a FileInfo into one of our
 // FileType constants.
-func modeToType(mode io.FileMode) FileType {
+func modeToType(mode fs.FileMode) FileType {
 	fileMode := mode.Type()
 	if fileMode.IsRegular() {
 		return FileTypeRegular
@@ -128,21 +127,32 @@ func modeToType(mode io.FileMode) FileType {
 
 // nonRegularTypeToFileType turns a FileMode from FileMode.Type() into one of
 // our FileType constants.
-func nonRegularTypeToFileType(fileMode io.FileMode) FileType {
+func nonRegularTypeToFileType(fileMode fs.FileMode) FileType {
 	switch fileMode {
-	case io.ModeDir:
+	case fs.ModeDir:
 		return FileTypeDir
-	case io.ModeSymlink:
+	case fs.ModeSymlink:
 		return FileTypeLink
-	case io.ModeSocket:
+	case fs.ModeSocket:
 		return FileTypeSocket
-	case io.ModeDevice:
+	case fs.ModeDevice:
 		return FileTypeBlock
-	case io.ModeCharDevice:
+	case fs.ModeCharDevice:
 		return FileTypeChar
-	case io.ModeNamedPipe:
+	case fs.ModeNamedPipe:
 		return FileTypeFIFO
 	default:
 		return FileTypeUnknown
+	}
+}
+
+// FileOperation returns an Operation that can be used with Paths that calls
+// File() on each path the Operation receives and outputs the ToString() value
+// to the given output file.
+func FileOperation(output *os.File) Operation {
+	return func(path string, info fs.FileInfo) error {
+		_, errw := output.WriteString(File(path, info).ToString())
+
+		return errw
 	}
 }

@@ -37,11 +37,17 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
-const lstatSlowErr = Error("lstat exceeded timeout")
+const errLstatSlow = Error("lstat exceeded timeout")
 
-// Statter is something you use to get stats of files on disk. NB: this is NOT
-// thread safe; you should only call Lstat() one at a time.
-type Statter struct {
+// Statter is something you use to get stats of files on disk.
+type Statter interface {
+	// Lstat calls os.Lstat() on the given path, returning the FileInfo.
+	Lstat(path string) (info fs.FileInfo, err error)
+}
+
+// StatterWithTimeout is is a Statter implementation. NB: this is NOT thread
+// safe; you should only call Lstat() one at a time.
+type StatterWithTimeout struct {
 	timeout         time.Duration
 	maxAttempts     int
 	currentAttempts int
@@ -50,8 +56,8 @@ type Statter struct {
 
 // WithTimeout returns a Statter with the given timeout and maxAttempts
 // configured. Timeouts are logged with the given logger.
-func WithTimeout(timeout time.Duration, maxAttempts int, logger log15.Logger) *Statter {
-	return &Statter{
+func WithTimeout(timeout time.Duration, maxAttempts int, logger log15.Logger) *StatterWithTimeout {
+	return &StatterWithTimeout{
 		timeout:     timeout,
 		maxAttempts: maxAttempts,
 		logger:      logger,
@@ -61,7 +67,7 @@ func WithTimeout(timeout time.Duration, maxAttempts int, logger log15.Logger) *S
 // Lstat calls os.Lstat() on the given path, but times it out after our
 // configured timeout, retrying until we've hit our maxAttempts. NB: this is NOT
 // thread safe, don't call this concurrently.
-func (s *Statter) Lstat(path string) (info fs.FileInfo, err error) {
+func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 	infoCh := make(chan fs.FileInfo, 1)
 	errCh := make(chan error, 1)
 	s.currentAttempts++
@@ -83,7 +89,7 @@ func (s *Statter) Lstat(path string) (info fs.FileInfo, err error) {
 
 		s.logger.Warn("an lstat call exceeded timeout, giving up", "path", path, "attempts", s.currentAttempts)
 
-		err = lstatSlowErr
+		err = errLstatSlow
 		s.currentAttempts = 0
 
 		return
@@ -91,7 +97,7 @@ func (s *Statter) Lstat(path string) (info fs.FileInfo, err error) {
 }
 
 // doLstat does the actual Lstat call and sends results on the given channels.
-func (s *Statter) doLstat(path string, infoCh chan fs.FileInfo, errCh chan error) {
+func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh chan error) {
 	info, err := os.Lstat(path)
 	infoCh <- info
 	errCh <- err

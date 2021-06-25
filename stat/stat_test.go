@@ -41,36 +41,22 @@ func TestLstat(t *testing.T) {
 	attempts := 2
 
 	Convey("Given a Statter with large timeout", t, func() {
-		buff := new(bytes.Buffer)
-		l := log15.New()
-		l.SetHandler(log15.StreamHandler(buff, log15.LogfmtFormat()))
+		buff, l := newLogger()
 
 		s := WithTimeout(timeout, attempts, l)
 		So(s, ShouldNotBeNil)
 
 		Convey("you can call Lstat on it", func() {
-			dir := t.TempDir()
-			pathEmpty := filepath.Join(dir, "empty")
-
-			info, err := s.Lstat(pathEmpty)
+			info, err := s.Lstat("/foo/bar")
 			So(err, ShouldNotBeNil)
 			So(info, ShouldBeNil)
 
-			f, err := os.Create(pathEmpty)
-			So(err, ShouldBeNil)
-			f.Close()
+			pathEmpty, pathContent := createTestFiles(t)
 
 			info, err = s.Lstat(pathEmpty)
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
 			So(info.Size(), ShouldEqual, 0)
-
-			pathContent := filepath.Join(dir, "content")
-			f, err = os.Create(pathContent)
-			So(err, ShouldBeNil)
-			_, err = f.WriteString("1")
-			So(err, ShouldBeNil)
-			f.Close()
 
 			info, err = s.Lstat(pathContent)
 			So(err, ShouldBeNil)
@@ -106,4 +92,45 @@ func TestLstat(t *testing.T) {
 			})
 		})
 	})
+}
+
+// newLogger returns a logger that logs to the returned buffer.
+func newLogger() (*bytes.Buffer, log15.Logger) {
+	buff := new(bytes.Buffer)
+	l := log15.New()
+	l.SetHandler(log15.StreamHandler(buff, log15.LogfmtFormat()))
+
+	return buff, l
+}
+
+// createTestFiles creates 2 temp files, the first empty, the second 1 byte
+// long, and returns their paths.
+func createTestFiles(t *testing.T) (string, string) {
+	t.Helper()
+
+	dir := t.TempDir()
+	pathEmpty := filepath.Join(dir, "empty")
+
+	f, err := os.Create(pathEmpty)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f.Close()
+
+	pathContent := filepath.Join(dir, "content")
+
+	f, err = os.Create(pathContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.WriteString("1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f.Close()
+
+	return pathEmpty, pathContent
 }

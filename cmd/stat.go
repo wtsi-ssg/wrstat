@@ -26,18 +26,14 @@
 package cmd
 
 import (
-	"bufio"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/reporter"
 	"github.com/wtsi-ssg/wrstat/stat"
 )
 
-const reportFrequency = 10 * time.Second
+const reportFrequency = 10 * time.Minute
 const statOutputFileSuffix = ".stats"
 const lstatTimeout = 10 * time.Second
 const lstatAttempts = 3
@@ -121,43 +117,19 @@ func createStatOutputFile(input string) *os.File {
 // scanAndStatInput scans through the input, stats each path, and outputs the
 // results to the output. If debug is true, outputs timings for Lstat calls.
 func scanAndStatInput(input, output *os.File, debug bool) {
-	scanner := bufio.NewScanner(input)
-
-	r := reporter.New("lstat", appLogger)
+	var frequency time.Duration
 	if debug {
-		r.StartReporting(reportFrequency)
-		defer r.StopReporting()
+		frequency = reportFrequency
 	}
 
-	scanLoop(scanner, output, r)
-
-	if err := scanner.Err(); err != nil {
-		die("problem reading the input file: %s", err)
-	}
-}
-
-// scanLoop reads the input line by line and calls lstat on each path.
-func scanLoop(scanner *bufio.Scanner, output *os.File, r *reporter.Reporter) {
 	statter := stat.WithTimeout(lstatTimeout, lstatAttempts, appLogger)
+	p := stat.NewPaths(statter, appLogger, frequency)
 
-	for scanner.Scan() {
-		path := scanner.Text()
+	if err := p.AddOperation("file", stat.FileOperation(output)); err != nil {
+		die("%s", err)
+	}
 
-		var info fs.FileInfo
-
-		err := r.TimeOperation(func() error {
-			var lerr error
-			info, lerr = statter.Lstat(path)
-
-			return lerr
-		})
-		if err != nil {
-			continue
-		}
-
-		_, err = output.WriteString(stat.File(filepath.Dir(path), info).ToString())
-		if err != nil {
-			die("problem writing to output file: %s", err)
-		}
+	if err := p.Scan(input); err != nil {
+		die("%s", err)
 	}
 }
