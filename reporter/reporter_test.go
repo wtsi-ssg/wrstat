@@ -101,7 +101,7 @@ func TestReporter(t *testing.T) {
 			So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=foo count=2`)
 			reg := regexp.MustCompile("report since last")
 			matches := reg.FindAllStringIndex(buff.String(), -1)
-			So(len(matches), ShouldBeBetweenOrEqual, 2, 4)
+			So(len(matches), ShouldBeBetweenOrEqual, 2, 5)
 			So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=foo count=6`)
 			So(buff.String(), ShouldNotContainSubstring, `lvl=warn msg="report failed"`)
 
