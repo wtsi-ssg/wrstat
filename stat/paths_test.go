@@ -68,7 +68,8 @@ func TestPaths(t *testing.T) {
 				So(err, ShouldBeNil)
 
 				So(*sleepN, ShouldEqual, 2)
-				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=check count=2`)
+				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=check count=`)
+				So(buff.String(), ShouldNotContainSubstring, `lvl=info msg="report since last" op=check count=0`)
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=check count=2`)
 				So(buff.String(), ShouldNotContainSubstring, `file details wrong`)
 
