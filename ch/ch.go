@@ -43,7 +43,7 @@ const modePermUser = 0700
 const modePermGroup = 0070
 const modePermUserToGroupShit = 3
 
-// PathChecker is callback used by Ch that will receive the absolute path to a
+// PathChecker is a callback used by Ch that will receive the absolute path to a
 // file or directory and should return a boolean if this path is eligible for
 // changing, and the desired group ID of this path.
 type PathChecker func(path string) (change bool, gid int)
