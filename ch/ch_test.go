@@ -301,10 +301,13 @@ func createTestDir(t *testing.T, path string, sticky bool) fs.FileInfo {
 		t.Fatal(err)
 	}
 
+	mode := os.ModePerm
 	if sticky {
-		if err := os.Chmod(path, os.ModePerm|os.ModeSetgid); err != nil {
-			t.Fatal(err)
-		}
+		mode |= os.ModeSetgid
+	}
+
+	if err := os.Chmod(path, mode); err != nil {
+		t.Fatal(err)
 	}
 
 	return statFile(t, path)
