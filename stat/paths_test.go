@@ -78,7 +78,7 @@ func TestPaths(t *testing.T) {
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=fail count=0 time=0s ops/s=n/a`)
 				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=fail count=2`)
 
-				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=lstat count=2`)
+				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=lstat count=`)
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=lstat count=2`)
 				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=lstat count=1`)
 			})
