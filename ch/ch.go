@@ -29,6 +29,7 @@
 package ch
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"os/user"
@@ -74,29 +75,55 @@ func New(pc PathChecker, logger log15.Logger) *Ch {
 // 2. If path is a directory, ensures it has setgid applied (group sticky).
 // 3. Ensures that group permissions match user permissions.
 //
-// Any errors are returned without logging them. Any changes we do on disk are
-// logged to our logger.
+// Any errors are returned without logging them, except for "not exists" errors
+// which are silently ignored since these are expected.
+//
+// Any changes we do on disk are logged to our logger.
 func (c *Ch) Do(path string, info fs.FileInfo) error {
 	change, gid := c.pc(path)
 	if !change {
 		return nil
 	}
 
-	var merr error
+	chain := &chain{}
 
-	if err := c.chownGroup(path, getGIDFromFileInfo(info), gid); err != nil {
-		merr = multierror.Append(merr, err)
+	chain.Call(func() error {
+		return c.chownGroup(path, getGIDFromFileInfo(info), gid)
+	})
+
+	chain.Call(func() error {
+		return c.setgid(path, info)
+	})
+
+	chain.Call(func() error {
+		return c.matchPermissions(path, info)
+	})
+
+	return chain.merr
+}
+
+// chain lets you call a chain of functions and combine their errors.
+type chain struct {
+	merr error
+	stop bool
+}
+
+// Call will run your function and append any error to our merr, except for
+// os.ErrNotExist, which instead result in future Call()s to no-op.
+func (c *chain) Call(f func() error) {
+	if c.stop {
+		return
 	}
 
-	if err := c.setgid(path, info); err != nil {
-		merr = multierror.Append(merr, err)
-	}
+	if err := f(); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			c.stop = true
 
-	if err := c.matchPermissions(path, info); err != nil {
-		merr = multierror.Append(merr, err)
-	}
+			return
+		}
 
-	return merr
+		c.merr = multierror.Append(c.merr, err)
+	}
 }
 
 // getGIDFromFileInfo extracts the GID from a FileInfo. NB: this will only work

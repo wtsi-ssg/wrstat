@@ -35,10 +35,16 @@ import (
 	"strconv"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/inconshreveable/log15"
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+const longBasename = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+	"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+	"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+	"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 func TestCh(t *testing.T) {
 	primaryGID, otherGIDs := getGIDs(t)
@@ -122,17 +128,41 @@ func TestCh(t *testing.T) {
 			So(buff.String(), ShouldNotContainSubstring, `lvl=info msg="matched group permissions to user" path=`+paths[0])
 		})
 
-		Convey("Do on a bad path returns a set of errors", func() {
+		Convey("Do on a non-existent path does nothing", func() {
 			cbChange = true
 			err := ch.Do(invalidPath, infos[2])
+			So(err, ShouldBeNil)
+
+			cbGID = primaryGID
+			err = ch.Do(invalidPath, infos[3])
+			So(err, ShouldBeNil)
+			cbGID = otherGID
+
+			err = ch.Do(invalidPath, infos[1])
+			So(err, ShouldBeNil)
+
+			So(buff.String(), ShouldBeBlank)
+		})
+
+		Convey("Do on a bad path returns a set of errors", func() {
+			badPath := createBadPath(t)
+
+			cbChange = true
+			cbGID = -2
+			err := ch.Do(badPath, &badInfo{isDir: false})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "1 error occurred")
 
-			err = ch.Do(invalidPath, infos[3])
+			err = ch.Do(badPath, &badInfo{isDir: true})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "2 errors occurred")
 
-			err = ch.Do(invalidPath, infos[1])
+			err = ch.Do(badPath, &badInfo{isDir: false, perm: 9999})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "2 errors occurred")
+
+			cbGID = 0
+			err = ch.Do(badPath, &badInfo{isDir: false, perm: 9999})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "1 error occurred")
 		})
@@ -345,3 +375,66 @@ func newLogger() (*bytes.Buffer, log15.Logger) {
 
 	return buff, l
 }
+
+// createBadPath creates a directory with a path length greater than 4096, which
+// should cause issues.
+func createBadPath(t *testing.T) string {
+	t.Helper()
+
+	dir := t.TempDir()
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		err = os.Chdir(wd)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	badPath := dir
+
+	for i := 0; i < 17; i++ {
+		err = os.Chdir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = os.Mkdir(longBasename, os.ModePerm)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		dir = longBasename
+		badPath = filepath.Join(badPath, dir)
+	}
+
+	return badPath
+}
+
+// badInfo is an fs.FileInfo that has nonsense data.
+type badInfo struct {
+	isDir bool
+	perm  int
+}
+
+func (b *badInfo) Name() string { return "foo" }
+
+func (b *badInfo) Size() int64 { return -1 }
+
+func (b *badInfo) Mode() fs.FileMode {
+	if b.perm != 0 {
+		return fs.FileMode(b.perm)
+	}
+
+	return os.ModePerm
+}
+
+func (b *badInfo) ModTime() time.Time { return time.Now() }
+
+func (b *badInfo) IsDir() bool { return b.isDir }
+
+func (b *badInfo) Sys() interface{} { return &syscall.Stat_t{Gid: 0} }
