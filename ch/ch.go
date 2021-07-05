@@ -42,7 +42,7 @@ import (
 
 const modePermUser = 0700
 const modePermGroup = 0070
-const modePermUserToGroupShit = 3
+const modePermUserToGroupShift = 3
 
 // PathChecker is a callback used by Ch that will receive the absolute path to a
 // file or directory and should return a boolean if this path is eligible for
@@ -219,7 +219,7 @@ func extractUserAsGroupPermissions(mode fs.FileMode) fs.FileMode {
 		user = modePermUser
 	}
 
-	return user >> modePermUserToGroupShit
+	return user >> modePermUserToGroupShift
 }
 
 // extractGroupPermissions returns the user permission bits of the given mode.
