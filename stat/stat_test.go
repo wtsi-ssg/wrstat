@@ -79,7 +79,7 @@ func TestLstat(t *testing.T) {
 				So(logStr, ShouldNotContainSubstring, `attempts=4`)
 
 				buff.Reset()
-				info, err = s.Lstat(pathContent)
+				info, err = s.Lstat("/foo")
 				So(err, ShouldNotBeNil)
 				So(info, ShouldBeNil)
 				logStr = buff.String()
