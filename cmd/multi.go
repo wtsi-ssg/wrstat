@@ -43,6 +43,7 @@ const desiredToJobsMultiplier = 2
 var workDir string
 var finalDir string
 var multiJobs int
+var multiCh string
 
 // multiCmd represents the multi command.
 var multiCmd = &cobra.Command{
@@ -102,7 +103,7 @@ deleted.`,
 			die("failed to create working dir: %s", err)
 		}
 
-		scheduleWalkJobs(outputRoot, args, unique, multiJobs, s)
+		scheduleWalkJobs(outputRoot, args, unique, multiJobs, multiCh, s)
 		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	},
 }
@@ -114,19 +115,26 @@ func init() {
 	multiCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	multiCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
 	multiCmd.Flags().IntVarP(&multiJobs, "parallel_jobs", "n", 64, "number of parallel stat jobs per walk")
+	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
 // path.
-func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string, n int, s *scheduler.Scheduler) {
+func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
+	n int, yamlPath string, s *scheduler.Scheduler) {
 	jobs := make([]*jobqueue.Job, desiredToJobsMultiplier*len(desiredPaths))
+
+	cmd := fmt.Sprintf("%s walk -n %d ", s.Executable(), n)
+	if yamlPath != "" {
+		cmd += fmt.Sprintf("--ch %s ", yamlPath)
+	}
 
 	for i, path := range desiredPaths {
 		thisUnique := scheduler.UniqueString()
 		outDir := filepath.Join(outputRoot, filepath.Base(path), thisUnique)
 
-		jobs[i*2] = s.NewJob(fmt.Sprintf("%s walk -d %s -o %s -i %s -n %d %s",
-			s.Executable(), thisUnique, outDir, statRepGrp(path, unique), n, path),
+		jobs[i*2] = s.NewJob(fmt.Sprintf("%s -d %s -o %s -i %s %s",
+			cmd, thisUnique, outDir, statRepGrp(path, unique), path),
 			walkRepGrp(path, unique), "wrstat-walk", thisUnique, "")
 
 		jobs[i*2+1] = s.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),

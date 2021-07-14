@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/ch"
 	"github.com/wtsi-ssg/wrstat/stat"
 )
 
@@ -39,6 +40,7 @@ const lstatTimeout = 10 * time.Second
 const lstatAttempts = 3
 
 var statDebug bool
+var statCh string
 
 // statCmd represents the stat command.
 var statCmd = &cobra.Command{
@@ -71,24 +73,53 @@ The output file format is 11 tab separated columns with the following contents:
    'X': anything else
 9. Inode number (on unix).
 10. Number of hard links.
-11. Identifier of the device on which this file resides.`,
+11. Identifier of the device on which this file resides.
+
+If you supply a yaml file to --ch of the following format:
+prefixes: ["/disk1", "/disk2/sub", "/disk3"]
+lookupDir: subdir_name_of_prefixes_that_contains_subdirs_in_lookup
+lookup:
+  subdir_of_lookupDir: unix_group_name
+directDir: subdir_of_prefixes_with_unix_group_or_exception_subdirs
+exceptions:
+  subdir_of_directDir: GID 
+
+Then any input filesystem path that has one of those prefixes and contains a sub
+directory named lookupDir which further contains a sub directory matching one
+of the lookup keys, or named directDir and further containing a sub directory
+named after a unix group or one of the exceptions keys, then the following will
+be ensured:
+
+1. The GID of the path matches the desired GID. The desired GID is either:
+   a) for paths that are nested within a sub directory of a lookupDir, the GID
+      corresponding to the unix group in the lookup.
+   b) for paths that are nested within a sub directory of a directDir, the GID
+      corresponding to the GID in the exceptions, or of the corresponding unix
+	  group.
+2. If path is a directory, it has setgid applied (group sticky).
+3. Group permissions match user permissions.
+
+(Any changes caused by this will not be reflected in the output file, since
+the chmod and chown operations happen after path's stats are retrieved.)
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			die("exactly 1 input file should be provided")
 		}
 
-		statPathsInFile(args[0], statDebug)
+		statPathsInFile(args[0], statCh, statDebug)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(statCmd)
 
+	statCmd.Flags().StringVar(&statCh, "ch", "", "YAML file detailing paths to chmod & chown")
 	statCmd.Flags().BoolVar(&statDebug, "debug", false, "output Lstat timings")
 }
 
 // statPathsInFile does the main work.
-func statPathsInFile(inputPath string, debug bool) {
+func statPathsInFile(inputPath string, yamlPath string, debug bool) {
 	input, err := os.Open(inputPath)
 	if err != nil {
 		die("failed to open input file: %s", err)
@@ -101,7 +132,7 @@ func statPathsInFile(inputPath string, debug bool) {
 		}
 	}()
 
-	scanAndStatInput(input, createStatOutputFile(inputPath), debug)
+	scanAndStatInput(input, createStatOutputFile(inputPath), yamlPath, debug)
 }
 
 // createStatOutputFile creates a file named input.stats.
@@ -115,8 +146,13 @@ func createStatOutputFile(input string) *os.File {
 }
 
 // scanAndStatInput scans through the input, stats each path, and outputs the
-// results to the output. If debug is true, outputs timings for Lstat calls.
-func scanAndStatInput(input, output *os.File, debug bool) {
+// results to the output.
+//
+// If yamlPath is not empty, also does chmod and chown operations on certain
+// paths.
+//
+// If debug is true, outputs timings for Lstat calls.
+func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 	var frequency time.Duration
 	if debug {
 		frequency = reportFrequency
@@ -129,7 +165,33 @@ func scanAndStatInput(input, output *os.File, debug bool) {
 		die("%s", err)
 	}
 
+	if err := addChOperation(yamlPath, p); err != nil {
+		die("%s", err)
+	}
+
 	if err := p.Scan(input); err != nil {
 		die("%s", err)
 	}
+}
+
+// addChOperation adds the chmod&chown operation to the Paths if the yaml file
+// has valid contents. No-op if yamlPath is blank.
+func addChOperation(yamlPath string, p *stat.Paths) error {
+	if yamlPath == "" {
+		return nil
+	}
+
+	data, err := os.ReadFile(yamlPath)
+	if err != nil {
+		return err
+	}
+
+	from, err := ch.NewGIDFromSubDirFromYAML(data, appLogger)
+	if err != nil {
+		return err
+	}
+
+	c := ch.New(from.PathChecker(), appLogger)
+
+	return p.AddOperation("ch", c.Do)
 }

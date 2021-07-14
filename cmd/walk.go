@@ -41,6 +41,7 @@ var outputDir string
 var depGroup string
 var nJobs int
 var walkID string
+var walkCh string
 
 // walkCmd represents the walk command.
 var walkCmd = &cobra.Command{
@@ -57,7 +58,8 @@ For each entry recursively within the directory of interest, their paths are
 written to --parallel_jobs output files in the given output directory.
 
 For each output file, a 'wrstat stat' job is then added to wr's queue with the
-given dependency group.
+given dependency group. For the meaning of the --ch option which is passed
+through to stat, see 'wrstat stat -h'.
 
 (When jobs are added to wr's queue to get the work done, they are given a
 --rep_grp of wrstat-stat-[id], so you can use
@@ -78,7 +80,7 @@ completed (eg. by adding your own job that depends on that group, such as a
 			walkID = statRepGrp(desiredDir, scheduler.UniqueString())
 		}
 
-		walkDirAndScheduleStats(desiredDir, outputDir, nJobs, depGroup, walkID, s)
+		walkDirAndScheduleStats(desiredDir, outputDir, nJobs, depGroup, walkID, walkCh, s)
 	},
 }
 
@@ -95,6 +97,7 @@ func init() {
 		&depGroup,
 		"dependency_group", "d", "",
 		"dependency group that stat jobs added to wr will belong to")
+	walkCmd.Flags().StringVar(&walkCh, "ch", "", "passed through to 'wrstat stat'")
 }
 
 // checkArgs checks we have required args and returns desired dir.
@@ -121,9 +124,10 @@ func statRepGrp(dir, unique string) string {
 }
 
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, n int, depGroup, repGroup string, s *scheduler.Scheduler) {
+func walkDirAndScheduleStats(desiredDir, outputDir string, n int, depGroup, repGroup,
+	yamlPath string, s *scheduler.Scheduler) {
 	outPaths := writeAllPathsToFiles(desiredDir, outputDir, n)
-	scheduleStatJobs(outPaths, depGroup, repGroup, s)
+	scheduleStatJobs(outPaths, depGroup, repGroup, yamlPath, s)
 }
 
 // writeAllPathsToFiles quickly traverses the entire file tree, writing out
@@ -189,13 +193,18 @@ func walkDir(desiredDir string, files []*os.File) error {
 }
 
 // scheduleStatJobs adds a 'wrstat stat' job to wr's queue for each out path.
-// The jobs are added with the given dep and rep groups.
-func scheduleStatJobs(outPaths []string, depGroup string, repGrp string, s *scheduler.Scheduler) {
+// The jobs are added with the given dep and rep groups, and the given yaml for
+// the --ch arg if not blank.
+func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath string, s *scheduler.Scheduler) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
+	cmd := fmt.Sprintf("%s stat ", s.Executable())
+	if yamlPath != "" {
+		cmd += fmt.Sprintf("--ch %s ", yamlPath)
+	}
+
 	for i, path := range outPaths {
-		jobs[i] = s.NewJob(fmt.Sprintf("%s stat %s", s.Executable(), path),
-			repGrp, "wrstat-stat", depGroup, "")
+		jobs[i] = s.NewJob(cmd+path, repGrp, "wrstat-stat", depGroup, "")
 	}
 
 	addJobsToQueue(s, jobs)
