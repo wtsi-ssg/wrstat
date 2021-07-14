@@ -32,6 +32,7 @@ import (
 	"strings"
 
 	"github.com/inconshreveable/log15"
+	"gopkg.in/yaml.v2"
 )
 
 // regexp* consts relate to the groups matched in our main regexp.
@@ -42,6 +43,12 @@ const (
 )
 
 const badUnixGroup = -1
+
+type Error string
+
+func (e Error) Error() string { return string(e) }
+
+const errInvalidYAML = Error("YAML is missing properties")
 
 // GIDFromSubDir provides a PathChecker that can decide if a path should be
 // looked at based on matching a prefix followed by a certain sub directory
@@ -105,7 +112,8 @@ type GIDFromSubDir struct {
 // directDir is the name of a subdirectory of the prefix paths that contains
 // further subdirectories that are named after unix group names. Or their name
 // is a key in the exceptions map, and the corresponding value will be the GID
-// used.
+// used. NB. unix group name to GID lookups are cached in the supplied
+// exceptions map.
 //
 // If lookupDir contains a subdirectory that isn't in your lookup, or directDir
 // contains a subdirectory that isn't in your exceptions and isn't a unix group
@@ -222,4 +230,48 @@ func (f *GIDFromSubDir) directGID(group string) int {
 	f.exceptions[group] = gid
 
 	return gid
+}
+
+// yamlForGIDFromSubDir is the struct we decode YAML in to during
+// NewGIDFromSubDirFromYAML().
+type yamlForGIDFromSubDir struct {
+	Prefixes   []string
+	LookupDir  string `yaml:"lookupDir"`
+	DirectDir  string `yaml:"directDir"`
+	Lookup     map[string]string
+	Exceptions map[string]int
+}
+
+// valid checks that required fields have been set.
+func (y *yamlForGIDFromSubDir) valid() bool {
+	if len(y.Prefixes) == 0 || y.LookupDir == "" || y.DirectDir == "" || len(y.Lookup) == 0 {
+		return false
+	}
+
+	return true
+}
+
+// NewGIDFromSubDirFromYAML is like NewGIDFromSubDir, but instead of supplying
+// all the different args, you supply it YAML data in the following format:
+//
+// prefixes: ["/disk1", "/disk2/sub", "/disk3"]
+// lookupDir: subdir_name_of_prefixes_that_contains_subdirs_in_lookup
+// lookup:
+//   foo: unix_group_name
+// directDir: subdir_of_prefixes_with_unix_group_or_exception_subdirs
+// exceptions:
+//   bar: GID
+func NewGIDFromSubDirFromYAML(data []byte, logger log15.Logger) (*GIDFromSubDir, error) {
+	var yfgfs yamlForGIDFromSubDir
+
+	err := yaml.Unmarshal(data, &yfgfs)
+	if err != nil {
+		return nil, err
+	}
+
+	if !yfgfs.valid() {
+		return nil, errInvalidYAML
+	}
+
+	return NewGIDFromSubDir(yfgfs.Prefixes, yfgfs.LookupDir, yfgfs.Lookup, yfgfs.DirectDir, yfgfs.Exceptions, logger)
 }
