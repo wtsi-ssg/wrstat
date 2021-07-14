@@ -100,6 +100,28 @@ exceptions:
 		So(p, ShouldNotBeNil)
 
 		testPaths(p, otherGIDs[0], primaryName, otherName, buff)
+
+		Convey("You don't have to specify exceptions", func() {
+			data := `
+prefixes: ["/disk1", "/disk2/sub", "/disk3"]
+lookupDir: teams
+lookup:
+  foo: ` + otherName + `
+directDir: projects
+`
+
+			f, err := NewGIDFromSubDirFromYAML([]byte(data), l)
+			So(err, ShouldBeNil)
+			So(f, ShouldNotBeNil)
+
+			p := f.PathChecker()
+			So(p, ShouldNotBeNil)
+
+			ok, gid := p("/disk1/projects/foo/file2.txt")
+			So(ok, ShouldBeFalse)
+			So(gid, ShouldEqual, badUnixGroup)
+			So(buff.String(), ShouldContainSubstring, "subdir not a unix group name")
+		})
 	})
 
 	Convey("You can't create a GIDFromSubDir from invalid YAML", t, func() {

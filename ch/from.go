@@ -248,6 +248,10 @@ func (y *yamlForGIDFromSubDir) valid() bool {
 		return false
 	}
 
+	if y.Exceptions == nil {
+		y.Exceptions = make(map[string]int)
+	}
+
 	return true
 }
 

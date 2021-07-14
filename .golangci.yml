@@ -16,7 +16,7 @@ linters-settings:
     lines: 30
     statements: 20
   gocognit:
-    min-complexity: 8
+    min-complexity: 9
   nestif:
     min-complexity: 2
   gocyclo:
