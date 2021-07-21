@@ -40,14 +40,26 @@ import (
 )
 
 func TestUsergroup(t *testing.T) {
+	usr, err := user.Current()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	cuidI, err := strconv.Atoi(usr.Uid)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	cuid := uint32(cuidI)
+
 	Convey("Given a Usergroup", t, func() {
-		ug := New()
+		ug := NewByUserGroup()
 		So(ug, ShouldNotBeNil)
 
 		Convey("You can add file info to it which accumulates the info", func() {
-			err := ug.Add("/a/b/c/1.txt", newMockInfo(1, 2, 10, false))
+			err := ug.Add("/a/b/c/1.txt", newMockInfo(cuid, 2, 10, false))
 			So(err, ShouldBeNil)
-			err = ug.Add("/a/b/c/2.txt", newMockInfo(1, 2, 20, false))
+			err = ug.Add("/a/b/c/2.txt", newMockInfo(cuid, 2, 20, false))
 			So(err, ShouldBeNil)
 			err = ug.Add("/a/b/c/3.txt", newMockInfo(2, 2, 5, false))
 			So(err, ShouldBeNil)
@@ -55,19 +67,19 @@ func TestUsergroup(t *testing.T) {
 			So(err, ShouldBeNil)
 			err = ug.Add("/a/b/c/5", newMockInfo(2, 3, 1, true))
 			So(err, ShouldBeNil)
-			err = ug.Add("/a/b/6.txt", newMockInfo(1, 2, 30, false))
+			err = ug.Add("/a/b/6.txt", newMockInfo(cuid, 2, 30, false))
 			So(err, ShouldBeNil)
 
-			So(ug.store[1], ShouldNotBeNil)
+			So(ug.store[cuid], ShouldNotBeNil)
 			So(ug.store[2], ShouldNotBeNil)
 			So(ug.store[3], ShouldBeNil)
-			So(ug.store[1][2], ShouldNotBeNil)
-			So(ug.store[1][3], ShouldBeNil)
+			So(ug.store[cuid][2], ShouldNotBeNil)
+			So(ug.store[cuid][3], ShouldBeNil)
 
-			So(len(ug.store[1][2]), ShouldEqual, 3)
-			So(ug.store[1][2]["/a/b/c"], ShouldResemble, &summary{2, 30})
-			So(ug.store[1][2]["/a/b"], ShouldResemble, &summary{3, 60})
-			So(ug.store[1][2]["/a"], ShouldResemble, &summary{3, 60})
+			So(len(ug.store[cuid][2]), ShouldEqual, 3)
+			So(ug.store[cuid][2]["/a/b/c"], ShouldResemble, &summary{2, 30})
+			So(ug.store[cuid][2]["/a/b"], ShouldResemble, &summary{3, 60})
+			So(ug.store[cuid][2]["/a"], ShouldResemble, &summary{3, 60})
 
 			So(len(ug.store[2][2]), ShouldEqual, 3)
 			So(ug.store[2][2]["/a/b/c"], ShouldResemble, &summary{1, 5})
@@ -89,19 +101,16 @@ func TestUsergroup(t *testing.T) {
 					err = ug.Output(out)
 					So(err, ShouldBeNil)
 					err = out.Close()
-					So(err, ShouldBeNil)
+					So(err, ShouldNotBeNil)
 
 					o, errr := os.ReadFile(outPath)
 					So(errr, ShouldBeNil)
 					output := string(o)
 
-					u, errl := user.LookupId(strconv.Itoa(1))
-					So(errl, ShouldBeNil)
-
 					g, errl := user.LookupGroupId(strconv.Itoa(2))
 					So(errl, ShouldBeNil)
 
-					So(output, ShouldContainSubstring, u.Name+"\t"+g.Name+"\t/a/b/c\t2\t30\n")
+					So(output, ShouldContainSubstring, os.Getenv("USER")+"\t"+g.Name+"\t/a/b/c\t2\t30\n")
 
 					err = exec.Command("sort", "-C", outPath).Run()
 					So(err, ShouldBeNil)

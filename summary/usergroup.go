@@ -179,7 +179,7 @@ func (store userStore) sort() ([]string, []groupStore, error) {
 			return nil, nil, err
 		}
 
-		byUserName[u.Name] = gids
+		byUserName[u.Username] = gids
 	}
 
 	keys := make([]string, len(byUserName))
@@ -206,8 +206,8 @@ type Usergroup struct {
 	store userStore
 }
 
-// New returns a Usergroup.
-func New() *Usergroup {
+// NewByUserGroup returns a Usergroup.
+func NewByUserGroup() *Usergroup {
 	return &Usergroup{
 		store: make(userStore),
 	}
@@ -257,7 +257,8 @@ func addForEachDir(path string, size int64, store dirStore) {
 // usernames, groups and directories are sorted.
 //
 // Returns an error on failure to write, or if username or group can't be
-// determined from the uids and gids in the added file info.
+// determined from the uids and gids in the added file info. output is closed
+// on completion.
 func (u *Usergroup) Output(output *os.File) error {
 	users, gStores, err := u.store.sort()
 	if err != nil {
@@ -273,7 +274,7 @@ func (u *Usergroup) Output(output *os.File) error {
 		}
 	}
 
-	return nil
+	return output.Close()
 }
 
 // outputGroupDirectorySummariesForUser sortes the groups for this user and
