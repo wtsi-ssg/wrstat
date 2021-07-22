@@ -57,7 +57,9 @@ tidy assumes the working directory you give it is the "multi unique" from multi.
 It probably won't do the right thing if not.
 
 Final output files are named to include the given --date as follows:
-[date]_[interest basename].[interest unique].[multi unique].wrstat.gz
+[date]_[interest basename].[interest unique].[multi unique].[type].gz
+
+Where [type] is one of 'stats' or 'byusergroup'.
 
 Once all output files have been moved, the "multi unique" directory is deleted.
 
@@ -103,24 +105,40 @@ func init() {
 
 // moveAndDelete does the main work of this cmd.
 func moveAndDelete(sourceDir, destDir, date string) error {
-	outputPaths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, combineOutputFileBasename))
-	if err != nil {
+	if err := findAndMoveOutputs(sourceDir, destDir, date,
+		combineStatsOutputFileBasename, "stats.gz"); err != nil {
 		return err
 	}
 
-	err = moveOutputs(outputPaths, destDir, date)
-	if err != nil {
+	if err := findAndMoveOutputs(sourceDir, destDir, date,
+		combineUserGroupOutputFileBasename, "byusergroup.gz"); err != nil {
 		return err
 	}
 
 	return os.RemoveAll(sourceDir)
 }
 
+// findAndMoveOutputs finds output files in the given sourceDir with given
+// suffix and moves them to destDir, including date in the name.
+func findAndMoveOutputs(sourceDir, destDir, date, inputSuffix, outputSuffix string) error {
+	outputPaths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, inputSuffix))
+	if err != nil {
+		return err
+	}
+
+	err = moveOutputs(outputPaths, destDir, date, outputSuffix)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // moveOutputs moves each output file to the finalDir and changes its name to
 // the correct format.
-func moveOutputs(outputPaths []string, destDir, date string) error {
+func moveOutputs(outputPaths []string, destDir, date, suffix string) error {
 	for _, path := range outputPaths {
-		err := moveOutput(path, destDir, date)
+		err := moveOutput(path, destDir, date, suffix)
 		if err != nil {
 			return err
 		}
@@ -131,15 +149,16 @@ func moveOutputs(outputPaths []string, destDir, date string) error {
 
 // moveOutput moves an output file to the finalDir and changes its name to
 // the correct format.
-func moveOutput(source string, destDir, date string) error {
+func moveOutput(source string, destDir, date, suffix string) error {
 	interestUniqueDir := filepath.Dir(source)
 	interestBaseDir := filepath.Dir(interestUniqueDir)
 	multiUniqueDir := filepath.Dir(interestBaseDir)
-	dest := filepath.Join(destDir, fmt.Sprintf("%s_%s.%s.%s.wrstat.gz",
+	dest := filepath.Join(destDir, fmt.Sprintf("%s_%s.%s.%s.%s",
 		date,
 		filepath.Base(interestBaseDir),
 		filepath.Base(interestUniqueDir),
-		filepath.Base(multiUniqueDir)))
+		filepath.Base(multiUniqueDir),
+		suffix))
 
 	err := os.Rename(source, dest)
 	if err != nil {

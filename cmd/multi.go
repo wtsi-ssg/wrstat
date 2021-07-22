@@ -73,12 +73,15 @@ Once everything has completed, the final output files are moved to the given
 --final_output directory, with a name that includes the date this command was
 started, the basename of the directory operated on, a unique string per
 directory of interest, and a unique string for this call of multi:
-[year][month][day]_[directory_basename]/[interest unique].[unique].wrstat.gz
+[year][month][day]_[directory_basename]/[interest unique].[unique].[type].gz
 eg. for 'wrstat multi -i foo -w /path/a -f /path/b /mnt/foo /mnt/bar /home/bar'
 It might produce: 
-/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.wrstat.gz
-/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.wrstat.gz
-/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.wrstat.gz
+/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
 
 Finally, the unique subdirectory of --working_directory that was created is
 deleted.`,
@@ -138,7 +141,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 			walkRepGrp(path, unique), "wrstat-walk", thisUnique, "")
 
 		jobs[i*2+1] = s.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
-			combineRepGrp(path, unique), "wrstat-stat", unique, thisUnique)
+			combineRepGrp(path, unique), "wrstat-combine", unique, thisUnique)
 	}
 
 	addJobsToQueue(s, jobs)

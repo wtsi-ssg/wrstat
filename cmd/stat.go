@@ -32,10 +32,12 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/ch"
 	"github.com/wtsi-ssg/wrstat/stat"
+	"github.com/wtsi-ssg/wrstat/summary"
 )
 
 const reportFrequency = 10 * time.Minute
 const statOutputFileSuffix = ".stats"
+const statUserGroupSummaryOutputFileSuffix = ".byusergroup"
 const lstatTimeout = 10 * time.Second
 const lstatAttempts = 3
 
@@ -74,6 +76,28 @@ The output file format is 11 tab separated columns with the following contents:
 9. Inode number (on unix).
 10. Number of hard links.
 11. Identifier of the device on which this file resides.
+
+It also summarises file count and size information by grouping on
+user+group+directory, and stores this summary in another file named after the
+input file with a ".byusergroup" suffix. This is 5 tab separated columns with
+the following contents (sorted on the first 3 columns):
+
+1. username
+2. unix group name
+3. directory
+4. number of files nested under 3 belonging to both 1 & 2.
+5. total file size in bytes of the files in 4.
+
+For example, if user joe using unix group lemur had written 2 10 byte files to
+/disk1/dir1, 3 files to /disk1/dir1/dir1a, 1 file to /disk1/dir2, and 1 file to
+/disk1/dir1 as unix group fish, then the output would be:
+
+joe	fish	/disk1	1	10
+joe	fish	/disk1/dir1	1	10
+joe	lemur	/disk1	6	60
+joe	lemur	/disk1/dir1	5	50
+joe	lemur	/disk1/dir1/dir1a	3	30
+joe	lemur	/disk1/dir2	1	10
 
 If you supply a yaml file to --ch of the following format:
 prefixes: ["/disk1", "/disk2/sub", "/disk3"]
@@ -137,7 +161,13 @@ func statPathsInFile(inputPath string, yamlPath string, debug bool) {
 
 // createStatOutputFile creates a file named input.stats.
 func createStatOutputFile(input string) *os.File {
-	output, err := os.Create(input + statOutputFileSuffix)
+	return createOutputFileWithSuffix(input, statOutputFileSuffix)
+}
+
+// createOutputFileWithSuffix creates an output file named after prefixPath
+// appended with suffix.
+func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
+	output, err := os.Create(prefixPath + suffix)
 	if err != nil {
 		die("failed to create output file: %s", err)
 	}
@@ -151,7 +181,7 @@ func createStatOutputFile(input string) *os.File {
 // If yamlPath is not empty, also does chmod and chown operations on certain
 // paths.
 //
-// If debug is true, outputs timings for Lstat calls.
+// If debug is true, outputs timings for Lstat calls and other operations.
 func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 	var frequency time.Duration
 	if debug {
@@ -165,13 +195,43 @@ func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 		die("%s", err)
 	}
 
-	if err := addChOperation(yamlPath, p); err != nil {
+	outputUserGroupSummaryData, err := addUserGroupSummaryOperation(input.Name(), p)
+	if err != nil {
 		die("%s", err)
 	}
 
-	if err := p.Scan(input); err != nil {
+	if err = addChOperation(yamlPath, p); err != nil {
 		die("%s", err)
 	}
+
+	if err = p.Scan(input); err != nil {
+		die("%s", err)
+	}
+
+	if err = outputUserGroupSummaryData(); err != nil {
+		die("%s", err)
+	}
+}
+
+// addUserGroupSummaryOperation adds an operation to Paths that collects [user,
+// group, directory, count, size] summary information. It returns a function
+// that you should call after calling p.Scan(), which outputs the summary data
+// to file.
+func addUserGroupSummaryOperation(input string, p *stat.Paths) (func() error, error) {
+	output := createUserGroupSummaryOutputFile(input)
+
+	ug := summary.NewByUserGroup()
+
+	err := p.AddOperation("usergroup", ug.Add)
+
+	return func() error {
+		return ug.Output(output)
+	}, err
+}
+
+// createUserGroupSummaryOutputFile creates a file named input.byusergroup.
+func createUserGroupSummaryOutputFile(input string) *os.File {
+	return createOutputFileWithSuffix(input, statUserGroupSummaryOutputFileSuffix)
 }
 
 // addChOperation adds the chmod&chown operation to the Paths if the yaml file
