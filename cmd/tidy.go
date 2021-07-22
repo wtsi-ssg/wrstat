@@ -115,6 +115,11 @@ func moveAndDelete(sourceDir, destDir, date string) error {
 		return err
 	}
 
+	if err := findAndMoveOutputs(sourceDir, destDir, date,
+		combineGroupOutputFileBasename, "bygroup"); err != nil {
+		return err
+	}
+
 	return os.RemoveAll(sourceDir)
 }
 

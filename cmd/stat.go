@@ -26,6 +26,7 @@
 package cmd
 
 import (
+	"io/fs"
 	"os"
 	"time"
 
@@ -38,6 +39,7 @@ import (
 const reportFrequency = 10 * time.Minute
 const statOutputFileSuffix = ".stats"
 const statUserGroupSummaryOutputFileSuffix = ".byusergroup"
+const statGroupSummaryOutputFileSuffix = ".bygroup"
 const lstatTimeout = 10 * time.Second
 const lstatAttempts = 3
 
@@ -200,6 +202,11 @@ func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 		die("%s", err)
 	}
 
+	outputGroupSummaryData, err := addGroupSummaryOperation(input.Name(), p)
+	if err != nil {
+		die("%s", err)
+	}
+
 	if err = addChOperation(yamlPath, p); err != nil {
 		die("%s", err)
 	}
@@ -211,6 +218,10 @@ func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 	if err = outputUserGroupSummaryData(); err != nil {
 		die("%s", err)
 	}
+
+	if err = outputGroupSummaryData(); err != nil {
+		die("%s", err)
+	}
 }
 
 // addUserGroupSummaryOperation adds an operation to Paths that collects [user,
@@ -218,20 +229,37 @@ func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 // that you should call after calling p.Scan(), which outputs the summary data
 // to file.
 func addUserGroupSummaryOperation(input string, p *stat.Paths) (func() error, error) {
-	output := createUserGroupSummaryOutputFile(input)
-
 	ug := summary.NewByUserGroup()
 
-	err := p.AddOperation("usergroup", ug.Add)
+	return addSummaryOperator(input, statUserGroupSummaryOutputFileSuffix, "usergroup", p, ug)
+}
+
+// outputOperators are types returned by summary.New*().
+type outputOperator interface {
+	Add(path string, info fs.FileInfo) error
+	Output(output *os.File) error
+}
+
+// addSummaryOperator adds the operation method of o to p after creating an
+// output file with given suffix. Returns function that actually writes to the
+// output.
+func addSummaryOperator(input, suffix, logName string, p *stat.Paths, o outputOperator) (func() error, error) {
+	output := createOutputFileWithSuffix(input, suffix)
+
+	err := p.AddOperation(logName, o.Add)
 
 	return func() error {
-		return ug.Output(output)
+		return o.Output(output)
 	}, err
 }
 
-// createUserGroupSummaryOutputFile creates a file named input.byusergroup.
-func createUserGroupSummaryOutputFile(input string) *os.File {
-	return createOutputFileWithSuffix(input, statUserGroupSummaryOutputFileSuffix)
+// addGroupSummaryOperation adds an operation to Paths that collects [group,
+// user, count, size] summary information. It returns a function that you should
+// call after calling p.Scan(), which outputs the summary data to file.
+func addGroupSummaryOperation(input string, p *stat.Paths) (func() error, error) {
+	g := summary.NewByGroupUser()
+
+	return addSummaryOperator(input, statGroupSummaryOutputFileSuffix, "group", p, g)
 }
 
 // addChOperation adds the chmod&chown operation to the Paths if the yaml file

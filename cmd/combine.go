@@ -45,6 +45,8 @@ const bytesInMB = 1000000
 const pgzipWriterBlocksMultiplier = 2
 const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
+const combineGroupOutputFileBasename = "combine.bygroup"
+const numSummaryColumns = 2
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
@@ -84,6 +86,12 @@ you supplied 'wrstat walk'.`,
 		go func() {
 			defer wg.Done()
 			mergeAndCompressUserGroupFiles(sourceDir)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mergeGroupFiles(sourceDir)
 		}()
 
 		wg.Wait()
@@ -224,35 +232,56 @@ func createCombineUserGroupOutputFile(dir string) *os.File {
 // mergeUserGroupAndCompress merges the inputs and stores in the output,
 // compressed.
 func mergeUserGroupAndCompress(inputs []string, output *os.File) error {
-	cmd := exec.Command("sort", "-m", "--files0-from", "-")
+	return mergeFilesAndStreamToOutput(inputs, output, mergeUserGroupStreamToCompressedFile)
+}
 
-	sortStdin, err := cmd.StdinPipe()
+// mergeStreamToOutputFunc is one of our merge*StreamTo* functions.
+type mergeStreamToOutputFunc func(data io.ReadCloser, output *os.File) error
+
+// mergeFilesAndStreamToOutput merges the inputs files and streams the content
+// to the streamFunc.
+func mergeFilesAndStreamToOutput(inputs []string, output *os.File, streamFunc mergeStreamToOutputFunc) error {
+	sortMergeOutput, cleanup, err := mergeSortedFiles(inputs)
 	if err != nil {
 		return err
 	}
 
-	sortMergeOutput, err := cmd.StdoutPipe()
-	if err != nil {
+	if err = streamFunc(sortMergeOutput, output); err != nil {
 		return err
 	}
 
-	if err = cmd.Start(); err != nil {
-		return err
-	}
-
-	if err = sendFilePathsToSort(sortStdin, inputs); err != nil {
-		return err
-	}
-
-	if err = mergeUserGroupStreamToCompressedFile(sortMergeOutput, output); err != nil {
-		return err
-	}
-
-	if err = cmd.Wait(); err != nil {
+	if err = cleanup(); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// mergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
+// Returns a pipe of the output from sort, and function you should call after
+// you've finished reading the output to cleanup.
+func mergeSortedFiles(inputs []string) (io.ReadCloser, func() error, error) {
+	cmd := exec.Command("sort", "-m", "--files0-from", "-")
+
+	sortStdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sortMergeOutput, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = cmd.Start(); err != nil {
+		return nil, nil, err
+	}
+
+	if err = sendFilePathsToSort(sortStdin, inputs); err != nil {
+		return nil, nil, err
+	}
+
+	return sortMergeOutput, cmd.Wait, nil
 }
 
 // sendFilePathsToSort will pipe the given paths null terminated to the pipe.
@@ -274,25 +303,8 @@ func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
 func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
 	zw, closeOutput := compressOutput(output)
 
-	scanner := bufio.NewScanner(data)
-	previous := []string{"", "", "", "", ""}
-
-	for scanner.Scan() {
-		current := strings.Split(scanner.Text(), "\t")
-
-		if userGroupLinesMatch(previous, current) {
-			mergeUserGroupLines(previous, current)
-
-			continue
-		}
-
-		if previous[0] != "" {
-			if _, err := zw.Write([]byte(strings.Join(previous, "\t") + "\n")); err != nil {
-				return err
-			}
-		}
-
-		previous = current
+	if err := mergeUserGroupStreamToOutput(data, zw); err != nil {
+		return err
 	}
 
 	closeOutput()
@@ -300,19 +312,65 @@ func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) e
 	return nil
 }
 
-// userGroupLinesMatch returns true if the first 3 elements of a match the first
-// 3 elements of b, corresponding to username, group and directory matching in
-// 2 lines of byusergroup file output.
-func userGroupLinesMatch(a, b []string) bool {
-	return a[0] == b[0] && a[1] == b[1] && a[2] == b[2]
+// mergeUserGroupStreamToOutput merges pre-sorted (pre-merged) usergroup data
+// (eg. from a `sort -m` of .byusergroup files), summing consecutive lines with
+// the first 3 columns, and outputting the results.
+func mergeUserGroupStreamToOutput(data io.ReadCloser, output io.Writer) error {
+	return mergeSummaryLines(data, 3, output)
 }
 
-// mergeUserGroupLines will sum the 4th element of a and b and store the result
-// in a[3], and likewise for the 5th element in a[4]. This corresponds to
-// summing the file count and size columns of 2 lines in a byusergroup file.
-func mergeUserGroupLines(a, b []string) {
-	a[3] = addNumberStrings(a[3], b[3])
-	a[4] = addNumberStrings(a[4], b[4])
+// mergeSummaryLines merges pre-sorted (pre-merged) summary data (eg. from a
+// `sort -m` of .by* files), summing consecutive lines that have the same values
+// in the first matchColumns columns, and outputting the results.
+func mergeSummaryLines(data io.ReadCloser, matchColumns int, output io.Writer) error {
+	scanner := bufio.NewScanner(data)
+	previous := make([]string, matchColumns+numSummaryColumns)
+
+	for scanner.Scan() {
+		current := strings.Split(scanner.Text(), "\t")
+
+		if summaryLinesMatch(matchColumns, previous, current) {
+			mergeMatchingSummaryLines(previous, current)
+
+			continue
+		}
+
+		if previous[0] != "" {
+			if _, err := output.Write([]byte(strings.Join(previous, "\t") + "\n")); err != nil {
+				return err
+			}
+		}
+
+		previous = current
+	}
+
+	_, err := output.Write([]byte(strings.Join(previous, "\t") + "\n"))
+
+	return err
+}
+
+// summaryLinesMatch returns true if the first matchColumns elements of 'a'
+// match the first matchColums elements of 'b'.
+func summaryLinesMatch(matchColumns int, a, b []string) bool {
+	for i := 0; i < matchColumns; i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// mergeMatchingSummaryLines will sum the second to last element of a and b and
+// store the result in a[penultimate], and likewise for the last element in
+// a[last]. This corresponds to summing the file count and size columns of 2
+// lines in a by* file.
+func mergeMatchingSummaryLines(a, b []string) {
+	last := len(a) - 1
+	penultimate := last - 1
+
+	a[penultimate] = addNumberStrings(a[penultimate], b[penultimate])
+	a[last] = addNumberStrings(a[last], b[last])
 }
 
 // addNumberStrings treats a and b as ints, adds them together, and returns the
@@ -329,4 +387,43 @@ func atoi(n string) int64 {
 	}
 
 	return i
+}
+
+// mergeGroupFiles finds and merges the bygroup files.
+func mergeGroupFiles(sourceDir string) {
+	paths := findGroupFilePaths(sourceDir)
+	output := createCombineGroupOutputFile(sourceDir)
+
+	err := mergeGroups(paths, output)
+	if err != nil {
+		die("failed to merge the bygroup files: %s", err)
+	}
+}
+
+// findGroupFilePaths returns files in the given dir named with a
+// '.bygroup' suffix.
+func findGroupFilePaths(dir string) []string {
+	return findFilePathsInDir(dir, statGroupSummaryOutputFileSuffix)
+}
+
+// createCombineGroupOutputFile creates a usergroup output file in the given
+// dir.
+func createCombineGroupOutputFile(dir string) *os.File {
+	return createOutputFileInDir(dir, combineGroupOutputFileBasename)
+}
+
+// mergeGroups merges and outputs bygroup data.
+func mergeGroups(inputs []string, output *os.File) error {
+	return mergeFilesAndStreamToOutput(inputs, output, mergeGroupStreamToFile)
+}
+
+// mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
+// (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
+// the first 2 columns, and outputting the results.
+func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
+	if err := mergeSummaryLines(data, 2, output); err != nil {
+		return err
+	}
+
+	return output.Close()
 }
