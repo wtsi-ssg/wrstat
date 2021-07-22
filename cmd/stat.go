@@ -197,12 +197,7 @@ func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 		die("%s", err)
 	}
 
-	outputUserGroupSummaryData, err := addUserGroupSummaryOperation(input.Name(), p)
-	if err != nil {
-		die("%s", err)
-	}
-
-	outputGroupSummaryData, err := addGroupSummaryOperation(input.Name(), p)
+	postScan, err := addSummaryOperations(input.Name(), p)
 	if err != nil {
 		die("%s", err)
 	}
@@ -215,13 +210,31 @@ func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 		die("%s", err)
 	}
 
-	if err = outputUserGroupSummaryData(); err != nil {
+	if err = postScan(); err != nil {
 		die("%s", err)
+	}
+}
+
+// addSummaryOperations adds summary operations to p. Returns a function that
+// should be called after p.Scan.
+func addSummaryOperations(input string, p *stat.Paths) (func() error, error) {
+	outputUserGroupSummaryData, err := addUserGroupSummaryOperation(input, p)
+	if err != nil {
+		return nil, err
 	}
 
-	if err = outputGroupSummaryData(); err != nil {
-		die("%s", err)
+	outputGroupSummaryData, err := addGroupSummaryOperation(input, p)
+	if err != nil {
+		return nil, err
 	}
+
+	return func() error {
+		if err = outputUserGroupSummaryData(); err != nil {
+			return err
+		}
+
+		return outputGroupSummaryData()
+	}, nil
 }
 
 // addUserGroupSummaryOperation adds an operation to Paths that collects [user,
