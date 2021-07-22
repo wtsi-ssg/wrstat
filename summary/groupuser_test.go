@@ -26,20 +26,17 @@
 package summary
 
 import (
-	"io/fs"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
-	"syscall"
 	"testing"
-	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestUsergroup(t *testing.T) {
+func TestGroupUser(t *testing.T) {
 	usr, err := user.Current()
 	if err != nil {
 		t.Fatal(err.Error())
@@ -52,33 +49,25 @@ func TestUsergroup(t *testing.T) {
 
 	cuid := uint32(cuidI)
 
-	Convey("Given a Usergroup", t, func() {
-		ug := NewByUserGroup()
+	Convey("Given a GroupUser", t, func() {
+		ug := NewByGroupUser()
 		So(ug, ShouldNotBeNil)
 
 		Convey("You can add file info to it which accumulates the info", func() {
 			addTestData(ug, cuid)
 
-			So(ug.store[cuid], ShouldNotBeNil)
 			So(ug.store[2], ShouldNotBeNil)
-			So(ug.store[3], ShouldBeNil)
-			So(ug.store[cuid][2], ShouldNotBeNil)
-			So(ug.store[cuid][3], ShouldBeNil)
+			So(ug.store[3], ShouldNotBeNil)
+			So(ug.store[2][cuid], ShouldNotBeNil)
+			So(ug.store[2][2], ShouldNotBeNil)
+			So(ug.store[3][2], ShouldNotBeNil)
+			So(ug.store[3][cuid], ShouldBeNil)
 
-			So(len(ug.store[cuid][2]), ShouldEqual, 3)
-			So(ug.store[cuid][2]["/a/b/c"], ShouldResemble, &summary{2, 30})
-			So(ug.store[cuid][2]["/a/b"], ShouldResemble, &summary{3, 60})
-			So(ug.store[cuid][2]["/a"], ShouldResemble, &summary{3, 60})
+			So(ug.store[2][cuid], ShouldResemble, &summary{3, 60})
 
-			So(len(ug.store[2][2]), ShouldEqual, 3)
-			So(ug.store[2][2]["/a/b/c"], ShouldResemble, &summary{1, 5})
-			So(ug.store[2][2]["/a/b"], ShouldResemble, &summary{1, 5})
-			So(ug.store[2][2]["/a"], ShouldResemble, &summary{1, 5})
+			So(ug.store[2][2], ShouldResemble, &summary{1, 5})
 
-			So(len(ug.store[2][3]), ShouldEqual, 3)
-			So(ug.store[2][3]["/a/b/c"], ShouldResemble, &summary{1, 6})
-			So(ug.store[2][3]["/a/b"], ShouldResemble, &summary{1, 6})
-			So(ug.store[2][3]["/a"], ShouldResemble, &summary{1, 6})
+			So(ug.store[3][2], ShouldResemble, &summary{1, 6})
 
 			Convey("And then given an output file", func() {
 				dir := t.TempDir()
@@ -99,7 +88,7 @@ func TestUsergroup(t *testing.T) {
 					g, errl := user.LookupGroupId(strconv.Itoa(2))
 					So(errl, ShouldBeNil)
 
-					So(output, ShouldContainSubstring, os.Getenv("USER")+"\t"+g.Name+"\t/a/b/c\t2\t30\n")
+					So(output, ShouldContainSubstring, g.Name+"\t"+os.Getenv("USER")+"\t3\t60\n")
 
 					err = exec.Command("sort", "-C", outPath).Run()
 					So(err, ShouldBeNil)
@@ -136,69 +125,4 @@ func TestUsergroup(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 	})
-}
-
-// byColumnAdder describes one of our New* types.
-type byColumnAdder interface {
-	Add(string, fs.FileInfo) error
-}
-
-func addTestData(a byColumnAdder, cuid uint32) {
-	err := a.Add("/a/b/c/1.txt", newMockInfo(cuid, 2, 10, false))
-	So(err, ShouldBeNil)
-	err = a.Add("/a/b/c/2.txt", newMockInfo(cuid, 2, 20, false))
-	So(err, ShouldBeNil)
-	err = a.Add("/a/b/c/3.txt", newMockInfo(2, 2, 5, false))
-	So(err, ShouldBeNil)
-	err = a.Add("/a/b/c/4.txt", newMockInfo(2, 3, 6, false))
-	So(err, ShouldBeNil)
-	err = a.Add("/a/b/c/5", newMockInfo(2, 3, 1, true))
-	So(err, ShouldBeNil)
-	err = a.Add("/a/b/6.txt", newMockInfo(cuid, 2, 30, false))
-	So(err, ShouldBeNil)
-}
-
-// mockInfo is an fs.FileInfo that has given data.
-type mockInfo struct {
-	uid   uint32
-	gid   uint32
-	size  int64
-	isDir bool
-}
-
-func newMockInfo(uid, gid uint32, size int64, dir bool) *mockInfo {
-	return &mockInfo{
-		uid:   uid,
-		gid:   gid,
-		size:  size,
-		isDir: dir,
-	}
-}
-
-func (m *mockInfo) Name() string { return "" }
-
-func (m *mockInfo) Size() int64 { return m.size }
-
-func (m *mockInfo) Mode() fs.FileMode {
-	return os.ModePerm
-}
-
-func (m *mockInfo) ModTime() time.Time { return time.Now() }
-
-func (m *mockInfo) IsDir() bool { return m.isDir }
-
-func (m *mockInfo) Sys() interface{} {
-	return &syscall.Stat_t{
-		Uid: m.uid,
-		Gid: m.gid,
-	}
-}
-
-// badInfo is a mockInfo that has a Sys() that returns nonsense.
-type badInfo struct {
-	mockInfo
-}
-
-func (b *badInfo) Sys() interface{} {
-	return "foo"
 }

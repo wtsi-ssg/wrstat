@@ -133,16 +133,30 @@ func (store groupStore) sort(gidLookupCache map[uint32]string) ([]string, []dirS
 
 // gidToName converts gid to group name, using the given cache to avoid lookups.
 func gidToName(gid uint32, cache map[uint32]string) (string, error) {
-	if name, ok := cache[gid]; ok {
+	return cachedIDToName(gid, cache, getGroupName)
+}
+
+func cachedIDToName(id uint32, cache map[uint32]string, lookup func(string) (string, error)) (string, error) {
+	if name, ok := cache[id]; ok {
 		return name, nil
 	}
 
-	g, err := user.LookupGroupId(strconv.Itoa(int(gid)))
+	name, err := lookup(strconv.Itoa(int(id)))
 	if err != nil {
 		return "", err
 	}
 
-	cache[gid] = g.Name
+	cache[id] = name
+
+	return name, nil
+}
+
+// getGroupName returns the name of the group given gid.
+func getGroupName(id string) (string, error) {
+	g, err := user.LookupGroupId(id)
+	if err != nil {
+		return "", err
+	}
 
 	return g.Name, nil
 }

@@ -62,6 +62,12 @@ issues:
     - path: version\.go
       linters:
         - forbidigo
+    - path: groupuser\.go
+      linters:
+        - dupl
+    - path: usergroup\.go
+      linters:
+        - dupl
   max-issues-per-linter: 0
   max-same-issues: 0
   new-from-rev: master
