@@ -29,9 +29,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/user"
 	"sort"
-	"strconv"
 	"syscall"
 )
 
@@ -50,21 +48,17 @@ func (store userToSummaryStore) add(uid uint32, size int64) {
 }
 
 // sort returns a slice of our summary values, sorted by our uid keys converted
-// to user names, which are also returned. Returns an error if a uid couldn't be
-// converted to a user name.
+// to user names, which are also returned.
+//
+// If uid is invalid, user name will be id[uid].
 //
 // If you will be sorting multiple different userToSummaryStores, supply them
 // all the same uidLookupCache which is used to minimise uid to name lookups.
-func (store userToSummaryStore) sort(uidLookupCache map[uint32]string) ([]string, []*summary, error) {
+func (store userToSummaryStore) sort(uidLookupCache map[uint32]string) ([]string, []*summary) {
 	byUserName := make(map[string]*summary)
 
 	for uid, summary := range store {
-		name, err := uidToName(uid, uidLookupCache)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		byUserName[name] = summary
+		byUserName[uidToName(uid, uidLookupCache)] = summary
 	}
 
 	keys := make([]string, len(byUserName))
@@ -83,22 +77,12 @@ func (store userToSummaryStore) sort(uidLookupCache map[uint32]string) ([]string
 		s[i] = byUserName[k]
 	}
 
-	return keys, s, nil
+	return keys, s
 }
 
 // uidToName converts uid to username, using the given cache to avoid lookups.
-func uidToName(uid uint32, cache map[uint32]string) (string, error) {
+func uidToName(uid uint32, cache map[uint32]string) string {
 	return cachedIDToName(uid, cache, getUserName)
-}
-
-// getUserName returns the username of the user given uid.
-func getUserName(id string) (string, error) {
-	u, err := user.LookupId(id)
-	if err != nil {
-		return "", err
-	}
-
-	return u.Username, nil
 }
 
 // groupToUserStore is a sortable map of gid to userToSummaryStore.
@@ -116,18 +100,13 @@ func (store groupToUserStore) getGroupToUserStore(gid uint32) userToSummaryStore
 }
 
 // sort returns a slice of our userToSummaryStore values, sorted by our gid keys
-// converted to unix group names, which are also returned. Returns an error if a
-// gid couldn't be converted to a name.
-func (store groupToUserStore) sort() ([]string, []userToSummaryStore, error) {
+// converted to unix group names, which are also returned. If gid has no group
+// name, name becomes id[gid].
+func (store groupToUserStore) sort() ([]string, []userToSummaryStore) {
 	byGroupName := make(map[string]userToSummaryStore)
 
 	for gid, uStore := range store {
-		g, err := user.LookupGroupId(strconv.Itoa(int(gid)))
-		if err != nil {
-			return nil, nil, err
-		}
-
-		byGroupName[g.Name] = uStore
+		byGroupName[getGroupName(gid)] = uStore
 	}
 
 	keys := make([]string, len(byGroupName))
@@ -146,7 +125,7 @@ func (store groupToUserStore) sort() ([]string, []userToSummaryStore, error) {
 		s[i] = byGroupName[k]
 	}
 
-	return keys, s, nil
+	return keys, s
 }
 
 // GroupUser is used to summarise file stats by group and user.
@@ -191,16 +170,12 @@ func (g *GroupUser) Add(path string, info fs.FileInfo) error {
 // determined from the uids and gids in the added file info. output is closed
 // on completion.
 func (g *GroupUser) Output(output *os.File) error {
-	groups, uStores, err := g.store.sort()
-	if err != nil {
-		return err
-	}
+	groups, uStores := g.store.sort()
 
 	uidLookupCache := make(map[uint32]string)
 
 	for i, groupname := range groups {
-		err = outputUserSummariesForGroup(output, groupname, uStores[i], uidLookupCache)
-		if err != nil {
+		if err := outputUserSummariesForGroup(output, groupname, uStores[i], uidLookupCache); err != nil {
 			return err
 		}
 	}
@@ -212,15 +187,12 @@ func (g *GroupUser) Output(output *os.File) error {
 // summary information.
 func outputUserSummariesForGroup(output *os.File, groupname string,
 	uStore userToSummaryStore, uidLookupCache map[uint32]string) error {
-	usernames, summaries, err := uStore.sort(uidLookupCache)
-	if err != nil {
-		return err
-	}
+	usernames, summaries := uStore.sort(uidLookupCache)
 
 	for i, s := range summaries {
-		_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n", groupname, usernames[i], s.count, s.size))
-		if errw != nil {
-			return errw
+		if _, err := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n",
+			groupname, usernames[i], s.count, s.size)); err != nil {
+			return err
 		}
 	}
 

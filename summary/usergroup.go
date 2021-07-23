@@ -95,21 +95,17 @@ func (store groupStore) getDirStore(gid uint32) dirStore {
 }
 
 // sort returns a slice of our dirStore values, sorted by our gid keys converted
-// to group names, which are also returned. Returns an error if a gid couldn't
-// be converted to a group name.
+// to group names, which are also returned.
+//
+// If a gid is invalid, the name will be id[gid].
 //
 // If you will be sorting multiple different groupStores, supply them all the
 // same gidLookupCache which is used to minimise gid to name lookups.
-func (store groupStore) sort(gidLookupCache map[uint32]string) ([]string, []dirStore, error) {
+func (store groupStore) sort(gidLookupCache map[uint32]string) ([]string, []dirStore) {
 	byGroupName := make(map[string]dirStore)
 
 	for gid, dStore := range store {
-		name, err := gidToName(gid, gidLookupCache)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		byGroupName[name] = dStore
+		byGroupName[gidToName(gid, gidLookupCache)] = dStore
 	}
 
 	keys := make([]string, len(byGroupName))
@@ -128,37 +124,37 @@ func (store groupStore) sort(gidLookupCache map[uint32]string) ([]string, []dirS
 		s[i] = byGroupName[k]
 	}
 
-	return keys, s, nil
+	return keys, s
 }
 
 // gidToName converts gid to group name, using the given cache to avoid lookups.
-func gidToName(gid uint32, cache map[uint32]string) (string, error) {
+func gidToName(gid uint32, cache map[uint32]string) string {
 	return cachedIDToName(gid, cache, getGroupName)
 }
 
-func cachedIDToName(id uint32, cache map[uint32]string, lookup func(string) (string, error)) (string, error) {
+func cachedIDToName(id uint32, cache map[uint32]string, lookup func(uint32) string) string {
 	if name, ok := cache[id]; ok {
-		return name, nil
+		return name
 	}
 
-	name, err := lookup(strconv.Itoa(int(id)))
-	if err != nil {
-		return "", err
-	}
+	name := lookup(id)
 
 	cache[id] = name
 
-	return name, nil
+	return name
 }
 
-// getGroupName returns the name of the group given gid.
-func getGroupName(id string) (string, error) {
-	g, err := user.LookupGroupId(id)
+// getGroupName returns the name of the group given gid. If the lookup fails,
+// returns "idxxx", where xxx is the given id as a string.
+func getGroupName(id uint32) string {
+	sid := strconv.Itoa(int(id))
+
+	g, err := user.LookupGroupId(sid)
 	if err != nil {
-		return "", err
+		return "id" + sid
 	}
 
-	return g.Name, nil
+	return g.Name
 }
 
 // userStore is a sortable map of uid to groupStore.
@@ -182,18 +178,13 @@ func (store userStore) getGroupStore(uid uint32) groupStore {
 }
 
 // sort returns a slice of our groupStore values, sorted by our uid keys
-// converted to user names, which are also returned. Returns an error if a uid
-// couldn't be converted to a user name.
-func (store userStore) sort() ([]string, []groupStore, error) {
+// converted to user names, which are also returned. If uid has no user name,
+// user name will be id[uid].
+func (store userStore) sort() ([]string, []groupStore) {
 	byUserName := make(map[string]groupStore)
 
 	for uid, gids := range store {
-		u, err := user.LookupId(strconv.Itoa(int(uid)))
-		if err != nil {
-			return nil, nil, err
-		}
-
-		byUserName[u.Username] = gids
+		byUserName[getUserName(uid)] = gids
 	}
 
 	keys := make([]string, len(byUserName))
@@ -212,7 +203,20 @@ func (store userStore) sort() ([]string, []groupStore, error) {
 		s[i] = byUserName[k]
 	}
 
-	return keys, s, nil
+	return keys, s
+}
+
+// getUserName returns the username of the given uid. If the lookup fails,
+// returns "idxxx", where xxx is the given id as a string.
+func getUserName(id uint32) string {
+	sid := strconv.Itoa(int(id))
+
+	u, err := user.LookupId(sid)
+	if err != nil {
+		return "id" + sid
+	}
+
+	return u.Username
 }
 
 // Usergroup is used to summarise file stats by user and group.
@@ -274,16 +278,12 @@ func addForEachDir(path string, size int64, store dirStore) {
 // determined from the uids and gids in the added file info. output is closed
 // on completion.
 func (u *Usergroup) Output(output *os.File) error {
-	users, gStores, err := u.store.sort()
-	if err != nil {
-		return err
-	}
+	users, gStores := u.store.sort()
 
 	gidLookupCache := make(map[uint32]string)
 
 	for i, username := range users {
-		err = outputGroupDirectorySummariesForUser(output, username, gStores[i], gidLookupCache)
-		if err != nil {
+		if err := outputGroupDirectorySummariesForUser(output, username, gStores[i], gidLookupCache); err != nil {
 			return err
 		}
 	}
@@ -295,14 +295,10 @@ func (u *Usergroup) Output(output *os.File) error {
 // calls outputDirectorySummariesForGroup.
 func outputGroupDirectorySummariesForUser(output *os.File, username string,
 	gStore groupStore, gidLookupCache map[uint32]string) error {
-	groupnames, dStores, err := gStore.sort(gidLookupCache)
-	if err != nil {
-		return err
-	}
+	groupnames, dStores := gStore.sort(gidLookupCache)
 
 	for i, groupname := range groupnames {
-		err = outputDirectorySummariesForGroup(output, username, groupname, dStores[i])
-		if err != nil {
+		if err := outputDirectorySummariesForGroup(output, username, groupname, dStores[i]); err != nil {
 			return err
 		}
 	}

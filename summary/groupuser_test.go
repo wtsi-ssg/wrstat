@@ -94,20 +94,14 @@ func TestGroupUser(t *testing.T) {
 					So(err, ShouldBeNil)
 				})
 
-				Convey("Output fails if there were bad uids", func() {
+				Convey("Output handles bad uids", func() {
 					err = ug.Add("/a/b/c/7.txt", newMockInfo(999999999, 2, 1, false))
-					So(err, ShouldBeNil)
-
-					err = ug.Output(out)
-					So(err, ShouldNotBeNil)
+					testBadIds(err, ug, out, outPath)
 				})
 
-				Convey("Output fails if there were bad gids", func() {
+				Convey("Output handles bad gids", func() {
 					err = ug.Add("/a/b/c/8.txt", newMockInfo(1, 999999999, 1, false))
-					So(err, ShouldBeNil)
-
-					err = ug.Output(out)
-					So(err, ShouldNotBeNil)
+					testBadIds(err, ug, out, outPath)
 				})
 
 				Convey("Output fails if we can't write to the output file", func() {
