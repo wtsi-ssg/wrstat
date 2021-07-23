@@ -171,11 +171,13 @@ func testPaths(p PathChecker, expectedGID int, expectedName1, expectedName2 stri
 		So(ok, ShouldBeFalse)
 		So(gid, ShouldEqual, badUnixGroup)
 		So(buff.String(), ShouldContainSubstring, "subdir not in group lookup")
+		So(buff.String(), ShouldContainSubstring, "path=/disk1/teams/bar/file1.txt")
 		buff.Reset()
 
 		ok, gid = p("/disk1/projects/bar/file2.txt")
 		So(ok, ShouldBeFalse)
 		So(gid, ShouldEqual, badUnixGroup)
 		So(buff.String(), ShouldContainSubstring, "subdir not a unix group name")
+		So(buff.String(), ShouldContainSubstring, "path=/disk1/projects/bar/file2.txt")
 	})
 }

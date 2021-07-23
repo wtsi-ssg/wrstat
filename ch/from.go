@@ -190,9 +190,9 @@ func (f *GIDFromSubDir) PathChecker() PathChecker {
 		}
 
 		if parts[regexpDirPart] == f.lookupDir {
-			gid = f.lookupGID(parts[regexpGroupPart])
+			gid = f.lookupGID(parts[regexpGroupPart], path)
 		} else {
-			gid = f.directGID(parts[regexpGroupPart])
+			gid = f.directGID(parts[regexpGroupPart], path)
 		}
 
 		change = gid != badUnixGroup
@@ -203,26 +203,26 @@ func (f *GIDFromSubDir) PathChecker() PathChecker {
 
 // lookupGID returns the GID corresponding to the unix group value in our
 // lookup with the given key.
-func (f *GIDFromSubDir) lookupGID(key string) int {
+func (f *GIDFromSubDir) lookupGID(key, fullPath string) int {
 	if gid, set := f.lookup[key]; set {
 		return gid
 	}
 
-	f.logger.Warn("subdir not in group lookup", "dir", key)
+	f.logger.Warn("subdir not in group lookup", "dir", key, "path", fullPath)
 
 	return badUnixGroup
 }
 
 // directGID returns the GID corresponding to the given unix group, unless group
 // is in our exceptions map, in which case that value is returned.
-func (f *GIDFromSubDir) directGID(group string) int {
+func (f *GIDFromSubDir) directGID(group, fullPath string) int {
 	if gid, set := f.exceptions[group]; set {
 		return gid
 	}
 
 	gid, err := gidFromName(group)
 	if err != nil {
-		f.logger.Warn("subdir not a unix group name", "dir", group)
+		f.logger.Warn("subdir not a unix group name", "dir", group, "path", fullPath)
 
 		gid = badUnixGroup
 	}
