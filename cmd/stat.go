@@ -81,7 +81,7 @@ The output file format is 11 tab separated columns with the following contents:
 
 It also summarises file count and size information by grouping on
 user+group+directory, and stores this summary in another file named after the
-input file with a ".byusergroup" suffix. This is 5 tab separated columns with
+input file with a ".byusergroup.gz" suffix. This is 5 tab separated columns with
 the following contents (sorted on the first 3 columns):
 
 1. username
@@ -100,6 +100,16 @@ joe	lemur	/disk1	6	60
 joe	lemur	/disk1/dir1	5	50
 joe	lemur	/disk1/dir1/dir1a	3	30
 joe	lemur	/disk1/dir2	1	10
+
+It also summarises file count and size information by grouping on group+user,
+and stores this summary in another file named after the input file with a
+".bygroup" suffix. This is 4 tab separated columns with the following contents
+(sorted on the first 2 columns):
+
+1. unix group name
+2. username
+3. number of files belonging to both 1 & 2.
+4. total file size in bytes of the files in 3.
 
 If you supply a yaml file to --ch of the following format:
 prefixes: ["/disk1", "/disk2/sub", "/disk3"]
