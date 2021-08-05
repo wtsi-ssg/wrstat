@@ -42,7 +42,7 @@ const desiredToJobsMultiplier = 2
 // options for this cmd.
 var workDir string
 var finalDir string
-var multiJobs int
+var multiInodes int
 var multiCh string
 
 // multiCmd represents the multi command.
@@ -109,7 +109,7 @@ deleted.`,
 			die("failed to create working dir: %s", err)
 		}
 
-		scheduleWalkJobs(outputRoot, args, unique, multiJobs, multiCh, s)
+		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s)
 		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	},
 }
@@ -120,7 +120,8 @@ func init() {
 	// flags specific to this sub-command
 	multiCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	multiCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
-	multiCmd.Flags().IntVarP(&multiJobs, "parallel_jobs", "n", 64, "number of parallel stat jobs per walk")
+	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
+		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 }
 

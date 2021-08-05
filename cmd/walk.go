@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/karrick/godirwalk"
@@ -36,10 +37,12 @@ import (
 	"github.com/wtsi-ssg/wrstat/scheduler"
 )
 
+const defaultInodesPerJob = 2000000
+
 // options for this cmd.
 var outputDir string
 var depGroup string
-var nJobs int
+var walkInodesPerJob int
 var walkID string
 var walkCh string
 
@@ -55,7 +58,8 @@ the host you started the manager on. Or run this from the same node that you
 started the manager on.
 
 For each entry recursively within the directory of interest, their paths are
-written to --parallel_jobs output files in the given output directory.
+written to output files in the given output directory. The number of files is
+such that they will each contain about --inodes_per_stat entries.
 
 For each output file, a 'wrstat stat' job is then added to wr's queue with the
 given dependency group. For the meaning of the --ch option which is passed
@@ -80,7 +84,7 @@ completed (eg. by adding your own job that depends on that group, such as a
 			walkID = statRepGrp(desiredDir, scheduler.UniqueString())
 		}
 
-		walkDirAndScheduleStats(desiredDir, outputDir, nJobs, depGroup, walkID, walkCh, s)
+		walkDirAndScheduleStats(desiredDir, outputDir, walkInodesPerJob, depGroup, walkID, walkCh, s)
 	},
 }
 
@@ -88,7 +92,8 @@ func init() {
 	RootCmd.AddCommand(walkCmd)
 
 	// flags specific to this sub-command
-	walkCmd.Flags().IntVarP(&nJobs, "parallel_jobs", "n", 64, "number of parallel jobs to run at once")
+	walkCmd.Flags().IntVarP(&walkInodesPerJob, "inodes_per_stat", "n",
+		defaultInodesPerJob, "number of inodes each parallel stat job will run on")
 	walkCmd.Flags().StringVarP(&outputDir, "output_directory", "o", "", "base directory for output files")
 	walkCmd.Flags().StringVarP(&walkID,
 		"id", "i", "",
@@ -124,16 +129,17 @@ func statRepGrp(dir, unique string) string {
 }
 
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, n int, depGroup, repGroup,
+func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup, repGroup,
 	yamlPath string, s *scheduler.Scheduler) {
-	outPaths := writeAllPathsToFiles(desiredDir, outputDir, n)
+	outPaths := writeAllPathsToFiles(desiredDir, outputDir, inodes)
 	scheduleStatJobs(outPaths, depGroup, repGroup, yamlPath, s)
 }
 
 // writeAllPathsToFiles quickly traverses the entire file tree, writing out
 // paths it encounters split over n files. It returns the paths to the output
 // files created.
-func writeAllPathsToFiles(desiredDir, outputDir string, n int) []string {
+func writeAllPathsToFiles(desiredDir, outputDir string, inodes int) []string {
+	n := calculateSplitBasedOnInodes(inodes, desiredDir)
 	outPaths := make([]string, n)
 
 	files := make([]*os.File, n)
@@ -155,6 +161,19 @@ func writeAllPathsToFiles(desiredDir, outputDir string, n int) []string {
 	}
 
 	return outPaths
+}
+
+// calculateSplitBasedOnInodes sees how many used inodes are on the given path
+// and provides the number of jobs such that each job would do inodes paths.
+func calculateSplitBasedOnInodes(n int, mount string) int {
+	var statfs syscall.Statfs_t
+	if err := syscall.Statfs(mount, &statfs); err != nil {
+		die("failed to stat the filesystem: %s", err)
+	}
+
+	inodes := statfs.Files - statfs.Ffree
+
+	return int(inodes) / n
 }
 
 // createWalkOutputFile creates an output file named 'walk.n' within the
