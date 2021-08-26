@@ -57,9 +57,9 @@ tidy assumes the working directory you give it is the "multi unique" from multi.
 It probably won't do the right thing if not.
 
 Final output files are named to include the given --date as follows:
-[date]_[interest basename].[interest unique].[multi unique].[type].gz
+[date]_[interest basename].[interest unique].[multi unique].[suffix]
 
-Where [type] is one of 'stats' or 'byusergroup'.
+Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
 
 Once all output files have been moved, the "multi unique" directory is deleted.
 
@@ -117,6 +117,11 @@ func moveAndDelete(sourceDir, destDir, date string) error {
 
 	if err := findAndMoveOutputs(sourceDir, destDir, date,
 		combineGroupOutputFileBasename, "bygroup"); err != nil {
+		return err
+	}
+
+	if err := findAndMoveOutputs(sourceDir, destDir, date,
+		combineLogOutputFileBasename, "logs.gz"); err != nil {
 		return err
 	}
 

@@ -46,6 +46,7 @@ const pgzipWriterBlocksMultiplier = 2
 const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
 const combineGroupOutputFileBasename = "combine.bygroup"
+const combineLogOutputFileBasename = "combine.log.gz"
 const numSummaryColumns = 2
 
 // combineCmd represents the combine command.
@@ -58,9 +59,13 @@ Within the given output directory, all the 'wrstat stat' *.stats files produced
 following an invocation of 'wrstat walk' will be concatenated, compressed and
 placed at the root of the output directory in a file called 'combine.stats.gz'.
 
-Additionally, all the 'wrstat stat' *.byusergroup files will be merged,
+Likewise, all the 'wrstat stat' *.byusergroup files will be merged,
 compressed and placed at the root of the output directory in a file called
 'combine.byusergroup.gz'.
+
+The same applies to the *.log files, being called 'combine.log.gz'.
+
+The *.bygroup files are merged but not compressed and called 'combine.bygroup'.
 
 NB: only call this by adding it to wr with a dependency on the dependency group
 you supplied 'wrstat walk'.`,
@@ -92,6 +97,12 @@ you supplied 'wrstat walk'.`,
 		go func() {
 			defer wg.Done()
 			mergeGroupFiles(sourceDir)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mergeAndCompressLogFiles(sourceDir)
 		}()
 
 		wg.Wait()
@@ -426,4 +437,46 @@ func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
 	}
 
 	return output.Close()
+}
+
+// mergeAndCompressLogFiles finds and merges the log files and compresses the
+// output.
+func mergeAndCompressLogFiles(sourceDir string) {
+	paths := findLogFilePaths(sourceDir)
+	output := createCombineLogOutputFile(sourceDir)
+
+	err := mergeLogAndCompress(paths, output)
+	if err != nil {
+		die("failed to merge the log files: %s", err)
+	}
+}
+
+// findLogFilePaths returns files in the given dir named with a '.log' suffix.
+func findLogFilePaths(dir string) []string {
+	return findFilePathsInDir(dir, statLogOutputFileSuffix)
+}
+
+// createCombineLogOutputFile creates a log output file in the given dir.
+func createCombineLogOutputFile(dir string) *os.File {
+	return createOutputFileInDir(dir, combineLogOutputFileBasename)
+}
+
+// mergeLogAndCompress merges the inputs and stores in the output, compressed.
+func mergeLogAndCompress(inputs []string, output *os.File) error {
+	return mergeFilesAndStreamToOutput(inputs, output, mergeLogStreamToCompressedFile)
+}
+
+// mergeLogStreamToCompressedFile merges pre-sorted (pre-merged) log data (eg.
+// from a `sort -m` of .byusergroup files), outputting the results to a file,
+// compressed.
+func mergeLogStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
+	zw, closeOutput := compressOutput(output)
+
+	if _, err := io.Copy(zw, data); err != nil {
+		return err
+	}
+
+	closeOutput()
+
+	return nil
 }

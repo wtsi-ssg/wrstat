@@ -78,12 +78,15 @@ eg. for 'wrstat multi -i foo -w /path/a -f /path/b /mnt/foo /mnt/bar /home/bar'
 It might produce: 
 /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.bygroup
 /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.stats.gz
 /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.bygroup
 /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.stats.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.bygroup
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
 
 Finally, the unique subdirectory of --working_directory that was created is

@@ -40,6 +40,7 @@ const reportFrequency = 10 * time.Minute
 const statOutputFileSuffix = ".stats"
 const statUserGroupSummaryOutputFileSuffix = ".byusergroup"
 const statGroupSummaryOutputFileSuffix = ".bygroup"
+const statLogOutputFileSuffix = ".log"
 const lstatTimeout = 10 * time.Second
 const lstatAttempts = 3
 
@@ -137,11 +138,17 @@ be ensured:
 
 (Any changes caused by this will not be reflected in the output file, since
 the chmod and chown operations happen after path's stats are retrieved.)
+
+Finally, log messages (including things like warnings and errors while working
+on the above) are stored in another file named after the input file with a
+".log" suffix.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			die("exactly 1 input file should be provided")
 		}
+
+		logToFile(args[0] + statLogOutputFileSuffix)
 
 		statPathsInFile(args[0], statCh, statDebug)
 	},
