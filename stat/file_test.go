@@ -44,10 +44,14 @@ func TestStatFile(t *testing.T) {
 
 		stat := &syscall.Stat_t{
 			Blocks:  1,
-			Blksize: 512,
+			Blksize: 1024,
 		}
 		fstat.correctSize(stat)
 		So(fstat.Size, ShouldEqual, 10)
+
+		fstat.Size = 1025
+		fstat.correctSize(stat)
+		So(fstat.Size, ShouldEqual, 512)
 
 		stat.Blocks = 0
 		fstat.correctSize(stat)

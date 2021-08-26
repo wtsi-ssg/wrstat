@@ -37,6 +37,11 @@ import (
 
 type FileType string
 
+// bytesPerBlock is the number of bytes in a block of st_blocks. st_blksize is
+// unrelated.
+// See http://www.gnu.org/software/libc/manual/html_node/Attribute-Meanings.html
+const bytesPerBlock int64 = 512
+
 const (
 	FileTypeRegular FileType = "f"
 	FileTypeLink    FileType = "l"
@@ -77,8 +82,8 @@ func (fs *FileStats) ToString() string {
 // correctSize will adjust our Size to stat.Blocks*stat.Blksize if our current
 // Size is greater than that, to account for files with holes in them.
 func (fs *FileStats) correctSize(stat *syscall.Stat_t) {
-	if fs.Size > stat.Blocks*stat.Blksize {
-		fs.Size = stat.Blocks * stat.Blksize
+	if fs.Size > stat.Blocks*bytesPerBlock {
+		fs.Size = stat.Blocks * bytesPerBlock
 	}
 }
 
