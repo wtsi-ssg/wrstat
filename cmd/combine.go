@@ -273,6 +273,8 @@ func mergeFilesAndStreamToOutput(inputs []string, output *os.File, streamFunc me
 // you've finished reading the output to cleanup.
 func mergeSortedFiles(inputs []string) (io.ReadCloser, func() error, error) {
 	cmd := exec.Command("sort", "-m", "--files0-from", "-")
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "LC_ALL=C")
 
 	sortStdin, err := cmd.StdinPipe()
 	if err != nil {
