@@ -72,7 +72,7 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 	errCh := make(chan error, 1)
 	s.currentAttempts++
 
-	timeout := time.After(s.timeout)
+	timer := time.NewTimer(s.timeout)
 
 	go s.doLstat(path, infoCh, errCh)
 
@@ -81,8 +81,10 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 		info = <-infoCh
 		s.currentAttempts = 0
 
+		timer.Stop()
+
 		return
-	case <-timeout:
+	case <-timer.C:
 		if s.currentAttempts <= s.maxAttempts {
 			s.logger.Warn("an lstat call exceeded timeout, will retry", "path", path, "attempts", s.currentAttempts)
 
@@ -100,6 +102,10 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 
 // doLstat does the actual Lstat call and sends results on the given channels.
 func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh chan error) {
+	if os.Getenv("WRSTAT_TEST_LSTAT") != "" {
+		<-time.After(1 * time.Millisecond)
+	}
+
 	info, err := os.Lstat(path)
 	infoCh <- info
 	errCh <- err

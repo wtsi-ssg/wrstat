@@ -67,6 +67,9 @@ func TestLstat(t *testing.T) {
 				s = WithTimeout(1*time.Nanosecond, attempts, l)
 				So(s, ShouldNotBeNil)
 
+				defer func() { os.Unsetenv("WRSTAT_TEST_LSTAT") }()
+				os.Setenv("WRSTAT_TEST_LSTAT", "long")
+
 				info, err = s.Lstat(pathContent)
 				So(err, ShouldNotBeNil)
 				So(info, ShouldBeNil)
