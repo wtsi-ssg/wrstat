@@ -26,6 +26,7 @@
 package scheduler
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	jqs "github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/inconshreveable/log15"
 	"github.com/rs/xid"
+	"github.com/wtsi-ssg/wr/clog"
 )
 
 type Error string
@@ -67,7 +69,8 @@ func New(deployment string, timeout time.Duration, logger log15.Logger, sudo boo
 		return nil, err
 	}
 
-	jq, err := jobqueue.ConnectUsingConfig(deployment, timeout, logger)
+	jq, err := jobqueue.ConnectUsingConfig(clog.ContextWithLogHandler(context.Background(),
+		logger.GetHandler()), deployment, timeout)
 	if err != nil {
 		return nil, err
 	}

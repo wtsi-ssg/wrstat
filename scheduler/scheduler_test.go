@@ -26,6 +26,7 @@
 package scheduler
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -45,6 +46,7 @@ func TestStatFile(t *testing.T) {
 	deployment := "development"
 	timeout := 10 * time.Second
 	logger := log15.New()
+	ctx := context.Background()
 
 	Convey("You can get unique strings", t, func() {
 		str := UniqueString()
@@ -59,7 +61,7 @@ func TestStatFile(t *testing.T) {
 		config, d := prepareWrConfig(t)
 		defer d()
 		server := serve(t, config)
-		defer server.Stop(true)
+		defer server.Stop(ctx, true)
 
 		Convey("You can make a Scheduler", func() {
 			s, err := New(deployment, timeout, logger, false)
@@ -111,7 +113,7 @@ func TestStatFile(t *testing.T) {
 				})
 
 				Convey("which you can't add to the queue if the server is down", func() {
-					server.Stop(true)
+					server.Stop(ctx, true)
 					err = s.SubmitJobs([]*jobqueue.Job{job, job2})
 					So(err, ShouldNotBeNil)
 				})
@@ -260,7 +262,7 @@ managerdir: "%s"`
 func serve(t *testing.T, config jobqueue.ServerConfig) *jobqueue.Server {
 	t.Helper()
 
-	server, _, _, err := jobqueue.Serve(config)
+	server, _, _, err := jobqueue.Serve(context.Background(), config)
 	if err != nil {
 		server, err = serveWithRetries(t, config)
 	}
@@ -282,7 +284,7 @@ func serveWithRetries(t *testing.T, config jobqueue.ServerConfig) (server *jobqu
 	for {
 		select {
 		case <-ticker.C:
-			server, _, _, err = jobqueue.Serve(config)
+			server, _, _, err = jobqueue.Serve(context.Background(), config)
 			if err != nil {
 				continue
 			}
