@@ -55,11 +55,13 @@ type Scheduler struct {
 	exe          string
 	requirements *jqs.Requirements
 	jq           *jobqueue.Client
+	sudo         bool
 }
 
 // New returns a Scheduler that is connected to wr manager using the given
-// deployment, timeout and logger.
-func New(deployment string, timeout time.Duration, logger log15.Logger) (*Scheduler, error) {
+// deployment, timeout and logger. If sudo is true, NewJob() will prefix 'sudo'
+// to commands.
+func New(deployment string, timeout time.Duration, logger log15.Logger, sudo bool) (*Scheduler, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -81,7 +83,8 @@ func New(deployment string, timeout time.Duration, logger log15.Logger) (*Schedu
 			Cores: reqCores,
 			Disk:  reqDisk,
 		},
-		jq: jq,
+		jq:   jq,
+		sudo: sudo,
 	}, err
 }
 
@@ -95,6 +98,9 @@ func (s *Scheduler) Executable() string {
 // to the current working directory, sets CwdMatters to true, applies a minimal
 // Requirements, and sets Retries to 3.
 //
+// If this Scheduler had been made with sudo: true, cmd will be prefixed with
+// 'sudo '.
+//
 // THe supplied depGroup and dep can be blank to not set DepGroups and
 // Dependencies.
 func (s *Scheduler) NewJob(cmd, rep, req, depGroup, dep string) *jobqueue.Job {
@@ -106,6 +112,10 @@ func (s *Scheduler) NewJob(cmd, rep, req, depGroup, dep string) *jobqueue.Job {
 	var dependencies jobqueue.Dependencies
 	if dep != "" {
 		dependencies = jobqueue.Dependencies{{DepGroup: dep}}
+	}
+
+	if s.sudo {
+		cmd = "sudo " + cmd
 	}
 
 	return &jobqueue.Job{

@@ -62,7 +62,7 @@ func TestStatFile(t *testing.T) {
 		defer server.Stop(true)
 
 		Convey("You can make a Scheduler", func() {
-			s, err := New(deployment, timeout, logger)
+			s, err := New(deployment, timeout, logger, false)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -125,11 +125,20 @@ func TestStatFile(t *testing.T) {
 			})
 		})
 
+		Convey("You can make a Scheduler that creates sudo jobs", func() {
+			s, err := New(deployment, timeout, logger, true)
+			So(err, ShouldBeNil)
+			So(s, ShouldNotBeNil)
+
+			job := s.NewJob("cmd", "rep", "req", "", "")
+			So(job.Cmd, ShouldEqual, "sudo cmd")
+		})
+
 		Convey("You can't create a Scheduler in an invalid dir", func() {
 			d := cdNonExistantDir(t)
 			defer d()
 
-			s, err := New(deployment, timeout, logger)
+			s, err := New(deployment, timeout, logger, false)
 			So(err, ShouldNotBeNil)
 			So(s, ShouldBeNil)
 		})
@@ -139,7 +148,7 @@ func TestStatFile(t *testing.T) {
 		_, d := prepareWrConfig(t)
 		defer d()
 
-		s, err := New(deployment, timeout, logger)
+		s, err := New(deployment, timeout, logger, false)
 		So(err, ShouldNotBeNil)
 		So(s, ShouldBeNil)
 	})

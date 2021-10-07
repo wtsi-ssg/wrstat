@@ -55,6 +55,10 @@ wr manager must have been started before running this. If the manager can run
 commands on multiple nodes, be sure to set wr's ManagerHost config option to
 the host you started the manager on.
 
+For full access to all files, either start wr manager as root, or start it as a
+user that can sudo without a password when running wrstat, and supply the --sudo
+option to this command.
+
 This calls 'wrstat walk' and 'wrstat combine' on each of the given directories
 of interest. Their outputs go to a unique subdirectory of the given
 --working_directory, which means you can start running this before a previous

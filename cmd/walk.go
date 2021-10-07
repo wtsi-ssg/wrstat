@@ -57,6 +57,10 @@ commands on multiple nodes, be sure to set wr's ManagerHost config option to
 the host you started the manager on. Or run this from the same node that you
 started the manager on.
 
+For full access to all files, either start wr manager as root, or start it as a
+user that can sudo without a password when running wrstat, and supply the --sudo
+option to this command.
+
 For each entry recursively within the directory of interest, their paths are
 written to output files in the given output directory. The number of files is
 such that they will each contain about --inodes_per_stat entries.
