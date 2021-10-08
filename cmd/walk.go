@@ -177,7 +177,13 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 
 	inodes := statfs.Files - statfs.Ffree
 
-	return int(inodes) / n
+	jobs := int(inodes) / n
+
+	if jobs == 0 {
+		jobs = 1
+	}
+
+	return jobs
 }
 
 // createWalkOutputFile creates an output file named 'walk.n' within the
