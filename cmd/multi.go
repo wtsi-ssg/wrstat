@@ -106,7 +106,7 @@ deleted.`,
 			die("at least 1 directory of interest must be supplied")
 		}
 
-		s, d := newScheduler()
+		s, d := newScheduler(workDir)
 		defer d()
 
 		unique := scheduler.UniqueString()
@@ -141,6 +141,10 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 	cmd := fmt.Sprintf("%s walk -n %d ", s.Executable(), n)
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
+	}
+
+	if sudo {
+		cmd += "--sudo "
 	}
 
 	for i, path := range desiredPaths {

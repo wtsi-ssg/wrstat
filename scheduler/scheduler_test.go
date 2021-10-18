@@ -64,7 +64,7 @@ func TestStatFile(t *testing.T) {
 		defer server.Stop(ctx, true)
 
 		Convey("You can make a Scheduler", func() {
-			s, err := New(deployment, timeout, logger, false)
+			s, err := New(deployment, "", timeout, logger, false)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -127,22 +127,40 @@ func TestStatFile(t *testing.T) {
 			})
 		})
 
-		Convey("You can make a Scheduler that creates sudo jobs", func() {
-			s, err := New(deployment, timeout, logger, true)
+		Convey("You can make a Scheduler with a specified cwd and it creates jobs in there", func() {
+			cwd := t.TempDir()
+
+			s, err := New(deployment, cwd, timeout, logger, false)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
 			job := s.NewJob("cmd", "rep", "req", "", "")
-			So(job.Cmd, ShouldEqual, "sudo cmd")
+			So(job.Cwd, ShouldEqual, cwd)
+			So(job.CwdMatters, ShouldBeTrue)
 		})
 
 		Convey("You can't create a Scheduler in an invalid dir", func() {
 			d := cdNonExistantDir(t)
 			defer d()
 
-			s, err := New(deployment, timeout, logger, false)
+			s, err := New(deployment, "", timeout, logger, false)
 			So(err, ShouldNotBeNil)
 			So(s, ShouldBeNil)
+		})
+
+		Convey("You can't create a Scheduler if you pass an invalid dir", func() {
+			s, err := New(deployment, "/non_existent", timeout, logger, false)
+			So(err, ShouldNotBeNil)
+			So(s, ShouldBeNil)
+		})
+
+		Convey("You can make a Scheduler that creates sudo jobs", func() {
+			s, err := New(deployment, "", timeout, logger, true)
+			So(err, ShouldBeNil)
+			So(s, ShouldNotBeNil)
+
+			job := s.NewJob("cmd", "rep", "req", "", "")
+			So(job.Cmd, ShouldEqual, "sudo cmd")
 		})
 	})
 
@@ -150,7 +168,7 @@ func TestStatFile(t *testing.T) {
 		_, d := prepareWrConfig(t)
 		defer d()
 
-		s, err := New(deployment, timeout, logger, false)
+		s, err := New(deployment, "", timeout, logger, false)
 		So(err, ShouldNotBeNil)
 		So(s, ShouldBeNil)
 	})

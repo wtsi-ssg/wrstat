@@ -62,9 +62,10 @@ type Scheduler struct {
 
 // New returns a Scheduler that is connected to wr manager using the given
 // deployment, timeout and logger. If sudo is true, NewJob() will prefix 'sudo'
-// to commands.
-func New(deployment string, timeout time.Duration, logger log15.Logger, sudo bool) (*Scheduler, error) {
-	wd, err := os.Getwd()
+// to commands. Added jobs will have the given cwd, which matters. If cwd is
+// blank, the current working dir is used.
+func New(deployment, cwd string, timeout time.Duration, logger log15.Logger, sudo bool) (*Scheduler, error) {
+	cwd, err := pickCWD(cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func New(deployment string, timeout time.Duration, logger log15.Logger, sudo boo
 	exe, err := os.Executable()
 
 	return &Scheduler{
-		cwd: wd,
+		cwd: cwd,
 		exe: exe,
 		requirements: &jqs.Requirements{
 			RAM:   reqRAM,
@@ -89,6 +90,18 @@ func New(deployment string, timeout time.Duration, logger log15.Logger, sudo boo
 		jq:   jq,
 		sudo: sudo,
 	}, err
+}
+
+// pickCWD checks the given directory exists, returns an error. If the given
+// dir is blank, returns the current working directory.
+func pickCWD(cwd string) (string, error) {
+	if cwd == "" {
+		return os.Getwd()
+	}
+
+	_, err := os.Stat(cwd)
+
+	return cwd, err
 }
 
 // Executable is a convenience function that returns the same as
