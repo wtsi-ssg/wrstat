@@ -193,6 +193,20 @@ func TestCh(t *testing.T) {
 			info, err := os.Lstat(slink)
 			So(err, ShouldBeNil)
 			So(getGIDFromFileInfo(info), ShouldEqual, otherGID)
+
+			Convey("chmod ignores symlinks but works on real files", func() {
+				err = chmod(info, slink, 0670)
+				So(err, ShouldBeNil)
+
+				info, err = os.Lstat(path)
+				So(info.Mode().Perm(), ShouldEqual, fs.FileMode(0660))
+
+				err = chmod(info, path, 0670)
+				So(err, ShouldBeNil)
+
+				info, err = os.Lstat(path)
+				So(info.Mode().Perm(), ShouldEqual, fs.FileMode(0670))
+			})
 		})
 	})
 }

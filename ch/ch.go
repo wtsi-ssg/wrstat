@@ -175,7 +175,7 @@ func (c *Ch) setgid(path string, info fs.FileInfo) error {
 		return nil
 	}
 
-	err := os.Chmod(path, info.Mode()|os.ModeSetgid)
+	err := chmod(info, path, info.Mode()|os.ModeSetgid)
 	if err != nil {
 		return err
 	}
@@ -190,6 +190,16 @@ func setgidApplied(info fs.FileInfo) bool {
 	return (info.Mode() & os.ModeSetgid) != 0
 }
 
+// chmod is like os.Chmod, but checks the given info to do nothing if this is a
+// symlink.
+func chmod(info fs.FileInfo, path string, mode fs.FileMode) error {
+	if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+		return nil
+	}
+
+	return os.Chmod(path, mode)
+}
+
 // matchPermissions sets group permissions to match user permissions if they're
 // different. If a change is made, logs it.
 func (c *Ch) matchPermissions(path string, info fs.FileInfo) error {
@@ -200,7 +210,7 @@ func (c *Ch) matchPermissions(path string, info fs.FileInfo) error {
 		return nil
 	}
 
-	err := os.Chmod(path, mode|userAsGroupPerms)
+	err := chmod(info, path, mode|userAsGroupPerms)
 	if err != nil {
 		return err
 	}
