@@ -139,7 +139,7 @@ func (c *Ch) chownGroup(path string, origGID, newGID int) error {
 		return nil
 	}
 
-	if err := os.Chown(path, -1, newGID); err != nil {
+	if err := os.Lchown(path, -1, newGID); err != nil {
 		return err
 	}
 

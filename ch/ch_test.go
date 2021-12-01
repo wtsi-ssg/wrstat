@@ -177,6 +177,23 @@ func TestCh(t *testing.T) {
 			err = ch.chownGroup(paths[0], primaryGID, -1)
 			So(err, ShouldNotBeNil)
 		})
+
+		Convey("chownGroup applies to symlinks themselves, not their targets", func() {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "a")
+			slink := filepath.Join(dir, "b")
+
+			createTestFile(t, path, primaryGID, 0660)
+			err := os.Symlink(path, slink)
+			So(err, ShouldBeNil)
+
+			err = ch.chownGroup(slink, primaryGID, otherGID)
+			So(err, ShouldBeNil)
+
+			info, err := os.Lstat(slink)
+			So(err, ShouldBeNil)
+			So(getGIDFromFileInfo(info), ShouldEqual, otherGID)
+		})
 	})
 }
 
