@@ -40,9 +40,13 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
-const modePermUser = 0700
-const modePermGroup = 0070
-const modePermUserToGroupShift = 3
+const (
+	modePermUser             = 0700
+	modePermGroup            = 0070
+	modePermUserToGroupShift = 3
+	modeUserExecutable       = 0100
+	modeGroupExecutable      = 0010
+)
 
 // PathChecker is a callback used by Ch that will receive the absolute path to a
 // file or directory and should return a boolean if this path is eligible for
@@ -201,23 +205,51 @@ func chmod(info fs.FileInfo, path string, mode fs.FileMode) error {
 }
 
 // matchPermissions sets group permissions to match user permissions if they're
-// different. If a change is made, logs it.
+// different.
+//
+// This first goes the other way for executable permission, copying any group x
+// to user.
+//
+// If a change is made, logs it.
 func (c *Ch) matchPermissions(path string, info fs.FileInfo) error {
-	mode := info.Mode()
+	mode, err := c.copyGroupXToUser(path, info)
+	if err != nil {
+		return err
+	}
+
 	userAsGroupPerms := extractUserAsGroupPermissions(mode)
 
 	if userAsGroupPerms == extractGroupPermissions(mode) {
 		return nil
 	}
 
-	err := chmod(info, path, mode|userAsGroupPerms)
+	err = chmod(info, path, mode|userAsGroupPerms)
 	if err != nil {
 		return err
 	}
 
-	c.logger.Info("matched group permissions to user", "path", path)
+	c.logger.Info("matched group permissions to user", "path", path, "old", mode, "new", mode|userAsGroupPerms)
 
 	return nil
+}
+
+// copyGroupXToUser makes the file user executable if it is group executable. If
+// a change is made, logs it and returns the new mode.
+func (c *Ch) copyGroupXToUser(path string, info fs.FileInfo) (fs.FileMode, error) {
+	mode := info.Mode()
+
+	if !(mode&modeGroupExecutable != 0 && mode&modeUserExecutable == 0) {
+		return mode, nil
+	}
+
+	err := chmod(info, path, mode^modeUserExecutable)
+	if err != nil {
+		return mode, err
+	}
+
+	c.logger.Info("set user x to match group", "path", path)
+
+	return mode ^ modeUserExecutable, nil
 }
 
 // extractUserAsGroupPermissions returns the user permission bits of the given

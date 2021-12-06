@@ -128,6 +128,18 @@ func TestCh(t *testing.T) {
 			So(buff.String(), ShouldNotContainSubstring, `lvl=info msg="matched group permissions to user" path=`+paths[0])
 		})
 
+		Convey("Do corrects -rw-rwxr-x to -rwxrwxr-x", func() {
+			cbChange = true
+			createAndDoExecutableTestFile(t, otherGID, 0675, ch)
+			So(buff.String(), ShouldContainSubstring, `lvl=info msg="set user x to match group" path=`)
+		})
+
+		Convey("Do corrects -rwxrw-r-x to -rwxrwxr-x", func() {
+			cbChange = true
+			createAndDoExecutableTestFile(t, otherGID, 0765, ch)
+			So(buff.String(), ShouldContainSubstring, `lvl=info msg="matched group permissions to user" path=`)
+		})
+
 		Convey("Do on a non-existent path does nothing", func() {
 			cbChange = true
 			err := ch.Do(invalidPath, infos[2])
@@ -472,3 +484,27 @@ func (b *badInfo) ModTime() time.Time { return time.Now() }
 func (b *badInfo) IsDir() bool { return b.isDir }
 
 func (b *badInfo) Sys() interface{} { return &syscall.Stat_t{Gid: 0} }
+
+// createAndDoExecutableTestFile creates a temp file with given gid and perms,
+// and calls ch.Do() on it. Set your callback to return true before calling
+// this. Checks that the file has the expected permissions afterwards.
+func createAndDoExecutableTestFile(t *testing.T, otherGID int, perms fs.FileMode, ch *Ch) {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a")
+	info := createTestFile(t, path, otherGID, perms)
+
+	err := ch.Do(path, info)
+	So(err, ShouldBeNil)
+
+	checkFilePermissions(t, path, "-rwxrwxr-x")
+}
+
+func checkFilePermissions(t *testing.T, path string, expected string) {
+	t.Helper()
+
+	info, err := os.Stat(path)
+	So(err, ShouldBeNil)
+	So(info.Mode().Perm().String(), ShouldEqual, expected)
+}
