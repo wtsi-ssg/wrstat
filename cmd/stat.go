@@ -136,6 +136,7 @@ be ensured:
 2. If path is a directory, it has setgid applied (group sticky).
 3. User execute permission is set if group execute permission was set.
 4. Group permissions match user permissions.
+5. Both user and group have read and write permissions.
 
 (Any changes caused by this will not be reflected in the output file, since
 the chmod and chown operations happen after path's stats are retrieved.)
