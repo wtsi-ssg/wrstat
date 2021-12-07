@@ -160,7 +160,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 			cmd, thisUnique, outDir, statRepGrp(path, unique), path),
 			walkRepGrp(path, unique), "wrstat-walk", thisUnique, "")
 
-		combineJobs[i] = s.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
+		combineJobs[i] = sHigherMemory.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
 			combineRepGrp(path, unique), "wrstat-combine", unique, thisUnique)
 	}
 

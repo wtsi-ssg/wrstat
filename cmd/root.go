@@ -132,6 +132,7 @@ func die(msg string, a ...interface{}) {
 // otherwise ram defaults to 50MB override 0.
 func newScheduler(cwd string, ram ...int) (*scheduler.Scheduler, func()) {
 	var s *scheduler.Scheduler
+
 	var err error
 
 	if len(ram) == 1 {
