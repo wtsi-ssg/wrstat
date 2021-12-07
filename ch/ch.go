@@ -40,9 +40,14 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
-const modePermUser = 0700
-const modePermGroup = 0070
-const modePermUserToGroupShift = 3
+const (
+	modePermUser              = 0700
+	modePermGroup             = 0070
+	modePermUserToGroupShift  = 3
+	modeUserExecutable        = 0100
+	modeGroupExecutable       = 0010
+	modeUserGroupReadWritable = 0660
+)
 
 // PathChecker is a callback used by Ch that will receive the absolute path to a
 // file or directory and should return a boolean if this path is eligible for
@@ -73,7 +78,9 @@ func New(pc PathChecker, logger log15.Logger) *Ch {
 //
 // 1. Ensures that the GID of the path is the returned GID.
 // 2. If path is a directory, ensures it has setgid applied (group sticky).
-// 3. Ensures that group permissions match user permissions.
+// 3. Ensures that User execute permission is set if group execute was set.
+// 4. Ensures that group permissions match user permissions.
+// 5. Forces user and group read and writeability.
 //
 // Any errors are returned without logging them, except for "not exists" errors
 // which are silently ignored since these are expected.
@@ -96,7 +103,7 @@ func (c *Ch) Do(path string, info fs.FileInfo) error {
 	})
 
 	chain.Call(func() error {
-		return c.matchPermissions(path, info)
+		return c.matchPermissionsAndMakeUGRW(path, info)
 	})
 
 	return chain.merr
@@ -139,7 +146,7 @@ func (c *Ch) chownGroup(path string, origGID, newGID int) error {
 		return nil
 	}
 
-	if err := os.Chown(path, -1, newGID); err != nil {
+	if err := os.Lchown(path, -1, newGID); err != nil {
 		return err
 	}
 
@@ -175,7 +182,7 @@ func (c *Ch) setgid(path string, info fs.FileInfo) error {
 		return nil
 	}
 
-	err := os.Chmod(path, info.Mode()|os.ModeSetgid)
+	err := chmod(info, path, info.Mode()|os.ModeSetgid)
 	if err != nil {
 		return err
 	}
@@ -190,24 +197,73 @@ func setgidApplied(info fs.FileInfo) bool {
 	return (info.Mode() & os.ModeSetgid) != 0
 }
 
-// matchPermissions sets group permissions to match user permissions if they're
-// different. If a change is made, logs it.
-func (c *Ch) matchPermissions(path string, info fs.FileInfo) error {
-	mode := info.Mode()
-	userAsGroupPerms := extractUserAsGroupPermissions(mode)
-
-	if userAsGroupPerms == extractGroupPermissions(mode) {
+// chmod is like os.Chmod, but checks the given info to do nothing if this is a
+// symlink.
+func chmod(info fs.FileInfo, path string, mode fs.FileMode) error {
+	if info.Mode()&os.ModeSymlink == os.ModeSymlink {
 		return nil
 	}
 
-	err := os.Chmod(path, mode|userAsGroupPerms)
+	return os.Chmod(path, mode)
+}
+
+// matchPermissionsAndMakeUGRW:
+//
+// 1) Sets u+x if g+x.
+// 2) Sets group permissions to match user permissions if they're different.
+// 3) Sets ug+rx if not already.
+//
+// If any changes are made, logs them.
+func (c *Ch) matchPermissionsAndMakeUGRW(path string, info fs.FileInfo) error {
+	mode, err := c.copyGroupXToUser(path, info)
 	if err != nil {
 		return err
 	}
 
-	c.logger.Info("matched group permissions to user", "path", path)
+	mode, err = c.matchPermissions(path, info, mode)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	return c.makeUGRW(path, info, mode)
+}
+
+// copyGroupXToUser makes the file user executable if it is group executable. If
+// a change is made, logs it and returns the new mode.
+func (c *Ch) copyGroupXToUser(path string, info fs.FileInfo) (fs.FileMode, error) {
+	mode := info.Mode()
+
+	if !(mode&modeGroupExecutable != 0 && mode&modeUserExecutable == 0) {
+		return mode, nil
+	}
+
+	err := chmod(info, path, mode^modeUserExecutable)
+	if err != nil {
+		return mode, err
+	}
+
+	c.logger.Info("set user x to match group", "path", path)
+
+	return mode ^ modeUserExecutable, nil
+}
+
+// matchPermissions sets group permissions to match user permissions if they're
+// different. If a change is made, logs it and returns the new mode.
+func (c *Ch) matchPermissions(path string, info fs.FileInfo, mode fs.FileMode) (fs.FileMode, error) {
+	userAsGroupPerms := extractUserAsGroupPermissions(mode)
+
+	if userAsGroupPerms == extractGroupPermissions(mode) {
+		return mode, nil
+	}
+
+	err := chmod(info, path, mode|userAsGroupPerms)
+	if err != nil {
+		return mode, err
+	}
+
+	c.logger.Info("matched group permissions to user", "path", path, "old", mode, "new", mode|userAsGroupPerms)
+
+	return mode | userAsGroupPerms, nil
 }
 
 // extractUserAsGroupPermissions returns the user permission bits of the given
@@ -225,4 +281,19 @@ func extractUserAsGroupPermissions(mode fs.FileMode) fs.FileMode {
 // extractGroupPermissions returns the user permission bits of the given mode.
 func extractGroupPermissions(mode fs.FileMode) fs.FileMode {
 	return mode & modePermGroup
+}
+
+// makeUGRW forces ug+rw on the file. If a change is made, logs it.
+func (c *Ch) makeUGRW(path string, info fs.FileInfo, mode fs.FileMode) error {
+	if !(mode&modeUserGroupReadWritable != modeUserGroupReadWritable) {
+		return nil
+	}
+
+	if err := chmod(info, path, mode|modeUserGroupReadWritable); err != nil {
+		return err
+	}
+
+	c.logger.Info("forced ug+rw", "path", path, "old", mode)
+
+	return nil
 }

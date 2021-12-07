@@ -58,13 +58,16 @@ type Scheduler struct {
 	requirements *jqs.Requirements
 	jq           *jobqueue.Client
 	sudo         bool
+	override     int
 }
 
 // New returns a Scheduler that is connected to wr manager using the given
 // deployment, timeout and logger. If sudo is true, NewJob() will prefix 'sudo'
 // to commands. Added jobs will have the given cwd, which matters. If cwd is
-// blank, the current working dir is used.
-func New(deployment, cwd string, timeout time.Duration, logger log15.Logger, sudo bool) (*Scheduler, error) {
+// blank, the current working dir is used. If ram is supplied, we set override
+// 1, otherwise it defaults to 50MB with no override.
+func New(deployment, cwd string, timeout time.Duration, logger log15.Logger,
+	sudo bool, ram ...int) (*Scheduler, error) {
 	cwd, err := pickCWD(cwd)
 	if err != nil {
 		return nil, err
@@ -78,17 +81,20 @@ func New(deployment, cwd string, timeout time.Duration, logger log15.Logger, sud
 
 	exe, err := os.Executable()
 
+	rram, override := parseRAM(ram)
+
 	return &Scheduler{
 		cwd: cwd,
 		exe: exe,
 		requirements: &jqs.Requirements{
-			RAM:   reqRAM,
+			RAM:   rram,
 			Time:  reqTime,
 			Cores: reqCores,
 			Disk:  reqDisk,
 		},
-		jq:   jq,
-		sudo: sudo,
+		override: override,
+		jq:       jq,
+		sudo:     sudo,
 	}, err
 }
 
@@ -102,6 +108,20 @@ func pickCWD(cwd string) (string, error) {
 	_, err := os.Stat(cwd)
 
 	return cwd, err
+}
+
+// parseRAM looks at the ram arg from New() and returns a ram amount and an
+// override value.
+func parseRAM(ram []int) (int, int) {
+	override := 0
+
+	rram := reqRAM
+	if len(ram) == 1 {
+		rram = ram[0]
+		override = 1
+	}
+
+	return rram, override
 }
 
 // Executable is a convenience function that returns the same as
@@ -144,6 +164,7 @@ func (s *Scheduler) NewJob(cmd, rep, req, depGroup, dep string) *jobqueue.Job {
 		DepGroups:    depGroups,
 		Dependencies: dependencies,
 		Retries:      jobRetries,
+		Override:     uint8(s.override),
 	}
 }
 

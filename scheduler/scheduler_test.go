@@ -89,6 +89,7 @@ func TestStatFile(t *testing.T) {
 				So(job.Retries, ShouldEqual, 3)
 				So(job.DepGroups, ShouldBeNil)
 				So(job.Dependencies, ShouldBeNil)
+				So(job.Override, ShouldEqual, 0)
 
 				job2 := s.NewJob("cmd2", "rep", "req", "a", "b")
 				So(job2.Cmd, ShouldEqual, "cmd2")
@@ -161,6 +162,16 @@ func TestStatFile(t *testing.T) {
 
 			job := s.NewJob("cmd", "rep", "req", "", "")
 			So(job.Cmd, ShouldEqual, "sudo cmd")
+		})
+
+		Convey("You can make a Scheduler with a RAM override", func() {
+			s, err := New(deployment, "", timeout, logger, false, 16000)
+			So(err, ShouldBeNil)
+			So(s, ShouldNotBeNil)
+
+			job := s.NewJob("cmd", "rep", "req", "", "")
+			So(job.Requirements.RAM, ShouldEqual, 16000)
+			So(job.Override, ShouldEqual, 1)
 		})
 	})
 

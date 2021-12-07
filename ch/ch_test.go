@@ -128,6 +128,36 @@ func TestCh(t *testing.T) {
 			So(buff.String(), ShouldNotContainSubstring, `lvl=info msg="matched group permissions to user" path=`+paths[0])
 		})
 
+		Convey("Do corrects -rw-rwxr-x to -rwxrwxr-x", func() {
+			cbChange = true
+			perm := createAndDoTestFile(t, otherGID, 0675, ch)
+
+			So(perm, ShouldEqual, "-rwxrwxr-x")
+			So(buff.String(), ShouldContainSubstring, `lvl=info msg="set user x to match group" path=`)
+		})
+
+		Convey("Do corrects -rwxrw-r-x to -rwxrwxr-x", func() {
+			cbChange = true
+			perm := createAndDoTestFile(t, otherGID, 0765, ch)
+
+			So(perm, ShouldEqual, "-rwxrwxr-x")
+			So(buff.String(), ShouldContainSubstring, `lvl=info msg="matched group permissions to user" path=`)
+		})
+
+		Convey("Do forces non-rw to ug+rw", func() {
+			cbChange = true
+
+			perm := createAndDoTestFile(t, otherGID, 0440, ch)
+			So(perm, ShouldEqual, "-rw-rw----")
+			So(buff.String(), ShouldContainSubstring, `lvl=info msg="forced ug+rw" path=`)
+
+			perm = createAndDoTestFile(t, otherGID, 0220, ch)
+			So(perm, ShouldEqual, "-rw-rw----")
+
+			perm = createAndDoTestFile(t, otherGID, 0235, ch)
+			So(perm, ShouldEqual, "-rwxrwxr-x")
+		})
+
 		Convey("Do on a non-existent path does nothing", func() {
 			cbChange = true
 			err := ch.Do(invalidPath, infos[2])
@@ -165,6 +195,10 @@ func TestCh(t *testing.T) {
 			err = ch.Do(badPath, &badInfo{isDir: false, perm: 9999})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "1 error occurred")
+
+			err = ch.Do(badPath, &badInfo{isDir: false, perm: 0444})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "1 error occurred")
 		})
 
 		Convey("chownGroup returns an error with invalid paths or GIDs", func() {
@@ -176,6 +210,37 @@ func TestCh(t *testing.T) {
 
 			err = ch.chownGroup(paths[0], primaryGID, -1)
 			So(err, ShouldNotBeNil)
+		})
+
+		Convey("chownGroup applies to symlinks themselves, not their targets", func() {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "a")
+			slink := filepath.Join(dir, "b")
+
+			createTestFile(t, path, primaryGID, 0660)
+			err := os.Symlink(path, slink)
+			So(err, ShouldBeNil)
+
+			err = ch.chownGroup(slink, primaryGID, otherGID)
+			So(err, ShouldBeNil)
+
+			info, err := os.Lstat(slink)
+			So(err, ShouldBeNil)
+			So(getGIDFromFileInfo(info), ShouldEqual, otherGID)
+
+			Convey("chmod ignores symlinks but works on real files", func() {
+				err = chmod(info, slink, 0670)
+				So(err, ShouldBeNil)
+
+				info, err = os.Lstat(path)
+				So(info.Mode().Perm(), ShouldEqual, fs.FileMode(0660))
+
+				err = chmod(info, path, 0670)
+				So(err, ShouldBeNil)
+
+				info, err = os.Lstat(path)
+				So(info.Mode().Perm(), ShouldEqual, fs.FileMode(0670))
+			})
 		})
 	})
 }
@@ -441,3 +506,28 @@ func (b *badInfo) ModTime() time.Time { return time.Now() }
 func (b *badInfo) IsDir() bool { return b.isDir }
 
 func (b *badInfo) Sys() interface{} { return &syscall.Stat_t{Gid: 0} }
+
+// createAndDoTestFile creates a temp file with given gid and perms,
+// and calls ch.Do() on it. Set your callback to return true before calling
+// this. Returns file permissions as a string afterwards.
+func createAndDoTestFile(t *testing.T, otherGID int, perms fs.FileMode, ch *Ch) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "a")
+	info := createTestFile(t, path, otherGID, perms)
+
+	err := ch.Do(path, info)
+	So(err, ShouldBeNil)
+
+	return getFilePermissions(t, path)
+}
+
+func getFilePermissions(t *testing.T, path string) string {
+	t.Helper()
+
+	info, err := os.Stat(path)
+	So(err, ShouldBeNil)
+
+	return info.Mode().Perm().String()
+}

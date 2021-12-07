@@ -35,9 +35,9 @@ import (
 	"github.com/wtsi-ssg/wrstat/scheduler"
 )
 
-// desiredToJobsMultiplier is how many more jobs we create from a given number
-// of desired directories.
-const desiredToJobsMultiplier = 2
+// moreMemory is how much memory we force some ostensibly low memory jobs to
+// use, because otherwise LSF could kill them for using disk-cache memory.
+const moreMemory = 16000
 
 // options for this cmd.
 var workDir string
@@ -109,6 +109,9 @@ deleted.`,
 		s, d := newScheduler(workDir)
 		defer d()
 
+		sMem, dMem := newScheduler(workDir, moreMemory)
+		defer dMem()
+
 		unique := scheduler.UniqueString()
 		outputRoot := filepath.Join(workDir, unique)
 		err := os.MkdirAll(outputRoot, userOnlyPerm)
@@ -116,8 +119,8 @@ deleted.`,
 			die("failed to create working dir: %s", err)
 		}
 
-		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s)
-		scheduleTidyJob(outputRoot, finalDir, unique, s)
+		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s, sMem)
+		scheduleTidyJob(outputRoot, finalDir, unique, sMem)
 	},
 }
 
@@ -133,10 +136,12 @@ func init() {
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
-// path.
+// path. The second scheduler is used to add combine jobs, which need a memory
+// override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	n int, yamlPath string, s *scheduler.Scheduler) {
-	jobs := make([]*jobqueue.Job, desiredToJobsMultiplier*len(desiredPaths))
+	n int, yamlPath string, s *scheduler.Scheduler, sHigherMemory *scheduler.Scheduler) {
+	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
+	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
 	cmd := fmt.Sprintf("%s walk -n %d ", s.Executable(), n)
 	if yamlPath != "" {
@@ -151,15 +156,16 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 		thisUnique := scheduler.UniqueString()
 		outDir := filepath.Join(outputRoot, filepath.Base(path), thisUnique)
 
-		jobs[i*2] = s.NewJob(fmt.Sprintf("%s -d %s -o %s -i %s %s",
+		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -o %s -i %s %s",
 			cmd, thisUnique, outDir, statRepGrp(path, unique), path),
 			walkRepGrp(path, unique), "wrstat-walk", thisUnique, "")
 
-		jobs[i*2+1] = s.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
+		combineJobs[i] = sHigherMemory.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
 			combineRepGrp(path, unique), "wrstat-combine", unique, thisUnique)
 	}
 
-	addJobsToQueue(s, jobs)
+	addJobsToQueue(s, walkJobs)
+	addJobsToQueue(sHigherMemory, combineJobs)
 }
 
 // walkRepGrp returns a rep_grp that can be used for the walk jobs multi will
