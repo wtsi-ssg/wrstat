@@ -93,6 +93,9 @@ It might produce:
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
 
+The output files will be given the same user:group ownership and
+user,group,other read & write permissions as the --final_output directory.
+
 Finally, the unique subdirectory of --working_directory that was created is
 deleted.`,
 	Run: func(cmd *cobra.Command, args []string) {
