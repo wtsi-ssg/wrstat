@@ -27,12 +27,17 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/spf13/cobra"
 	shutil "github.com/termie/go-shutil"
 )
+
+// modeRW are the read-write permission bits for user, group and other.
+const modeRW = 0666
 
 // options for this cmd.
 var tidyDir string
@@ -61,6 +66,9 @@ Final output files are named to include the given --date as follows:
 
 Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
 
+The output files will be given the same user:group ownership and
+user,group,other read & write permissions as the --final_output directory.
+
 Once all output files have been moved, the "multi unique" directory is deleted.
 
 It is safe to call this multiple times if it was, for example, killed half way
@@ -83,12 +91,17 @@ through; it won't clobber final outputs already moved.`,
 			die("failed to create --final_output dir [%s]: %s", destDir, err)
 		}
 
+		destDirInfo, err := os.Stat(destDir)
+		if err != nil {
+			die("could not stat the --final_output dir: %s", err)
+		}
+
 		sourceDir, err := filepath.Abs(args[0])
 		if err != nil {
 			die("could not determine absolute path to source dir: %s", err)
 		}
 
-		err = moveAndDelete(sourceDir, destDir, tidyDate)
+		err = moveAndDelete(sourceDir, destDir, destDirInfo, tidyDate)
 		if err != nil {
 			die("failed to tidy: %s", err)
 		}
@@ -104,23 +117,23 @@ func init() {
 }
 
 // moveAndDelete does the main work of this cmd.
-func moveAndDelete(sourceDir, destDir, date string) error {
-	if err := findAndMoveOutputs(sourceDir, destDir, date,
+func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
+	if err := findAndMoveOutputs(sourceDir, destDir, destDirInfo, date,
 		combineStatsOutputFileBasename, "stats.gz"); err != nil {
 		return err
 	}
 
-	if err := findAndMoveOutputs(sourceDir, destDir, date,
+	if err := findAndMoveOutputs(sourceDir, destDir, destDirInfo, date,
 		combineUserGroupOutputFileBasename, "byusergroup.gz"); err != nil {
 		return err
 	}
 
-	if err := findAndMoveOutputs(sourceDir, destDir, date,
+	if err := findAndMoveOutputs(sourceDir, destDir, destDirInfo, date,
 		combineGroupOutputFileBasename, "bygroup"); err != nil {
 		return err
 	}
 
-	if err := findAndMoveOutputs(sourceDir, destDir, date,
+	if err := findAndMoveOutputs(sourceDir, destDir, destDirInfo, date,
 		combineLogOutputFileBasename, "logs.gz"); err != nil {
 		return err
 	}
@@ -129,14 +142,16 @@ func moveAndDelete(sourceDir, destDir, date string) error {
 }
 
 // findAndMoveOutputs finds output files in the given sourceDir with given
-// suffix and moves them to destDir, including date in the name.
-func findAndMoveOutputs(sourceDir, destDir, date, inputSuffix, outputSuffix string) error {
+// suffix and moves them to destDir, including date in the name, and adjusting
+// ownership and permissions to match the destDir.
+func findAndMoveOutputs(sourceDir, destDir string, destDirInfo fs.FileInfo,
+	date, inputSuffix, outputSuffix string) error {
 	outputPaths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, inputSuffix))
 	if err != nil {
 		return err
 	}
 
-	err = moveOutputs(outputPaths, destDir, date, outputSuffix)
+	err = moveOutputs(outputPaths, destDir, destDirInfo, date, outputSuffix)
 	if err != nil {
 		return err
 	}
@@ -144,11 +159,10 @@ func findAndMoveOutputs(sourceDir, destDir, date, inputSuffix, outputSuffix stri
 	return nil
 }
 
-// moveOutputs moves each output file to the finalDir and changes its name to
-// the correct format.
-func moveOutputs(outputPaths []string, destDir, date, suffix string) error {
+// moveOutputs calls moveOutput() on each outputPaths source file.
+func moveOutputs(outputPaths []string, destDir string, destDirInfo fs.FileInfo, date, suffix string) error {
 	for _, path := range outputPaths {
-		err := moveOutput(path, destDir, date, suffix)
+		err := moveOutput(path, destDir, destDirInfo, date, suffix)
 		if err != nil {
 			return err
 		}
@@ -158,8 +172,9 @@ func moveOutputs(outputPaths []string, destDir, date, suffix string) error {
 }
 
 // moveOutput moves an output file to the finalDir and changes its name to
-// the correct format.
-func moveOutput(source string, destDir, date, suffix string) error {
+// the correct format, then adjusts ownership and permissions to match the
+// destDir.
+func moveOutput(source string, destDir string, destDirInfo fs.FileInfo, date, suffix string) error {
 	interestUniqueDir := filepath.Dir(source)
 	interestBaseDir := filepath.Dir(interestUniqueDir)
 	multiUniqueDir := filepath.Dir(interestBaseDir)
@@ -172,8 +187,58 @@ func moveOutput(source string, destDir, date, suffix string) error {
 
 	err := os.Rename(source, dest)
 	if err != nil {
-		err = shutil.CopyFile(source, dest, false)
+		if err = shutil.CopyFile(source, dest, false); err != nil {
+			return err
+		}
 	}
 
-	return err
+	return matchPerms(dest, destDirInfo)
+}
+
+// matchPerms ensures that the given file has the same ownership and read-write
+// permissions as the given fileinfo.
+func matchPerms(path string, desired fs.FileInfo) error {
+	current, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if err = matchOwnership(path, current, desired); err != nil {
+		return err
+	}
+
+	return matchReadWrite(path, current, desired)
+}
+
+// matchOwnership ensures that the given file with the current fileinfo has the
+// same user and group ownership as the desired fileinfo.
+func matchOwnership(path string, current, desired fs.FileInfo) error {
+	uid, gid := getUIDAndGID(current)
+	desiredUID, desiredGID := getUIDAndGID(desired)
+
+	if uid == desiredUID && gid == desiredGID {
+		return nil
+	}
+
+	return os.Lchown(path, desiredUID, desiredGID)
+}
+
+// getUIDAndGID extracts the UID and GID from a FileInfo. NB: this will only
+// work on linux.
+func getUIDAndGID(info fs.FileInfo) (int, int) {
+	return int(info.Sys().(*syscall.Stat_t).Uid), int(info.Sys().(*syscall.Stat_t).Gid)
+}
+
+// matchReadWrite ensures that the given file with the current fileinfo has the
+// same user,group,other read&write permissions as the desired fileinfo.
+func matchReadWrite(path string, current, desired fs.FileInfo) error {
+	currentMode := current.Mode()
+	currentRW := currentMode & modeRW
+	desiredRW := desired.Mode() & modeRW
+
+	if currentRW == desiredRW {
+		return nil
+	}
+
+	return os.Chmod(path, currentMode|desiredRW)
 }
