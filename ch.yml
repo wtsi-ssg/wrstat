@@ -1,4 +1,4 @@
-prefixes: ["/lustre/scratch114", "/lustre/scratch115/realdata/mdt0", "/lustre/scratch115/realdata/mdt1", "/lustre/scratch115/realdata/mdt2", "/lustre/scratch115/realdata/mdt3", "/lustre/scratch118/humgen/hgi", "/lustre/scratch119/realdata/mdt2", "/lustre/scratch119/realdata/mdt3", "/lustre/scratch123/hgi/mdt1", "/lustre/scratch123/hgi/mdt2"]
+prefixes: ["/lustre/scratch114", "/lustre/scratch115/realdata/mdt0", "/lustre/scratch115/realdata/mdt1", "/lustre/scratch115/realdata/mdt2", "/lustre/scratch115/realdata/mdt3", "/lustre/scratch118/humgen/hgi", "/lustre/scratch119/realdata/mdt2", "/lustre/scratch119/realdata/mdt3", "/lustre/scratch123/hgi/mdt1", "/lustre/scratch123/hgi/mdt2", "/lustre/scratch123/hgi/mdt0"]
 lookupDir: teams
 lookup:
   anderson: team152
