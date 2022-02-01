@@ -86,7 +86,7 @@ func TestStatFile(t *testing.T) {
 				So(job.Cwd, ShouldEqual, wd)
 				So(job.CwdMatters, ShouldBeTrue)
 				So(job.Requirements, ShouldResemble, &jqs.Requirements{RAM: 50, Time: 2 * time.Second, Cores: 1, Disk: 1})
-				So(job.Retries, ShouldEqual, 3)
+				So(job.Retries, ShouldEqual, 30)
 				So(job.DepGroups, ShouldBeNil)
 				So(job.Dependencies, ShouldBeNil)
 				So(job.Override, ShouldEqual, 0)

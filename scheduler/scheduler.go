@@ -44,7 +44,7 @@ func (e Error) Error() string { return string(e) }
 const dupJobsErr = Error("some of the added jobs were duplicates")
 
 // some consts for the jobs returned by NewJob().
-const jobRetries uint8 = 3
+const jobRetries uint8 = 30
 const reqRAM = 50
 const reqTime = 2 * time.Second
 const reqCores = 1
