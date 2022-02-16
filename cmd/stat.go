@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2021-2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -40,6 +40,7 @@ const reportFrequency = 10 * time.Minute
 const statOutputFileSuffix = ".stats"
 const statUserGroupSummaryOutputFileSuffix = ".byusergroup"
 const statGroupSummaryOutputFileSuffix = ".bygroup"
+const statDGUTSummaryOutputFileSuffix = ".dgut"
 const statLogOutputFileSuffix = ".log"
 const lstatTimeout = 10 * time.Second
 const lstatAttempts = 3
@@ -101,6 +102,17 @@ joe	lemur	/disk1	6	60
 joe	lemur	/disk1/dir1	5	50
 joe	lemur	/disk1/dir1/dir1a	3	30
 joe	lemur	/disk1/dir2	1	10
+
+Likewise, it produces a similar file that also shows nested numbers, with these
+6 tab separated columns, with a ".dgut.gz" suffix:
+
+1. directory
+2. gid
+3. uid
+4. filetype (0=cram,1=bam,2=index,3=compressed,4=uncompressed,5=checkpoint,
+	         6=temp,7=other)
+5. number of files nested under 1 belonging to 2 and 3 and having filetype in 4.
+6. total file size in bytes of the files in 5.
 
 It also summarises file count and size information by grouping on group+user,
 and stores this summary in another file named after the input file with a
@@ -247,12 +259,21 @@ func addSummaryOperations(input string, p *stat.Paths) (func() error, error) {
 		return nil, err
 	}
 
+	outputDGUTSummaryData, err := addDGUTSummaryOperation(input, p)
+	if err != nil {
+		return nil, err
+	}
+
 	return func() error {
 		if err = outputUserGroupSummaryData(); err != nil {
 			return err
 		}
 
-		return outputGroupSummaryData()
+		if err = outputGroupSummaryData(); err != nil {
+			return err
+		}
+
+		return outputDGUTSummaryData()
 	}, nil
 }
 
@@ -292,6 +313,16 @@ func addGroupSummaryOperation(input string, p *stat.Paths) (func() error, error)
 	g := summary.NewByGroupUser()
 
 	return addSummaryOperator(input, statGroupSummaryOutputFileSuffix, "group", p, g)
+}
+
+// addDGUTSummaryOperation adds an operation to Paths that collects [directory,
+// group, user, filetype, count, size] summary information. It returns a
+// function that you should call after calling p.Scan(), which outputs the
+// summary data to file.
+func addDGUTSummaryOperation(input string, p *stat.Paths) (func() error, error) {
+	d := summary.NewByDirGroupUserType()
+
+	return addSummaryOperator(input, statDGUTSummaryOutputFileSuffix, "dgut", p, d)
 }
 
 // addChOperation adds the chmod&chown operation to the Paths if the yaml file
