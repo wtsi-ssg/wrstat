@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2021-2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -46,6 +46,7 @@ const pgzipWriterBlocksMultiplier = 2
 const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
 const combineGroupOutputFileBasename = "combine.bygroup"
+const combineDGUTOutputFileBasename = "combine.dgut.gz"
 const combineLogOutputFileBasename = "combine.log.gz"
 const numSummaryColumns = 2
 const groupSumCols = 2
@@ -66,7 +67,8 @@ Likewise, all the 'wrstat stat' *.byusergroup files will be merged,
 compressed and placed at the root of the output directory in a file called
 'combine.byusergroup.gz'.
 
-The same applies to the *.log files, being called 'combine.log.gz'.
+The same applies to the *.log files, being called 'combine.log.gz', and to the
+*.dugt files, being called 'combine.dgut.gz'.
 
 The *.bygroup files are merged but not compressed and called 'combine.bygroup'.
 
@@ -100,6 +102,12 @@ you supplied 'wrstat walk'.`,
 		go func() {
 			defer wg.Done()
 			mergeGroupFiles(sourceDir)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mergeAndCompressDGUTFiles(sourceDir)
 		}()
 
 		wg.Add(1)
@@ -319,20 +327,13 @@ func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
 func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
 	zw, closeOutput := compressOutput(output)
 
-	if err := mergeUserGroupStreamToOutput(data, zw); err != nil {
+	if err := mergeSummaryLines(data, 3, zw); err != nil {
 		return err
 	}
 
 	closeOutput()
 
 	return nil
-}
-
-// mergeUserGroupStreamToOutput merges pre-sorted (pre-merged) usergroup data
-// (eg. from a `sort -m` of .byusergroup files), summing consecutive lines with
-// the first 3 columns, and outputting the results.
-func mergeUserGroupStreamToOutput(data io.ReadCloser, output io.Writer) error {
-	return mergeSummaryLines(data, userGroupSumCols, output)
 }
 
 // mergeSummaryLines merges pre-sorted (pre-merged) summary data (eg. from a
@@ -442,6 +443,48 @@ func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
 	}
 
 	return output.Close()
+}
+
+// mergeAndCompressDGUTFiles finds and merges the dgut files and compresses the
+// output.
+func mergeAndCompressDGUTFiles(sourceDir string) {
+	paths := findDGUTFilePaths(sourceDir)
+	output := createCombineDGUTOutputFile(sourceDir)
+
+	err := mergeDGUTAndCompress(paths, output)
+	if err != nil {
+		die("failed to merge the dgut files: %s", err)
+	}
+}
+
+// findDGUTFilePaths returns files in the given dir named with a '.dgut' suffix.
+func findDGUTFilePaths(dir string) []string {
+	return findFilePathsInDir(dir, statDGUTSummaryOutputFileSuffix)
+}
+
+// createCombineDGUTOutputFile creates a dgut output file in the given dir.
+func createCombineDGUTOutputFile(dir string) *os.File {
+	return createOutputFileInDir(dir, combineDGUTOutputFileBasename)
+}
+
+// mergeDGUTAndCompress merges the inputs and stores in the output, compressed.
+func mergeDGUTAndCompress(inputs []string, output *os.File) error {
+	return mergeFilesAndStreamToOutput(inputs, output, mergeDGUTStreamToCompressedFile)
+}
+
+// mergeDGUTStreamToCompressedFile merges pre-sorted (pre-merged) dgut data (eg.
+// from a `sort -m` of .dgut files), summing consecutive lines with the first 4
+// columns, and outputting the results to a file, compressed.
+func mergeDGUTStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
+	zw, closeOutput := compressOutput(output)
+
+	if err := mergeSummaryLines(data, 4, zw); err != nil {
+		return err
+	}
+
+	closeOutput()
+
+	return nil
 }
 
 // mergeAndCompressLogFiles finds and merges the log files and compresses the
