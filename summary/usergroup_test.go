@@ -65,20 +65,23 @@ func TestUsergroup(t *testing.T) {
 			So(ug.store[cuid][2], ShouldNotBeNil)
 			So(ug.store[cuid][3], ShouldBeNil)
 
-			So(len(ug.store[cuid][2]), ShouldEqual, 3)
+			So(len(ug.store[cuid][2]), ShouldEqual, 4)
 			So(ug.store[cuid][2]["/a/b/c"], ShouldResemble, &summary{2, 30})
 			So(ug.store[cuid][2]["/a/b"], ShouldResemble, &summary{3, 60})
 			So(ug.store[cuid][2]["/a"], ShouldResemble, &summary{3, 60})
+			So(ug.store[cuid][2]["/"], ShouldResemble, &summary{3, 60})
 
-			So(len(ug.store[2][2]), ShouldEqual, 3)
+			So(len(ug.store[2][2]), ShouldEqual, 4)
 			So(ug.store[2][2]["/a/b/c"], ShouldResemble, &summary{1, 5})
 			So(ug.store[2][2]["/a/b"], ShouldResemble, &summary{1, 5})
 			So(ug.store[2][2]["/a"], ShouldResemble, &summary{1, 5})
+			So(ug.store[2][2]["/"], ShouldResemble, &summary{1, 5})
 
-			So(len(ug.store[2][3]), ShouldEqual, 3)
+			So(len(ug.store[2][3]), ShouldEqual, 4)
 			So(ug.store[2][3]["/a/b/c"], ShouldResemble, &summary{1, 6})
 			So(ug.store[2][3]["/a/b"], ShouldResemble, &summary{1, 6})
 			So(ug.store[2][3]["/a"], ShouldResemble, &summary{1, 6})
+			So(ug.store[2][3]["/"], ShouldResemble, &summary{1, 6})
 
 			Convey("And then given an output file", func() {
 				dir := t.TempDir()
@@ -101,8 +104,7 @@ func TestUsergroup(t *testing.T) {
 
 					So(output, ShouldContainSubstring, os.Getenv("USER")+"\t"+g.Name+"\t/a/b/c\t2\t30\n")
 
-					err = exec.Command("sort", "-C", outPath).Run()
-					So(err, ShouldBeNil)
+					So(checkFileIsSorted(outPath), ShouldBeTrue)
 				})
 
 				Convey("Output handles bad uids", func() {
@@ -210,4 +212,14 @@ func testBadIds(err error, a byColumnAdder, out *os.File, outPath string) {
 	output := string(o)
 
 	So(output, ShouldContainSubstring, "id999999999")
+}
+
+func checkFileIsSorted(path string) bool {
+	cmd := exec.Command("sort", "-C", path)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "LC_ALL=C")
+
+	err := cmd.Run()
+
+	return err == nil
 }
