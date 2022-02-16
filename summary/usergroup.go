@@ -46,6 +46,31 @@ const errNotUnix = Error("file info Sys() was not a *syscall.Stat_t; only unix i
 // values.
 type dirStore map[string]*summary
 
+// addForEachDir breaks path into each directory and calls add() on it.
+func (store dirStore) addForEachDir(path string, size int64) {
+	cb := func(dir string) {
+		store.add(dir, size)
+	}
+
+	doForEachDir(path, cb)
+}
+
+// doForEachDir breaks path into each sub-directory, and passes each to the
+// given callback.
+func doForEachDir(path string, cb func(dir string)) {
+	dir := filepath.Dir(path)
+
+	for {
+		cb(dir)
+
+		if dir == "/" || dir == "." {
+			return
+		}
+
+		dir = filepath.Dir(dir)
+	}
+}
+
 // add will auto-vivify a summary for the given directory path and call
 // add(size) on it.
 func (store dirStore) add(path string, size int64) {
@@ -61,6 +86,12 @@ func (store dirStore) add(path string, size int64) {
 // sort returns a slice of our summary values, sorted by our directory path
 // keys which are also returned.
 func (store dirStore) sort() ([]string, []*summary) {
+	return sortSummaryStore(store)
+}
+
+// sortSummaryStore returns a slice of our summary values, sorted by the store's
+// keys which are also returned.
+func sortSummaryStore(store map[string]*summary) ([]string, []*summary) {
 	keys := make([]string, len(store))
 	i := 0
 
@@ -246,25 +277,9 @@ func (u *Usergroup) Add(path string, info fs.FileInfo) error {
 
 	dStore := u.store.DirStore(stat.Uid, stat.Gid)
 
-	addForEachDir(path, info.Size(), dStore)
+	dStore.addForEachDir(path, info.Size())
 
 	return nil
-}
-
-// addForEachDir breaks path into each directory and adds the size to the
-// summary in the store, creating one for each dir if necessary.
-func addForEachDir(path string, size int64, store dirStore) {
-	dir := filepath.Dir(path)
-
-	for {
-		if dir == "/" || dir == "." {
-			return
-		}
-
-		store.add(dir, size)
-
-		dir = filepath.Dir(dir)
-	}
 }
 
 // Output will write summary information for all the paths previously added. The
