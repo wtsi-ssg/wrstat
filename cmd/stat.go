@@ -110,9 +110,13 @@ Likewise, it produces a similar file that also shows nested numbers, with these
 2. gid
 3. uid
 4. filetype (0=cram,1=bam,2=index,3=compressed,4=uncompressed,5=checkpoint,
-	         6=temp,7=other)
+	         6=other,7=temporary)
 5. number of files nested under 1 belonging to 2 and 3 and having filetype in 4.
 6. total file size in bytes of the files in 5.
+
+(Note that files can be both "temporary" and one of the other types, so ignore
+lines where column 4 is 7 if summing up columns 5 and 6 for a given 1+2+3 for an
+"all filetypes" query.)
 
 It also summarises file count and size information by grouping on group+user,
 and stores this summary in another file named after the input file with a
