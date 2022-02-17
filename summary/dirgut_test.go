@@ -45,9 +45,9 @@ func TestDirGUTFileType(t *testing.T) {
 		So(DGUTFileTypeCompressed.String(), ShouldEqual, "compressed")
 		So(DGUTFileTypeUncompressed.String(), ShouldEqual, "uncompressed")
 		So(DGUTFileTypeCheckpoint.String(), ShouldEqual, "checkpoint")
-		So(DGUTFileTypeTemp.String(), ShouldEqual, "temporary")
 		So(DGUTFileTypeOther.String(), ShouldEqual, "other")
-		So(int(DGUTFileTypeOther), ShouldEqual, 7)
+		So(DGUTFileTypeTemp.String(), ShouldEqual, "temporary")
+		So(int(DGUTFileTypeTemp), ShouldEqual, 7)
 	})
 
 	Convey("isCram lets you know if a path is a cram file", t, func() {
@@ -134,7 +134,8 @@ func TestDirGUTFileType(t *testing.T) {
 		So(d.pathToTypes("/foo/bar.sam"), ShouldResemble, []DirGUTFileType{DGUTFileTypeUncompressed})
 		So(d.pathToTypes("/foo/bar.jobstate.context"), ShouldResemble, []DirGUTFileType{DGUTFileTypeCheckpoint})
 		So(d.pathToTypes("/foo/bar.sdf"), ShouldResemble, []DirGUTFileType{DGUTFileTypeOther})
-		So(d.pathToTypes("/foo/.tmp.sdf"), ShouldResemble, []DirGUTFileType{DGUTFileTypeTemp}) // not also "other"
+		So(pathToTypesMap(d, "/foo/.tmp.sdf"), ShouldResemble, map[DirGUTFileType]bool{
+			DGUTFileTypeOther: true, DGUTFileTypeTemp: true})
 	})
 }
 
