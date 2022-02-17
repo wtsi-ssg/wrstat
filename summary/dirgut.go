@@ -45,13 +45,13 @@ const (
 	DGUTFileTypeCompressed
 	DGUTFileTypeUncompressed
 	DGUTFileTypeCheckpoint
-	DGUTFileTypeTemp
 	DGUTFileTypeOther
+	DGUTFileTypeTemp
 )
 
 // String lets you convert a DirGUTFileType to a meaningful string.
 func (d DirGUTFileType) String() string {
-	return [...]string{"cram", "bam", "index", "compressed", "uncompressed", "checkpoint", "temporary", "other"}[d]
+	return [...]string{"cram", "bam", "index", "compressed", "uncompressed", "checkpoint", "other", "temporary"}[d]
 }
 
 // gutStore is a sortable map with gid,uid,filetype as keys and summaries as
@@ -133,7 +133,6 @@ func NewByDirGroupUserType() *DirGroupUserType {
 			DGUTFileTypeCompressed:   isCompressed,
 			DGUTFileTypeUncompressed: isUncompressed,
 			DGUTFileTypeCheckpoint:   isCheckpoint,
-			DGUTFileTypeTemp:         isTemp,
 		},
 	}
 }
@@ -200,8 +199,14 @@ func isTemp(path string) bool {
 
 // Add is a github.com/wtsi-ssg/wrstat/stat Operation. It will break path in to
 // its directories and add the file size and increment the file count to each,
-// summed for the info's group, user and file type. If path is a directory, it
-// is ignored.
+// summed for the info's group, user and filetype. If path is a directory, it is
+// ignored.
+//
+// NB: the "temporary" filetype is an extra filetype on top of the other normal
+// filetypes, so if you sum all the filetypes to get information about a a given
+// directory+group+user combination, you should ignore "temporary". Only count
+// "temporary" when it's the only type you're considering, or you'll count some
+// files twice.
 func (d *DirGroupUserType) Add(path string, info fs.FileInfo) error {
 	if info.IsDir() {
 		return nil
@@ -235,11 +240,6 @@ func (d *DirGroupUserType) statToGUTKeys(stat *syscall.Stat_t, path string) []st
 // pathToTypes determines the filetype of the given path based on its basename,
 // and returns a slice of our DirGUTFileType. More than one is possible, because
 // a path can be both a temporary file, and another type.
-//
-// *** Allowing multiple types in this way means you would double count the same
-// file when it is a specific type and temporary file, and you sum across all
-// filetypes with the same DGU. We should either not allow both, or have extra
-// filetypes for every pair of specific+temporary...
 func (d *DirGroupUserType) pathToTypes(path string) []DirGUTFileType {
 	var types []DirGUTFileType
 
@@ -251,6 +251,10 @@ func (d *DirGroupUserType) pathToTypes(path string) []DirGUTFileType {
 
 	if len(types) == 0 {
 		types = append(types, DGUTFileTypeOther)
+	}
+
+	if isTemp(path) {
+		types = append(types, DGUTFileTypeTemp)
 	}
 
 	return types
@@ -286,8 +290,8 @@ func (d *DirGroupUserType) addForEachDir(path string, gutKeys []string, size int
 //   3 = compressed
 //   4 = uncompressed
 //   5 = checkpoint
-//   6 = temp
-//   7 = other
+//   6 = other
+//   7 = temp
 //
 // Returns an error on failure to write. output is closed on completion.
 func (d *DirGroupUserType) Output(output *os.File) error {
