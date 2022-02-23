@@ -16,7 +16,13 @@ require (
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/spf13/cobra v1.3.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
+<<<<<<< HEAD
 	github.com/wtsi-ssg/wr v0.5.5
+=======
+	github.com/ugorji/go/codec v1.2.6
+	github.com/wtsi-ssg/wr v0.5.3
+	go.etcd.io/bbolt v1.3.6
+>>>>>>> New dgut package with storage implemented; queries to follow.
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	gopkg.in/yaml.v2 v2.4.0
@@ -94,9 +100,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
-	github.com/ugorji/go/codec v1.2.6 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.etcd.io/bbolt v1.3.6 // indirect
 	golang.org/x/crypto v0.0.0-20220131195533-30dcbda58838 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86 // indirect
