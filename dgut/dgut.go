@@ -61,3 +61,10 @@ func decodeDGUTbytes(dir, encoded []byte) (*DGUT, error) {
 		GUTs: g,
 	}, err
 }
+
+// CountAndSize sums the count and size of all our GUTs and returns the results.
+//
+// See GUTs.CountAndSize for an explanation of the filter.
+func (d *DGUT) CountAndSize(filter *GUTFilter) (uint64, uint64) {
+	return d.GUTs.CountAndSize(filter)
+}

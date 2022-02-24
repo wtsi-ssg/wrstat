@@ -37,12 +37,15 @@ const (
 	gutBucket = "gut"
 )
 
+const ErrDirNotFound = Error("directory not found")
+
 // DB is used to create and query a database made from a dgut file, which is the
 // directory,group,user,type summary output produced by the summary packages'
 // DirGroupUserType.Output() method.
 type DB struct {
 	path       string
-	db         *bolt.DB
+	wdb        *bolt.DB
+	rdb        *bolt.DB
 	batchSize  int
 	writeBatch []*DGUT
 	writeI     int
@@ -75,7 +78,7 @@ func (d *DB) Store(data io.Reader, batchSize int) error {
 	}
 
 	defer func() {
-		errc := d.db.Close()
+		errc := d.wdb.Close()
 		if err == nil {
 			err = errc
 		}
@@ -108,7 +111,7 @@ func (d *DB) createDB() error {
 		return errc
 	})
 
-	d.db = db
+	d.wdb = db
 
 	return err
 }
@@ -146,7 +149,7 @@ func (d *DB) storeBatch() {
 		return
 	}
 
-	err := d.db.Update(func(tx *bolt.Tx) error {
+	err := d.wdb.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(gutBucket))
 
 		return storeDGUTsInBucket(d.writeBatch, b)
@@ -179,4 +182,54 @@ func storeDGUTinDB(dgut *DGUT, b *bolt.Bucket) error {
 	dir, guts := dgut.encodeToBytes()
 
 	return b.Put(dir, guts)
+}
+
+// Open opens the database for reading. You need to call this before using the
+// query methods like DirInfo().
+func (d *DB) Open() error {
+	rdb, err := openBoltReadOnly(d.path)
+	if err != nil {
+		return err
+	}
+
+	d.rdb = rdb
+
+	return nil
+}
+
+// openBoltReadOnly opens a bolt database at the given path in read-only mode.
+func openBoltReadOnly(path string) (*bolt.DB, error) {
+	return bolt.Open(path, 0666, &bolt.Options{ReadOnly: true})
+}
+
+// DirInfo tells you the total number of files and their total size nested under
+// the given directory. See GUTs.CountAndSize for an explanation of the filter.
+//
+// Returns an error if dir doesn't exist, or if there was a problem reading from
+// the database.
+//
+// You must call Open() before calling this.
+func (d *DB) DirInfo(dir string, filter *GUTFilter) (uint64, uint64, error) {
+	var dgut *DGUT
+
+	if err := d.rdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(gutBucket))
+		bdir := []byte(dir)
+		v := b.Get(bdir)
+
+		if v == nil {
+			return ErrDirNotFound
+		}
+
+		var errd error
+		dgut, errd = decodeDGUTbytes(bdir, v)
+
+		return errd
+	}); err != nil {
+		return 0, 0, err
+	}
+
+	c, s := dgut.CountAndSize(filter)
+
+	return c, s, nil
 }
