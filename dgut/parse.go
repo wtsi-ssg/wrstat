@@ -32,13 +32,15 @@ import (
 	"io"
 	"strconv"
 	"strings"
+
+	"github.com/wtsi-ssg/wrstat/summary"
 )
 
 type Error string
 
 func (e Error) Error() string { return string(e) }
 
-const errInvalidFormat = Error("the provided data was not in dgut format")
+const ErrInvalidFormat = Error("the provided data was not in dgut format")
 
 const (
 	gutDataCols = 6
@@ -104,7 +106,7 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 	return parts[0], &GUT{
 		GID:   uint32(ints[0]),
 		UID:   uint32(ints[1]),
-		FT:    uint8(ints[2]),
+		FT:    summary.DirGUTFileType(ints[2]),
 		Count: ints[3],
 		Size:  ints[4],
 	}, nil
@@ -116,7 +118,7 @@ func splitDGUTLine(line string) ([]string, error) {
 
 	parts := strings.Split(line, "\t")
 	if len(parts) != gutDataCols {
-		return nil, errInvalidFormat
+		return nil, ErrInvalidFormat
 	}
 
 	return parts, nil
@@ -130,23 +132,23 @@ func gutLinePartsToInts(parts []string) ([]uint64, error) {
 	var err error
 
 	if ints[0], err = strconv.ParseUint(parts[1], 10, 32); err != nil {
-		return nil, errInvalidFormat
+		return nil, ErrInvalidFormat
 	}
 
 	if ints[1], err = strconv.ParseUint(parts[2], 10, 32); err != nil {
-		return nil, errInvalidFormat
+		return nil, ErrInvalidFormat
 	}
 
 	if ints[2], err = strconv.ParseUint(parts[3], 10, 8); err != nil {
-		return nil, errInvalidFormat
+		return nil, ErrInvalidFormat
 	}
 
 	if ints[3], err = strconv.ParseUint(parts[4], 10, 64); err != nil {
-		return nil, errInvalidFormat
+		return nil, ErrInvalidFormat
 	}
 
 	if ints[4], err = strconv.ParseUint(parts[5], 10, 64); err != nil {
-		return nil, errInvalidFormat
+		return nil, ErrInvalidFormat
 	}
 
 	return ints, nil
