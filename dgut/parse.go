@@ -23,8 +23,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-// package dgut lets you create and query a database made from dgut files.
-
 package dgut
 
 import (

@@ -23,8 +23,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-// package dgut lets you create and query a database made from dgut files.
-
 package dgut
 
 import (
@@ -303,11 +301,10 @@ func openBoltReadOnly(path string) (*bolt.DB, error) {
 // DirInfo tells you the total number of files and their total size nested under
 // the given directory. See GUTs.CountAndSize for an explanation of the filter.
 //
-// Returns an error if dir doesn't exist, or if there was a problem reading from
-// the database.
+// Returns an error if dir doesn't exist.
 //
 // You must call Open() before calling this.
-func (d *DB) DirInfo(dir string, filter *GUTFilter) (uint64, uint64, error) {
+func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, error) {
 	var dgut *DGUT
 
 	if err := d.rdb.View(func(tx *bolt.Tx) error {
@@ -319,10 +316,9 @@ func (d *DB) DirInfo(dir string, filter *GUTFilter) (uint64, uint64, error) {
 			return ErrDirNotFound
 		}
 
-		var errd error
-		dgut, errd = decodeDGUTbytes(bdir, v)
+		dgut = decodeDGUTbytes(d.ch, bdir, v)
 
-		return errd
+		return nil
 	}); err != nil {
 		return 0, 0, err
 	}
@@ -340,10 +336,12 @@ func (d *DB) DirInfo(dir string, filter *GUTFilter) (uint64, uint64, error) {
 // or didn't exist at all).
 //
 // You must call Open() before calling this.
-func (d *DB) Children(dir string) ([]string, error) {
+func (d *DB) Children(dir string) []string {
 	var children []string
 
-	err := d.rdb.View(func(tx *bolt.Tx) error {
+	// no error is possible here, but the View function requires we return one.
+	//nolint:errcheck
+	d.rdb.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(childBucket))
 
 		children = d.getChildrenFromBucket(dir, b)
@@ -351,5 +349,5 @@ func (d *DB) Children(dir string) ([]string, error) {
 		return nil
 	})
 
-	return children, err
+	return children
 }

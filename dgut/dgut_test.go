@@ -68,130 +68,10 @@ func TestDGUT(t *testing.T) {
 		})
 	})
 
-	dgutData := "/\t1\t101\t0\t3\t30\n" +
-		"/\t1\t101\t1\t2\t10\n" +
-		"/\t1\t101\t7\t1\t5\n" +
-		"/\t1\t102\t0\t4\t40\n" +
-		"/\t2\t102\t0\t5\t5\n" +
-
-		"/a\t1\t101\t0\t3\t30\n" +
-		"/a\t1\t101\t1\t2\t10\n" +
-		"/a\t1\t101\t7\t1\t5\n" +
-		"/a\t1\t102\t0\t4\t40\n" +
-		"/a\t2\t102\t0\t5\t5\n" +
-
-		"/a/b\t1\t101\t0\t3\t30\n" +
-		"/a/b\t1\t101\t1\t2\t10\n" +
-		"/a/b\t1\t101\t7\t1\t5\n" +
-		"/a/b\t1\t102\t0\t4\t40\n" +
-
-		"/a/b/d\t1\t101\t0\t3\t30\n" +
-		"/a/b/d\t1\t102\t0\t4\t40\n" +
-
-		"/a/b/d/f\t1\t101\t0\t1\t10\n" +
-		"/a/b/d/g\t1\t101\t0\t2\t20\n" +
-		"/a/b/d/g\t1\t102\t0\t4\t40\n" +
-
-		"/a/b/e\t1\t101\t1\t2\t10\n" +
-		"/a/b/e\t1\t101\t7\t1\t5\n" +
-		"/a/b/e/h\t1\t101\t1\t2\t10\n" +
-		"/a/b/e/h\t1\t101\t7\t1\t5\n" +
-		"/a/b/e/h/tmp\t1\t101\t7\t1\t5\n" +
-
-		"/a/c\t2\t102\t0\t5\t5\n" +
-		"/a/c/d\t2\t102\t0\t5\t5\n"
-
-	expectedRootGUTs := GUTs{
-		{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30},
-		{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
-		{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
-		{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
-		{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5},
-	}
-	expected := []*DGUT{
-		{
-			Dir:  "/",
-			GUTs: expectedRootGUTs,
-		},
-		{
-			Dir:  "/a",
-			GUTs: expectedRootGUTs,
-		},
-		{
-			Dir: "/a/b",
-			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30},
-				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
-				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
-				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
-			},
-		},
-		{
-			Dir: "/a/b/d",
-			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30},
-				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
-			},
-		},
-		{
-			Dir: "/a/b/d/f",
-			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 0, Count: 1, Size: 10},
-			},
-		},
-		{
-			Dir: "/a/b/d/g",
-			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 0, Count: 2, Size: 20},
-				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
-			},
-		},
-		{
-			Dir: "/a/b/e",
-			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
-				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
-			},
-		},
-		{
-			Dir: "/a/b/e/h",
-			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
-				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
-			},
-		},
-		{
-			Dir: "/a/b/e/h/tmp",
-			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
-			},
-		},
-		{
-			Dir: "/a/c",
-			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5},
-			},
-		},
-		{
-			Dir: "/a/c/d",
-			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5},
-			},
-		},
-	}
-
-	expectedKeys := []string{"/", "/a", "/a/b", "/a/b/d", "/a/b/d/f",
-		"/a/b/d/g", "/a/b/e", "/a/b/e/h", "/a/b/e/h/tmp", "/a/c", "/a/c/d"}
+	dgutData, expectedRootGUTs, expected, expectedKeys := testData()
 
 	Convey("You can see if a GUT passes a filter", t, func() {
-		// expectedRootGUTs := GUTs{
-		// 	{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30},
-		// 	{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
-		// 	{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
-		// 	{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
-		// 	{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5},
-		// }
-		filter := &GUTFilter{}
+		filter := &Filter{}
 		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeTrue)
 		So(expectedRootGUTs[2].PassesFilter(filter), ShouldBeFalse)
 
@@ -229,12 +109,12 @@ func TestDGUT(t *testing.T) {
 	})
 
 	Convey("A DGUT can be encoded and decoded", t, func() {
-		dirb, b := expected[0].encodeToBytes(new(codec.BincHandle))
+		ch := new(codec.BincHandle)
+		dirb, b := expected[0].encodeToBytes(ch)
 		So(len(dirb), ShouldEqual, 1)
 		So(len(b), ShouldEqual, 148)
 
-		d, err := decodeDGUTbytes(dirb, b)
-		So(err, ShouldBeNil)
+		d := decodeDGUTbytes(ch, dirb, b)
 		So(d, ShouldResemble, expected[0])
 	})
 
@@ -272,8 +152,7 @@ func TestDGUT(t *testing.T) {
 		})
 
 		Convey("And a database file path", func() {
-			dir := t.TempDir()
-			path := filepath.Join(dir, "dgut.db")
+			path := testMakeDBPath(t)
 			db := NewDB(path)
 			So(db, ShouldNotBeNil)
 
@@ -320,22 +199,22 @@ func TestDGUT(t *testing.T) {
 						So(err, ShouldNotBeNil)
 						So(err, ShouldEqual, ErrDirNotFound)
 
-						c, s, err = db.DirInfo("/", &GUTFilter{GIDs: []uint32{1}})
+						c, s, err = db.DirInfo("/", &Filter{GIDs: []uint32{1}})
 						So(err, ShouldBeNil)
 						So(c, ShouldEqual, 9)
 						So(s, ShouldEqual, 80)
 
-						c, s, err = db.DirInfo("/", &GUTFilter{UIDs: []uint32{102}})
+						c, s, err = db.DirInfo("/", &Filter{UIDs: []uint32{102}})
 						So(err, ShouldBeNil)
 						So(c, ShouldEqual, 9)
 						So(s, ShouldEqual, 45)
 
-						c, s, err = db.DirInfo("/", &GUTFilter{GIDs: []uint32{1}, UIDs: []uint32{102}})
+						c, s, err = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
 						So(err, ShouldBeNil)
 						So(c, ShouldEqual, 4)
 						So(s, ShouldEqual, 40)
 
-						c, s, err = db.DirInfo("/", &GUTFilter{
+						c, s, err = db.DirInfo("/", &Filter{
 							GIDs: []uint32{1},
 							UIDs: []uint32{102},
 							FTs:  []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
@@ -343,25 +222,21 @@ func TestDGUT(t *testing.T) {
 						So(c, ShouldEqual, 0)
 						So(s, ShouldEqual, 0)
 
-						c, s, err = db.DirInfo("/", &GUTFilter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
+						c, s, err = db.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
 						So(err, ShouldBeNil)
 						So(c, ShouldEqual, 1)
 						So(s, ShouldEqual, 5)
 
-						children, err := db.Children("/a")
-						So(err, ShouldBeNil)
+						children := db.Children("/a")
 						So(children, ShouldResemble, []string{"/a/b", "/a/c"})
 
-						children, err = db.Children("/a/b/e/h")
-						So(err, ShouldBeNil)
+						children = db.Children("/a/b/e/h")
 						So(children, ShouldResemble, []string{"/a/b/e/h/tmp"})
 
-						children, err = db.Children("/a/c/d")
-						So(err, ShouldBeNil)
+						children = db.Children("/a/c/d")
 						So(children, ShouldResemble, []string{})
 
-						children, err = db.Children("/foo")
-						So(err, ShouldBeNil)
+						children = db.Children("/foo")
 						So(children, ShouldResemble, []string{})
 					})
 				})
@@ -430,6 +305,144 @@ func TestDGUT(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 	})
+}
+
+// testData provides some test data and expected results.
+func testData() (dgutData string, expectedRootGUTs GUTs, expected []*DGUT, expectedKeys []string) {
+	dgutData = testDGUTData()
+
+	expectedRootGUTs = GUTs{
+		{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30},
+		{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
+		{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
+		{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
+		{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5},
+	}
+
+	expected = []*DGUT{
+		{
+			Dir:  "/",
+			GUTs: expectedRootGUTs,
+		},
+		{
+			Dir:  "/a",
+			GUTs: expectedRootGUTs,
+		},
+		{
+			Dir: "/a/b",
+			GUTs: []*GUT{
+				{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30},
+				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
+				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
+				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
+			},
+		},
+		{
+			Dir: "/a/b/d",
+			GUTs: []*GUT{
+				{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30},
+				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
+			},
+		},
+		{
+			Dir: "/a/b/d/f",
+			GUTs: []*GUT{
+				{GID: 1, UID: 101, FT: 0, Count: 1, Size: 10},
+			},
+		},
+		{
+			Dir: "/a/b/d/g",
+			GUTs: []*GUT{
+				{GID: 1, UID: 101, FT: 0, Count: 2, Size: 20},
+				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40},
+			},
+		},
+		{
+			Dir: "/a/b/e",
+			GUTs: []*GUT{
+				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
+				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
+			},
+		},
+		{
+			Dir: "/a/b/e/h",
+			GUTs: []*GUT{
+				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10},
+				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
+			},
+		},
+		{
+			Dir: "/a/b/e/h/tmp",
+			GUTs: []*GUT{
+				{GID: 1, UID: 101, FT: 1, Count: 1, Size: 5},
+				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5},
+			},
+		},
+		{
+			Dir: "/a/c",
+			GUTs: []*GUT{
+				{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5},
+			},
+		},
+		{
+			Dir: "/a/c/d",
+			GUTs: []*GUT{
+				{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5},
+			},
+		},
+	}
+
+	expectedKeys = []string{"/", "/a", "/a/b", "/a/b/d", "/a/b/d/f",
+		"/a/b/d/g", "/a/b/e", "/a/b/e/h", "/a/b/e/h/tmp", "/a/c", "/a/c/d"}
+
+	return dgutData, expectedRootGUTs, expected, expectedKeys
+}
+
+func testDGUTData() string {
+	return "/\t1\t101\t0\t3\t30\n" +
+		"/\t1\t101\t1\t2\t10\n" +
+		"/\t1\t101\t7\t1\t5\n" +
+		"/\t1\t102\t0\t4\t40\n" +
+		"/\t2\t102\t0\t5\t5\n" +
+
+		"/a\t1\t101\t0\t3\t30\n" +
+		"/a\t1\t101\t1\t2\t10\n" +
+		"/a\t1\t101\t7\t1\t5\n" +
+		"/a\t1\t102\t0\t4\t40\n" +
+		"/a\t2\t102\t0\t5\t5\n" +
+
+		"/a/b\t1\t101\t0\t3\t30\n" +
+		"/a/b\t1\t101\t1\t2\t10\n" +
+		"/a/b\t1\t101\t7\t1\t5\n" +
+		"/a/b\t1\t102\t0\t4\t40\n" +
+
+		"/a/b/d\t1\t101\t0\t3\t30\n" +
+		"/a/b/d\t1\t102\t0\t4\t40\n" +
+
+		"/a/b/d/f\t1\t101\t0\t1\t10\n" +
+		"/a/b/d/g\t1\t101\t0\t2\t20\n" +
+		"/a/b/d/g\t1\t102\t0\t4\t40\n" +
+
+		"/a/b/e\t1\t101\t1\t2\t10\n" +
+		"/a/b/e\t1\t101\t7\t1\t5\n" +
+		"/a/b/e/h\t1\t101\t1\t2\t10\n" +
+		"/a/b/e/h\t1\t101\t7\t1\t5\n" +
+		"/a/b/e/h/tmp\t1\t101\t1\t1\t5\n" +
+		"/a/b/e/h/tmp\t1\t101\t7\t1\t5\n" +
+
+		"/a/c\t2\t102\t0\t5\t5\n" +
+		"/a/c/d\t2\t102\t0\t5\t5\n"
+}
+
+// testMakeDBPath creates a temp dir that will be cleaned up automatically, and
+// returns a path to a file inside that can be used for a database file. The
+// file isn't actually created.
+func testMakeDBPath(t *testing.T) string {
+	t.Helper()
+
+	dir := t.TempDir()
+
+	return filepath.Join(dir, "dgut.db")
 }
 
 // testGetDBKeys returns all the keys in the given bucket of the db at the given

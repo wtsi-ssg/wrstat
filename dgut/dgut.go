@@ -47,22 +47,22 @@ func (d *DGUT) encodeToBytes(ch codec.Handle) ([]byte, []byte) {
 
 // decodeDGUTbytes converts the byte slices returned by DGUT.Encode() back in to
 // a *DGUT.
-func decodeDGUTbytes(dir, encoded []byte) (*DGUT, error) {
-	ch := new(codec.BincHandle)
+func decodeDGUTbytes(ch codec.Handle, dir, encoded []byte) *DGUT {
 	dec := codec.NewDecoderBytes(encoded, ch)
 
 	var g GUTs
-	err := dec.Decode(&g)
+
+	dec.MustDecode(&g)
 
 	return &DGUT{
 		Dir:  string(dir),
 		GUTs: g,
-	}, err
+	}
 }
 
 // CountAndSize sums the count and size of all our GUTs and returns the results.
 //
 // See GUTs.CountAndSize for an explanation of the filter.
-func (d *DGUT) CountAndSize(filter *GUTFilter) (uint64, uint64) {
+func (d *DGUT) CountAndSize(filter *Filter) (uint64, uint64) {
 	return d.GUTs.CountAndSize(filter)
 }
