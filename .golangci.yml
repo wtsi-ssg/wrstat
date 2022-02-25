@@ -6,7 +6,7 @@ run:
 
 linters-settings:
   dupl:
-    threshold: 50
+    threshold: 100
   errcheck:
     check-type-assertions: true
     check-blank: true
