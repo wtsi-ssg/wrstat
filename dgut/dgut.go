@@ -37,9 +37,7 @@ type DGUT struct {
 
 // encodeToBytes returns our Dir as a []byte and our GUTs encoded in another
 // []byte suitable for storing on disk.
-func (d *DGUT) encodeToBytes() ([]byte, []byte) {
-	ch := new(codec.BincHandle)
-
+func (d *DGUT) encodeToBytes(ch codec.Handle) ([]byte, []byte) {
 	var encoded []byte
 	enc := codec.NewEncoderBytes(&encoded, ch)
 	enc.MustEncode(d.GUTs)

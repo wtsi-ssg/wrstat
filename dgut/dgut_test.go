@@ -32,6 +32,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/summary"
 	bolt "go.etcd.io/bbolt"
 )
@@ -225,14 +226,10 @@ func TestDGUT(t *testing.T) {
 		c, s := expectedRootGUTs.CountAndSize(nil)
 		So(c, ShouldEqual, 14)
 		So(s, ShouldEqual, 85)
-
-		Convey("You can filter what you sum on", func() {
-			//
-		})
 	})
 
 	Convey("A DGUT can be encoded and decoded", t, func() {
-		dirb, b := expected[0].encodeToBytes()
+		dirb, b := expected[0].encodeToBytes(new(codec.BincHandle))
 		So(len(dirb), ShouldEqual, 1)
 		So(len(b), ShouldEqual, 148)
 
@@ -291,9 +288,13 @@ func TestDGUT(t *testing.T) {
 					So(errs, ShouldBeNil)
 					So(info.Size(), ShouldBeGreaterThan, 30000)
 
-					keys, errt := testGetDBKeys(path)
+					keys, errt := testGetDBKeys(path, gutBucket)
 					So(errt, ShouldBeNil)
 					So(keys, ShouldResemble, expectedKeys)
+
+					keys, errt = testGetDBKeys(path, childBucket)
+					So(errt, ShouldBeNil)
+					So(keys, ShouldResemble, []string{"/", "/a", "/a/b", "/a/b/d", "/a/b/e", "/a/b/e/h", "/a/c"})
 
 					Convey("You can query a database after Open()ing it", func() {
 						db = NewDB(path)
@@ -346,6 +347,22 @@ func TestDGUT(t *testing.T) {
 						So(err, ShouldBeNil)
 						So(c, ShouldEqual, 1)
 						So(s, ShouldEqual, 5)
+
+						children, err := db.Children("/a")
+						So(err, ShouldBeNil)
+						So(children, ShouldResemble, []string{"/a/b", "/a/c"})
+
+						children, err = db.Children("/a/b/e/h")
+						So(err, ShouldBeNil)
+						So(children, ShouldResemble, []string{"/a/b/e/h/tmp"})
+
+						children, err = db.Children("/a/c/d")
+						So(err, ShouldBeNil)
+						So(children, ShouldResemble, []string{})
+
+						children, err = db.Children("/foo")
+						So(err, ShouldBeNil)
+						So(children, ShouldResemble, []string{})
 					})
 				})
 			})
@@ -354,7 +371,7 @@ func TestDGUT(t *testing.T) {
 				err := db.Store(data, len(expectedKeys))
 				So(err, ShouldBeNil)
 
-				keys, errt := testGetDBKeys(path)
+				keys, errt := testGetDBKeys(path, gutBucket)
 				So(errt, ShouldBeNil)
 				So(keys, ShouldResemble, expectedKeys)
 			})
@@ -363,7 +380,7 @@ func TestDGUT(t *testing.T) {
 				err := db.Store(data, len(expectedKeys)+2)
 				So(err, ShouldBeNil)
 
-				keys, errt := testGetDBKeys(path)
+				keys, errt := testGetDBKeys(path, gutBucket)
 				So(errt, ShouldBeNil)
 				So(keys, ShouldResemble, expectedKeys)
 			})
@@ -393,11 +410,9 @@ func TestDGUT(t *testing.T) {
 					err = db.createDB()
 					So(err, ShouldBeNil)
 
-					err = db.wdb.View(func(tx *bolt.Tx) error {
-						b := tx.Bucket([]byte(gutBucket))
+					db.writeBatch = expected
 
-						return storeDGUTsInBucket(expected, b)
-					})
+					err = db.wdb.View(db.storeChildrenAndDGUTs)
 
 					So(err, ShouldNotBeNil)
 				})
@@ -417,9 +432,9 @@ func TestDGUT(t *testing.T) {
 	})
 }
 
-// testGetDBKeys returns all the keys in the gutBucket of the db at the given
+// testGetDBKeys returns all the keys in the given bucket of the db at the given
 // path.
-func testGetDBKeys(path string) ([]string, error) {
+func testGetDBKeys(path, bucket string) ([]string, error) {
 	rdb, err := openBoltReadOnly(path)
 	if err != nil {
 		return nil, err
@@ -428,7 +443,7 @@ func testGetDBKeys(path string) ([]string, error) {
 	var keys []string
 
 	err = rdb.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(gutBucket))
+		b := tx.Bucket([]byte(bucket))
 
 		return b.ForEach(func(k, v []byte) error {
 			keys = append(keys, string(k))

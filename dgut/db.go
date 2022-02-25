@@ -29,12 +29,16 @@ package dgut
 
 import (
 	"io"
+	"path/filepath"
 
+	"github.com/hashicorp/go-multierror"
+	"github.com/ugorji/go/codec"
 	bolt "go.etcd.io/bbolt"
 )
 
 const (
-	gutBucket = "gut"
+	gutBucket   = "gut"
+	childBucket = "children"
 )
 
 const ErrDirNotFound = Error("directory not found")
@@ -50,6 +54,7 @@ type DB struct {
 	writeBatch []*DGUT
 	writeI     int
 	writeErr   error
+	ch         codec.Handle
 }
 
 // NewDB returns a *DB that can be used to create or query a dgut database.
@@ -106,12 +111,19 @@ func (d *DB) createDB() error {
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, errc := tx.CreateBucketIfNotExists([]byte(gutBucket))
+		var errm *multierror.Error
 
-		return errc
+		_, errc := tx.CreateBucketIfNotExists([]byte(gutBucket))
+		errm = multierror.Append(errm, errc)
+
+		_, errc = tx.CreateBucketIfNotExists([]byte(childBucket))
+		errm = multierror.Append(errm, errc)
+
+		return errm.ErrorOrNil()
 	})
 
 	d.wdb = db
+	d.ch = new(codec.BincHandle)
 
 	return err
 }
@@ -143,28 +155,45 @@ func (d *DB) parserCB(dgut *DGUT) {
 	}
 }
 
-// storeBatch writes the current batch of DGUTs to the database.
+// storeBatch writes the current batch of DGUTs to the database. It also updates
+// our dir->child lookup in the database.
 func (d *DB) storeBatch() {
 	if d.writeErr != nil {
 		return
 	}
 
-	err := d.wdb.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(gutBucket))
-
-		return storeDGUTsInBucket(d.writeBatch, b)
-	})
-
-	if err != nil {
+	if err := d.wdb.Update(d.storeChildrenAndDGUTs); err != nil {
 		d.writeErr = err
 	}
 }
 
-// storeDGUTsInBucket stores the current batch of DGUTs in the given bucket.
-// Only call from within a database transaction.
-func storeDGUTsInBucket(dguts []*DGUT, b *bolt.Bucket) error {
-	for _, dgut := range dguts {
-		if err := storeDGUTinDB(dgut, b); err != nil {
+// storeChildrenAndDGUTs calls storeChildrenInBucket() and storeDGUTsInBucket()
+// with the right buckets. Provide a database transaction from which to work
+// inside.
+func (d *DB) storeChildrenAndDGUTs(tx *bolt.Tx) error {
+	var errm *multierror.Error
+
+	b := tx.Bucket([]byte(childBucket))
+	err := d.storeChildrenInBucket(b)
+	errm = multierror.Append(errm, err)
+
+	b = tx.Bucket([]byte(gutBucket))
+	err = d.storeDGUTsInBucket(b)
+	errm = multierror.Append(errm, err)
+
+	return errm.ErrorOrNil()
+}
+
+// storeChildrenInBucket stores the Dirs of the current DGUT batch in the given
+// bucket (which should be the childBucket). Only call from within a database
+// transaction.
+func (d *DB) storeChildrenInBucket(b *bolt.Bucket) error {
+	for _, dgut := range d.writeBatch {
+		if dgut == nil {
+			return nil
+		}
+
+		if err := d.storeChildInDB(dgut.Dir, b); err != nil {
 			return err
 		}
 	}
@@ -172,14 +201,81 @@ func storeDGUTsInBucket(dguts []*DGUT, b *bolt.Bucket) error {
 	return nil
 }
 
-// storeDGUT stores a DGUT in the given database bucket. Only call from within a
-// database transaction.
-func storeDGUTinDB(dgut *DGUT, b *bolt.Bucket) error {
-	if dgut == nil {
+// storeChildInDB stores the given child directory in the given database bucket
+// (which should be the childBucket) against its parent directory, adding to any
+// existing children. Only call from within a database transaction.
+//
+// The root directory / is ignored since it is not a child and has no parent.
+func (d *DB) storeChildInDB(child string, b *bolt.Bucket) error {
+	if child == "/" {
 		return nil
 	}
 
-	dir, guts := dgut.encodeToBytes()
+	parent := filepath.Dir(child)
+
+	children := d.getChildrenFromBucket(parent, b)
+	children = append(children, child)
+
+	return b.Put([]byte(parent), d.encodeChildren(children))
+}
+
+// getChildrenFromBucket retrieves the child directory values associated with
+// the given directory key in the given bucket (which should be childBucket).
+// Only call from within a database transaction. Returns an empty slice if the
+// dir wasn't found.
+func (d *DB) getChildrenFromBucket(dir string, b *bolt.Bucket) []string {
+	v := b.Get([]byte(dir))
+
+	if v == nil {
+		return []string{}
+	}
+
+	return d.decodeChildrenBytes(v)
+}
+
+// decodeChildBytes converts the byte slice returned by encodeChildren() back
+// in to a []string.
+func (d *DB) decodeChildrenBytes(encoded []byte) []string {
+	dec := codec.NewDecoderBytes(encoded, d.ch)
+
+	var children []string
+
+	dec.MustDecode(&children)
+
+	return children
+}
+
+// encodeChildren returns converts the given string slice into a []byte suitable
+// for storing on disk.
+func (d *DB) encodeChildren(dirs []string) []byte {
+	var encoded []byte
+	enc := codec.NewEncoderBytes(&encoded, d.ch)
+	enc.MustEncode(dirs)
+
+	return encoded
+}
+
+// storeDGUTsInBucket stores the current batch of DGUTs in the given bucket
+// (which should be the gutBucket). Only call from within a database
+// transaction.
+func (d *DB) storeDGUTsInBucket(b *bolt.Bucket) error {
+	for _, dgut := range d.writeBatch {
+		if dgut == nil {
+			return nil
+		}
+
+		if err := d.storeDGUTinDB(dgut, b); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// storeDGUT stores a DGUT in the given database bucket (which should be the
+// gutBucket). Only call from within a database transaction.
+func (d *DB) storeDGUTinDB(dgut *DGUT, b *bolt.Bucket) error {
+	dir, guts := dgut.encodeToBytes(d.ch)
 
 	return b.Put(dir, guts)
 }
@@ -193,6 +289,8 @@ func (d *DB) Open() error {
 	}
 
 	d.rdb = rdb
+
+	d.ch = new(codec.BincHandle)
 
 	return nil
 }
@@ -232,4 +330,26 @@ func (d *DB) DirInfo(dir string, filter *GUTFilter) (uint64, uint64, error) {
 	c, s := dgut.CountAndSize(filter)
 
 	return c, s, nil
+}
+
+// Children returns the directory paths that are directly inside the given
+// directory.
+//
+// Returns an error if there was a problem reading from the database, but no
+// error and an empty slice if dir had no children (because it was a leaf dir,
+// or didn't exist at all).
+//
+// You must call Open() before calling this.
+func (d *DB) Children(dir string) ([]string, error) {
+	var children []string
+
+	err := d.rdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(childBucket))
+
+		children = d.getChildrenFromBucket(dir, b)
+
+		return nil
+	})
+
+	return children, err
 }
