@@ -66,10 +66,13 @@ func NewDB(path string) *DB {
 // offers fast lookup of the information by directory.
 //
 // The path for the database file you provided to NewDB() can be a non-existent
-// file to create a new database, or you can add to an existing databse by
-// providing the path to a file you Store()d to before. It is expected that you
-// would only add new unique directories or update existing ones; no deletion
-// of old records not in the new data is done.
+// file to create a new database, or you can add to an existing database by
+// providing the path to a file you Store()d to before.
+//
+// NB: do NOT Store() summary.DirGroupUserType.Output() data calculated on the
+// same directories multiple times to the same database. Only store multiple
+// times for calculations on independent directories (that can share parent
+// directories, but one can't be a sub-directory of the other).
 //
 // batchSize is how many directories worth of information are written to the
 // database in one go. More is faster, but uses more memory. 10,000 might be a
@@ -281,8 +284,14 @@ func (d *DB) storeDGUTsInBucket(b *bolt.Bucket) error {
 }
 
 // storeDGUT stores a DGUT in the given database bucket (which should be the
-// gutBucket). Only call from within a database transaction.
+// gutBucket). If a DGUT for this dir is already in the database, updates it.
+// Only call from within a database transaction.
 func (d *DB) storeDGUTinDB(dgut *DGUT, b *bolt.Bucket) error {
+	existing, err := getDGUTFromBucket(b, dgut.Dir, d.ch)
+	if err == nil {
+		dgut.Append(existing)
+	}
+
 	dir, guts := dgut.encodeToBytes(d.ch)
 
 	return b.Put(dir, guts)
@@ -329,16 +338,12 @@ func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, error) {
 
 	if err := d.rdb.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(gutBucket))
-		bdir := []byte(dir)
-		v := b.Get(bdir)
 
-		if v == nil {
-			return ErrDirNotFound
-		}
+		var errg error
 
-		dgut = decodeDGUTbytes(d.ch, bdir, v)
+		dgut, errg = getDGUTFromBucket(b, dir, d.ch)
 
-		return nil
+		return errg
 	}); err != nil {
 		return 0, 0, err
 	}
@@ -346,6 +351,21 @@ func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, error) {
 	c, s := dgut.CountAndSize(filter)
 
 	return c, s, nil
+}
+
+// getDGUTFromBucket gets and decodes a dgut from the given bucket (which should
+// be dgutBucket). Only call from within a database transaction.
+func getDGUTFromBucket(b *bolt.Bucket, dir string, ch codec.Handle) (*DGUT, error) {
+	bdir := []byte(dir)
+	v := b.Get(bdir)
+
+	if v == nil {
+		return nil, ErrDirNotFound
+	}
+
+	dgut := decodeDGUTbytes(ch, bdir, v)
+
+	return dgut, nil
 }
 
 // Children returns the directory paths that are directly inside the given

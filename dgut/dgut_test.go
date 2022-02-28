@@ -261,11 +261,31 @@ func TestDGUT(t *testing.T) {
 
 						c, s, errd := db.DirInfo("/", nil)
 						So(errd, ShouldBeNil)
-						So(c, ShouldEqual, 14)
-						So(s, ShouldEqual, 85)
+						So(c, ShouldEqual, 28)
+						So(s, ShouldEqual, 170)
 
-						children := db.Children("/a")
-						So(children, ShouldResemble, []string{"/a/b", "/a/c"})
+						children := db.Children("/")
+						So(children, ShouldResemble, []string{"/a"})
+
+						err = db.Close()
+						So(err, ShouldBeNil)
+
+						data = strings.NewReader("/\t3\t103\t0\t1\t1\n" +
+							"/i\t3\t103\t0\t1\t1\n")
+						err = db.Store(data, 4)
+						So(err, ShouldBeNil)
+
+						db = NewDB(path)
+						err = db.Open()
+						So(err, ShouldBeNil)
+
+						c, s, errd = db.DirInfo("/", nil)
+						So(errd, ShouldBeNil)
+						So(c, ShouldEqual, 29)
+						So(s, ShouldEqual, 171)
+
+						children = db.Children("/")
+						So(children, ShouldResemble, []string{"/a", "/i"})
 					})
 				})
 			})

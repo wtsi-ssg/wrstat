@@ -66,3 +66,11 @@ func decodeDGUTbytes(ch codec.Handle, dir, encoded []byte) *DGUT {
 func (d *DGUT) CountAndSize(filter *Filter) (uint64, uint64) {
 	return d.GUTs.CountAndSize(filter)
 }
+
+// Append appends the GUTs in the given DGUT to our own. Useful when you have
+// 2 DGUTs for the same Dir that were calculated on different subdirectories
+// independently, and now you're dealing with DGUTs for their common parent
+// directories.
+func (d *DGUT) Append(other *DGUT) {
+	d.GUTs = append(d.GUTs, other.GUTs...)
+}
