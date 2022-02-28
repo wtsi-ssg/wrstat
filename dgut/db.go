@@ -65,9 +65,11 @@ func NewDB(path string) *DB {
 // summary.DirGroupUserType.Output()) and store it in a database file that
 // offers fast lookup of the information by directory.
 //
-// It is assumed and recommended that the path for the database file you
-// provided to NewDB() is the path to a non-existent file. Ie. only Store() to
-// a given database file once. However, updates are possible.
+// The path for the database file you provided to NewDB() can be a non-existent
+// file to create a new database, or you can add to an existing databse by
+// providing the path to a file you Store()d to before. It is expected that you
+// would only add new unique directories or update existing ones; no deletion
+// of old records not in the new data is done.
 //
 // batchSize is how many directories worth of information are written to the
 // database in one go. More is faster, but uses more memory. 10,000 might be a
@@ -201,7 +203,8 @@ func (d *DB) storeChildrenInBucket(b *bolt.Bucket) error {
 
 // storeChildInDB stores the given child directory in the given database bucket
 // (which should be the childBucket) against its parent directory, adding to any
-// existing children. Only call from within a database transaction.
+// existing children, avoiding duplicates. Only call from within a database
+// transaction.
 //
 // The root directory / is ignored since it is not a child and has no parent.
 func (d *DB) storeChildInDB(child string, b *bolt.Bucket) error {
@@ -212,6 +215,13 @@ func (d *DB) storeChildInDB(child string, b *bolt.Bucket) error {
 	parent := filepath.Dir(child)
 
 	children := d.getChildrenFromBucket(parent, b)
+
+	for _, storedChild := range children {
+		if storedChild == child {
+			return nil
+		}
+	}
+
 	children = append(children, child)
 
 	return b.Put([]byte(parent), d.encodeChildren(children))
@@ -279,7 +289,7 @@ func (d *DB) storeDGUTinDB(dgut *DGUT, b *bolt.Bucket) error {
 }
 
 // Open opens the database for reading. You need to call this before using the
-// query methods like DirInfo().
+// query methods like DirInfo(). Be sure to call Close() after you're finished!
 func (d *DB) Open() error {
 	rdb, err := openBoltReadOnly(d.path)
 	if err != nil {
@@ -296,6 +306,16 @@ func (d *DB) Open() error {
 // openBoltReadOnly opens a bolt database at the given path in read-only mode.
 func openBoltReadOnly(path string) (*bolt.DB, error) {
 	return bolt.Open(path, 0666, &bolt.Options{ReadOnly: true})
+}
+
+// Close closes the database after reading. You need to call this once you've
+// finished reading, or you might prevent future writes!
+func (d *DB) Close() error {
+	if d.rdb == nil {
+		return nil
+	}
+
+	return d.rdb.Close()
 }
 
 // DirInfo tells you the total number of files and their total size nested under
