@@ -5,6 +5,7 @@ go 1.17
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5 // indirect
 	github.com/VertebrateResequencing/wr v0.31.1
+	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v0.0.0-20201112154412-8562bdadbbac
 	github.com/karrick/godirwalk v1.16.1
@@ -16,13 +17,9 @@ require (
 	github.com/smartystreets/goconvey v1.6.4
 	github.com/spf13/cobra v1.3.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
-<<<<<<< HEAD
-	github.com/wtsi-ssg/wr v0.5.5
-=======
 	github.com/ugorji/go/codec v1.2.6
-	github.com/wtsi-ssg/wr v0.5.3
+	github.com/wtsi-ssg/wr v0.5.5
 	go.etcd.io/bbolt v1.3.6
->>>>>>> New dgut package with storage implemented; queries to follow.
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	gopkg.in/yaml.v2 v2.4.0
@@ -44,7 +41,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/docker/spdystream v0.2.0 // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fanatic/go-infoblox v0.0.0-20190709161059-e25f3820238c // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-ini/ini v1.66.3 // indirect
