@@ -177,53 +177,57 @@ func TestDGUT(t *testing.T) {
 
 					Convey("You can query a database after Open()ing it", func() {
 						db = NewDB(path)
+
+						err = db.Close()
+						So(err, ShouldBeNil)
+
 						err = db.Open()
 						So(err, ShouldBeNil)
 
-						c, s, err := db.DirInfo("/", nil)
-						So(err, ShouldBeNil)
+						c, s, errd := db.DirInfo("/", nil)
+						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 14)
 						So(s, ShouldEqual, 85)
 
-						c, s, err = db.DirInfo("/a/c/d", nil)
-						So(err, ShouldBeNil)
+						c, s, errd = db.DirInfo("/a/c/d", nil)
+						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 5)
 						So(s, ShouldEqual, 5)
 
-						c, s, err = db.DirInfo("/a/b/d/g", nil)
-						So(err, ShouldBeNil)
+						c, s, errd = db.DirInfo("/a/b/d/g", nil)
+						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 6)
 						So(s, ShouldEqual, 60)
 
-						_, _, err = db.DirInfo("/foo", nil)
-						So(err, ShouldNotBeNil)
-						So(err, ShouldEqual, ErrDirNotFound)
+						_, _, errd = db.DirInfo("/foo", nil)
+						So(errd, ShouldNotBeNil)
+						So(errd, ShouldEqual, ErrDirNotFound)
 
-						c, s, err = db.DirInfo("/", &Filter{GIDs: []uint32{1}})
-						So(err, ShouldBeNil)
+						c, s, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}})
+						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 9)
 						So(s, ShouldEqual, 80)
 
-						c, s, err = db.DirInfo("/", &Filter{UIDs: []uint32{102}})
-						So(err, ShouldBeNil)
+						c, s, errd = db.DirInfo("/", &Filter{UIDs: []uint32{102}})
+						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 9)
 						So(s, ShouldEqual, 45)
 
-						c, s, err = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
-						So(err, ShouldBeNil)
+						c, s, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
+						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 4)
 						So(s, ShouldEqual, 40)
 
-						c, s, err = db.DirInfo("/", &Filter{
+						c, s, errd = db.DirInfo("/", &Filter{
 							GIDs: []uint32{1},
 							UIDs: []uint32{102},
 							FTs:  []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
-						So(err, ShouldBeNil)
+						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 0)
 						So(s, ShouldEqual, 0)
 
-						c, s, err = db.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
-						So(err, ShouldBeNil)
+						c, s, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
+						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 1)
 						So(s, ShouldEqual, 5)
 
@@ -238,6 +242,30 @@ func TestDGUT(t *testing.T) {
 
 						children = db.Children("/foo")
 						So(children, ShouldResemble, []string{})
+
+						err = db.Close()
+						So(err, ShouldBeNil)
+
+						err = db.Close()
+						So(err, ShouldBeNil)
+					})
+
+					Convey("Store()ing multiple times is OK", func() {
+						data = strings.NewReader(dgutData)
+						err = db.Store(data, 4)
+						So(err, ShouldBeNil)
+
+						db = NewDB(path)
+						err = db.Open()
+						So(err, ShouldBeNil)
+
+						c, s, errd := db.DirInfo("/", nil)
+						So(errd, ShouldBeNil)
+						So(c, ShouldEqual, 14)
+						So(s, ShouldEqual, 85)
+
+						children := db.Children("/a")
+						So(children, ShouldResemble, []string{"/a/b", "/a/c"})
 					})
 				})
 			})
@@ -452,6 +480,10 @@ func testGetDBKeys(path, bucket string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer func() {
+		err = rdb.Close()
+	}()
 
 	var keys []string
 
