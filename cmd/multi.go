@@ -41,6 +41,8 @@ const (
 	walkTime    = 19 * time.Hour
 	combineTime = 40 * time.Minute
 	combineRAM  = 150
+	dbTime      = 12 * time.Hour
+	dbRAM       = 16000
 )
 
 // options for this cmd.
@@ -77,6 +79,9 @@ unique directory created for all of them.
 'wr status -i wrstat -z -o s' to get information on how long everything or
 particular subsets of jobs took.)
 
+After the combine jobs complete, 'wrstat tree --create' is called to create
+a database of directory-group-user-filetype file count and size information.
+
 Once everything has completed, the final output files are moved to the given
 --final_output directory, with a name that includes the date this command was
 started, the basename of the directory operated on, a unique string per
@@ -96,6 +101,7 @@ It might produce:
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617.c35m8359bnc8ni7dgphg.dgut.db
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -124,6 +130,7 @@ deleted.`,
 		}
 
 		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s)
+		scheduleDBJob(outputRoot, unique, s)
 		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	},
 }
@@ -198,12 +205,26 @@ func combineRepGrp(dir, unique string) string {
 	return repGrp("combine", dir, unique)
 }
 
+// scheduleDBJob adds a job to wr's queue that creates a dgut.db from the
+// combine.dgut.gz files in each working directory subdir.
+func scheduleDBJob(outputRoot, unique string, s *scheduler.Scheduler) {
+	req := scheduler.DefaultRequirements()
+	reqDB := req.Clone()
+	reqDB.Time = dbTime
+	reqDB.RAM = dbRAM
+
+	job := s.NewJob(fmt.Sprintf("%s tree create %s", s.Executable(), outputRoot),
+		repGrp("tree", "create", unique), "wrstat-tree", unique+".tree", unique, reqDB)
+
+	addJobsToQueue(s, []*jobqueue.Job{job})
+}
+
 // scheduleTidyJob adds a job to wr's queue that for each working directory
 // subdir moves the output to the final location and then deletes the working
 // directory.
 func scheduleTidyJob(outputRoot, finalDir, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s tidy -f %s -d %s %s", s.Executable(), finalDir, dateStamp(), outputRoot),
-		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique, nil)
+		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique+".tree", scheduler.DefaultRequirements())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
