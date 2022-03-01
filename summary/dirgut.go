@@ -49,9 +49,35 @@ const (
 	DGUTFileTypeTemp
 )
 
+const ErrInvalidType = Error("not a valid file type")
+
 // String lets you convert a DirGUTFileType to a meaningful string.
 func (d DirGUTFileType) String() string {
 	return [...]string{"cram", "bam", "index", "compressed", "uncompressed", "checkpoint", "other", "temporary"}[d]
+}
+
+// FileTypeStringToDirGUTFileType converts the String() representation of a
+// DirGUTFileType back in to a DirGUTFileType. Errors if an invalid string
+// supplied.
+func FileTypeStringToDirGUTFileType(ft string) (DirGUTFileType, error) {
+	convert := map[string]DirGUTFileType{
+		"cram":         DGUTFileTypeCram,
+		"bam":          DGUTFileTypeBam,
+		"index":        DGUTFileTypeIndex,
+		"compressed":   DGUTFileTypeCompressed,
+		"uncompressed": DGUTFileTypeUncompressed,
+		"checkpoint":   DGUTFileTypeCheckpoint,
+		"other":        DGUTFileTypeOther,
+		"temporary":    DGUTFileTypeTemp,
+	}
+
+	dgft, ok := convert[ft]
+
+	if !ok {
+		return DGUTFileTypeOther, ErrInvalidType
+	}
+
+	return dgft, nil
 }
 
 // gutStore is a sortable map with gid,uid,filetype as keys and summaries as
