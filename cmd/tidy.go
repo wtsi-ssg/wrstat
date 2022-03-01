@@ -66,6 +66,9 @@ Final output files are named to include the given --date as follows:
 
 Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
 
+It also moves the dgut.db file which is for all the directories of interest,
+nameing it [date].[multi unique].dgut.db.
+
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
@@ -135,6 +138,10 @@ func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date stri
 
 	if err := findAndMoveOutputs(sourceDir, destDir, destDirInfo, date,
 		combineLogOutputFileBasename, "logs.gz"); err != nil {
+		return err
+	}
+
+	if err := findAndMoveDB(sourceDir, destDir, destDirInfo, date); err != nil {
 		return err
 	}
 
@@ -241,4 +248,28 @@ func matchReadWrite(path string, current, desired fs.FileInfo) error {
 	}
 
 	return os.Chmod(path, currentMode|desiredRW)
+}
+
+// findAndMoveDB finds the dgut.db file in the given sourceDir and moves it to
+// destDir, including date in the name, and adjusting ownership and permissions
+// to match the destDir.
+func findAndMoveDB(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
+	source := filepath.Join(sourceDir, dgutDBBasename)
+
+	if _, err := os.Stat(source); err != nil {
+		return err
+	}
+
+	dest := filepath.Join(destDir, fmt.Sprintf("%s.%s.%s",
+		date,
+		filepath.Base(sourceDir),
+		dgutDBBasename))
+
+	if err := os.Rename(source, dest); err != nil {
+		if err = shutil.CopyFile(source, dest, false); err != nil {
+			return err
+		}
+	}
+
+	return matchPerms(dest, destDirInfo)
 }
