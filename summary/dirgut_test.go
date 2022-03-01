@@ -50,6 +50,45 @@ func TestDirGUTFileType(t *testing.T) {
 		So(int(DGUTFileTypeTemp), ShouldEqual, 7)
 	})
 
+	Convey("You can go from a string to a DGUTFileType", t, func() {
+		ft, err := FileTypeStringToDirGUTFileType("cram")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeCram)
+
+		ft, err = FileTypeStringToDirGUTFileType("bam")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeBam)
+
+		ft, err = FileTypeStringToDirGUTFileType("index")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeIndex)
+
+		ft, err = FileTypeStringToDirGUTFileType("compressed")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeCompressed)
+
+		ft, err = FileTypeStringToDirGUTFileType("uncompressed")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeUncompressed)
+
+		ft, err = FileTypeStringToDirGUTFileType("checkpoint")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeCheckpoint)
+
+		ft, err = FileTypeStringToDirGUTFileType("other")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeOther)
+
+		ft, err = FileTypeStringToDirGUTFileType("temporary")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeTemp)
+
+		ft, err = FileTypeStringToDirGUTFileType("foo")
+		So(err, ShouldNotBeNil)
+		So(err, ShouldEqual, ErrInvalidType)
+		So(ft, ShouldEqual, DGUTFileTypeOther)
+	})
+
 	Convey("isCram lets you know if a path is a cram file", t, func() {
 		So(isCram("/foo/bar.cram"), ShouldBeTrue)
 		So(isCram("/foo/bar.CRAM"), ShouldBeTrue)
