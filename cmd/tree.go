@@ -187,7 +187,7 @@ func makeTreeFilter(groups, users, types string) (*dgut.Filter, error) {
 // makeTreeGroupFilter creates a filter for groups.
 func makeTreeGroupFilter(groups string) (*dgut.Filter, error) {
 	if groups == "" {
-		return nil, nil
+		return &dgut.Filter{}, nil
 	}
 
 	gnames := strings.Split(groups, ",")
