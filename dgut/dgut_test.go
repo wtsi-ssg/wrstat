@@ -447,39 +447,34 @@ func testData() (dgutData string, expectedRootGUTs GUTs, expected []*DGUT, expec
 }
 
 func testDGUTData() string {
-	return "/\t1\t101\t0\t3\t30\n" +
-		"/\t1\t101\t1\t2\t10\n" +
-		"/\t1\t101\t7\t1\t5\n" +
-		"/\t1\t102\t0\t4\t40\n" +
-		"/\t2\t102\t0\t5\t5\n" +
-
-		"/a\t1\t101\t0\t3\t30\n" +
-		"/a\t1\t101\t1\t2\t10\n" +
-		"/a\t1\t101\t7\t1\t5\n" +
-		"/a\t1\t102\t0\t4\t40\n" +
-		"/a\t2\t102\t0\t5\t5\n" +
-
-		"/a/b\t1\t101\t0\t3\t30\n" +
-		"/a/b\t1\t101\t1\t2\t10\n" +
-		"/a/b\t1\t101\t7\t1\t5\n" +
-		"/a/b\t1\t102\t0\t4\t40\n" +
-
-		"/a/b/d\t1\t101\t0\t3\t30\n" +
-		"/a/b/d\t1\t102\t0\t4\t40\n" +
-
-		"/a/b/d/f\t1\t101\t0\t1\t10\n" +
-		"/a/b/d/g\t1\t101\t0\t2\t20\n" +
-		"/a/b/d/g\t1\t102\t0\t4\t40\n" +
-
-		"/a/b/e\t1\t101\t1\t2\t10\n" +
-		"/a/b/e\t1\t101\t7\t1\t5\n" +
-		"/a/b/e/h\t1\t101\t1\t2\t10\n" +
-		"/a/b/e/h\t1\t101\t7\t1\t5\n" +
-		"/a/b/e/h/tmp\t1\t101\t1\t1\t5\n" +
-		"/a/b/e/h/tmp\t1\t101\t7\t1\t5\n" +
-
-		"/a/c\t2\t102\t0\t5\t5\n" +
-		"/a/c/d\t2\t102\t0\t5\t5\n"
+	return `/	1	101	0	3	30
+	/	1	101	1	2	10
+	/	1	101	7	1	5
+	/	1	102	0	4	40
+	/	2	102	0	5	5
+	/a	1	101	0	3	30
+	/a	1	101	1	2	10
+	/a	1	101	7	1	5
+	/a	1	102	0	4	40
+	/a	2	102	0	5	5
+	/a/b	1	101	0	3	30
+	/a/b	1	101	1	2	10
+	/a/b	1	101	7	1	5
+	/a/b	1	102	0	4	40
+	/a/b/d	1	101	0	3	30
+	/a/b/d	1	102	0	4	40
+	/a/b/d/f	1	101	0	1	10
+	/a/b/d/g	1	101	0	2	20
+	/a/b/d/g	1	102	0	4	40
+	/a/b/e	1	101	1	2	10
+	/a/b/e	1	101	7	1	5
+	/a/b/e/h	1	101	1	2	10
+	/a/b/e/h	1	101	7	1	5
+	/a/b/e/h/tmp	1	101	1	1	5
+	/a/b/e/h/tmp	1	101	7	1	5
+	/a/c	2	102	0	5	5
+	/a/c/d	2	102	0	5	5
+`
 }
 
 // testMakeDBPath creates a temp dir that will be cleaned up automatically, and
