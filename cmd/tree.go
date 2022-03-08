@@ -34,7 +34,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize" //nolint:misspell,gci
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/dgut"
