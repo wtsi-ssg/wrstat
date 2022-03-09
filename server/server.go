@@ -67,9 +67,12 @@ func New() *Server {
 }
 
 // Start will start listening to the given address (eg. "localhost:8080"), and
-// serve the REST API. It blocks, but will gracefully shut down on SIGINT and
-// SIGTERM. If you Start() in a go-routine, you can call Stop() manually.
-func (s *Server) Start(addr string) error {
+// serve the REST API over https; you must provide paths to your certficate and
+// key file.
+//
+// It blocks, but will gracefully shut down on SIGINT and SIGTERM. If you
+// Start() in a go-routine, you can call Stop() manually.
+func (s *Server) Start(addr, certFile, keyFile string) error {
 	srv := &graceful.Server{
 		Timeout: stopTimeout,
 
@@ -81,7 +84,7 @@ func (s *Server) Start(addr string) error {
 
 	s.srv = srv
 
-	return srv.ListenAndServe()
+	return srv.ListenAndServeTLS(certFile, keyFile)
 }
 
 // Stop() gracefully stops the server after Start(), and waits for active

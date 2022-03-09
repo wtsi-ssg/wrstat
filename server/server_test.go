@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -57,15 +58,23 @@ func TestServer(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			addr := fmt.Sprintf("localhost:%d", port)
+			certPath, keyPath, err := createTestCert(t)
+			So(err, ShouldBeNil)
 
 			var g errgroup.Group
 			g.Go(func() error {
-				return s.Start(addr)
+				return s.Start(addr, certPath, keyPath)
 			})
 
 			<-time.After(100 * time.Millisecond)
 			client := resty.New()
+			client.SetRootCertificate(certPath)
+
 			resp, err := client.R().Get("http://" + addr + "/foo")
+			So(err, ShouldBeNil)
+			So(resp.StatusCode(), ShouldEqual, http.StatusBadRequest)
+
+			resp, err = client.R().Get("https://" + addr + "/foo")
 			So(err, ShouldBeNil)
 			So(resp.StatusCode(), ShouldEqual, http.StatusNotFound)
 
@@ -184,6 +193,25 @@ func TestServer(t *testing.T) {
 			})
 		})
 	})
+}
+
+// createTestCert creates a self-signed cert and key, returning their paths.
+func createTestCert(t *testing.T) (string, string, error) {
+	t.Helper()
+
+	dir := t.TempDir()
+	certPath := filepath.Join(dir, "cert")
+	keyPath := filepath.Join(dir, "key")
+
+	cmd := exec.Command("openssl", "req", "-new", "-newkey", "rsa:4096",
+		"-days", "1", "-nodes", "-x509", "-subj", "/CN=localhost",
+		"-addext", "subjectAltName = DNS:localhost",
+		"-keyout", keyPath, "-out", certPath,
+	)
+
+	err := cmd.Run()
+
+	return certPath, keyPath, err
 }
 
 // getUserAndGroups returns the current users username, uid and gids.
