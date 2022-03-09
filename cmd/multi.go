@@ -79,7 +79,7 @@ unique directory created for all of them.
 'wr status -i wrstat -z -o s' to get information on how long everything or
 particular subsets of jobs took.)
 
-After the combine jobs complete, 'wrstat tree --create' is called to create
+After the combine jobs complete, 'wrstat dgut' is called to create
 a database of directory-group-user-filetype file count and size information.
 
 Once everything has completed, the final output files are moved to the given
@@ -213,8 +213,8 @@ func scheduleDBJob(outputRoot, unique string, s *scheduler.Scheduler) {
 	reqDB.Time = dbTime
 	reqDB.RAM = dbRAM
 
-	job := s.NewJob(fmt.Sprintf("%s tree create %s", s.Executable(), outputRoot),
-		repGrp("tree", "create", unique), "wrstat-tree", unique+".tree", unique, reqDB)
+	job := s.NewJob(fmt.Sprintf("%s dgut %s", s.Executable(), outputRoot),
+		repGrp("dgut", "create", unique), "wrstat-dgut", unique+".dgut", unique, reqDB)
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
@@ -224,7 +224,7 @@ func scheduleDBJob(outputRoot, unique string, s *scheduler.Scheduler) {
 // directory.
 func scheduleTidyJob(outputRoot, finalDir, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s tidy -f %s -d %s %s", s.Executable(), finalDir, dateStamp(), outputRoot),
-		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique+".tree", scheduler.DefaultRequirements())
+		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique+".dgut", scheduler.DefaultRequirements())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
