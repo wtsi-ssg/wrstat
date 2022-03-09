@@ -105,6 +105,18 @@ func init() {
 		"created jobs will run with sudo")
 }
 
+func hideGlobalFlags(from *cobra.Command, command *cobra.Command, strings []string) {
+	if err := RootCmd.Flags().MarkHidden("deployment"); err != nil {
+		die("err: %s", err)
+	}
+
+	if err := RootCmd.Flags().MarkHidden("sudo"); err != nil {
+		die("err: %s", err)
+	}
+
+	from.Parent().HelpFunc()(command, strings)
+}
+
 func logToFile(path string) {
 	fh, err := log15.FileHandler(path, log15.LogfmtFormat())
 	if err != nil {
