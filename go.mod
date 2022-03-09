@@ -7,6 +7,7 @@ require (
 	github.com/VertebrateResequencing/wr v0.31.1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gin-gonic/gin v1.7.7
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v0.0.0-20201112154412-8562bdadbbac
 	github.com/karrick/godirwalk v1.16.1
@@ -23,8 +24,10 @@ require (
 	github.com/wtsi-ssg/wr v0.5.4
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+	gopkg.in/tylerb/graceful.v1 v1.2.15
 	gopkg.in/yaml.v2 v2.4.0
 )
 

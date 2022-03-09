@@ -32,15 +32,18 @@ import (
 	"os/user"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wtsi-ssg/wrstat/dgut"
 	"github.com/wtsi-ssg/wrstat/summary"
+	"gopkg.in/tylerb/graceful.v1"
 )
 
 const (
 	defaultDir    = "/"
 	defaultSplits = "2"
+	stopTimeout   = 10 * time.Second
 )
 
 // Server is used to start a web server that provides a REST API to the dgut
@@ -48,6 +51,7 @@ const (
 type Server struct {
 	router *gin.Engine
 	tree   *dgut.Tree
+	srv    *graceful.Server
 }
 
 // New creates a Server which can serve a REST API.
@@ -62,11 +66,37 @@ func New() *Server {
 	}
 }
 
-// *** need an actual ListenAndServe method, ability to tell it a port to use,
-// and an ability to test on an available port...
+// Start will start listening to the given address (eg. "localhost:8080"), and
+// serve the REST API. It blocks, but will gracefully shut down on SIGINT and
+// SIGTERM. If you Start() in a go-routine, you can call Stop() manually.
+func (s *Server) Start(addr string) error {
+	srv := &graceful.Server{
+		Timeout: stopTimeout,
 
-// LoadDGUTDB loads the given dgut.db (as produced by dgut.DB.Store()) so that
-// getWhere() will work.
+		Server: &http.Server{
+			Addr:    addr,
+			Handler: s.router,
+		},
+	}
+
+	s.srv = srv
+
+	return srv.ListenAndServe()
+}
+
+// Stop() gracefully stops the server after Start(), and waits for active
+// connections to close and the port to be available again.
+func (s *Server) Stop() {
+	ch := s.srv.StopChan()
+	s.srv.Stop(stopTimeout)
+	<-ch
+}
+
+// LoadDGUTDB loads the given dgut.db (as produced by dgut.DB.Store()) and adds
+// the /where endpoint to the REST API.
+//
+// The /where endpoint can take the dir, splits, groups, users and types
+// parameters, which correspond to arguments that dgut.Tree.Where() takes.
 func (s *Server) LoadDGUTDB(path string) error {
 	tree, err := dgut.NewTree(path)
 	if err != nil {
