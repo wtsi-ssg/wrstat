@@ -28,15 +28,20 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os/user"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/go-resty/resty/v2"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wr/network/port"
 	"github.com/wtsi-ssg/wrstat/dgut"
+	"golang.org/x/sync/errgroup"
 )
 
 func TestServer(t *testing.T) {
@@ -45,12 +50,28 @@ func TestServer(t *testing.T) {
 	Convey("Given a Server", t, func() {
 		s := New()
 
-		Convey("convertSplitsValue works", func() {
-			n := convertSplitsValue("1")
-			So(n, ShouldEqual, 1)
+		Convey("You can Start the Server", func() {
+			checker, err := port.NewChecker("localhost")
+			So(err, ShouldBeNil)
+			port, _, err := checker.AvailableRange(2)
+			So(err, ShouldBeNil)
 
-			n = convertSplitsValue("foo")
-			So(n, ShouldEqual, 2)
+			addr := fmt.Sprintf("localhost:%d", port)
+
+			var g errgroup.Group
+			g.Go(func() error {
+				return s.Start(addr)
+			})
+
+			<-time.After(100 * time.Millisecond)
+			client := resty.New()
+			resp, err := client.R().Get("http://" + addr + "/foo")
+			So(err, ShouldBeNil)
+			So(resp.StatusCode(), ShouldEqual, http.StatusNotFound)
+
+			s.Stop()
+			err = g.Wait()
+			So(err, ShouldBeNil)
 		})
 
 		if len(gids) < 2 {
@@ -58,6 +79,14 @@ func TestServer(t *testing.T) {
 
 			return
 		}
+
+		Convey("convertSplitsValue works", func() {
+			n := convertSplitsValue("1")
+			So(n, ShouldEqual, 1)
+
+			n = convertSplitsValue("foo")
+			So(n, ShouldEqual, 2)
+		})
 
 		Convey("You can query the where endpoint", func() {
 			response, err := queryWhere(s, "")
