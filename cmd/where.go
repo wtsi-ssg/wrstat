@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 
 	"github.com/dustin/go-humanize" //nolint:misspell
 	"github.com/go-resty/resty/v2"
@@ -40,6 +41,7 @@ import (
 const bytesPerK = 1024
 const defaultSplits = 2
 const defaultMinMB = 50
+const errBadQuery = Error("bad query; check dir, group, user and type")
 
 // options for this cmd.
 var whereQueryDir string
@@ -49,6 +51,8 @@ var whereUsers string
 var whereTypes string
 var whereMinimum int
 var whereCert string
+var whereJSON bool
+var whereOrder string
 
 // whereCmd represents the where command.
 var whereCmd = &cobra.Command{
@@ -82,9 +86,16 @@ You can filter what files should be considered and reported on:
           from this set of allowed values: cram,bam,index,compressed,
 		  uncompressed,checkpoint,other,temp
 
-Finally, to avoid producing too much output, the --minimum option can be used to
-not display directories that have less than that number of MBs of data nested
+To avoid producing too much output, the --minimum option can be used to not
+display directories that have less than that number of MBs of data nested
 inside. Defaults to 50MB.
+
+You can change the sort --order from the default of by 'size', to by 'count' or
+'dir'.
+
+--minimum and --sort are ignored, however, if you choose --json output, which
+will just give you all the filtered results. In the JSON output, the Size is in
+bytes.
 
 If the wrstat server is using an untrusted certificate, the path to its
 certificate can be provided with --cert, or the WRSTAT_SERVER_CERT environment
@@ -116,7 +127,7 @@ variable, to force trust in it.
 		minSizeBytes := whereMinMBToBytes(whereMinimum)
 
 		err := where(url, whereCert, whereQueryDir, whereGroups, whereUsers, whereTypes,
-			fmt.Sprintf("%d", whereSplits), minSizeBytes)
+			fmt.Sprintf("%d", whereSplits), whereOrder, minSizeBytes, whereJSON)
 		if err != nil {
 			die(err.Error())
 		}
@@ -141,6 +152,10 @@ func init() {
 		"minimum size (in MB) of files nested under a directory for it to be reported on")
 	whereCmd.Flags().StringVarP(&whereCert, "cert", "c", "",
 		"path to the server's certificate to force trust in it")
+	whereCmd.Flags().StringVarP(&whereOrder, "order", "o", "size",
+		"sort order of results; size, count or dir")
+	whereCmd.Flags().BoolVarP(&whereJSON, "json", "j", false,
+		"output JSON (ignores --minimum and --order)")
 
 	whereCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
 		hideGlobalFlags(whereCmd, command, strings)
@@ -154,7 +169,28 @@ func whereMinMBToBytes(mbs int) uint64 {
 
 // where does the main job of quering the server to answer where the data is on
 // disk.
-func where(url, cert, dir, groups, users, types, splits string, minSizeBytes uint64) error {
+func where(url, cert, dir, groups, users, types, splits, order string, minSizeBytes uint64, json bool) error {
+	resp, err := getWhereDataIs(url, cert, dir, groups, users, types, splits)
+	if err != nil {
+		return err
+	}
+
+	if json {
+		cliPrint(string(resp.Body()))
+
+		return nil
+	}
+
+	dcss := extractDCSSFromResponse(resp)
+	orderDCSS(dcss, order)
+
+	printWhereDataIs(dcss, minSizeBytes)
+
+	return nil
+}
+
+// getWhereDataIs does the actual query of the web server.
+func getWhereDataIs(url, cert, dir, groups, users, types, splits string) (*resty.Response, error) {
 	client := resty.New()
 
 	if cert != "" {
@@ -172,16 +208,34 @@ func where(url, cert, dir, groups, users, types, splits string, minSizeBytes uin
 		}).
 		Get("https://" + url + "/where")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		die("bad query; check dir, group, user and type")
+		return nil, errBadQuery
 	}
 
-	printWhereDataIs(*resp.Result().(*dgut.DCSs), minSizeBytes) //nolint:forcetypeassert
+	return resp, nil
+}
 
-	return nil
+// extractDCSSFromResponse gets the pre-converted DCSs out of the response.
+func extractDCSSFromResponse(resp *resty.Response) dgut.DCSs {
+	return *resp.Result().(*dgut.DCSs) //nolint:forcetypeassert
+}
+
+// orderDCSS reorders the given DCSs by count or dir, does nothing if order is
+// size (the default) or invalid.
+func orderDCSS(dcss dgut.DCSs, order string) {
+	switch order {
+	case "count":
+		sort.Slice(dcss, func(i, j int) bool {
+			return dcss[i].Count > dcss[j].Count
+		})
+	case "dir":
+		sort.Slice(dcss, func(i, j int) bool {
+			return dcss[i].Dir < dcss[j].Dir
+		})
+	}
 }
 
 // printWhereDataIs formats query results and prints it to STDOUT.
