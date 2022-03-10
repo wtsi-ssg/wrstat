@@ -147,6 +147,11 @@ func cliFormat() log15.Format { //nolint:ireturn
 	})
 }
 
+// cliPrint outputs the message to STDOUT.
+func cliPrint(msg string, a ...interface{}) {
+	fmt.Fprintf(os.Stdout, msg, a...)
+}
+
 // warn is a convenience to log a message at the Warn level.
 func warn(msg string, a ...interface{}) {
 	appLogger.Warn(fmt.Sprintf(msg, a...))
