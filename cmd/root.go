@@ -29,6 +29,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -105,6 +106,8 @@ func init() {
 		"created jobs will run with sudo")
 }
 
+// hideGlobalFlags can be used for sub-commands that don't need deployment and
+// sudo options.
 func hideGlobalFlags(from *cobra.Command, command *cobra.Command, strings []string) {
 	if err := RootCmd.Flags().MarkHidden("deployment"); err != nil {
 		die("err: %s", err)
@@ -117,6 +120,7 @@ func hideGlobalFlags(from *cobra.Command, command *cobra.Command, strings []stri
 	from.Parent().HelpFunc()(command, strings)
 }
 
+// logToFile logs to the given file.
 func logToFile(path string) {
 	fh, err := log15.FileHandler(path, log15.LogfmtFormat())
 	if err != nil {
@@ -126,6 +130,21 @@ func logToFile(path string) {
 	}
 
 	appLogger.SetHandler(fh)
+}
+
+// setCLIFormat logs plain text log messages to STDERR.
+func setCLIFormat() {
+	appLogger.SetHandler(log15.StreamHandler(os.Stderr, cliFormat()))
+}
+
+// cliFormat returns a log15.Format that only prints the plain log msg.
+func cliFormat() log15.Format {
+	return log15.FormatFunc(func(r *log15.Record) []byte {
+		b := &bytes.Buffer{}
+		fmt.Fprintf(b, "%s\n", r.Msg)
+
+		return b.Bytes()
+	})
 }
 
 // warn is a convenience to log a message at the Warn level.

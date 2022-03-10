@@ -89,6 +89,8 @@ certificate can be provided with --cert, or the WRSTAT_SERVER_CERT environment
 variable, to force trust in it.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		setCLIFormat()
+
 		var url string
 
 		if len(args) == 1 {
