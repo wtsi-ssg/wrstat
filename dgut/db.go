@@ -37,6 +37,7 @@ import (
 const (
 	gutBucket   = "gut"
 	childBucket = "children"
+	dbOpenMode  = 0600
 )
 
 const ErrDirNotFound = Error("directory not found")
@@ -108,7 +109,7 @@ func (d *DB) Store(data io.Reader, batchSize int) error {
 // createDB creates a new database file if it doesn't already exist, and creates
 // buckets inside it if they don't exist.
 func (d *DB) createDB() error {
-	db, err := bolt.Open(d.path, 0600, nil)
+	db, err := bolt.Open(d.path, dbOpenMode, nil)
 	if err != nil {
 		return err
 	}
@@ -314,7 +315,7 @@ func (d *DB) Open() error {
 
 // openBoltReadOnly opens a bolt database at the given path in read-only mode.
 func openBoltReadOnly(path string) (*bolt.DB, error) {
-	return bolt.Open(path, 0666, &bolt.Options{ReadOnly: true})
+	return bolt.Open(path, dbOpenMode, &bolt.Options{ReadOnly: true})
 }
 
 // Close closes the database after reading. You need to call this once you've

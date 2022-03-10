@@ -41,7 +41,8 @@ func (e Error) Error() string { return string(e) }
 const ErrInvalidFormat = Error("the provided data was not in dgut format")
 
 const (
-	gutDataCols = 6
+	gutDataCols    = 6
+	gutDataIntCols = 5
 )
 
 type dgutParserCallBack func(*DGUT)
@@ -123,9 +124,9 @@ func splitDGUTLine(line string) ([]string, error) {
 }
 
 // gutLinePartsToInts takes the output of splitDGUTLine() and returns the last
-// 6 columns as ints.
+// 5 columns as ints.
 func gutLinePartsToInts(parts []string) ([]uint64, error) {
-	ints := make([]uint64, 5)
+	ints := make([]uint64, gutDataIntCols)
 
 	var err error
 

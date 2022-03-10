@@ -138,7 +138,7 @@ func setCLIFormat() {
 }
 
 // cliFormat returns a log15.Format that only prints the plain log msg.
-func cliFormat() log15.Format {
+func cliFormat() log15.Format { //nolint:ireturn
 	return log15.FormatFunc(func(r *log15.Record) []byte {
 		b := &bytes.Buffer{}
 		fmt.Fprintf(b, "%s\n", r.Msg)

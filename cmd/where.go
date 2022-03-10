@@ -30,7 +30,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/dustin/go-humanize" //nolint:misspell,gci
+	"github.com/dustin/go-humanize" //nolint:misspell
 	"github.com/go-resty/resty/v2"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -38,6 +38,8 @@ import (
 )
 
 const bytesPerK = 1024
+const defaultSplits = 2
+const defaultMinMB = 50
 
 // options for this cmd.
 var whereQueryDir string
@@ -127,7 +129,7 @@ func init() {
 	// flags specific to these sub-commands
 	whereCmd.Flags().StringVarP(&whereQueryDir, "dir", "d", "/",
 		"directory path you wish to query")
-	whereCmd.Flags().IntVarP(&whereSplits, "splits", "s", 2,
+	whereCmd.Flags().IntVarP(&whereSplits, "splits", "s", defaultSplits,
 		"number of splits (see help text)")
 	whereCmd.Flags().StringVarP(&whereGroups, "groups", "g", "",
 		"comma separated list of unix groups to filter on")
@@ -135,7 +137,7 @@ func init() {
 		"comma separated list of usernames to filter on")
 	whereCmd.Flags().StringVarP(&whereTypes, "types", "t", "",
 		"comma separated list of types (amongst cram,bam,index,compressed,uncompressed,checkpoint,other,temp) to filter on")
-	whereCmd.Flags().IntVarP(&whereMinimum, "minimum", "m", 50,
+	whereCmd.Flags().IntVarP(&whereMinimum, "minimum", "m", defaultMinMB,
 		"minimum size (in MB) of files nested under a directory for it to be reported on")
 	whereCmd.Flags().StringVarP(&whereCert, "cert", "c", "",
 		"path to the server's certificate to force trust in it")
@@ -177,7 +179,7 @@ func where(url, cert, dir, groups, users, types, splits string, minSizeBytes uin
 		die("bad query; check dir, group, user and type")
 	}
 
-	printWhereDataIs(*resp.Result().(*dgut.DCSs), minSizeBytes)
+	printWhereDataIs(*resp.Result().(*dgut.DCSs), minSizeBytes) //nolint:forcetypeassert
 
 	return nil
 }

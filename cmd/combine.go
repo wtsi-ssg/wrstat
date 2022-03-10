@@ -49,6 +49,8 @@ const combineGroupOutputFileBasename = "combine.bygroup"
 const combineDGUTOutputFileBasename = "combine.dgut.gz"
 const combineLogOutputFileBasename = "combine.log.gz"
 const numSummaryColumns = 2
+const userGroupSumCols = 3
+const dgutSumCols = 4
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
@@ -324,7 +326,7 @@ func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
 func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
 	zw, closeOutput := compressOutput(output)
 
-	if err := mergeSummaryLines(data, 3, zw); err != nil {
+	if err := mergeSummaryLines(data, userGroupSumCols, zw); err != nil {
 		return err
 	}
 
@@ -475,7 +477,7 @@ func mergeDGUTAndCompress(inputs []string, output *os.File) error {
 func mergeDGUTStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
 	zw, closeOutput := compressOutput(output)
 
-	if err := mergeSummaryLines(data, 4, zw); err != nil {
+	if err := mergeSummaryLines(data, dgutSumCols, zw); err != nil {
 		return err
 	}
 
