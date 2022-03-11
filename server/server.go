@@ -28,6 +28,9 @@
 package server
 
 import (
+	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os/user"
 	"strconv"
@@ -54,12 +57,32 @@ type Server struct {
 	srv    *graceful.Server
 }
 
-// New creates a Server which can serve a REST API.
-func New() *Server {
+// New creates a Server which can serve a REST API. It logs to the given
+// io.Writer, which could for example be syslog using the log/syslog pkg with
+// syslog.new(syslog.LOG_INFO, "tag").
+func New(logWriter io.Writer) *Server {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
-	r.Use(gin.Recovery()) // gin.Default() also includes gin.Logger()
+	r.Use(gin.Recovery())
+
+	logger := log.New(logWriter, "", 0)
+
+	gin.DisableConsoleColor()
+	gin.DefaultWriter = logger.Writer()
+
+	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		return fmt.Sprintf("%s - [%s %s %s \"%s\"] STATUS=%d %s %s\n",
+			param.ClientIP,
+			param.Method,
+			param.Path,
+			param.Request.Proto,
+			param.Request.UserAgent(),
+			param.StatusCode,
+			param.Latency,
+			param.ErrorMessage,
+		)
+	}))
 
 	return &Server{
 		router: r,
@@ -124,7 +147,9 @@ func (s *Server) getWhere(c *gin.Context) {
 
 	dcss, err := s.callWhere(dir, splits, groups, users, types)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, nil)
+		c.AbortWithError(http.StatusBadRequest, err)
+
+		return
 	}
 
 	c.IndentedJSON(http.StatusOK, dcss)
