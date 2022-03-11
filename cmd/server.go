@@ -31,7 +31,7 @@ import (
 )
 
 // options for this cmd.
-var serverPort string
+var serverBind string
 var serverCert string
 var serverKey string
 var serverDGUT string
@@ -46,12 +46,19 @@ Starting the web server brings up a REST API that can use the given dgut.db
 (as produced by 'wrstat dgut' during 'wrstat mutli') to answer questions about
 where data is on the disks.
 
+Your --bind address should include the port, and for it to work with your
+--cert, you probably need to specify it as fqdn:port.
+
 The server must be running for 'wrstat where' calls to succeed.
 
 This command will block forever in the foreground; you can background it with
 ctrl-z; bg.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		if serverBind == "" {
+			die("you must supply --bind")
+		}
+
 		if serverDGUT == "" {
 			die("you must supply the path to the dgut.db")
 		}
@@ -71,7 +78,7 @@ ctrl-z; bg.
 			die("failed to load database: %s", err)
 		}
 
-		err = s.Start("0.0.0.0:"+serverPort, serverCert, serverKey)
+		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
 			die("non-graceful stop: %s", err)
 		}
@@ -82,8 +89,8 @@ func init() {
 	RootCmd.AddCommand(serverCmd)
 
 	// flags specific to this sub-command
-	serverCmd.Flags().StringVarP(&serverPort, "port", "p", "80",
-		"port to listen on")
+	serverCmd.Flags().StringVarP(&serverBind, "bind", "b", ":80",
+		"address to bind to, eg host:port")
 	serverCmd.Flags().StringVarP(&serverDGUT, "db", "d", "",
 		"path to dgut.db")
 	serverCmd.Flags().StringVarP(&serverCert, "cert", "c", "",
