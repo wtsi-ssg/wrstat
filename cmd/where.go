@@ -60,9 +60,10 @@ var whereCmd = &cobra.Command{
 	Short: "Find out where data is on disks",
 	Long: `Find out where data is on disks.
 
-Query the wrstat server by providing its URL (using the WRSTAT_SERVER enironment
-variable, or overriding that with a command line argument), and the --dir you
-wish to know about (defaults to the root directory).
+Query the wrstat server by providing its URL (including port, using the
+WRSTAT_SERVER environment variable, or overriding that with a command line
+argument), and the --dir you wish to know about (defaults to the root
+directory).
 
 This tool will show where data really lies: the deepest directory that has all
 filter-passing files nested under it.
