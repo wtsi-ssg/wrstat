@@ -26,6 +26,8 @@
 package cmd
 
 import (
+	"log/syslog"
+
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/server"
 )
@@ -49,6 +51,8 @@ where data is on the disks.
 Your --bind address should include the port, and for it to work with your
 --cert, you probably need to specify it as fqdn:port.
 
+The server will log all messages (of any severity) to syslog at the INFO level.
+
 The server must be running for 'wrstat where' calls to succeed.
 
 This command will block forever in the foreground; you can background it with
@@ -71,9 +75,14 @@ ctrl-z; bg.
 			die("you must supply --key")
 		}
 
-		s := server.New()
+		w, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
+		if err != nil {
+			die("failed to connect to syslog: %s", err)
+		}
 
-		err := s.LoadDGUTDB(serverDGUT)
+		s := server.New(w)
+
+		err = s.LoadDGUTDB(serverDGUT)
 		if err != nil {
 			die("failed to load database: %s", err)
 		}

@@ -49,7 +49,8 @@ func TestServer(t *testing.T) {
 	username, uid, gids := getUserAndGroups(t)
 
 	Convey("Given a Server", t, func() {
-		s := New()
+		var logWriter strings.Builder
+		s := New(&logWriter)
 
 		Convey("You can Start the Server", func() {
 			checker, err := port.NewChecker("localhost")
@@ -101,6 +102,9 @@ func TestServer(t *testing.T) {
 			response, err := queryWhere(s, "")
 			So(err, ShouldBeNil)
 			So(response.Code, ShouldEqual, http.StatusNotFound)
+			So(logWriter.String(), ShouldContainSubstring, "[GET /where")
+			So(logWriter.String(), ShouldContainSubstring, "STATUS=404")
+			logWriter.Reset()
 
 			Convey("And given a dgut database", func() {
 				path, err := createExampleDB(t, uid, gids[0], gids[1])
@@ -119,6 +123,8 @@ func TestServer(t *testing.T) {
 					response, err := queryWhere(s, "")
 					So(err, ShouldBeNil)
 					So(response.Code, ShouldEqual, http.StatusOK)
+					So(logWriter.String(), ShouldContainSubstring, "[GET /where")
+					So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
 
 					result, err := decodeWhereResult(response)
 					So(err, ShouldBeNil)
@@ -183,6 +189,8 @@ func TestServer(t *testing.T) {
 						response, err := queryWhere(s, "?dir=/foo")
 						So(err, ShouldBeNil)
 						So(response.Code, ShouldEqual, http.StatusBadRequest)
+						So(logWriter.String(), ShouldContainSubstring, "STATUS=400")
+						So(logWriter.String(), ShouldContainSubstring, "Error #01: directory not found")
 					})
 				})
 			})
