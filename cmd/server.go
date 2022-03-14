@@ -26,6 +26,7 @@
 package cmd
 
 import (
+	"fmt"
 	"log/syslog"
 
 	"github.com/spf13/cobra"
@@ -51,7 +52,10 @@ where data is on the disks.
 Your --bind address should include the port, and for it to work with your
 --cert, you probably need to specify it as fqdn:port.
 
-The server will log all messages (of any severity) to syslog at the INFO level.
+The server will log all messages (of any severity) to syslog at the INFO level,
+except for non-graceful stops of the server, which are sent at the CRIT level or
+include 'panic' in the message. The messages are tagged 'wrstat-server', and you
+might want to filter away 'STATUS=200' to find problems.
 
 The server must be running for 'wrstat where' calls to succeed.
 
@@ -84,12 +88,16 @@ ctrl-z; bg.
 
 		err = s.LoadDGUTDB(serverDGUT)
 		if err != nil {
-			die("failed to load database: %s", err)
+			msg := fmt.Sprintf("failed to load database: %s", err)
+			w.Crit(msg) //nolint:errcheck
+			die(msg)
 		}
 
 		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
-			die("non-graceful stop: %s", err)
+			msg := fmt.Sprintf("non-graceful stop: %s", err)
+			w.Crit(msg) //nolint:errcheck
+			die(msg)
 		}
 	},
 }
