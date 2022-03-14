@@ -58,7 +58,7 @@ var whereCmd = &cobra.Command{
 	Short: "Find out where data is on disks",
 	Long: `Find out where data is on disks.
 
-Query the wrstat server by providing its URL (including port, using the
+Query the wrstat server by providing its URL in the form domain:port (using the
 WRSTAT_SERVER environment variable, or overriding that with a command line
 argument), and the --dir you wish to know about (defaults to the root
 directory).
