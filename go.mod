@@ -6,6 +6,7 @@ require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5 // indirect
 	github.com/VertebrateResequencing/wr v0.31.1
 	github.com/dustin/go-humanize v1.0.0
+	github.com/gin-contrib/secure v0.0.1
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/hashicorp/go-multierror v1.1.1
