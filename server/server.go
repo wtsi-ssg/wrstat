@@ -23,7 +23,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-// package server provides a web server for a REST API.
+// package server provides a web server for a REST API and website.
 
 package server
 
@@ -44,27 +44,33 @@ import (
 )
 
 const (
+	// EndPointREST is the base location for all REST endpoints.
+	EndPointREST = "/rest/v1"
+
+	// WhereEndPoint is the endpoint for making where queries.
+	EndPointWhere = EndPointREST + "/where"
+
 	defaultDir    = "/"
 	defaultSplits = "2"
 	stopTimeout   = 10 * time.Second
 )
 
 // Server is used to start a web server that provides a REST API to the dgut
-// package's database.
+// package's database, and a website that displays the information nicely.
 type Server struct {
 	router *gin.Engine
 	tree   *dgut.Tree
 	srv    *graceful.Server
 }
 
-// New creates a Server which can serve a REST API. It logs to the given
-// io.Writer, which could for example be syslog using the log/syslog pkg with
-// syslog.new(syslog.LOG_INFO, "tag").
+// New creates a Server which can serve a REST API and website.
+//
+// It logs to the given io.Writer, which could for example be syslog using the
+// log/syslog pkg with syslog.new(syslog.LOG_INFO, "tag").
 func New(logWriter io.Writer) *Server {
 	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.New()
-	r.Use(gin.Recovery())
 
 	logger := log.New(logWriter, "", 0)
 
@@ -84,14 +90,16 @@ func New(logWriter io.Writer) *Server {
 		)
 	}))
 
+	r.Use(gin.RecoveryWithWriter(logWriter))
+
 	return &Server{
 		router: r,
 	}
 }
 
 // Start will start listening to the given address (eg. "localhost:8080"), and
-// serve the REST API over https; you must provide paths to your certficate and
-// key file.
+// serve the REST API and website over https; you must provide paths to your
+// certficate and key file.
 //
 // It blocks, but will gracefully shut down on SIGINT and SIGTERM. If you
 // Start() in a go-routine, you can call Stop() manually.
@@ -119,9 +127,9 @@ func (s *Server) Stop() {
 }
 
 // LoadDGUTDB loads the given dgut.db (as produced by dgut.DB.Store()) and adds
-// the /where endpoint to the REST API.
+// the /rest/v1/where endpoint to the REST API.
 //
-// The /where endpoint can take the dir, splits, groups, users and types
+// The /rest/v1/where endpoint can take the dir, splits, groups, users and types
 // parameters, which correspond to arguments that dgut.Tree.Where() takes.
 func (s *Server) LoadDGUTDB(path string) error {
 	tree, err := dgut.NewTree(path)
@@ -130,14 +138,14 @@ func (s *Server) LoadDGUTDB(path string) error {
 	}
 
 	s.tree = tree
-	s.router.GET("/where", s.getWhere)
+	s.router.GET(EndPointWhere, s.getWhere)
 
 	return nil
 }
 
 // getWhere responds with a list of directory stats describing where data is on
 // disks. LoadDGUTDB() must already have been called. This is called when there
-// is a GET on /where.
+// is a GET on /rest/v1/where.
 func (s *Server) getWhere(c *gin.Context) {
 	dir := c.DefaultQuery("dir", defaultDir)
 	splits := c.DefaultQuery("splits", defaultSplits)
@@ -147,7 +155,7 @@ func (s *Server) getWhere(c *gin.Context) {
 
 	dcss, err := s.callWhere(dir, splits, groups, users, types)
 	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
 
 		return
 	}
