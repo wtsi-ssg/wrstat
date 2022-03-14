@@ -38,6 +38,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wr/network/port"
@@ -68,6 +69,13 @@ func TestServer(t *testing.T) {
 			})
 
 			<-time.After(100 * time.Millisecond)
+
+			defer func() {
+				s.Stop()
+				err = g.Wait()
+				So(err, ShouldBeNil)
+			}()
+
 			client := resty.New()
 			client.SetRootCertificate(certPath)
 
@@ -79,9 +87,7 @@ func TestServer(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(resp.StatusCode(), ShouldEqual, http.StatusNotFound)
 
-			s.Stop()
-			err = g.Wait()
-			So(err, ShouldBeNil)
+			testWhereClientOnRealServer(t, uid, gids, s, addr, certPath)
 		})
 
 		if len(gids) < 2 {
@@ -102,7 +108,7 @@ func TestServer(t *testing.T) {
 			response, err := queryWhere(s, "")
 			So(err, ShouldBeNil)
 			So(response.Code, ShouldEqual, http.StatusNotFound)
-			So(logWriter.String(), ShouldContainSubstring, "[GET /where")
+			So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/where")
 			So(logWriter.String(), ShouldContainSubstring, "STATUS=404")
 			logWriter.Reset()
 
@@ -123,7 +129,7 @@ func TestServer(t *testing.T) {
 					response, err := queryWhere(s, "")
 					So(err, ShouldBeNil)
 					So(response.Code, ShouldEqual, http.StatusOK)
-					So(logWriter.String(), ShouldContainSubstring, "[GET /where")
+					So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/where")
 					So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
 
 					result, err := decodeWhereResult(response)
@@ -200,7 +206,47 @@ func TestServer(t *testing.T) {
 				So(err, ShouldNotBeNil)
 			})
 		})
+
+		Convey("Endpoints that panic are logged", func() {
+			s.router.GET("/foo", func(c *gin.Context) {
+				panic("bar")
+			})
+
+			response, err := queryREST(s, "/foo", "")
+			So(err, ShouldBeNil)
+			So(response.Code, ShouldEqual, http.StatusInternalServerError)
+			So(logWriter.String(), ShouldContainSubstring, "STATUS=500")
+			So(logWriter.String(), ShouldContainSubstring, "panic")
+		})
 	})
+}
+
+// testWhereClientOnRealServer tests our client method GetWhereDataIs on a real
+// listening server, if we have at least 2 gids to test with.
+func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Server, addr, cert string) {
+	t.Helper()
+
+	if len(gids) < 2 {
+		return
+	}
+
+	_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "")
+	So(err, ShouldNotBeNil)
+
+	path, err := createExampleDB(t, uid, gids[0], gids[1])
+	So(err, ShouldBeNil)
+
+	err = s.LoadDGUTDB(path)
+	So(err, ShouldBeNil)
+
+	_, _, err = GetWhereDataIs(addr, cert, "", "", "", "", "")
+	So(err, ShouldNotBeNil)
+	So(err, ShouldEqual, ErrBadQuery)
+
+	json, dcss, err := GetWhereDataIs(addr, cert, "/", "", "", "", "")
+	So(err, ShouldBeNil)
+	So(string(json), ShouldNotBeBlank)
+	So(len(dcss), ShouldBeGreaterThan, 0)
 }
 
 // createTestCert creates a self-signed cert and key, returning their paths.
@@ -243,11 +289,18 @@ func getUserAndGroups(t *testing.T) (string, string, []string) {
 	return uu.Username, uu.Uid, gids
 }
 
-// queryWhere does a test GET of /where, with extra appended (start it with ?).
+// queryWhere does a test GET of /rest/v1/where, with extra appended (start it
+// with ?).
 func queryWhere(s *Server, extra string) (*httptest.ResponseRecorder, error) {
+	return queryREST(s, EndPointWhere, extra)
+}
+
+// queryREST does a test GET of the given REST endpoint (start it with /), with
+// extra appended (start it with ?).
+func queryREST(s *Server, endpoint, extra string) (*httptest.ResponseRecorder, error) {
 	response := httptest.NewRecorder()
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", "/where"+extra, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", endpoint+extra, nil)
 	if err != nil {
 		return nil, err
 	}

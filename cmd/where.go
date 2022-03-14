@@ -27,21 +27,19 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"sort"
 
 	"github.com/dustin/go-humanize" //nolint:misspell
-	"github.com/go-resty/resty/v2"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/dgut"
+	"github.com/wtsi-ssg/wrstat/server"
 )
 
 const bytesPerK = 1024
 const defaultSplits = 2
 const defaultMinMB = 50
-const errBadQuery = Error("bad query; check dir, group, user and type")
 
 // options for this cmd.
 var whereQueryDir string
@@ -171,57 +169,22 @@ func whereMinMBToBytes(mbs int) uint64 {
 // where does the main job of quering the server to answer where the data is on
 // disk.
 func where(url, cert, dir, groups, users, types, splits, order string, minSizeBytes uint64, json bool) error {
-	resp, err := getWhereDataIs(url, cert, dir, groups, users, types, splits)
+	body, dcss, err := server.GetWhereDataIs(url, cert, dir, groups, users, types, splits)
 	if err != nil {
 		return err
 	}
 
 	if json {
-		cliPrint(string(resp.Body()))
+		cliPrint(string(body))
 
 		return nil
 	}
 
-	dcss := extractDCSSFromResponse(resp)
 	orderDCSS(dcss, order)
 
 	printWhereDataIs(dcss, minSizeBytes)
 
 	return nil
-}
-
-// getWhereDataIs does the actual query of the web server.
-func getWhereDataIs(url, cert, dir, groups, users, types, splits string) (*resty.Response, error) {
-	client := resty.New()
-
-	if cert != "" {
-		client.SetRootCertificate(cert)
-	}
-
-	resp, err := client.R().SetResult(dgut.DCSs{}).
-		ForceContentType("application/json").
-		SetQueryParams(map[string]string{
-			"dir":    dir,
-			"groups": groups,
-			"users":  users,
-			"types":  types,
-			"splits": splits,
-		}).
-		Get("https://" + url + "/where")
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode() != http.StatusOK {
-		return nil, errBadQuery
-	}
-
-	return resp, nil
-}
-
-// extractDCSSFromResponse gets the pre-converted DCSs out of the response.
-func extractDCSSFromResponse(resp *resty.Response) dgut.DCSs {
-	return *resp.Result().(*dgut.DCSs) //nolint:forcetypeassert
 }
 
 // orderDCSS reorders the given DCSs by count or dir, does nothing if order is
