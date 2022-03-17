@@ -144,8 +144,11 @@ func TestServer(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.String(), ShouldEqual, `{"code":401,"message":"illegal base64 data at input byte 0"}`)
 
+				start := time.Now()
+				end := start.Add(1 * time.Minute)
+
 				var noClaimToken string
-				noClaimToken, err = makeTestToken(keyPath, false)
+				noClaimToken, err = makeTestToken(keyPath, start, end, false)
 				So(err, ShouldBeNil)
 
 				r = newAuthenticatedClientRequest(addr, certPath, noClaimToken)
@@ -158,7 +161,7 @@ func TestServer(t *testing.T) {
 				So(err, ShouldBeNil)
 
 				var manualWronglySignedToken string
-				manualWronglySignedToken, err = makeTestToken(keyPath2, true)
+				manualWronglySignedToken, err = makeTestToken(keyPath2, start, end, true)
 				So(err, ShouldBeNil)
 
 				r = newAuthenticatedClientRequest(addr, certPath, manualWronglySignedToken)
@@ -167,7 +170,7 @@ func TestServer(t *testing.T) {
 				So(resp.String(), ShouldEqual, `{"code":401,"message":"crypto/rsa: verification error"}`)
 
 				var manualCorrectlySignedToken string
-				manualCorrectlySignedToken, err = makeTestToken(keyPath, true)
+				manualCorrectlySignedToken, err = makeTestToken(keyPath, start, end, true)
 				So(err, ShouldBeNil)
 
 				r = newAuthenticatedClientRequest(addr, certPath, manualCorrectlySignedToken)
@@ -175,12 +178,44 @@ func TestServer(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.String(), ShouldBeBlank)
 
+				var manualExpiredToken string
+				manualExpiredToken, err = makeTestToken(keyPath, start, start.Add(time.Nanosecond), true)
+				So(err, ShouldBeNil)
+
+				r = newAuthenticatedClientRequest(addr, certPath, manualExpiredToken)
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldEqual, `{"code":401,"message":"Token is expired"}`)
+
+				_, err = RefreshJWT("foo", certPath, manualExpiredToken)
+				So(err, ShouldNotBeNil)
+
+				_, err = RefreshJWT(addr, certPath, manualWronglySignedToken)
+				So(err, ShouldNotBeNil)
+
+				var refreshedToken string
+				refreshedToken, err = RefreshJWT(addr, certPath, manualExpiredToken)
+				So(err, ShouldBeNil)
+				So(refreshedToken, ShouldNotBeBlank)
+
+				r = newAuthenticatedClientRequest(addr, certPath, refreshedToken)
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldBeBlank)
+
+				past := start.Add(-(2 * tokenDuration) - (2 * time.Nanosecond))
+				manualExpiredToken, err = makeTestToken(keyPath, past, past.Add(time.Nanosecond), true)
+				So(err, ShouldBeNil)
+
+				_, err = RefreshJWT(addr, certPath, manualExpiredToken)
+				So(err, ShouldNotBeNil)
+
 				r = newAuthenticatedClientRequest(addr, certPath, token)
 				resp, err = r.Get(EndPointAuth + "/test")
 				So(err, ShouldBeNil)
 				So(resp.String(), ShouldBeBlank)
 
-				So(called, ShouldEqual, 2)
+				So(called, ShouldEqual, 3)
 				So(claims[userKey], ShouldBeNil)
 				So(claims[claimKeyUsername], ShouldEqual, "user")
 				user, ok := userI.(*User)
@@ -237,7 +272,7 @@ func TestServer(t *testing.T) {
 				So(user2, ShouldBeNil)
 			})
 
-			testWhereClientOnRealServer(t, uid, gids, s, addr, certPath)
+			testWhereClientOnRealServer(t, uid, gids, s, addr, certPath, keyPath)
 		})
 
 		if len(gids) < 2 {
@@ -373,7 +408,7 @@ func TestServer(t *testing.T) {
 
 // testWhereClientOnRealServer tests our client method GetWhereDataIs on a real
 // listening server, if we have at least 2 gids to test with.
-func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Server, addr, cert string) {
+func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Server, addr, cert, key string) {
 	t.Helper()
 
 	if len(gids) < 2 {
@@ -381,7 +416,7 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 	}
 
 	Convey("The where endpoint works with a real server", func() {
-		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "")
+		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 
 		path, err := createExampleDB(t, uid, gids[0], gids[1])
@@ -390,11 +425,26 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 		err = s.LoadDGUTDB(path)
 		So(err, ShouldBeNil)
 
-		_, _, err = GetWhereDataIs(addr, cert, "", "", "", "", "")
+		_, _, err = GetWhereDataIs(addr, cert, "", "/", "", "", "", "")
+		So(err, ShouldNotBeNil)
+		So(err, ShouldEqual, ErrNoAuth)
+
+		err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
+			return true, []string{"0", uid}, gids
+		})
+		So(err, ShouldBeNil)
+
+		err = s.LoadDGUTDB(path)
+		So(err, ShouldBeNil)
+
+		token, err := Login(addr, cert, "user", "pass")
+		So(err, ShouldBeNil)
+
+		_, _, err = GetWhereDataIs(addr, cert, token, "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 		So(err, ShouldEqual, ErrBadQuery)
 
-		json, dcss, err := GetWhereDataIs(addr, cert, "/", "", "", "", "")
+		json, dcss, err := GetWhereDataIs(addr, cert, token, "/", "", "", "", "")
 		So(err, ShouldBeNil)
 		So(string(json), ShouldNotBeBlank)
 		So(len(dcss), ShouldBeGreaterThan, 0)
@@ -420,7 +470,10 @@ func createTestCert(t *testing.T) (string, string, error) {
 	return certPath, keyPath, err
 }
 
-func makeTestToken(keyPath string, withUserClaims bool) (string, error) {
+// makeTestToken creates a JWT signed with the key at the given path, that
+// has orig_iat of start and exp of end, and includes a claimKeyUsername claim
+// if withUserClaims is true.
+func makeTestToken(keyPath string, start, end time.Time, withUserClaims bool) (string, error) {
 	token := gjwt.New(gjwt.GetSigningMethod("RS512"))
 
 	claims, ok := token.Claims.(gjwt.MapClaims)
@@ -434,10 +487,8 @@ func makeTestToken(keyPath string, withUserClaims bool) (string, error) {
 		claims[claimKeyGIDs] = ""
 	}
 
-	now := time.Now()
-	expire := now.Add(time.Hour)
-	claims["exp"] = expire.Unix()
-	claims["orig_iat"] = now
+	claims["orig_iat"] = start.Unix()
+	claims["exp"] = end.Unix()
 
 	keyData, err := ioutil.ReadFile(keyPath)
 	if err != nil {

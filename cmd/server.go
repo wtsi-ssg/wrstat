@@ -86,6 +86,13 @@ ctrl-z; bg.
 
 		s := server.New(w)
 
+		err = s.EnableAuth(serverCert, serverKey, authenticate)
+		if err != nil {
+			msg := fmt.Sprintf("failed to enable authentication: %s", err)
+			w.Crit(msg) //nolint:errcheck
+			die(msg)
+		}
+
 		err = s.LoadDGUTDB(serverDGUT)
 		if err != nil {
 			msg := fmt.Sprintf("failed to load database: %s", err)
@@ -118,4 +125,10 @@ func init() {
 	serverCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
 		hideGlobalFlags(serverCmd, command, strings)
 	})
+}
+
+// authenticate *** is currently a place holder that allows root-level access to
+// everyone.
+func authenticate(username, password string) (bool, []string, []string) {
+	return true, []string{}, []string{}
 }
