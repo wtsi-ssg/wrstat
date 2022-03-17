@@ -101,6 +101,23 @@ func jsonStringBodyToString(body []byte) string {
 	return str
 }
 
+// RefreshJWT is like Login(), but refreshes a JWT previously returned by
+// Login() if it's still valid.
+func RefreshJWT(url, cert, token string) (string, error) {
+	r := newAuthenticatedClientRequest(url, cert, token)
+
+	resp, err := r.Get(EndPointJWT)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return "", ErrNoAuth
+	}
+
+	return jsonStringBodyToString(resp.Body()), nil
+}
+
 // newAuthenticatedClientRequest is like newClientRequest, but sets the given
 // JWT in the authorization header.
 func newAuthenticatedClientRequest(url, cert, jwt string) *resty.Request {
@@ -118,9 +135,11 @@ func newAuthenticatedClientRequest(url, cert, jwt string) *resty.Request {
 // Provide a non-blank path to a certificate to force us to trust that
 // certificate, eg. if the server was started with a self-signed certificate.
 //
+// You must first Login() to get a JWT that you must supply here.
+//
 // The other parameters correspond to arguments that dgut.Tree.Where() takes.
-func GetWhereDataIs(url, cert, dir, groups, users, types, splits string) ([]byte, dgut.DCSs, error) {
-	r := newClientRequest(url, cert)
+func GetWhereDataIs(url, cert, jwt, dir, groups, users, types, splits string) ([]byte, dgut.DCSs, error) {
+	r := newAuthenticatedClientRequest(url, cert, jwt)
 
 	resp, err := r.SetResult(dgut.DCSs{}).
 		ForceContentType("application/json").
@@ -131,14 +150,17 @@ func GetWhereDataIs(url, cert, dir, groups, users, types, splits string) ([]byte
 			"types":  types,
 			"splits": splits,
 		}).
-		Get(EndPointWhere)
+		Get(EndPointAuthWhere)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		return nil, nil, ErrBadQuery
+	switch resp.StatusCode() {
+	case http.StatusUnauthorized, http.StatusNotFound:
+		return nil, nil, ErrNoAuth
+	case http.StatusOK:
+		return resp.Body(), *resp.Result().(*dgut.DCSs), nil //nolint:forcetypeassert
 	}
 
-	return resp.Body(), *resp.Result().(*dgut.DCSs), nil //nolint:forcetypeassert
+	return nil, nil, ErrBadQuery
 }

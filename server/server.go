@@ -55,8 +55,15 @@ const (
 	// authorisation should belong to.
 	EndPointAuth = EndPointREST + "/auth"
 
-	// EndPointWhere is the endpoint for making where queries.
-	EndPointWhere = EndPointREST + "/where"
+	wherePath = "/where"
+
+	// EndPointWhere is the endpoint for making where queries if authorization
+	// isn't implemented.
+	EndPointWhere = EndPointREST + wherePath
+
+	// EndPointAuthWhere is the endpoint for making where queries if
+	// authorization is implemented.
+	EndPointAuthWhere = EndPointAuth + wherePath
 
 	defaultDir    = "/"
 	defaultSplits = "2"
@@ -144,9 +151,11 @@ func (s *Server) Stop() {
 }
 
 // LoadDGUTDB loads the given dgut.db (as produced by dgut.DB.Store()) and adds
-// the /rest/v1/where GET endpoint to the REST API.
+// the /rest/v1/where GET endpoint to the REST API. If you call EnableAuth()
+// first, then this endpoint will be secured and be available at
+// /rest/v1/auth/where.
 //
-// The /rest/v1/where endpoint can take the dir, splits, groups, users and types
+// The where endpoint can take the dir, splits, groups, users and types
 // parameters, which correspond to arguments that dgut.Tree.Where() takes.
 func (s *Server) LoadDGUTDB(path string) error {
 	tree, err := dgut.NewTree(path)
@@ -155,7 +164,12 @@ func (s *Server) LoadDGUTDB(path string) error {
 	}
 
 	s.tree = tree
-	s.router.GET(EndPointWhere, s.getWhere)
+
+	if s.authGroup == nil {
+		s.router.GET(EndPointWhere, s.getWhere)
+	} else {
+		s.authGroup.GET(wherePath, s.getWhere)
+	}
 
 	return nil
 }
