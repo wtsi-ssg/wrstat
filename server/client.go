@@ -23,12 +23,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-// package server provides a web server for a REST API and website.
-
 package server
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/wtsi-ssg/wrstat/dgut"
@@ -38,9 +37,79 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
+const ErrNoAuth = Error("authentication failed")
 const ErrBadQuery = Error("bad query; check dir, group, user and type")
 
 const ClientProtocol = "https://"
+
+// Login is a client call to a Server listening at the given domain:port url
+// that checks the given password is valid for the given username, and returns a
+// JWT if so.
+//
+// Provide a non-blank path to a certificate to force us to trust that
+// certificate, eg. if the server was started with a self-signed certificate.
+func Login(url, cert, username, password string) (string, error) {
+	r := newClientRequest(url, cert)
+
+	resp, err := r.SetFormData(map[string]string{
+		"username": username,
+		"password": password,
+	}).
+		Post(EndPointJWT)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return "", ErrNoAuth
+	}
+
+	return jsonStringBodyToString(resp.Body()), nil
+}
+
+// newClientRequest creates a resty Request that will trust the certificate at
+// the given path. cert can be blank to only trust the normal installed cert
+// chain.
+func newClientRequest(url, cert string) *resty.Request {
+	client := newRestyClient(url, cert)
+
+	return client.R()
+}
+
+// newRestyClient creates a Resty client that will trust the certificate at
+// the given path. cert can be blank to only trust the normal installed cert
+// chain.
+func newRestyClient(url, cert string) *resty.Client {
+	client := resty.New()
+
+	if cert != "" {
+		client.SetRootCertificate(cert)
+	}
+
+	client.SetBaseURL(ClientProtocol + url)
+
+	return client
+}
+
+// jsonStringBodyToString takes the response body of a JSON string, and returns
+// it as a string.
+func jsonStringBodyToString(body []byte) string {
+	str := string(body)
+	str = strings.TrimPrefix(str, `"`)
+	str = strings.TrimSuffix(str, `"`)
+
+	return str
+}
+
+// newAuthenticatedClientRequest is like newClientRequest, but sets the given
+// JWT in the authorization header.
+func newAuthenticatedClientRequest(url, cert, jwt string) *resty.Request {
+	client := newRestyClient(url, cert)
+
+	client.SetAuthToken(jwt)
+
+	return client.R()
+}
 
 // GetWhereDataIs is a client call to a Server listening at the given
 // domain:port url that queries where data is and returns the raw response body
@@ -51,13 +120,9 @@ const ClientProtocol = "https://"
 //
 // The other parameters correspond to arguments that dgut.Tree.Where() takes.
 func GetWhereDataIs(url, cert, dir, groups, users, types, splits string) ([]byte, dgut.DCSs, error) {
-	client := resty.New()
+	r := newClientRequest(url, cert)
 
-	if cert != "" {
-		client.SetRootCertificate(cert)
-	}
-
-	resp, err := client.R().SetResult(dgut.DCSs{}).
+	resp, err := r.SetResult(dgut.DCSs{}).
 		ForceContentType("application/json").
 		SetQueryParams(map[string]string{
 			"dir":    dir,
@@ -66,7 +131,7 @@ func GetWhereDataIs(url, cert, dir, groups, users, types, splits string) ([]byte
 			"types":  types,
 			"splits": splits,
 		}).
-		Get(ClientProtocol + url + EndPointWhere)
+		Get(EndPointWhere)
 	if err != nil {
 		return nil, nil, err
 	}

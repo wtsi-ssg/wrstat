@@ -48,7 +48,14 @@ const (
 	// EndPointREST is the base location for all REST endpoints.
 	EndPointREST = "/rest/v1"
 
-	// WhereEndPoint is the endpoint for making where queries.
+	// EndPointJWT is the endpoint for creating or refreshing a JWT.
+	EndPointJWT = EndPointREST + "/jwt"
+
+	// EndPointAuth is the name of the router group that endpoints requiring JWT
+	// authorisation should belong to.
+	EndPointAuth = EndPointREST + "/auth"
+
+	// EndPointWhere is the endpoint for making where queries.
 	EndPointWhere = EndPointREST + "/where"
 
 	defaultDir    = "/"
@@ -56,12 +63,19 @@ const (
 	stopTimeout   = 10 * time.Second
 )
 
+// AuthCallback is a function that returns true if the given password is valid
+// for the given username. It also returns the other UIDs this user can sudo as,
+// and all the groups this user and the sudoable users belong to.
+type AuthCallback func(username, password string) (bool, []string, []string)
+
 // Server is used to start a web server that provides a REST API to the dgut
 // package's database, and a website that displays the information nicely.
 type Server struct {
-	router *gin.Engine
-	tree   *dgut.Tree
-	srv    *graceful.Server
+	router    *gin.Engine
+	tree      *dgut.Tree
+	srv       *graceful.Server
+	authGroup *gin.RouterGroup
+	authCB    AuthCallback
 }
 
 // New creates a Server which can serve a REST API and website.
@@ -130,7 +144,7 @@ func (s *Server) Stop() {
 }
 
 // LoadDGUTDB loads the given dgut.db (as produced by dgut.DB.Store()) and adds
-// the /rest/v1/where endpoint to the REST API.
+// the /rest/v1/where GET endpoint to the REST API.
 //
 // The /rest/v1/where endpoint can take the dir, splits, groups, users and types
 // parameters, which correspond to arguments that dgut.Tree.Where() takes.

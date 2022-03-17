@@ -29,6 +29,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
@@ -38,8 +39,10 @@ import (
 	"testing"
 	"time"
 
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
+	gjwt "github.com/golang-jwt/jwt/v4"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wr/network/port"
 	"github.com/wtsi-ssg/wrstat/dgut"
@@ -48,6 +51,8 @@ import (
 
 func TestServer(t *testing.T) {
 	username, uid, gids := getUserAndGroups(t)
+
+	exampleUser := &User{Username: "user", UIDs: []string{"1", "2"}, GIDs: []string{"3", "4"}}
 
 	Convey("Given a Server", t, func() {
 		var logWriter strings.Builder
@@ -86,6 +91,147 @@ func TestServer(t *testing.T) {
 			resp, err = client.R().Get("https://" + addr + "/foo")
 			So(err, ShouldBeNil)
 			So(resp.StatusCode(), ShouldEqual, http.StatusNotFound)
+
+			Convey("The jwt endpoint works after enabling it", func() {
+				err = s.EnableAuth("/foo", "/bar", func(u, p string) (bool, []string, []string) {
+					return false, nil, nil
+				})
+				So(err, ShouldNotBeNil)
+
+				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, []string, []string) {
+					ok := p == "pass"
+
+					return ok, []string{"1", "2"}, []string{"3", "4"}
+				})
+				So(err, ShouldBeNil)
+
+				r := newClientRequest(addr, certPath)
+				resp, err = r.Post(EndPointJWT)
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldEqual, `{"code":401,"message":"missing Username or Password"}`)
+
+				_, err = Login("foo", certPath, "user", "foo")
+				So(err, ShouldNotBeNil)
+
+				var token string
+				token, err = Login(addr, certPath, "user", "foo")
+				So(err, ShouldNotBeNil)
+				So(err, ShouldEqual, ErrNoAuth)
+				So(token, ShouldBeBlank)
+
+				token, err = Login(addr, certPath, "user", "pass")
+				So(err, ShouldBeNil)
+				So(token, ShouldNotBeBlank)
+
+				var called int
+				var claims jwt.MapClaims
+				var userI interface{}
+				var gu *User
+
+				s.authGroup.GET("/test", func(c *gin.Context) {
+					called++
+					userI, _ = c.Get(userKey)
+					gu = s.getUser(c)
+					claims = jwt.ExtractClaims(c)
+				})
+
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldEqual, `{"code":401,"message":"auth header is empty"}`)
+
+				r = newAuthenticatedClientRequest(addr, certPath, "{sdf.sdf.sdf}")
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldEqual, `{"code":401,"message":"illegal base64 data at input byte 0"}`)
+
+				noClaimToken, err := makeTestToken(keyPath, false)
+				So(err, ShouldBeNil)
+
+				r = newAuthenticatedClientRequest(addr, certPath, noClaimToken)
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldEqual, `{"code":403,"message":"you don't have permission to access this resource"}`)
+
+				_, keyPath2, err := createTestCert(t)
+				So(err, ShouldBeNil)
+
+				manualWronglySignedToken, err := makeTestToken(keyPath2, true)
+				So(err, ShouldBeNil)
+
+				r = newAuthenticatedClientRequest(addr, certPath, manualWronglySignedToken)
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldEqual, `{"code":401,"message":"crypto/rsa: verification error"}`)
+
+				manualCorrectlySignedToken, err := makeTestToken(keyPath, true)
+				So(err, ShouldBeNil)
+
+				r = newAuthenticatedClientRequest(addr, certPath, manualCorrectlySignedToken)
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldBeBlank)
+
+				r = newAuthenticatedClientRequest(addr, certPath, token)
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldBeBlank)
+
+				So(called, ShouldEqual, 2)
+				So(claims[userKey], ShouldBeNil)
+				So(claims[claimKeyUsername], ShouldEqual, "user")
+				user, ok := userI.(*User)
+				So(ok, ShouldBeTrue)
+				So(user, ShouldResemble, exampleUser)
+				So(gu, ShouldResemble, exampleUser)
+			})
+
+			Convey("authPayLoad correctly maps a User to claims, or returns none", func() {
+				data := "foo"
+				claims := authPayLoad(data)
+				So(len(claims), ShouldEqual, 0)
+
+				claims = authPayLoad(exampleUser)
+				So(len(claims), ShouldEqual, 3)
+				So(claims, ShouldResemble, jwt.MapClaims{
+					claimKeyUsername: "user",
+					claimKeyUIDs:     "1,2",
+					claimKeyGIDs:     "3,4",
+				})
+			})
+
+			Convey("retrieveClaimString fails with bad claims", func() {
+				claims := jwt.MapClaims{"foo": []string{"bar"}}
+
+				_, errc := retrieveClaimString(claims, "abc")
+				So(errc, ShouldNotBeNil)
+
+				str, errc := retrieveClaimString(claims, "foo")
+				So(errc, ShouldNotBeNil)
+				So(errc, ShouldEqual, ErrBadJWTClaim)
+				So(str, ShouldBeBlank)
+			})
+
+			Convey("getUser fails without the user key having a valid value", func() {
+				called := 0
+
+				var user1, user2 *User
+
+				s.router.GET("/test", func(c *gin.Context) {
+					user1 = s.getUser(c)
+					c.Keys = map[string]interface{}{userKey: "foo"}
+					user2 = s.getUser(c)
+
+					called++
+				})
+
+				r := newClientRequest(addr, certPath)
+				resp, err = r.Get("https://" + addr + "/test")
+				So(err, ShouldBeNil)
+
+				So(called, ShouldEqual, 1)
+				So(user1, ShouldBeNil)
+				So(user2, ShouldBeNil)
+			})
 
 			testWhereClientOnRealServer(t, uid, gids, s, addr, certPath)
 		})
@@ -230,23 +376,25 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 		return
 	}
 
-	_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "")
-	So(err, ShouldNotBeNil)
+	Convey("The where endpoint works with a real server", func() {
+		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "")
+		So(err, ShouldNotBeNil)
 
-	path, err := createExampleDB(t, uid, gids[0], gids[1])
-	So(err, ShouldBeNil)
+		path, err := createExampleDB(t, uid, gids[0], gids[1])
+		So(err, ShouldBeNil)
 
-	err = s.LoadDGUTDB(path)
-	So(err, ShouldBeNil)
+		err = s.LoadDGUTDB(path)
+		So(err, ShouldBeNil)
 
-	_, _, err = GetWhereDataIs(addr, cert, "", "", "", "", "")
-	So(err, ShouldNotBeNil)
-	So(err, ShouldEqual, ErrBadQuery)
+		_, _, err = GetWhereDataIs(addr, cert, "", "", "", "", "")
+		So(err, ShouldNotBeNil)
+		So(err, ShouldEqual, ErrBadQuery)
 
-	json, dcss, err := GetWhereDataIs(addr, cert, "/", "", "", "", "")
-	So(err, ShouldBeNil)
-	So(string(json), ShouldNotBeBlank)
-	So(len(dcss), ShouldBeGreaterThan, 0)
+		json, dcss, err := GetWhereDataIs(addr, cert, "/", "", "", "", "")
+		So(err, ShouldBeNil)
+		So(string(json), ShouldNotBeBlank)
+		So(len(dcss), ShouldBeGreaterThan, 0)
+	})
 }
 
 // createTestCert creates a self-signed cert and key, returning their paths.
@@ -266,6 +414,38 @@ func createTestCert(t *testing.T) (string, string, error) {
 	err := cmd.Run()
 
 	return certPath, keyPath, err
+}
+
+func makeTestToken(keyPath string, withUserClaims bool) (string, error) {
+	token := gjwt.New(gjwt.GetSigningMethod("RS512"))
+
+	claims, ok := token.Claims.(gjwt.MapClaims)
+	if !ok {
+		return "", ErrNoAuth
+	}
+
+	if withUserClaims {
+		claims[claimKeyUsername] = "root"
+		claims[claimKeyUIDs] = ""
+		claims[claimKeyGIDs] = ""
+	}
+
+	now := time.Now()
+	expire := now.Add(time.Hour)
+	claims["exp"] = expire.Unix()
+	claims["orig_iat"] = now
+
+	keyData, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return "", err
+	}
+
+	key, err := gjwt.ParseRSAPrivateKeyFromPEM(keyData)
+	if err != nil {
+		return "", err
+	}
+
+	return token.SignedString(key)
 }
 
 // getUserAndGroups returns the current users username, uid and gids.
