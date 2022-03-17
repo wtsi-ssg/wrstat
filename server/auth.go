@@ -40,7 +40,7 @@ type login struct {
 }
 
 const (
-	tokenDuration    = time.Hour * 24 * 7
+	tokenDuration    = time.Hour * 24 * 5
 	userKey          = "user"
 	claimKeyUsername = "Username"
 	claimKeyUIDs     = "UIDs"
@@ -69,7 +69,8 @@ type User struct {
 //
 // JWTs are signed and verified using the given cert and key files.
 //
-// GET on the endpoint will refresh the JWT.
+// GET on the endpoint will refresh the JWT. JWTs expire after 5 days, but can
+// be refreshed up until day 10 from issue.
 func (s *Server) EnableAuth(certFile, keyFile string, cb AuthCallback) error {
 	s.authCB = cb
 
@@ -105,12 +106,11 @@ func (s *Server) createAuthMiddleware(certFile, keyFile string) (*jwt.GinJWTMidd
 		Authorizator: func(data interface{}, c *gin.Context) bool {
 			return data != nil
 		},
-		LoginResponse: func(c *gin.Context, code int, token string, t time.Time) {
-			c.JSON(http.StatusOK, token)
-		},
-		TokenLookup:   "header: Authorization",
-		TokenHeadName: "Bearer",
-		TimeFunc:      time.Now,
+		LoginResponse:   tokenResponder,
+		RefreshResponse: tokenResponder,
+		TokenLookup:     "header: Authorization",
+		TokenHeadName:   "Bearer",
+		TimeFunc:        time.Now,
 	})
 }
 
@@ -189,6 +189,11 @@ func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 		UIDs:     uids,
 		GIDs:     gids,
 	}, nil
+}
+
+// tokenResponder returns token as a simple JSON string.
+func tokenResponder(c *gin.Context, code int, token string, t time.Time) {
+	c.JSON(http.StatusOK, token)
 }
 
 // getUser retreives the *User information extracted from the JWT in the auth

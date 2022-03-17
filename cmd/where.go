@@ -28,18 +28,27 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 	"sort"
+	"strings"
+	"syscall"
 
 	"github.com/dustin/go-humanize" //nolint:misspell
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/dgut"
 	"github.com/wtsi-ssg/wrstat/server"
+	"golang.org/x/term"
 )
 
-const bytesPerK = 1024
-const defaultSplits = 2
-const defaultMinMB = 50
+const (
+	bytesPerK     = 1024
+	defaultSplits = 2
+	defaultMinMB  = 50
+	jwtBasename   = ".wrstat.jwt"
+	privatePerms  = 0600
+)
 
 // options for this cmd.
 var whereQueryDir string
@@ -99,6 +108,19 @@ bytes.
 If the wrstat server is using an untrusted certificate, the path to its
 certificate can be provided with --cert, or the WRSTAT_SERVER_CERT environment
 variable, to force trust in it.
+
+On first usage, you will be asked to provide your (LDAP) password to
+authenticate with the server. The server will find out what unix groups and
+users you are allowed to know about, and a JWT with this information will be
+stored in your home directory at ~/.wrstat.jwt.
+
+When you run this, you will effectively have hardcoded --groups and --users
+filters corresponding to your permissions, though you can restrict it further
+to just some of the groups and users you are allowed to see.
+
+With the JWT in place, you won't have to provide your password again, until it
+expires. Expiry time is 5 days, but the JWT is automatically refreshed every
+time you use this, with refreshes possible up to 5 days after expiry.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		setCLIFormat()
@@ -169,7 +191,12 @@ func whereMinMBToBytes(mbs int) uint64 {
 // where does the main job of quering the server to answer where the data is on
 // disk.
 func where(url, cert, dir, groups, users, types, splits, order string, minSizeBytes uint64, json bool) error {
-	body, dcss, err := server.GetWhereDataIs(url, cert, dir, groups, users, types, splits)
+	token, err := getJWT(url, cert)
+	if err != nil {
+		return err
+	}
+
+	body, dcss, err := server.GetWhereDataIs(url, cert, token, dir, groups, users, types, splits)
 	if err != nil {
 		return err
 	}
@@ -185,6 +212,81 @@ func where(url, cert, dir, groups, users, types, splits, order string, minSizeBy
 	printWhereDataIs(dcss, minSizeBytes)
 
 	return nil
+}
+
+// getJWT checks if we have stored a jwt in a file in user's home directory.
+// If so, the JWT is refreshed and returned.
+//
+// Otherwise, we ask the user for the password and login, storing and returning
+// the new JWT.
+func getJWT(url, cert string) (string, error) {
+	token, err := getStoredJWT(url, cert)
+	if err != nil {
+		token, err = login(url, cert)
+		if err == nil {
+			err = storeJWT(token)
+		}
+	}
+
+	return token, err
+}
+
+// getStoredJWT sees if we've previously called storeJWT(), gets the token
+// from the file it made, then tries to refresh it on the Server.
+func getStoredJWT(url, cert string) (string, error) {
+	path, err := jwtStoragePath()
+	if err != nil {
+		return "", err
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	token := strings.TrimSpace(string(content))
+
+	return server.RefreshJWT(url, cert, token)
+}
+
+// jwtStoragePath returns the path where we store our JWT.
+func jwtStoragePath() (string, error) {
+	dir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, jwtBasename), nil
+}
+
+// login requests the currently logged-in user's password, and tries to use it
+// to log in to the server. Returns the JWT on success.
+func login(url, cert string) (string, error) {
+	user, err := user.Current()
+	if err != nil {
+		die("couldn't get user: %s", err)
+	}
+
+	cliPrint("Password: ")
+
+	passwordB, err := term.ReadPassword(syscall.Stdin)
+	if err != nil {
+		die("couldn't read password: %s", err)
+	}
+
+	cliPrint("\n")
+
+	return server.Login(url, cert, user.Uid, string(passwordB))
+}
+
+// storeJWT writes the given token string to a private file in user's home dir.
+func storeJWT(token string) error {
+	path, err := jwtStoragePath()
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, []byte(token), privatePerms)
 }
 
 // orderDCSS reorders the given DCSs by count or dir, does nothing if order is
