@@ -144,7 +144,8 @@ func TestServer(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.String(), ShouldEqual, `{"code":401,"message":"illegal base64 data at input byte 0"}`)
 
-				noClaimToken, err := makeTestToken(keyPath, false)
+				var noClaimToken string
+				noClaimToken, err = makeTestToken(keyPath, false)
 				So(err, ShouldBeNil)
 
 				r = newAuthenticatedClientRequest(addr, certPath, noClaimToken)
@@ -152,10 +153,12 @@ func TestServer(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.String(), ShouldEqual, `{"code":403,"message":"you don't have permission to access this resource"}`)
 
-				_, keyPath2, err := createTestCert(t)
+				var keyPath2 string
+				_, keyPath2, err = createTestCert(t)
 				So(err, ShouldBeNil)
 
-				manualWronglySignedToken, err := makeTestToken(keyPath2, true)
+				var manualWronglySignedToken string
+				manualWronglySignedToken, err = makeTestToken(keyPath2, true)
 				So(err, ShouldBeNil)
 
 				r = newAuthenticatedClientRequest(addr, certPath, manualWronglySignedToken)
@@ -163,7 +166,8 @@ func TestServer(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.String(), ShouldEqual, `{"code":401,"message":"crypto/rsa: verification error"}`)
 
-				manualCorrectlySignedToken, err := makeTestToken(keyPath, true)
+				var manualCorrectlySignedToken string
+				manualCorrectlySignedToken, err = makeTestToken(keyPath, true)
 				So(err, ShouldBeNil)
 
 				r = newAuthenticatedClientRequest(addr, certPath, manualCorrectlySignedToken)
