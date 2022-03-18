@@ -49,8 +49,10 @@ const combineGroupOutputFileBasename = "combine.bygroup"
 const combineDGUTOutputFileBasename = "combine.dgut.gz"
 const combineLogOutputFileBasename = "combine.log.gz"
 const numSummaryColumns = 2
+const groupSumCols = 2
 const userGroupSumCols = 3
 const dgutSumCols = 4
+const intBase = 10
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
@@ -392,12 +394,12 @@ func mergeMatchingSummaryLines(a, b []string) {
 // addNumberStrings treats a and b as ints, adds them together, and returns the
 // resulting int64 as a string.
 func addNumberStrings(a, b string) string {
-	return strconv.FormatInt(atoi(a)+atoi(b), 10)
+	return strconv.FormatInt(atoi(a)+atoi(b), intBase)
 }
 
 // atoi is like strconv.Atoi but returns an int64 and dies on error.
 func atoi(n string) int64 {
-	i, err := strconv.ParseInt(n, 10, 0)
+	i, err := strconv.ParseInt(n, intBase, 0)
 	if err != nil {
 		die("bad number string '%s': %s", n, err)
 	}
@@ -435,9 +437,9 @@ func mergeGroups(inputs []string, output *os.File) error {
 
 // mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
 // (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
-// the first 2 columns, and outputting the results.
+// the same first 2 columns, and outputting the results.
 func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
-	if err := mergeSummaryLines(data, 2, output); err != nil {
+	if err := mergeSummaryLines(data, groupSumCols, output); err != nil {
 		return err
 	}
 

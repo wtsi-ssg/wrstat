@@ -106,7 +106,7 @@ func TestStatFile(t *testing.T) {
 					Convey("but you get an error if there are duplicates", func() {
 						err = s.SubmitJobs([]*jobqueue.Job{job, job2})
 						So(err, ShouldNotBeNil)
-						So(err, ShouldEqual, dupJobsErr)
+						So(err, ShouldEqual, errDupJobs)
 
 						info := server.GetServerStats()
 						So(info.Ready, ShouldEqual, 2)
