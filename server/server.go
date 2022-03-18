@@ -229,7 +229,7 @@ func (s *Server) restrictedGroups(c *gin.Context, groups string) ([]string, erro
 		return ids, nil
 	}
 
-	return restrictIDsToWanted(allowedIDs, wanted), nil
+	return restrictIDsToWanted(allowedIDs, wanted)
 }
 
 // groupNameToGID converts group name to GID.
@@ -290,10 +290,11 @@ func (s *Server) getRestrictedIDs(c *gin.Context, cb func(*User) []string) []str
 }
 
 // restrictIDsToWanted returns the elements of ids that are in wanted. Will
-// return ids if wanted is empty.
-func restrictIDsToWanted(ids []string, wanted map[string]bool) []string {
+// return ids if wanted is empty. Returns an error if you don't want any of the
+// given ids.
+func restrictIDsToWanted(ids []string, wanted map[string]bool) ([]string, error) {
 	if len(wanted) == 0 {
-		return ids
+		return ids, nil
 	}
 
 	var final []string //nolint:prealloc
@@ -306,7 +307,11 @@ func restrictIDsToWanted(ids []string, wanted map[string]bool) []string {
 		final = append(final, id)
 	}
 
-	return final
+	if final == nil {
+		return nil, ErrBadQuery
+	}
+
+	return final, nil
 }
 
 // restrictedUsers checks our JWT if present, and will return the user IDs that
@@ -327,7 +332,7 @@ func (s *Server) restrictedUsers(c *gin.Context, users string) ([]string, error)
 		return ids, nil
 	}
 
-	return restrictIDsToWanted(allowedIDs, wanted), nil
+	return restrictIDsToWanted(allowedIDs, wanted)
 }
 
 // userNameToUID converts user name to UID.
