@@ -276,7 +276,7 @@ func login(url, cert string) (string, error) {
 
 	cliPrint("\n")
 
-	return server.Login(url, cert, user.Uid, string(passwordB))
+	return server.Login(url, cert, user.Username, string(passwordB))
 }
 
 // storeJWT writes the given token string to a private file in user's home dir.
