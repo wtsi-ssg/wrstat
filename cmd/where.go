@@ -313,18 +313,21 @@ func printWhereDataIs(dcss dgut.DCSs, minSizeBytes uint64) {
 	}
 
 	table := prepareWhereTable()
+	skipped := 0
 
-	for i, dcs := range dcss {
+	for _, dcs := range dcss {
 		if dcs.Size < minSizeBytes {
-			defer printSkipped(len(dcss) - i)
+			skipped++
 
-			break
+			continue
 		}
 
 		table.Append([]string{dcs.Dir, fmt.Sprintf("%d", dcs.Count), humanize.Bytes(dcs.Size)})
 	}
 
 	table.Render()
+
+	printSkipped(skipped)
 }
 
 // prepareWhereTable creates a table with a header that outputs to STDOUT.
@@ -337,5 +340,9 @@ func prepareWhereTable() *tablewriter.Table {
 
 // printSkipped prints the given number of results were skipped.
 func printSkipped(n int) {
+	if n == 0 {
+		return
+	}
+
 	warn(fmt.Sprintf("(%d results not displayed as smaller than --minimum)", n))
 }
