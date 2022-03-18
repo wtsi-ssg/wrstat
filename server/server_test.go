@@ -489,6 +489,9 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
 			So(dcss[0].Count, ShouldEqual, 5)
+
+			_, _, errg = GetWhereDataIs(addr, cert, token, "/", "", "root", "", "0")
+			So(errg, ShouldNotBeNil)
 		})
 	})
 }
