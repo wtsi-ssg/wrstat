@@ -49,14 +49,10 @@ const combineGroupOutputFileBasename = "combine.bygroup"
 const combineDGUTOutputFileBasename = "combine.dgut.gz"
 const combineLogOutputFileBasename = "combine.log.gz"
 const numSummaryColumns = 2
-<<<<<<< HEAD
 const groupSumCols = 2
 const userGroupSumCols = 3
 const intBase = 10
-=======
-const userGroupSumCols = 3
 const dgutSumCols = 4
->>>>>>> Update linters and delint.
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
@@ -441,7 +437,7 @@ func mergeGroups(inputs []string, output *os.File) error {
 
 // mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
 // (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
-// the first 2 columns, and outputting the results.
+// the same first 2 columns, and outputting the results.
 func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
 	if err := mergeSummaryLines(data, groupSumCols, output); err != nil {
 		return err
