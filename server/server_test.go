@@ -54,6 +54,11 @@ func TestServer(t *testing.T) {
 
 	exampleUser := &User{Username: "user", UIDs: []string{"1", "2"}, GIDs: []string{"3", "4"}}
 
+	Convey("hasError tells you about errors", t, func() {
+		So(hasError(nil, nil), ShouldBeFalse)
+		So(hasError(nil, ErrBadQuery, nil), ShouldBeTrue)
+	})
+
 	Convey("Given a Server", t, func() {
 		var logWriter strings.Builder
 		s := New(&logWriter)
@@ -429,25 +434,62 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 		So(err, ShouldNotBeNil)
 		So(err, ShouldEqual, ErrNoAuth)
 
-		err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
-			return true, []string{"0", uid}, gids
+		g, errg := user.LookupGroupId(gids[0])
+		So(errg, ShouldBeNil)
+
+		Convey("Root can see everything", func() {
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
+				return true, nil, nil
+			})
+			So(err, ShouldBeNil)
+
+			err = s.LoadDGUTDB(path)
+			So(err, ShouldBeNil)
+
+			token, errl := Login(addr, cert, "user", "pass")
+			So(errl, ShouldBeNil)
+
+			_, _, err = GetWhereDataIs(addr, cert, token, "", "", "", "", "")
+			So(err, ShouldNotBeNil)
+			So(err, ShouldEqual, ErrBadQuery)
+
+			json, dcss, errg := GetWhereDataIs(addr, cert, token, "/", "", "", "", "0")
+			So(errg, ShouldBeNil)
+			So(string(json), ShouldNotBeBlank)
+			So(len(dcss), ShouldEqual, 1)
+			So(dcss[0].Count, ShouldEqual, 14)
+
+			json, dcss, errg = GetWhereDataIs(addr, cert, token, "/", g.Name, "", "", "0")
+			So(errg, ShouldBeNil)
+			So(string(json), ShouldNotBeBlank)
+			So(len(dcss), ShouldEqual, 1)
+			So(dcss[0].Count, ShouldEqual, 9)
 		})
-		So(err, ShouldBeNil)
 
-		err = s.LoadDGUTDB(path)
-		So(err, ShouldBeNil)
+		Convey("Normal users have restricted access", func() {
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
+				return true, []string{uid}, gids
+			})
+			So(err, ShouldBeNil)
 
-		token, err := Login(addr, cert, "user", "pass")
-		So(err, ShouldBeNil)
+			err = s.LoadDGUTDB(path)
+			So(err, ShouldBeNil)
 
-		_, _, err = GetWhereDataIs(addr, cert, token, "", "", "", "", "")
-		So(err, ShouldNotBeNil)
-		So(err, ShouldEqual, ErrBadQuery)
+			token, errl := Login(addr, cert, "user", "pass")
+			So(errl, ShouldBeNil)
 
-		json, dcss, err := GetWhereDataIs(addr, cert, token, "/", "", "", "", "")
-		So(err, ShouldBeNil)
-		So(string(json), ShouldNotBeBlank)
-		So(len(dcss), ShouldBeGreaterThan, 0)
+			json, dcss, errg := GetWhereDataIs(addr, cert, token, "/", "", "", "", "0")
+			So(errg, ShouldBeNil)
+			So(string(json), ShouldNotBeBlank)
+			So(len(dcss), ShouldEqual, 1)
+			So(dcss[0].Count, ShouldEqual, 5)
+
+			json, dcss, errg = GetWhereDataIs(addr, cert, token, "/", g.Name, "", "", "0")
+			So(errg, ShouldBeNil)
+			So(string(json), ShouldNotBeBlank)
+			So(len(dcss), ShouldEqual, 1)
+			So(dcss[0].Count, ShouldEqual, 5)
+		})
 	})
 }
 
