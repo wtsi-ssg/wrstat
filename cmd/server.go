@@ -28,6 +28,7 @@ package cmd
 import (
 	"fmt"
 	"log/syslog"
+	"os/user"
 
 	ldap "github.com/go-ldap/ldap/v3"
 	"github.com/spf13/cobra"
@@ -41,6 +42,7 @@ var serverKey string
 var serverDGUT string
 var serverLDAPFQDN string
 var serverLDAPBindDN string
+var syslogWriter *syslog.Writer
 
 // serverCmd represents the server command.
 var serverCmd = &cobra.Command{
@@ -95,31 +97,32 @@ ctrl-z; bg.
 			die("you must supply --ldap_dn")
 		}
 
-		w, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
+		var err error
+		syslogWriter, err = syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
 		if err != nil {
 			die("failed to connect to syslog: %s", err)
 		}
 
-		s := server.New(w)
+		s := server.New(syslogWriter)
 
 		err = s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
 			msg := fmt.Sprintf("failed to enable authentication: %s", err)
-			w.Crit(msg) //nolint:errcheck
+			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
 		err = s.LoadDGUTDB(serverDGUT)
 		if err != nil {
 			msg := fmt.Sprintf("failed to load database: %s", err)
-			w.Crit(msg) //nolint:errcheck
+			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
 		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
 			msg := fmt.Sprintf("non-graceful stop: %s", err)
-			w.Crit(msg) //nolint:errcheck
+			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 	},
@@ -156,7 +159,21 @@ func authenticate(username, password string) (bool, []string, []string) {
 		return false, nil, nil
 	}
 
-	return true, []string{}, []string{}
+	uids, err := getUsersUIDs(username)
+	if err != nil {
+		syslogWriter.Warning(fmt.Sprintf("failed to get UIDs for %s: %s", username, err)) //nolint:errcheck
+
+		return false, nil, nil
+	}
+
+	gids, err := getGIDsForUsers(uids)
+	if err != nil {
+		syslogWriter.Warning(fmt.Sprintf("failed to get GIDs for %s: %s", username, err)) //nolint:errcheck
+
+		return false, nil, nil
+	}
+
+	return true, uids, gids
 }
 
 // checkLDAPPassword checks with LDAP if the given password is valid for the
@@ -168,4 +185,59 @@ func checkLDAPPassword(username, password string) error {
 	}
 
 	return l.Bind(fmt.Sprintf(serverLDAPBindDN, username), password)
+}
+
+// getUsersUIDs returns the uid for the given username, and also the uids of any
+// other users can sudo as *** not yet implemented. If the user can sudo as
+// root, returns nil.
+func getUsersUIDs(username string) ([]string, error) {
+	u, err := user.Lookup(username)
+	if err != nil {
+		return nil, err
+	}
+
+	uids := []string{u.Uid}
+
+	return uids, nil
+}
+
+// getGIDsForUsers returns the group ids the given user ids belong to. If no
+// users are supplied, returns nil.
+func getGIDsForUsers(uids []string) ([]string, error) {
+	if uids == nil {
+		return nil, nil
+	}
+
+	gidMap := make(map[string]bool)
+
+	for _, uid := range uids {
+		theseGids, err := getGIDsForUser(uid)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, gid := range theseGids {
+			gidMap[gid] = true
+		}
+	}
+
+	gids := make([]string, len(gidMap))
+	i := 0
+
+	for gid := range gidMap {
+		gids[i] = gid
+		i++
+	}
+
+	return gids, nil
+}
+
+// getGIDsForUser returns the group IDs that the given user belongs to.
+func getGIDsForUser(uid string) ([]string, error) {
+	u, err := user.LookupId(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	return u.GroupIds()
 }

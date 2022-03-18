@@ -73,6 +73,9 @@ const (
 // AuthCallback is a function that returns true if the given password is valid
 // for the given username. It also returns the other UIDs this user can sudo as,
 // and all the groups this user and the sudoable users belong to.
+//
+// As a special case, if the user can sudo as root, it should just return
+// nil slices.
 type AuthCallback func(username, password string) (bool, []string, []string)
 
 // Server is used to start a web server that provides a REST API to the dgut
@@ -184,7 +187,21 @@ func (s *Server) getWhere(c *gin.Context) {
 	users := c.Query("users")
 	types := c.Query("types")
 
-	dcss, err := s.callWhere(dir, splits, groups, users, types)
+	filterGIDs, err := s.restrictedGroups(c, groups)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
+
+		return
+	}
+
+	filterUIDs, err := s.restrictedUsers(c, users)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
+
+		return
+	}
+
+	dcss, err := s.callWhere(dir, splits, filterGIDs, filterUIDs, types)
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
 
@@ -194,9 +211,138 @@ func (s *Server) getWhere(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, dcss)
 }
 
+// restrictedGroups checks our JWT if present, and will return the GIDs that
+// user is allowed to query. If groups arg is not blank, but a comma separated
+// list of group names, further limits the GIDs returned to be amongst those. If
+// the JWT has no groups specified, returns all the given group names as GIDs.
+func (s *Server) restrictedGroups(c *gin.Context, groups string) ([]string, error) {
+	ids, wanted, err := getWantedIDs(groups, groupNameToGID)
+	if err != nil {
+		return nil, err
+	}
+
+	allowedIDs := s.getRestrictedIDs(c, func(u *User) []string {
+		return u.GIDs
+	})
+
+	if allowedIDs == nil {
+		return ids, nil
+	}
+
+	return restrictIDsToWanted(allowedIDs, wanted), nil
+}
+
+// groupNameToGID converts group name to GID.
+func groupNameToGID(name string) (string, error) {
+	g, err := user.LookupGroup(name)
+	if err != nil {
+		return "", err
+	}
+
+	return g.Gid, nil
+}
+
+// getWantedIDs splits the given comma separated names in to a slice and then
+// passes each name to the given callback to convert it to an id, then returns
+// a slice of the ids, along with a map where the slice elements are the keys.
+// Both will be nil if names is blank.
+func getWantedIDs(names string, cb func(name string) (string, error)) ([]string, map[string]bool, error) {
+	splitNames := splitCommaSeparatedString(names)
+
+	ids := make([]string, len(splitNames))
+	wanted := make(map[string]bool, len(splitNames))
+
+	for i, name := range splitNames {
+		id, err := cb(name)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		ids[i] = id
+		wanted[id] = true
+	}
+
+	return ids, wanted, nil
+}
+
+// splitCommaSeparatedString splits the given comma separated string in to a
+// slice of string. Returns nil if value is blank.
+func splitCommaSeparatedString(value string) []string {
+	var parts []string
+	if value != "" {
+		parts = strings.Split(value, ",")
+	}
+
+	return parts
+}
+
+// getRestrictedIDs extracts the User information from our JWT and passes it to
+// the given callback, which should return the desired type of ID (GIDs or
+// UIDs). Returns nil without calling the callback if we're not doing auth.
+func (s *Server) getRestrictedIDs(c *gin.Context, cb func(*User) []string) []string {
+	if s.authGroup == nil {
+		return nil
+	}
+
+	u := s.getUser(c)
+
+	return cb(u)
+}
+
+// restrictIDsToWanted returns the elements of ids that are in wanted. Will
+// return ids if wanted is empty.
+func restrictIDsToWanted(ids []string, wanted map[string]bool) []string {
+	if len(wanted) == 0 {
+		return ids
+	}
+
+	var final []string //nolint:prealloc
+
+	for _, id := range ids {
+		if !wanted[id] {
+			continue
+		}
+
+		final = append(final, id)
+	}
+
+	return final
+}
+
+// restrictedUsers checks our JWT if present, and will return the user IDs that
+// user is allowed to query. If users arg is not blank, but a comma separated
+// list of user names, further limits the users returned to be amongst those.
+// If the JWT has no users specified, returns all the given users as UIDs.
+func (s *Server) restrictedUsers(c *gin.Context, users string) ([]string, error) {
+	ids, wanted, err := getWantedIDs(users, userNameToUID)
+	if err != nil {
+		return nil, err
+	}
+
+	allowedIDs := s.getRestrictedIDs(c, func(u *User) []string {
+		return u.UIDs
+	})
+
+	if allowedIDs == nil {
+		return ids, nil
+	}
+
+	return restrictIDsToWanted(allowedIDs, wanted), nil
+}
+
+// userNameToUID converts user name to UID.
+func userNameToUID(name string) (string, error) {
+	u, err := user.Lookup(name)
+	if err != nil {
+		return "", err
+	}
+
+	return u.Uid, nil
+}
+
 // callWhere interprets string filters and passes them to tree.Where().
-func (s *Server) callWhere(dir, splits, groups, users, types string) (dgut.DCSs, error) {
-	filter, err := makeTreeFilter(groups, users, types)
+func (s *Server) callWhere(dir, splits string, gids, uids []string, types string) (dgut.DCSs, error) {
+	filter, err := makeTreeFilter(gids, uids, types)
 	if err != nil {
 		return nil, err
 	}
@@ -205,73 +351,48 @@ func (s *Server) callWhere(dir, splits, groups, users, types string) (dgut.DCSs,
 }
 
 // makeTreeFilter creates a filter from string args.
-func makeTreeFilter(groups, users, types string) (*dgut.Filter, error) {
-	filter, err := makeTreeGroupFilter(groups)
-	if err != nil {
-		return nil, err
-	}
+func makeTreeFilter(gids, uids []string, types string) (*dgut.Filter, error) {
+	filter := makeTreeGroupFilter(gids)
 
-	if err = addUsersToFilter(filter, users); err != nil {
-		return nil, err
-	}
+	addUsersToFilter(filter, uids)
 
-	err = addTypesToFilter(filter, types)
+	err := addTypesToFilter(filter, types)
 
 	return filter, err
 }
 
 // makeTreeGroupFilter creates a filter for groups.
-func makeTreeGroupFilter(groups string) (*dgut.Filter, error) {
-	if groups == "" {
-		return &dgut.Filter{}, nil
+func makeTreeGroupFilter(gids []string) *dgut.Filter {
+	if len(gids) == 0 {
+		return &dgut.Filter{}
 	}
 
-	gnames := strings.Split(groups, ",")
-	gids := make([]uint32, len(gnames))
+	return &dgut.Filter{GIDs: idStringsToInts(gids)}
+}
 
-	for i, name := range gnames {
-		group, err := user.LookupGroup(name)
-		if err != nil {
-			return nil, err
-		}
+// idStringsToInts converts a slice of id strings into uint32s.
+func idStringsToInts(idStrings []string) []uint32 {
+	ids := make([]uint32, len(idStrings))
 
+	for i, idStr := range idStrings {
 		// no error is possible here, with the number string coming from an OS
 		// lookup.
 		//nolint:errcheck
-		gid, _ := strconv.ParseUint(group.Gid, 10, 32)
+		id, _ := strconv.ParseUint(idStr, 10, 32)
 
-		gids[i] = uint32(gid)
+		ids[i] = uint32(id)
 	}
 
-	return &dgut.Filter{GIDs: gids}, nil
+	return ids
 }
 
 // addUsersToFilter adds a filter for users to the given filter.
-func addUsersToFilter(filter *dgut.Filter, users string) error {
-	if users == "" {
-		return nil
+func addUsersToFilter(filter *dgut.Filter, uids []string) {
+	if len(uids) == 0 {
+		return
 	}
 
-	unames := strings.Split(users, ",")
-	uids := make([]uint32, len(unames))
-
-	for i, name := range unames {
-		user, err := user.Lookup(name)
-		if err != nil {
-			return err
-		}
-
-		// no error is possible here, with the number string coming from an OS
-		// lookup.
-		//nolint:errcheck
-		uid, _ := strconv.ParseUint(user.Uid, 10, 32)
-
-		uids[i] = uint32(uid)
-	}
-
-	filter.UIDs = uids
-
-	return nil
+	filter.UIDs = idStringsToInts(uids)
 }
 
 // addTypesToFilter adds a filter for types to the given filter.
@@ -280,7 +401,7 @@ func addTypesToFilter(filter *dgut.Filter, types string) error {
 		return nil
 	}
 
-	tnames := strings.Split(types, ",")
+	tnames := splitCommaSeparatedString(types)
 	fts := make([]summary.DirGUTFileType, len(tnames))
 
 	for i, name := range tnames {
