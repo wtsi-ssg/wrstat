@@ -57,6 +57,7 @@ issues:
       linters:
         - funlen
         - maintidx
+        - contextcheck
     - path: cmd
       linters:
         - gochecknoinits
