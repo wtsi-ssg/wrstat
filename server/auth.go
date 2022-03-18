@@ -138,15 +138,26 @@ func authIdentityHandler(c *gin.Context) interface{} {
 	uids, err2 := retrieveClaimString(claims, claimKeyUIDs)
 	gids, err3 := retrieveClaimString(claims, claimKeyGIDs)
 
-	if username == "" || err1 != nil || err2 != nil || err3 != nil {
+	if username == "" || hasError(err1, err2, err3) {
 		return nil
 	}
 
 	return &User{
 		Username: username,
-		UIDs:     strings.Split(uids, ","),
-		GIDs:     strings.Split(gids, ","),
+		UIDs:     splitCommaSeparatedString(uids),
+		GIDs:     splitCommaSeparatedString(gids),
 	}
+}
+
+// hasError tells you if any of the given errors is not nil.
+func hasError(errs ...error) bool {
+	for _, err := range errs {
+		if err != nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 // retrieveClaimString finds and converts to a string the given claim in amongst
