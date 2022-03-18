@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"log/syslog"
 
+	ldap "github.com/go-ldap/ldap/v3"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/server"
 )
@@ -38,6 +39,8 @@ var serverBind string
 var serverCert string
 var serverKey string
 var serverDGUT string
+var serverLDAPFQDN string
+var serverLDAPBindDN string
 
 // serverCmd represents the server command.
 var serverCmd = &cobra.Command{
@@ -51,6 +54,11 @@ where data is on the disks.
 
 Your --bind address should include the port, and for it to work with your
 --cert, you probably need to specify it as fqdn:port.
+
+The server authenticates users using LDAP. You must provide the FQDN for your
+LDAP server, eg. --ldap_server ldap.example.com, and the bind DN that you would
+supply to eg. 'ldapwhoami -D' to test user credentials, replacing the username
+part with '%s', eg. --ldap_dn 'uid=%s,ou=people,dc=example,dc=com'.
 
 The server will log all messages (of any severity) to syslog at the INFO level,
 except for non-graceful stops of the server, which are sent at the CRIT level or
@@ -77,6 +85,14 @@ ctrl-z; bg.
 
 		if serverKey == "" {
 			die("you must supply --key")
+		}
+
+		if serverLDAPFQDN == "" {
+			die("you must supply --ldap_server")
+		}
+
+		if serverLDAPBindDN == "" {
+			die("you must supply --ldap_dn")
 		}
 
 		w, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
@@ -121,14 +137,35 @@ func init() {
 		"path to certificate file")
 	serverCmd.Flags().StringVarP(&serverKey, "key", "k", "",
 		"path to key file")
+	serverCmd.Flags().StringVarP(&serverLDAPFQDN, "ldap_server", "s", "",
+		"fqdn of your ldap server")
+	serverCmd.Flags().StringVarP(&serverLDAPBindDN, "ldap_dn", "l", "",
+		"ldap bind dn, with username replaced with %s")
 
 	serverCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
 		hideGlobalFlags(serverCmd, command, strings)
 	})
 }
 
-// authenticate *** is currently a place holder that allows root-level access to
-// everyone.
+// authenticate verifies the user's password against LDAP, and if correct
+// returns true alog with all the uids they can sudo as, and all the gids all
+// those users belong to.
 func authenticate(username, password string) (bool, []string, []string) {
+	err := checkLDAPPassword(username, password)
+	if err != nil {
+		return false, nil, nil
+	}
+
 	return true, []string{}, []string{}
+}
+
+// checkLDAPPassword checks with LDAP if the given password is valid for the
+// given username. Returns nil if valid, error otherwise.
+func checkLDAPPassword(username, password string) error {
+	l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s:636", serverLDAPFQDN))
+	if err != nil {
+		return err
+	}
+
+	return l.Bind(fmt.Sprintf(serverLDAPBindDN, username), password)
 }
