@@ -312,6 +312,8 @@ func TestServer(t *testing.T) {
 				expected, err := tree.Where("/", nil, 2)
 				So(err, ShouldBeNil)
 
+				tree.Close()
+
 				Convey("You can get results after calling LoadDGUTDB", func() {
 					err = s.LoadDGUTDBs(path)
 					So(err, ShouldBeNil)
@@ -420,6 +422,9 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 		return
 	}
 
+	g, errg := user.LookupGroupId(gids[0])
+	So(errg, ShouldBeNil)
+
 	Convey("The where endpoint works with a real server", func() {
 		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
 		So(err, ShouldNotBeNil)
@@ -427,15 +432,14 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 		path, err := createExampleDB(t, uid, gids[0], gids[1])
 		So(err, ShouldBeNil)
 
-		err = s.LoadDGUTDBs(path)
-		So(err, ShouldBeNil)
+		Convey("You can't get where data is without auth", func() {
+			err = s.LoadDGUTDBs(path)
+			So(err, ShouldBeNil)
 
-		_, _, err = GetWhereDataIs(addr, cert, "", "/", "", "", "", "")
-		So(err, ShouldNotBeNil)
-		So(err, ShouldEqual, ErrNoAuth)
-
-		g, errg := user.LookupGroupId(gids[0])
-		So(errg, ShouldBeNil)
+			_, _, err = GetWhereDataIs(addr, cert, "", "/", "", "", "", "")
+			So(err, ShouldNotBeNil)
+			So(err, ShouldEqual, ErrNoAuth)
+		})
 
 		Convey("Root can see everything", func() {
 			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
@@ -599,20 +603,19 @@ func decodeWhereResult(response *httptest.ResponseRecorder) (dgut.DCSs, error) {
 }
 
 // createExampleDB creates a temporary dgut.db from some example data that uses
-// the given uid and gids, and returns the path to the database file.
+// the given uid and gids, and returns the path to the database directory.
 func createExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
 	t.Helper()
 
 	dir := t.TempDir()
-	path := filepath.Join(dir, "dgut.db")
 
 	dgutData := exampleDGUTData(uid, gidA, gidB)
 	data := strings.NewReader(dgutData)
-	db := dgut.NewDB(path)
+	db := dgut.NewDB(dir)
 
 	err := db.Store(data, 20)
 
-	return path, err
+	return dir, err
 }
 
 // exampleDGUTData is some example DGUT data that uses the given uid and gids,

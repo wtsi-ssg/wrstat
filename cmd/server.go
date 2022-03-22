@@ -129,6 +129,8 @@ ctrl-z; bg.
 			die(msg)
 		}
 
+		defer s.Stop()
+
 		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
 			msg := fmt.Sprintf("non-graceful stop: %s", err)

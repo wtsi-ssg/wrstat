@@ -146,14 +146,19 @@ func (s *Server) Start(addr, certFile, keyFile string) error {
 }
 
 // Stop() gracefully stops the server after Start(), and waits for active
-// connections to close and the port to be available again.
+// connections to close and the port to be available again. It also closes the
+// database if you LoadDGUTDBs().
 func (s *Server) Stop() {
 	ch := s.srv.StopChan()
 	s.srv.Stop(stopTimeout)
 	<-ch
+
+	if s.tree != nil {
+		s.tree.Close()
+	}
 }
 
-// LoadDGUTDBs loads the given dgut.db files (as produced by one or more
+// LoadDGUTDBs loads the given dgut.db directories (as produced by one or more
 // invocations of dgut.DB.Store()) and adds the /rest/v1/where GET endpoint to
 // the REST API. If you call EnableAuth() first, then this endpoint will be
 // secured and be available at /rest/v1/auth/where.

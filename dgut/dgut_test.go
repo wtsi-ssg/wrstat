@@ -26,15 +26,16 @@
 package dgut
 
 import (
+	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/akrylysov/pogreb"
+	"github.com/akrylysov/pogreb/fs"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/summary"
-	bolt "go.etcd.io/bbolt"
 )
 
 func TestDGUT(t *testing.T) {
@@ -151,32 +152,44 @@ func TestDGUT(t *testing.T) {
 			So(i, ShouldEqual, 0)
 		})
 
-		Convey("And a database file path", func() {
-			path := testMakeDBPath(t)
-			db := NewDB(path)
+		Convey("And database file paths", func() {
+			paths := testMakeDBPaths(t)
+			db := NewDB(paths[0])
 			So(db, ShouldNotBeNil)
 
 			Convey("You can store it in a database file", func() {
-				info, errs := os.Stat(path)
+				_, errs := os.Stat(paths[1])
 				So(errs, ShouldNotBeNil)
+				_, errs = os.Stat(paths[2])
+				So(errs, ShouldNotBeNil)
+
 				err := db.Store(data, 4)
 				So(err, ShouldBeNil)
 
-				Convey("The resulting database file has the expected content", func() {
-					info, errs = os.Stat(path)
-					So(errs, ShouldBeNil)
-					So(info.Size(), ShouldBeGreaterThan, 30000)
+				Convey("After a store, the underlying databases are closed", func() {
+					err = db.writeSet.Close()
+					So(err, ShouldNotBeNil)
+					So(err.Error(), ShouldContainSubstring, "file already closed")
+				})
 
-					keys, errt := testGetDBKeys(path, gutBucket)
+				Convey("The resulting database files have the expected content", func() {
+					info, errs := os.Stat(paths[1])
+					So(errs, ShouldBeNil)
+					So(info.Size(), ShouldBeGreaterThan, 10)
+					info, errs = os.Stat(paths[2])
+					So(errs, ShouldBeNil)
+					So(info.Size(), ShouldBeGreaterThan, 10)
+
+					keys, errt := testGetDBKeys(paths[1])
 					So(errt, ShouldBeNil)
 					So(keys, ShouldResemble, expectedKeys)
 
-					keys, errt = testGetDBKeys(path, childBucket)
+					keys, errt = testGetDBKeys(paths[2])
 					So(errt, ShouldBeNil)
 					So(keys, ShouldResemble, []string{"/", "/a", "/a/b", "/a/b/d", "/a/b/e", "/a/b/e/h", "/a/c"})
 
 					Convey("You can query a database after Open()ing it", func() {
-						db = NewDB(path)
+						db = NewDB(paths[0])
 
 						db.Close()
 
@@ -245,6 +258,32 @@ func TestDGUT(t *testing.T) {
 						db.Close()
 					})
 
+					Convey("Open()s fail on invalid databases", func() {
+						db = NewDB(paths[0])
+
+						db.Close()
+
+						err = os.RemoveAll(paths[2])
+						So(err, ShouldBeNil)
+
+						err = os.WriteFile(paths[2], []byte("foo"), 0600)
+						So(err, ShouldBeNil)
+
+						err = db.Open()
+						So(err, ShouldNotBeNil)
+					})
+
+					Convey("Trying to get information from an invalid database fails", func() {
+						pdb, erro := pogreb.Open(paths[1], &pogreb.Options{FileSystem: fs.OS})
+						So(erro, ShouldBeNil)
+
+						err = pdb.Close()
+						So(err, ShouldBeNil)
+
+						_, err = getDGUTFromDB(pdb, "/", db.ch)
+						So(err, ShouldNotBeNil)
+					})
+
 					Convey("Store()ing multiple times", func() {
 						data = strings.NewReader("/\t3\t103\t0\t2\t2\n" +
 							"/a/i\t3\t103\t0\t1\t1\n" +
@@ -256,13 +295,13 @@ func TestDGUT(t *testing.T) {
 							So(err, ShouldEqual, ErrDBExists)
 						})
 
-						Convey("to different db files and loading them all does work", func() {
-							path2 := path + ".2"
+						Convey("to different db directories and loading them all does work", func() {
+							path2 := paths[0] + ".2"
 							db2 := NewDB(path2)
 							err = db2.Store(data, 4)
 							So(err, ShouldBeNil)
 
-							db = NewDB(path, path2)
+							db = NewDB(paths[0], path2)
 							err = db.Open()
 							So(err, ShouldBeNil)
 
@@ -285,7 +324,7 @@ func TestDGUT(t *testing.T) {
 				err := db.Store(data, len(expectedKeys))
 				So(err, ShouldBeNil)
 
-				keys, errt := testGetDBKeys(path, gutBucket)
+				keys, errt := testGetDBKeys(paths[1])
 				So(errt, ShouldBeNil)
 				So(keys, ShouldResemble, expectedKeys)
 			})
@@ -294,7 +333,7 @@ func TestDGUT(t *testing.T) {
 				err := db.Store(data, len(expectedKeys)+2)
 				So(err, ShouldBeNil)
 
-				keys, errt := testGetDBKeys(path, gutBucket)
+				keys, errt := testGetDBKeys(paths[1])
 				So(errt, ShouldBeNil)
 				So(keys, ShouldResemble, expectedKeys)
 			})
@@ -310,10 +349,12 @@ func TestDGUT(t *testing.T) {
 				err := db.createDB()
 				So(err, ShouldBeNil)
 
-				err = db.wdb.Close()
+				err = db.writeSet.Close()
 				So(err, ShouldBeNil)
 
-				err = os.Remove(path)
+				err = os.RemoveAll(paths[1])
+				So(err, ShouldBeNil)
+				err = os.RemoveAll(paths[2])
 				So(err, ShouldBeNil)
 
 				err = db.storeData(data)
@@ -326,9 +367,8 @@ func TestDGUT(t *testing.T) {
 
 					db.writeBatch = expected
 
-					err = db.wdb.View(db.storeChildrenAndDGUTs)
-
-					So(err, ShouldNotBeNil)
+					db.storeBatch()
+					So(db.writeErr, ShouldNotBeNil)
 				})
 			})
 		})
@@ -468,21 +508,23 @@ func testDGUTData() string {
 `
 }
 
-// testMakeDBPath creates a temp dir that will be cleaned up automatically, and
-// returns a path to a file inside that can be used for a database file. The
-// file isn't actually created.
-func testMakeDBPath(t *testing.T) string {
+// testMakeDBPaths creates a temp dir that will be cleaned up automatically, and
+// returns the paths to the directory and dgut and children database files
+// inside that would be created. The files aren't actually created.
+func testMakeDBPaths(t *testing.T) []string {
 	t.Helper()
 
 	dir := t.TempDir()
 
-	return filepath.Join(dir, "dgut.db")
+	set := newDBSet(dir)
+	paths := set.paths()
+
+	return append([]string{dir}, paths...)
 }
 
-// testGetDBKeys returns all the keys in the given bucket of the db at the given
-// path.
-func testGetDBKeys(path, bucket string) ([]string, error) {
-	rdb, err := openBoltReadOnly(path)
+// testGetDBKeys returns all the keys in the db at the given path.
+func testGetDBKeys(path string) ([]string, error) {
+	rdb, err := pogreb.Open(path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -491,17 +533,22 @@ func testGetDBKeys(path, bucket string) ([]string, error) {
 		err = rdb.Close()
 	}()
 
-	var keys []string
+	var keys []string //nolint:prealloc
 
-	err = rdb.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(bucket))
+	it := rdb.Items()
 
-		return b.ForEach(func(k, v []byte) error {
-			keys = append(keys, string(k))
+	for {
+		key, _, err := it.Next()
+		if errors.Is(err, pogreb.ErrIterationDone) {
+			break
+		}
 
-			return nil
-		})
-	})
+		if err != nil {
+			return keys, err
+		}
 
-	return keys, err
+		keys = append(keys, string(key))
+	}
+
+	return keys, nil
 }

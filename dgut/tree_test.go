@@ -35,16 +35,16 @@ import (
 
 func TestTree(t *testing.T) {
 	Convey("You can make a Tree from a dgut database", t, func() {
-		path := testMakeDBPath(t)
-		tree, err := NewTree(path)
-		So(err, ShouldNotBeNil)
+		paths := testMakeDBPaths(t)
+		tree, errc := NewTree(paths[0])
+		So(errc, ShouldNotBeNil)
 		So(tree, ShouldBeNil)
 
-		err = testCreateDB(path)
-		So(err, ShouldBeNil)
+		errc = testCreateDB(paths[0])
+		So(errc, ShouldBeNil)
 
-		tree, err = NewTree(path)
-		So(err, ShouldBeNil)
+		tree, errc = NewTree(paths[0])
+		So(errc, ShouldBeNil)
 		So(tree, ShouldNotBeNil)
 
 		Convey("You can query the Tree for DirInfo", func() {
@@ -132,11 +132,21 @@ func TestTree(t *testing.T) {
 			err = tree.addChildInfo(di, []string{"/foo"}, nil)
 			So(err, ShouldNotBeNil)
 		})
+
+		Convey("You can't open the same db twice without closing it first", func() {
+			_, err := NewTree(paths[0])
+			So(err, ShouldNotBeNil)
+
+			tree.Close()
+
+			_, err = NewTree(paths[0])
+			So(err, ShouldBeNil)
+		})
 	})
 
 	Convey("You can make a Tree from multiple dgut databases and query it", t, func() {
-		path1 := testMakeDBPath(t)
-		db := NewDB(path1)
+		paths1 := testMakeDBPaths(t)
+		db := NewDB(paths1[0])
 		data := strings.NewReader("/\t1\t11\t1\t1\t1\n" +
 			"/a\t1\t11\t1\t1\t1\n" +
 			"/a/b\t1\t11\t1\t1\t1\n" +
@@ -145,8 +155,8 @@ func TestTree(t *testing.T) {
 		err := db.Store(data, 20)
 		So(err, ShouldBeNil)
 
-		path2 := testMakeDBPath(t)
-		db = NewDB(path2)
+		paths2 := testMakeDBPaths(t)
+		db = NewDB(paths2[0])
 		data = strings.NewReader("/\t1\t11\t1\t1\t1\n" +
 			"/a\t1\t11\t1\t1\t1\n" +
 			"/a/b\t1\t11\t1\t1\t1\n" +
@@ -155,7 +165,7 @@ func TestTree(t *testing.T) {
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 
-		tree, err := NewTree(path1, path2)
+		tree, err := NewTree(paths1[0], paths2[0])
 		So(err, ShouldBeNil)
 		So(tree, ShouldNotBeNil)
 

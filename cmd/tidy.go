@@ -39,6 +39,8 @@ import (
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
 
+const dgutDBsBasename = "dgut.dbs"
+
 // options for this cmd.
 var tidyDir string
 var tidyDate string
@@ -66,8 +68,8 @@ Final output files are named to include the given --date as follows:
 
 Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
 
-It also moves the dgut.db file which is for all the directories of interest,
-nameing it [date].[multi unique].dgut.db.
+It also moves the dgut.db.* directories to inside a directory named:
+[date].[multi unique].dgut.dbs
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -257,9 +259,9 @@ func matchReadWrite(path string, current, desired fs.FileInfo) error {
 	return os.Chmod(path, currentMode|desiredRW)
 }
 
-// findAndMoveDBs finds the dgut.db files in the given sourceDir and moves them
-// to destDir, including date in the name, and adjusting ownership and
-// permissions to match the destDir.
+// findAndMoveDBs finds the dgut.db.* directories in the given sourceDir and
+// moves them to destDir, including date in the name, and adjusting ownership
+// and permissions to match the destDir.
 func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
 	sources, errg := filepath.Glob(fmt.Sprintf("%s/%s.*", sourceDir, dgutDBBasename))
 	if errg != nil {
@@ -271,10 +273,17 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date str
 			return err
 		}
 
-		dest := filepath.Join(destDir, fmt.Sprintf("%s.%s.%s",
+		dest := filepath.Join(destDir, fmt.Sprintf("%s.%s.%s/%s",
 			date,
 			filepath.Base(sourceDir),
+			dgutDBsBasename,
 			filepath.Base(source)))
+
+		destDir := filepath.Dir(dest)
+
+		if err := os.MkdirAll(destDir, destDirInfo.Mode().Perm()); err != nil {
+			return err
+		}
 
 		err := renameAndMatchPerms(source, dest, destDirInfo)
 		if err != nil {

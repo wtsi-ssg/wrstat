@@ -54,8 +54,8 @@ var dgutCmd = &cobra.Command{
 
 Within the given output directory, all the 'wrstat combine' combine.dgut.gz
 files produced following multiple invocations of 'wrstat walk' followed by
-'wrstat combine' will be read and stored in a single database file called
-'dgut.db'.
+'wrstat combine' will be read and stored in database directories called
+'dgut.db.*', where * is an incrementing number.
 
 NB: only call this by adding it to wr with a dependency on the dependency
 group all your 'wrstat combine' jobs are in.`,
