@@ -31,27 +31,120 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/akrylysov/pogreb"
 	"github.com/hashicorp/go-multierror"
 	"github.com/ugorji/go/codec"
-	bolt "go.etcd.io/bbolt"
 )
 
 const (
-	gutBucket   = "gut"
-	childBucket = "children"
-	dbOpenMode  = 0600
+	dbBasenameDGUT     = "dgut.db"
+	dbBasenameChildren = dbBasenameDGUT + ".children"
 )
 
-const ErrDBExists = Error("database file already exists")
+const ErrDBExists = Error("database already exists")
+const ErrDBNotExists = Error("database doesn't exists")
 const ErrDirNotFound = Error("directory not found")
+
+// a dbSet is 2 databases, one for storing DGUTs, one for storing children.
+type dbSet struct {
+	dir      string
+	dguts    *pogreb.DB
+	children *pogreb.DB
+}
+
+// newDBSet creates a new newDBSet that knows where its database files are
+// located or should be created.
+func newDBSet(dir string) *dbSet {
+	return &dbSet{
+		dir: dir,
+	}
+}
+
+// Create creates new database files in our directory. Returns an error if those
+// files already exist.
+func (s *dbSet) Create() error {
+	if s.pathsExist(s.paths()) {
+		return ErrDBExists
+	}
+
+	return s.Open()
+}
+
+// paths returns the expected paths for our dgut and children databases
+// respectively.
+func (s *dbSet) paths() []string {
+	return []string{
+		filepath.Join(s.dir, dbBasenameDGUT),
+		filepath.Join(s.dir, dbBasenameChildren),
+	}
+}
+
+// pathsExist tells you if the databases at the given paths already exist.
+func (s *dbSet) pathsExist(paths []string) bool {
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err == nil && info.Size() != 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Open opens our constituent databases for reading or writing.
+func (s *dbSet) Open() error {
+	paths := s.paths()
+
+	db, err := pogreb.Open(paths[0], nil)
+	if err != nil {
+		return err
+	}
+
+	s.dguts = db
+
+	db, err = pogreb.Open(paths[1], nil)
+	if err != nil {
+		return err
+	}
+
+	s.children = db
+
+	return nil
+}
+
+// Sync syncs our constituent databases.
+func (s *dbSet) Sync() error {
+	var errm *multierror.Error
+
+	err := s.dguts.Sync()
+	errm = multierror.Append(errm, err)
+
+	err = s.children.Sync()
+	errm = multierror.Append(errm, err)
+
+	return errm.ErrorOrNil()
+}
+
+// Close closes our constituent databases.
+func (s *dbSet) Close() error {
+	var errm *multierror.Error
+
+	err := s.dguts.Close()
+	errm = multierror.Append(errm, err)
+
+	err = s.children.Close()
+	errm = multierror.Append(errm, err)
+
+	return errm.ErrorOrNil()
+}
 
 // DB is used to create and query a database made from a dgut file, which is the
 // directory,group,user,type summary output produced by the summary packages'
 // DirGroupUserType.Output() method.
 type DB struct {
 	paths      []string
-	wdb        *bolt.DB
-	rdbs       []*bolt.DB
+	writeSet   *dbSet
+	readSets   []*dbSet
 	batchSize  int
 	writeBatch []*DGUT
 	writeI     int
@@ -60,22 +153,22 @@ type DB struct {
 }
 
 // NewDB returns a *DB that can be used to create or query a dgut database.
-// Provide the path to the database file. In the case of only reading databases
-// with Open(), you can supply multiple database paths to query all of them
-// simultaneously.
+// Provide the path to directory that (will) store(s) the database files. In the
+// case of only reading databases with Open(), you can supply multiple directory
+// paths to query all of them simultaneously.
 func NewDB(paths ...string) *DB {
 	return &DB{paths: paths}
 }
 
 // Store will read the given dgut file data (as output by
-// summary.DirGroupUserType.Output()) and store it in a database file that
-// offers fast lookup of the information by directory.
+// summary.DirGroupUserType.Output()) and store it in 2 database files that
+// offer fast lookup of the information by directory.
 //
-// The path for the database file you provided to NewDB() (only the first will
-// be used) must be a non-existent file to create a new database. You can't add
-// to an existing database. If you create multiple sets of data to store,
-// instead Store them to individual database files, and then load all them
-// together during Open().
+// The path for the database directory you provided to NewDB() (only the first
+// will be used) must not already have database files in it to create a new
+// database. You can't add to an existing database. If you create multiple sets
+// of data to store, instead Store them to individual database directories, and
+// then load all them together during Open().
 //
 // batchSize is how many directories worth of information are written to the
 // database in one go. More is faster, but uses more memory. 10,000 might be a
@@ -89,7 +182,7 @@ func (d *DB) Store(data io.Reader, batchSize int) error {
 	}
 
 	defer func() {
-		errc := d.wdb.Close()
+		errc := d.writeSet.Close()
 		if err == nil {
 			err = errc
 		}
@@ -108,32 +201,16 @@ func (d *DB) Store(data io.Reader, batchSize int) error {
 	return err
 }
 
-// createDB creates a new database file if it doesn't already exist, and creates
-// buckets inside it if they don't exist.
+// createDB creates a new database set, but only if it doesn't already exist.
 func (d *DB) createDB() error {
-	info, err := os.Stat(d.paths[0])
-	if err == nil && info.Size() != 0 {
-		return ErrDBExists
-	}
+	set := newDBSet(d.paths[0])
 
-	db, err := bolt.Open(d.paths[0], dbOpenMode, nil)
+	err := set.Create()
 	if err != nil {
 		return err
 	}
 
-	err = db.Update(func(tx *bolt.Tx) error {
-		var errm *multierror.Error
-
-		_, errc := tx.CreateBucketIfNotExists([]byte(gutBucket))
-		errm = multierror.Append(errm, errc)
-
-		_, errc = tx.CreateBucketIfNotExists([]byte(childBucket))
-		errm = multierror.Append(errm, errc)
-
-		return errm.ErrorOrNil()
-	})
-
-	d.wdb = db
+	d.writeSet = set
 	d.ch = new(codec.BincHandle)
 
 	return err
@@ -173,38 +250,31 @@ func (d *DB) storeBatch() {
 		return
 	}
 
-	if err := d.wdb.Update(d.storeChildrenAndDGUTs); err != nil {
+	var errm *multierror.Error
+
+	err := d.storeChildren()
+	errm = multierror.Append(errm, err)
+
+	err = d.storeDGUTs()
+	errm = multierror.Append(errm, err)
+
+	err = d.writeSet.Sync()
+	errm = multierror.Append(errm, err)
+
+	err = errm.ErrorOrNil()
+	if err != nil {
 		d.writeErr = err
 	}
 }
 
-// storeChildrenAndDGUTs calls storeChildrenInBucket() and storeDGUTsInBucket()
-// with the right buckets. Provide a database transaction from which to work
-// inside.
-func (d *DB) storeChildrenAndDGUTs(tx *bolt.Tx) error {
-	var errm *multierror.Error
-
-	b := tx.Bucket([]byte(childBucket))
-	err := d.storeChildrenInBucket(b)
-	errm = multierror.Append(errm, err)
-
-	b = tx.Bucket([]byte(gutBucket))
-	err = d.storeDGUTsInBucket(b)
-	errm = multierror.Append(errm, err)
-
-	return errm.ErrorOrNil()
-}
-
-// storeChildrenInBucket stores the Dirs of the current DGUT batch in the given
-// bucket (which should be the childBucket). Only call from within a database
-// transaction.
-func (d *DB) storeChildrenInBucket(b *bolt.Bucket) error {
+// storeChildren stores the Dirs of the current DGUT batch in the db.
+func (d *DB) storeChildren() error {
 	for _, dgut := range d.writeBatch {
 		if dgut == nil {
 			return nil
 		}
 
-		if err := d.storeChildInDB(dgut.Dir, b); err != nil {
+		if err := d.storeChildInDB(dgut.Dir); err != nil {
 			return err
 		}
 	}
@@ -212,34 +282,31 @@ func (d *DB) storeChildrenInBucket(b *bolt.Bucket) error {
 	return nil
 }
 
-// storeChildInDB stores the given child directory in the given database bucket
-// (which should be the childBucket) against its parent directory, adding to any
-// existing children. Duplicate children should not be added. Only call from
-// within a database transaction.
+// storeChildInDB stores the given child directory in the database against its
+// parent directory, adding to any existing children. Duplicate children should
+// not be added.
 //
 // The root directory / is ignored since it is not a child and has no parent.
-func (d *DB) storeChildInDB(child string, b *bolt.Bucket) error {
+func (d *DB) storeChildInDB(child string) error {
 	if child == "/" {
 		return nil
 	}
 
 	parent := filepath.Dir(child)
 
-	children := d.getChildrenFromBucket(parent, b)
+	children := d.getChildrenFromDB(d.writeSet.children, parent)
 
 	children = append(children, child)
 
-	return b.Put([]byte(parent), d.encodeChildren(children))
+	return d.writeSet.children.Put([]byte(parent), d.encodeChildren(children))
 }
 
-// getChildrenFromBucket retrieves the child directory values associated with
-// the given directory key in the given bucket (which should be childBucket).
-// Only call from within a database transaction. Returns an empty slice if the
-// dir wasn't found.
-func (d *DB) getChildrenFromBucket(dir string, b *bolt.Bucket) []string {
-	v := b.Get([]byte(dir))
-
-	if v == nil {
+// getChildrenFromDB retrieves the child directory values associated with the
+// given directory key in the given db. Returns an empty slice if the dir wasn't
+// found.
+func (d *DB) getChildrenFromDB(db *pogreb.DB, dir string) []string {
+	v, err := db.Get([]byte(dir))
+	if err != nil || v == nil {
 		return []string{}
 	}
 
@@ -268,16 +335,14 @@ func (d *DB) encodeChildren(dirs []string) []byte {
 	return encoded
 }
 
-// storeDGUTsInBucket stores the current batch of DGUTs in the given bucket
-// (which should be the gutBucket). Only call from within a database
-// transaction.
-func (d *DB) storeDGUTsInBucket(b *bolt.Bucket) error {
+// storeDGUTs stores the current batch of DGUTs in the db.
+func (d *DB) storeDGUTs() error {
 	for _, dgut := range d.writeBatch {
 		if dgut == nil {
 			return nil
 		}
 
-		if err := d.storeDGUTinDB(dgut, b); err != nil {
+		if err := d.storeDGUT(dgut); err != nil {
 			return err
 		}
 	}
@@ -285,50 +350,51 @@ func (d *DB) storeDGUTsInBucket(b *bolt.Bucket) error {
 	return nil
 }
 
-// storeDGUT stores a DGUT in the given database bucket (which should be the
-// gutBucket). Only call from within a database transaction. DGUTs are expected
-// to be unique per Store() operation and database.
-func (d *DB) storeDGUTinDB(dgut *DGUT, b *bolt.Bucket) error {
+// storeDGUT stores a DGUT in the db. DGUTs are expected to be unique per
+// Store() operation and database.
+func (d *DB) storeDGUT(dgut *DGUT) error {
 	dir, guts := dgut.encodeToBytes(d.ch)
 
-	return b.Put(dir, guts)
+	return d.writeSet.dguts.Put(dir, guts)
 }
 
-// Open opens the database for reading. You need to call this before using the
-// query methods like DirInfo(). Be sure to call Close() after you're finished!
+// Open opens the database(s) for reading. You need to call this before using
+// the query methods like DirInfo() and Which(). You should call Close() after
+// you've finished.
 func (d *DB) Open() error {
-	rdbs := make([]*bolt.DB, len(d.paths))
+	readSets := make([]*dbSet, len(d.paths))
 
 	for i, path := range d.paths {
-		rdb, err := openBoltReadOnly(path)
+		readSet := newDBSet(path)
+
+		if !readSet.pathsExist(readSet.paths()) {
+			return ErrDBNotExists
+		}
+
+		err := readSet.Open()
 		if err != nil {
 			return err
 		}
 
-		rdbs[i] = rdb
+		readSets[i] = readSet
 	}
 
-	d.rdbs = rdbs
+	d.readSets = readSets
 
 	d.ch = new(codec.BincHandle)
 
 	return nil
 }
 
-// openBoltReadOnly opens a bolt database at the given path in read-only mode.
-func openBoltReadOnly(path string) (*bolt.DB, error) {
-	return bolt.Open(path, dbOpenMode, &bolt.Options{ReadOnly: true})
-}
-
-// Close closes the database after reading. It's nice to call this once you've
-// finished reading, but not necessary; errors are ignored.
+// Close closes the database(s) after reading. You should call this once
+// you've finished reading, but it's not necessary; errors are ignored.
 func (d *DB) Close() {
-	if d.rdbs == nil {
+	if d.readSets == nil {
 		return
 	}
 
-	for _, rdb := range d.rdbs {
-		rdb.Close()
+	for _, readSet := range d.readSets {
+		readSet.Close()
 	}
 }
 
@@ -343,17 +409,13 @@ func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, error) {
 
 	dgut := &DGUT{}
 
-	for _, rdb := range d.rdbs {
-		if err := rdb.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(gutBucket))
-
-			return getDGUTFromBucketAndAppend(b, dir, d.ch, dgut)
-		}); err != nil {
+	for _, readSet := range d.readSets {
+		if err := getDGUTFromDBAndAppend(readSet.dguts, dir, d.ch, dgut); err != nil {
 			notFound++
 		}
 	}
 
-	if notFound == len(d.rdbs) {
+	if notFound == len(d.readSets) {
 		return 0, 0, ErrDirNotFound
 	}
 
@@ -362,11 +424,11 @@ func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, error) {
 	return c, s, nil
 }
 
-// getDGUTFromBucketAndAppend calls getDGUTFromBucket() and appends the result
+// getDGUTFromDBAndAppend calls getDGUTFromDB() and appends the result
 // to the given dgut. If the given dgut is empty, it will be populated with the
 // content of the result instead.
-func getDGUTFromBucketAndAppend(b *bolt.Bucket, dir string, ch codec.Handle, dgut *DGUT) error {
-	thisDGUT, err := getDGUTFromBucket(b, dir, ch)
+func getDGUTFromDBAndAppend(db *pogreb.DB, dir string, ch codec.Handle, dgut *DGUT) error {
+	thisDGUT, err := getDGUTFromDB(db, dir, ch)
 	if err != nil {
 		return err
 	}
@@ -381,11 +443,14 @@ func getDGUTFromBucketAndAppend(b *bolt.Bucket, dir string, ch codec.Handle, dgu
 	return nil
 }
 
-// getDGUTFromBucket gets and decodes a dgut from the given bucket (which should
-// be dgutBucket). Only call from within a database transaction.
-func getDGUTFromBucket(b *bolt.Bucket, dir string, ch codec.Handle) (*DGUT, error) {
+// getDGUTFromDB gets and decodes a dgut from the given database.
+func getDGUTFromDB(db *pogreb.DB, dir string, ch codec.Handle) (*DGUT, error) {
 	bdir := []byte(dir)
-	v := b.Get(bdir)
+
+	v, err := db.Get(bdir)
+	if err != nil {
+		return nil, err
+	}
 
 	if v == nil {
 		return nil, ErrDirNotFound
@@ -409,19 +474,10 @@ func getDGUTFromBucket(b *bolt.Bucket, dir string, ch codec.Handle) (*DGUT, erro
 func (d *DB) Children(dir string) []string {
 	children := make(map[string]bool)
 
-	for _, rdb := range d.rdbs {
-		// no error is possible here, but the View function requires we return
-		// one.
-		//nolint:errcheck
-		rdb.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(childBucket))
-
-			for _, child := range d.getChildrenFromBucket(dir, b) {
-				children[child] = true
-			}
-
-			return nil
-		})
+	for _, readSet := range d.readSets {
+		for _, child := range d.getChildrenFromDB(readSet.children, dir) {
+			children[child] = true
+		}
 	}
 
 	return mapToSortedKeys(children)

@@ -74,7 +74,7 @@ unique directory created for all of them.
 particular subsets of jobs took.)
 
 After the combine jobs complete, 'wrstat dgut' is called to create
-a database of directory-group-user-filetype file count and size information.
+a databases of directory-group-user-filetype file count and size information.
 
 Once everything has completed, the final output files are moved to the given
 --final_output directory, with a name that includes the date this command was
@@ -95,7 +95,7 @@ It might produce:
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
-/path/b/20210617.c35m8359bnc8ni7dgphg.dgut.db
+/path/b/20210617.c35m8359bnc8ni7dgphg.dgut.dbs
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
