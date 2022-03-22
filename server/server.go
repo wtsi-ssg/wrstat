@@ -153,15 +153,15 @@ func (s *Server) Stop() {
 	<-ch
 }
 
-// LoadDGUTDB loads the given dgut.db (as produced by dgut.DB.Store()) and adds
-// the /rest/v1/where GET endpoint to the REST API. If you call EnableAuth()
-// first, then this endpoint will be secured and be available at
-// /rest/v1/auth/where.
+// LoadDGUTDBs loads the given dgut.db files (as produced by one or more
+// invocations of dgut.DB.Store()) and adds the /rest/v1/where GET endpoint to
+// the REST API. If you call EnableAuth() first, then this endpoint will be
+// secured and be available at /rest/v1/auth/where.
 //
 // The where endpoint can take the dir, splits, groups, users and types
 // parameters, which correspond to arguments that dgut.Tree.Where() takes.
-func (s *Server) LoadDGUTDB(path string) error {
-	tree, err := dgut.NewTree(path)
+func (s *Server) LoadDGUTDBs(paths ...string) error {
+	tree, err := dgut.NewTree(paths...)
 	if err != nil {
 		return err
 	}

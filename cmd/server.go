@@ -50,7 +50,6 @@ const sudoLMayRunRegexpMatches = 2
 var serverBind string
 var serverCert string
 var serverKey string
-var serverDGUT string
 var serverLDAPFQDN string
 var serverLDAPBindDN string
 var syslogWriter *syslog.Writer
@@ -61,9 +60,9 @@ var serverCmd = &cobra.Command{
 	Short: "Start the web server",
 	Long: `Start the web server.
 
-Starting the web server brings up a REST API that can use the given dgut.db 
-(as produced by 'wrstat dgut' during 'wrstat mutli') to answer questions about
-where data is on the disks.
+Starting the web server brings up a REST API that can use the given dgut.db
+files (as produced by 'wrstat dgut' during 'wrstat mutli') to answer questions
+about where data is on the disks. (Provide the list as unamed args.)
 
 Your --bind address should include the port, and for it to work with your
 --cert, you probably need to specify it as fqdn:port.
@@ -84,12 +83,12 @@ This command will block forever in the foreground; you can background it with
 ctrl-z; bg.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		if serverBind == "" {
-			die("you must supply --bind")
+		if len(args) == 0 {
+			die("you must supply the path(s) to your dgut.db file(s)")
 		}
 
-		if serverDGUT == "" {
-			die("you must supply the path to the dgut.db")
+		if serverBind == "" {
+			die("you must supply --bind")
 		}
 
 		if serverCert == "" {
@@ -123,7 +122,7 @@ ctrl-z; bg.
 			die(msg)
 		}
 
-		err = s.LoadDGUTDB(serverDGUT)
+		err = s.LoadDGUTDBs(args...)
 		if err != nil {
 			msg := fmt.Sprintf("failed to load database: %s", err)
 			syslogWriter.Crit(msg) //nolint:errcheck
@@ -145,8 +144,6 @@ func init() {
 	// flags specific to this sub-command
 	serverCmd.Flags().StringVarP(&serverBind, "bind", "b", ":80",
 		"address to bind to, eg host:port")
-	serverCmd.Flags().StringVarP(&serverDGUT, "db", "d", "",
-		"path to dgut.db")
 	serverCmd.Flags().StringVarP(&serverCert, "cert", "c", "",
 		"path to certificate file")
 	serverCmd.Flags().StringVarP(&serverKey, "key", "k", "",

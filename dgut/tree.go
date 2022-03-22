@@ -32,11 +32,11 @@ type Tree struct {
 	db *DB
 }
 
-// NewTree, given the path to a dgut database file (as created by DB.Store()),
-// returns a *Tree that can be used to do high-level queries on the stats of a
-// tree of disk folders.
-func NewTree(path string) (*Tree, error) {
-	db := NewDB(path)
+// NewTree, given the paths to one or more dgut database files (as created by
+// DB.Store()), returns a *Tree that can be used to do high-level queries on the
+// stats of a tree of disk folders.
+func NewTree(paths ...string) (*Tree, error) {
+	db := NewDB(paths...)
 
 	if err := db.Open(); err != nil {
 		return nil, err

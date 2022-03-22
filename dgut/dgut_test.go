@@ -178,8 +178,7 @@ func TestDGUT(t *testing.T) {
 					Convey("You can query a database after Open()ing it", func() {
 						db = NewDB(path)
 
-						err = db.Close()
-						So(err, ShouldBeNil)
+						db.Close()
 
 						err = db.Open()
 						So(err, ShouldBeNil)
@@ -238,54 +237,46 @@ func TestDGUT(t *testing.T) {
 						So(children, ShouldResemble, []string{"/a/b/e/h/tmp"})
 
 						children = db.Children("/a/c/d")
-						So(children, ShouldResemble, []string{})
+						So(children, ShouldBeNil)
 
 						children = db.Children("/foo")
-						So(children, ShouldResemble, []string{})
+						So(children, ShouldBeNil)
 
-						err = db.Close()
-						So(err, ShouldBeNil)
-
-						err = db.Close()
-						So(err, ShouldBeNil)
+						db.Close()
 					})
 
-					Convey("Store()ing multiple times is OK", func() {
-						data = strings.NewReader(dgutData)
-						err = db.Store(data, 4)
-						So(err, ShouldBeNil)
-
-						db = NewDB(path)
-						err = db.Open()
-						So(err, ShouldBeNil)
-
-						c, s, errd := db.DirInfo("/", nil)
-						So(errd, ShouldBeNil)
-						So(c, ShouldEqual, 28)
-						So(s, ShouldEqual, 170)
-
-						children := db.Children("/")
-						So(children, ShouldResemble, []string{"/a"})
-
-						err = db.Close()
-						So(err, ShouldBeNil)
-
-						data = strings.NewReader("/\t3\t103\t0\t1\t1\n" +
+					Convey("Store()ing multiple times", func() {
+						data = strings.NewReader("/\t3\t103\t0\t2\t2\n" +
+							"/a/i\t3\t103\t0\t1\t1\n" +
 							"/i\t3\t103\t0\t1\t1\n")
-						err = db.Store(data, 4)
-						So(err, ShouldBeNil)
 
-						db = NewDB(path)
-						err = db.Open()
-						So(err, ShouldBeNil)
+						Convey("to the same db file doesn't work", func() {
+							err = db.Store(data, 4)
+							So(err, ShouldNotBeNil)
+							So(err, ShouldEqual, ErrDBExists)
+						})
 
-						c, s, errd = db.DirInfo("/", nil)
-						So(errd, ShouldBeNil)
-						So(c, ShouldEqual, 29)
-						So(s, ShouldEqual, 171)
+						Convey("to different db files and loading them all does work", func() {
+							path2 := path + ".2"
+							db2 := NewDB(path2)
+							err = db2.Store(data, 4)
+							So(err, ShouldBeNil)
 
-						children = db.Children("/")
-						So(children, ShouldResemble, []string{"/a", "/i"})
+							db = NewDB(path, path2)
+							err = db.Open()
+							So(err, ShouldBeNil)
+
+							c, s, errd := db.DirInfo("/", nil)
+							So(errd, ShouldBeNil)
+							So(c, ShouldEqual, 16)
+							So(s, ShouldEqual, 87)
+
+							children := db.Children("/")
+							So(children, ShouldResemble, []string{"/a", "/i"})
+
+							children = db.Children("/a")
+							So(children, ShouldResemble, []string{"/a/b", "/a/c", "/a/i"})
+						})
 					})
 				})
 			})

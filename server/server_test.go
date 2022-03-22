@@ -313,7 +313,7 @@ func TestServer(t *testing.T) {
 				So(err, ShouldBeNil)
 
 				Convey("You can get results after calling LoadDGUTDB", func() {
-					err = s.LoadDGUTDB(path)
+					err = s.LoadDGUTDBs(path)
 					So(err, ShouldBeNil)
 
 					response, err := queryWhere(s, "")
@@ -391,8 +391,8 @@ func TestServer(t *testing.T) {
 				})
 			})
 
-			Convey("LoadDGUTDB fails on an invalid path", func() {
-				err := s.LoadDGUTDB("/foo")
+			Convey("LoadDGUTDBs fails on an invalid path", func() {
+				err := s.LoadDGUTDBs("/foo")
 				So(err, ShouldNotBeNil)
 			})
 		})
@@ -427,7 +427,7 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 		path, err := createExampleDB(t, uid, gids[0], gids[1])
 		So(err, ShouldBeNil)
 
-		err = s.LoadDGUTDB(path)
+		err = s.LoadDGUTDBs(path)
 		So(err, ShouldBeNil)
 
 		_, _, err = GetWhereDataIs(addr, cert, "", "/", "", "", "", "")
@@ -443,7 +443,7 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 			})
 			So(err, ShouldBeNil)
 
-			err = s.LoadDGUTDB(path)
+			err = s.LoadDGUTDBs(path)
 			So(err, ShouldBeNil)
 
 			token, errl := Login(addr, cert, "user", "pass")
@@ -472,7 +472,7 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 			})
 			So(err, ShouldBeNil)
 
-			err = s.LoadDGUTDB(path)
+			err = s.LoadDGUTDBs(path)
 			So(err, ShouldBeNil)
 
 			token, errl := Login(addr, cert, "user", "pass")
