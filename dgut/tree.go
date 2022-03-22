@@ -34,7 +34,7 @@ type Tree struct {
 
 // NewTree, given the paths to one or more dgut database files (as created by
 // DB.Store()), returns a *Tree that can be used to do high-level queries on the
-// stats of a tree of disk folders.
+// stats of a tree of disk folders. You should Close() the tree after use.
 func NewTree(paths ...string) (*Tree, error) {
 	db := NewDB(paths...)
 
@@ -202,4 +202,10 @@ func (t *Tree) where0(dir string, filter *Filter) (*DirInfo, error) {
 	}
 
 	return di, nil
+}
+
+// Close should be called after you've finished querying the tree to release its
+// database locks.
+func (t *Tree) Close() {
+	t.db.Close()
 }
