@@ -86,7 +86,7 @@ completed (eg. by adding your own job that depends on that group, such as a
 	Run: func(cmd *cobra.Command, args []string) {
 		desiredDir := checkArgs(outputDir, depGroup, args)
 
-		s, d := newScheduler("")
+		s, d := newScheduler("", moreMemory)
 		defer d()
 
 		if walkID == "" {

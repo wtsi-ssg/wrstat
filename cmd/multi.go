@@ -119,7 +119,7 @@ deleted.`,
 			die("at least 1 directory of interest must be supplied")
 		}
 
-		s, d := newScheduler(workDir)
+		s, d := newScheduler(workDir, moreMemory)
 		defer d()
 
 		unique := scheduler.UniqueString()
