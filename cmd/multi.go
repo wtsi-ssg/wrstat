@@ -38,6 +38,7 @@ import (
 // moreMemory is how much memory we force some ostensibly low memory jobs to
 // use, because otherwise LSF could kill them for using disk-cache memory.
 const moreMemory = 16000
+const evenMoreMemory = 48000
 
 // options for this cmd.
 var workDir string
@@ -113,10 +114,10 @@ deleted.`,
 			die("at least 1 directory of interest must be supplied")
 		}
 
-		s, d := newScheduler(workDir)
+		s, d := newScheduler(workDir, moreMemory)
 		defer d()
 
-		sMem, dMem := newScheduler(workDir, moreMemory)
+		sMem, dMem := newScheduler(workDir, evenMoreMemory)
 		defer dMem()
 
 		unique := scheduler.UniqueString()
@@ -128,7 +129,7 @@ deleted.`,
 
 		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s, sMem)
 		scheduleDBJob(outputRoot, unique, sMem)
-		scheduleTidyJob(outputRoot, finalDir, unique, sMem)
+		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	},
 }
 
