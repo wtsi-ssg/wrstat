@@ -133,6 +133,46 @@ func TestTree(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 	})
+
+	Convey("You can make a Tree from multiple dgut databases and query it", t, func() {
+		path1 := testMakeDBPath(t)
+		db := NewDB(path1)
+		data := strings.NewReader("/\t1\t11\t1\t1\t1\n" +
+			"/a\t1\t11\t1\t1\t1\n" +
+			"/a/b\t1\t11\t1\t1\t1\n" +
+			"/a/b/c\t1\t11\t1\t1\t1\n" +
+			"/a/b/c/d\t1\t11\t1\t1\t1\n")
+		err := db.Store(data, 20)
+		So(err, ShouldBeNil)
+
+		path2 := testMakeDBPath(t)
+		db = NewDB(path2)
+		data = strings.NewReader("/\t1\t11\t1\t1\t1\n" +
+			"/a\t1\t11\t1\t1\t1\n" +
+			"/a/b\t1\t11\t1\t1\t1\n" +
+			"/a/b/c\t1\t11\t1\t1\t1\n" +
+			"/a/b/c/e\t1\t11\t1\t1\t1\n")
+		err = db.Store(data, 20)
+		So(err, ShouldBeNil)
+
+		tree, err := NewTree(path1, path2)
+		So(err, ShouldBeNil)
+		So(tree, ShouldNotBeNil)
+
+		dcss, err := tree.Where("/", nil, 0)
+		So(err, ShouldBeNil)
+		So(dcss, ShouldResemble, DCSs{
+			{"/a/b/c", 2, 2},
+		})
+
+		dcss, err = tree.Where("/", nil, 1)
+		So(err, ShouldBeNil)
+		So(dcss, ShouldResemble, DCSs{
+			{"/a/b/c", 2, 2},
+			{"/a/b/c/d", 1, 1},
+			{"/a/b/c/e", 1, 1},
+		})
+	})
 }
 
 func testCreateDB(path string) error {

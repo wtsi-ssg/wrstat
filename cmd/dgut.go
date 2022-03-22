@@ -64,7 +64,7 @@ group all your 'wrstat combine' jobs are in.`,
 			die("you must supply (only) the path to the dgut.db")
 		}
 
-		if err := createDGUTDB(args[0]); err != nil {
+		if err := createDGUTDBs(args[0]); err != nil {
 			die("failed to create database: %s", err)
 		}
 	},
@@ -74,9 +74,9 @@ func init() {
 	RootCmd.AddCommand(dgutCmd)
 }
 
-// createDGUTDB does the main work of creating a database from combine.dgut.gz
+// createDGUTDBs does the main work of creating databases from combine.dgut.gz
 // files.
-func createDGUTDB(dir string) error {
+func createDGUTDBs(dir string) error {
 	sourceDir, err := filepath.Abs(dir)
 	if err != nil {
 		return err
@@ -87,10 +87,7 @@ func createDGUTDB(dir string) error {
 		return err
 	}
 
-	outPath := filepath.Join(sourceDir, dgutDBBasename)
-	db := dgut.NewDB(outPath)
-
-	for _, path := range dguts {
+	for i, path := range dguts {
 		file, err := os.Open(path)
 		if err != nil {
 			return err
@@ -100,6 +97,9 @@ func createDGUTDB(dir string) error {
 		if err != nil {
 			return err
 		}
+
+		outPath := filepath.Join(sourceDir, fmt.Sprintf("%s.%d", dgutDBBasename, i))
+		db := dgut.NewDB(outPath)
 
 		if err = db.Store(gz, dgutStoreBatchSize); err != nil {
 			return err

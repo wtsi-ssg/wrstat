@@ -141,7 +141,7 @@ func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date stri
 		return err
 	}
 
-	if err := findAndMoveDB(sourceDir, destDir, destDirInfo, date); err != nil {
+	if err := findAndMoveDBs(sourceDir, destDir, destDirInfo, date); err != nil {
 		return err
 	}
 
@@ -192,6 +192,13 @@ func moveOutput(source string, destDir string, destDirInfo fs.FileInfo, date, su
 		filepath.Base(multiUniqueDir),
 		suffix))
 
+	return renameAndMatchPerms(source, dest, destDirInfo)
+}
+
+// renameAndMatchPerms tries 2 ways to rename the file (resorting to a copy if
+// this is across filesystem boundaries), then matches the dest file permissions
+// to the given FileInfo.
+func renameAndMatchPerms(source, dest string, destDirInfo fs.FileInfo) error {
 	err := os.Rename(source, dest)
 	if err != nil {
 		if err = shutil.CopyFile(source, dest, false); err != nil {
@@ -250,26 +257,30 @@ func matchReadWrite(path string, current, desired fs.FileInfo) error {
 	return os.Chmod(path, currentMode|desiredRW)
 }
 
-// findAndMoveDB finds the dgut.db file in the given sourceDir and moves it to
-// destDir, including date in the name, and adjusting ownership and permissions
-// to match the destDir.
-func findAndMoveDB(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
-	source := filepath.Join(sourceDir, dgutDBBasename)
-
-	if _, err := os.Stat(source); err != nil {
-		return err
+// findAndMoveDBs finds the dgut.db files in the given sourceDir and moves them
+// to destDir, including date in the name, and adjusting ownership and
+// permissions to match the destDir.
+func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
+	sources, errg := filepath.Glob(fmt.Sprintf("%s/%s.*", sourceDir, dgutDBBasename))
+	if errg != nil {
+		return errg
 	}
 
-	dest := filepath.Join(destDir, fmt.Sprintf("%s.%s.%s",
-		date,
-		filepath.Base(sourceDir),
-		dgutDBBasename))
+	for _, source := range sources {
+		if _, err := os.Stat(source); err != nil {
+			return err
+		}
 
-	if err := os.Rename(source, dest); err != nil {
-		if err = shutil.CopyFile(source, dest, false); err != nil {
+		dest := filepath.Join(destDir, fmt.Sprintf("%s.%s.%s",
+			date,
+			filepath.Base(sourceDir),
+			filepath.Base(source)))
+
+		err := renameAndMatchPerms(source, dest, destDirInfo)
+		if err != nil {
 			return err
 		}
 	}
 
-	return matchPerms(dest, destDirInfo)
+	return nil
 }
