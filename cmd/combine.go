@@ -39,6 +39,7 @@ import (
 
 	"github.com/klauspost/pgzip"
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/dgut"
 )
 
 const bytesInMB = 1000000
@@ -46,13 +47,14 @@ const pgzipWriterBlocksMultiplier = 2
 const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
 const combineGroupOutputFileBasename = "combine.bygroup"
-const combineDGUTOutputFileBasename = "combine.dgut.gz"
+const combineDGUTOutputFileBasename = "combine.dgut.db"
 const combineLogOutputFileBasename = "combine.log.gz"
 const numSummaryColumns = 2
 const groupSumCols = 2
 const userGroupSumCols = 3
 const dgutSumCols = 4
 const intBase = 10
+const dgutStoreBatchSize = 10000
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
@@ -68,8 +70,10 @@ Likewise, all the 'wrstat stat' *.byusergroup files will be merged,
 compressed and placed at the root of the output directory in a file called
 'combine.byusergroup.gz'.
 
-The same applies to the *.log files, being called 'combine.log.gz', and to the
-*.dugt files, being called 'combine.dgut.gz'.
+The same applies to the *.log files, being called 'combine.log.gz'.
+
+The *.dugt files will be turned in to databases in a directory
+'combine.dgut.db'.
 
 The *.bygroup files are merged but not compressed and called 'combine.bygroup'.
 
@@ -108,7 +112,7 @@ you supplied 'wrstat walk'.`,
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mergeAndCompressDGUTFiles(sourceDir)
+			mergeDGUTFilesToDB(sourceDir)
 		}()
 
 		wg.Add(1)
@@ -446,13 +450,13 @@ func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
 	return output.Close()
 }
 
-// mergeAndCompressDGUTFiles finds and merges the dgut files and compresses the
-// output.
-func mergeAndCompressDGUTFiles(sourceDir string) {
+// mergeDGUTFilesToDB finds and merges the dgut files and then stores the
+// information in a database.
+func mergeDGUTFilesToDB(sourceDir string) {
 	paths := findDGUTFilePaths(sourceDir)
-	output := createCombineDGUTOutputFile(sourceDir)
+	outputDir := createCombineDGUTOutputDir(sourceDir)
 
-	err := mergeDGUTAndCompress(paths, output)
+	err := mergeDGUTAndStoreInDB(paths, outputDir)
 	if err != nil {
 		die("failed to merge the dgut files: %s", err)
 	}
@@ -463,29 +467,50 @@ func findDGUTFilePaths(dir string) []string {
 	return findFilePathsInDir(dir, statDGUTSummaryOutputFileSuffix)
 }
 
-// createCombineDGUTOutputFile creates a dgut output file in the given dir.
-func createCombineDGUTOutputFile(dir string) *os.File {
-	return createOutputFileInDir(dir, combineDGUTOutputFileBasename)
+// createCombineDGUTOutputDir creates a dgut output dir in the given dir.
+// Returns the path to the created directory.
+func createCombineDGUTOutputDir(dir string) string {
+	path := filepath.Join(dir, combineDGUTOutputFileBasename)
+
+	err := os.MkdirAll(path, userOnlyPerm)
+	if err != nil {
+		die("failed to create output dir: %s", err)
+	}
+
+	return path
 }
 
-// mergeDGUTAndCompress merges the inputs and stores in the output, compressed.
-func mergeDGUTAndCompress(inputs []string, output *os.File) error {
-	return mergeFilesAndStreamToOutput(inputs, output, mergeDGUTStreamToCompressedFile)
-}
-
-// mergeDGUTStreamToCompressedFile merges pre-sorted (pre-merged) dgut data (eg.
-// from a `sort -m` of .dgut files), summing consecutive lines with the first 4
-// columns, and outputting the results to a file, compressed.
-func mergeDGUTStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
-	zw, closeOutput := compressOutput(output)
-
-	if err := mergeSummaryLines(data, dgutSumCols, zw); err != nil {
+// mergeDGUTAndStoreInDB merges pre-sorted (pre-merged) dgut data (eg. from a
+// `sort -m` of .dgut files), summing consecutive lines with the first 4
+// columns, and outputs the results to an embedded database.
+func mergeDGUTAndStoreInDB(inputs []string, outputDir string) error {
+	sortMergeOutput, cleanup, err := mergeSortedFiles(inputs)
+	if err != nil {
 		return err
 	}
 
-	closeOutput()
+	db := dgut.NewDB(outputDir)
+	reader, writer := io.Pipe()
+	errCh := make(chan error, 1)
 
-	return nil
+	go func() {
+		errCh <- db.Store(reader, dgutStoreBatchSize)
+	}()
+
+	if err = mergeSummaryLines(sortMergeOutput, dgutSumCols, writer); err != nil {
+		return err
+	}
+
+	if err = writer.Close(); err != nil {
+		return err
+	}
+
+	err = <-errCh
+	if err != nil {
+		return err
+	}
+
+	return cleanup()
 }
 
 // mergeAndCompressLogFiles finds and merges the log files and compresses the
