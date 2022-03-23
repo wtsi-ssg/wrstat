@@ -68,8 +68,9 @@ Final output files are named to include the given --date as follows:
 
 Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
 
-It also moves the dgut.db.* directories to inside a directory named:
+It also moves the combine.dgut.db directories to inside a directory named:
 [date].[multi unique].dgut.dbs
+(making them sequentially numbered sub-directories)
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -259,29 +260,29 @@ func matchReadWrite(path string, current, desired fs.FileInfo) error {
 	return os.Chmod(path, currentMode|desiredRW)
 }
 
-// findAndMoveDBs finds the dgut.db.* directories in the given sourceDir and
-// moves them to destDir, including date in the name, and adjusting ownership
-// and permissions to match the destDir.
+// findAndMoveDBs finds the combine.dgut.db directories in the given sourceDir
+// and moves them to destDir, including date in the name, and adjusting
+// ownership and permissions to match the destDir.
 func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
-	sources, errg := filepath.Glob(fmt.Sprintf("%s/%s.*", sourceDir, dgutDBBasename))
+	sources, errg := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, combineDGUTOutputFileBasename))
 	if errg != nil {
 		return errg
 	}
 
-	for _, source := range sources {
+	for i, source := range sources {
 		if _, err := os.Stat(source); err != nil {
 			return err
 		}
 
-		dest := filepath.Join(destDir, fmt.Sprintf("%s.%s.%s/%s",
+		dest := filepath.Join(destDir, fmt.Sprintf("%s.%s.%s/%d",
 			date,
 			filepath.Base(sourceDir),
 			dgutDBsBasename,
-			filepath.Base(source)))
+			i))
 
-		destDir := filepath.Dir(dest)
+		newDir := filepath.Dir(dest)
 
-		if err := os.MkdirAll(destDir, destDirInfo.Mode().Perm()); err != nil {
+		if err := os.MkdirAll(newDir, destDirInfo.Mode().Perm()); err != nil {
 			return err
 		}
 
