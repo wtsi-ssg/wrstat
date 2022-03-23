@@ -436,7 +436,7 @@ func is660(t *testing.T, path string) bool {
 }
 
 // newLogger returns a logger that logs to the returned buffer.
-func newLogger() (*bytes.Buffer, log15.Logger) { //nolint:ireturn
+func newLogger() (*bytes.Buffer, log15.Logger) {
 	buff := new(bytes.Buffer)
 	l := log15.New()
 	l.SetHandler(log15.StreamHandler(buff, log15.LogfmtFormat()))
