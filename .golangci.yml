@@ -118,7 +118,6 @@ linters:
     - gosec
     - ifshort
     - importas
-    - ireturn
     - lll
     - maintidx
     - makezero
@@ -158,6 +157,7 @@ linters:
   #   - goprintffuncname
   #   - grouper
   #   - interfacer
+  #   - ireturn
   #   - paralleltest
   #   - promlinter
   #   - revive
