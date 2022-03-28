@@ -467,9 +467,12 @@ func findDGUTFilePaths(dir string) []string {
 }
 
 // createCombineDGUTOutputDir creates a dgut output dir in the given dir.
-// Returns the path to the created directory.
+// Returns the path to the created directory. If it already existed, will delete
+// it first, since we can't store to a pre-existing db.
 func createCombineDGUTOutputDir(dir string) string {
 	path := filepath.Join(dir, combineDGUTOutputFileBasename)
+
+	os.RemoveAll(path)
 
 	err := os.MkdirAll(path, userOnlyPerm)
 	if err != nil {
