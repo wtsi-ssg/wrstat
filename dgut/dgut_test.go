@@ -26,16 +26,14 @@
 package dgut
 
 import (
-	"errors"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/akrylysov/pogreb"
-	"github.com/akrylysov/pogreb/fs"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/summary"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestDGUT(t *testing.T) {
@@ -166,12 +164,6 @@ func TestDGUT(t *testing.T) {
 				err := db.Store(data, 4)
 				So(err, ShouldBeNil)
 
-				Convey("After a store, the underlying databases are closed", func() {
-					err = db.writeSet.Close()
-					So(err, ShouldNotBeNil)
-					So(err.Error(), ShouldContainSubstring, "file already closed")
-				})
-
 				Convey("The resulting database files have the expected content", func() {
 					info, errs := os.Stat(paths[1])
 					So(errs, ShouldBeNil)
@@ -180,11 +172,11 @@ func TestDGUT(t *testing.T) {
 					So(errs, ShouldBeNil)
 					So(info.Size(), ShouldBeGreaterThan, 10)
 
-					keys, errt := testGetDBKeys(paths[1])
+					keys, errt := testGetDBKeys(paths[1], gutBucket)
 					So(errt, ShouldBeNil)
 					So(keys, ShouldResemble, expectedKeys)
 
-					keys, errt = testGetDBKeys(paths[2])
+					keys, errt = testGetDBKeys(paths[2], childBucket)
 					So(errt, ShouldBeNil)
 					So(keys, ShouldResemble, []string{"/", "/a", "/a/b", "/a/b/d", "/a/b/e", "/a/b/e/h", "/a/c"})
 
@@ -271,16 +263,14 @@ func TestDGUT(t *testing.T) {
 
 						err = db.Open()
 						So(err, ShouldNotBeNil)
-					})
 
-					Convey("Trying to get information from an invalid database fails", func() {
-						pdb, erro := pogreb.Open(paths[1], &pogreb.Options{FileSystem: fs.OS})
-						So(erro, ShouldBeNil)
-
-						err = pdb.Close()
+						err = os.RemoveAll(paths[1])
 						So(err, ShouldBeNil)
 
-						_, err = getDGUTFromDB(pdb, "/", db.ch)
+						err = os.WriteFile(paths[1], []byte("foo"), 0600)
+						So(err, ShouldBeNil)
+
+						err = db.Open()
 						So(err, ShouldNotBeNil)
 					})
 
@@ -297,6 +287,8 @@ func TestDGUT(t *testing.T) {
 
 						Convey("to different db directories and loading them all does work", func() {
 							path2 := paths[0] + ".2"
+							err = os.Mkdir(path2, os.ModePerm)
+							So(err, ShouldBeNil)
 							db2 := NewDB(path2)
 							err = db2.Store(data, 4)
 							So(err, ShouldBeNil)
@@ -324,7 +316,7 @@ func TestDGUT(t *testing.T) {
 				err := db.Store(data, len(expectedKeys))
 				So(err, ShouldBeNil)
 
-				keys, errt := testGetDBKeys(paths[1])
+				keys, errt := testGetDBKeys(paths[1], gutBucket)
 				So(errt, ShouldBeNil)
 				So(keys, ShouldResemble, expectedKeys)
 			})
@@ -333,7 +325,7 @@ func TestDGUT(t *testing.T) {
 				err := db.Store(data, len(expectedKeys)+2)
 				So(err, ShouldBeNil)
 
-				keys, errt := testGetDBKeys(paths[1])
+				keys, errt := testGetDBKeys(paths[1], gutBucket)
 				So(errt, ShouldBeNil)
 				So(keys, ShouldResemble, expectedKeys)
 			})
@@ -344,31 +336,39 @@ func TestDGUT(t *testing.T) {
 				So(db.writeErr, ShouldBeNil)
 			})
 
-			Convey("You can't store to db if the db file gets deleted", func() {
+			Convey("You can't store to db if", func() {
 				db.batchSize = 4
 				err := db.createDB()
 				So(err, ShouldBeNil)
 
-				err = db.writeSet.Close()
-				So(err, ShouldBeNil)
-
-				err = os.RemoveAll(paths[1])
-				So(err, ShouldBeNil)
-				err = os.RemoveAll(paths[2])
-				So(err, ShouldBeNil)
-
-				err = db.storeData(data)
-				So(err, ShouldBeNil)
-				So(db.writeErr, ShouldNotBeNil)
-
-				Convey("Or if the put fails", func() {
-					err = db.createDB()
+				Convey("the first db gets closed", func() {
+					err = db.writeSet.dguts.Close()
 					So(err, ShouldBeNil)
 
+					db.writeErr = nil
+					err = db.storeData(data)
+					So(err, ShouldBeNil)
+					So(db.writeErr, ShouldNotBeNil)
+				})
+
+				Convey("the second db gets closed", func() {
+					err = db.writeSet.children.Close()
+					So(err, ShouldBeNil)
+
+					db.writeErr = nil
+					err = db.storeData(data)
+					So(err, ShouldBeNil)
+					So(db.writeErr, ShouldNotBeNil)
+				})
+
+				Convey("the put fails", func() {
 					db.writeBatch = expected
 
-					db.storeBatch()
-					So(db.writeErr, ShouldNotBeNil)
+					err = db.writeSet.children.View(db.storeChildrenInTx)
+					So(err, ShouldNotBeNil)
+
+					err = db.writeSet.dguts.View(db.storeDGUTsInTx)
+					So(err, ShouldNotBeNil)
 				})
 			})
 		})
@@ -381,6 +381,15 @@ func TestDGUT(t *testing.T) {
 			So(err, ShouldNotBeNil)
 
 			err = db.Open()
+			So(err, ShouldNotBeNil)
+
+			paths := testMakeDBPaths(t)
+			db = NewDB(paths[0])
+
+			err = os.WriteFile(paths[2], []byte("foo"), 0600)
+			So(err, ShouldBeNil)
+
+			err = db.Store(data, 4)
 			So(err, ShouldNotBeNil)
 		})
 	})
@@ -523,8 +532,8 @@ func testMakeDBPaths(t *testing.T) []string {
 }
 
 // testGetDBKeys returns all the keys in the db at the given path.
-func testGetDBKeys(path string) ([]string, error) {
-	rdb, err := pogreb.Open(path, nil)
+func testGetDBKeys(path, bucket string) ([]string, error) {
+	rdb, err := bolt.Open(path, dbOpenMode, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -533,22 +542,17 @@ func testGetDBKeys(path string) ([]string, error) {
 		err = rdb.Close()
 	}()
 
-	var keys []string //nolint:prealloc
+	var keys []string
 
-	it := rdb.Items()
+	err = rdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
 
-	for {
-		key, _, err := it.Next()
-		if errors.Is(err, pogreb.ErrIterationDone) {
-			break
-		}
+		return b.ForEach(func(k, v []byte) error {
+			keys = append(keys, string(k))
 
-		if err != nil {
-			return keys, err
-		}
+			return nil
+		})
+	})
 
-		keys = append(keys, string(key))
-	}
-
-	return keys, nil
+	return keys, err
 }

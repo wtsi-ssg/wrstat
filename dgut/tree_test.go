@@ -133,14 +133,8 @@ func TestTree(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 
-		Convey("You can't open the same db twice without closing it first", func() {
-			_, err := NewTree(paths[0])
-			So(err, ShouldNotBeNil)
-
+		Convey("Closing works", func() {
 			tree.Close()
-
-			_, err = NewTree(paths[0])
-			So(err, ShouldBeNil)
 		})
 	})
 
