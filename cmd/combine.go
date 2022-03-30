@@ -53,7 +53,7 @@ const numSummaryColumns = 2
 const groupSumCols = 2
 const userGroupSumCols = 3
 const intBase = 10
-const dgutStoreBatchSize = 10000
+const dgutStoreBatchSize = 100000
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{

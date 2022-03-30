@@ -148,7 +148,7 @@ func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date stri
 		return err
 	}
 
-	return os.RemoveAll(sourceDir)
+	return nil //os.RemoveAll(sourceDir)
 }
 
 // findAndMoveOutputs finds output files in the given sourceDir with given
