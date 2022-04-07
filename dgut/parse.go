@@ -27,6 +27,7 @@ package dgut
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"strconv"
 	"strings"
@@ -39,6 +40,7 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const ErrInvalidFormat = Error("the provided data was not in dgut format")
+const ErrBlankLine = Error("the provided line had no information")
 
 const (
 	gutDataCols    = 6
@@ -64,6 +66,10 @@ func parseDGUTLines(data io.Reader, cb dgutParserCallBack) error {
 	for scanner.Scan() {
 		thisDir, g, err := parseDGUTLine(scanner.Text())
 		if err != nil {
+			if errors.Is(err, ErrBlankLine) {
+				continue
+			}
+
 			return err
 		}
 
@@ -95,6 +101,10 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 	parts, err := splitDGUTLine(line)
 	if err != nil {
 		return "", nil, err
+	}
+
+	if parts[0] == "" {
+		return "", nil, ErrBlankLine
 	}
 
 	ints, err := gutLinePartsToInts(parts)
