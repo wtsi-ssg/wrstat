@@ -86,7 +86,7 @@ completed (eg. by adding your own job that depends on that group, such as a
 	Run: func(cmd *cobra.Command, args []string) {
 		desiredDir := checkArgs(outputDir, depGroup, args)
 
-		s, d := newScheduler("", moreMemory)
+		s, d := newScheduler("", forcedQueue, moreMemory)
 		defer d()
 
 		if walkID == "" {
@@ -114,6 +114,7 @@ func init() {
 		"dependency_group", "d", "",
 		"dependency group that stat jobs added to wr will belong to")
 	walkCmd.Flags().StringVar(&walkCh, "ch", "", "passed through to 'wrstat stat'")
+	walkCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
 }
 
 // checkArgs checks we have required args and returns desired dir.

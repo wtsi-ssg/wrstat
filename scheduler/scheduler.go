@@ -62,8 +62,9 @@ type Scheduler struct {
 // New returns a Scheduler that is connected to wr manager using the given
 // deployment, timeout and logger. If sudo is true, NewJob() will prefix 'sudo'
 // to commands. Added jobs will have the given cwd, which matters. If cwd is
-// blank, the current working dir is used.
-func New(deployment, cwd string, timeout time.Duration, logger log15.Logger,
+// blank, the current working dir is used. If queue is not blank, that queue
+// will be used when scheduling.
+func New(deployment, cwd, queue string, timeout time.Duration, logger log15.Logger,
 	sudo bool) (*Scheduler, error) {
 	cwd, err := pickCWD(cwd)
 	if err != nil {
@@ -78,11 +79,14 @@ func New(deployment, cwd string, timeout time.Duration, logger log15.Logger,
 
 	exe, err := os.Executable()
 
+	req := makeRequirements(queue)
+
 	return &Scheduler{
-		cwd:  cwd,
-		exe:  exe,
-		jq:   jq,
-		sudo: sudo,
+		cwd:          cwd,
+		exe:          exe,
+		requirements: req,
+		jq:           jq,
+		sudo:         sudo,
 	}, err
 }
 
@@ -96,6 +100,24 @@ func pickCWD(cwd string) (string, error) {
 	_, err := os.Stat(cwd)
 
 	return cwd, err
+}
+
+// makeRequirements makes a Requirments based on the queue override, and
+// defaults.
+func makeRequirements(queue string) *jqs.Requirements {
+	var other map[string]string
+	if queue != "" {
+		other = make(map[string]string)
+		other["scheduler_queue"] = queue
+	}
+
+	return &jqs.Requirements{
+		RAM:   reqRAM,
+		Time:  reqTime,
+		Cores: reqCores,
+		Disk:  reqDisk,
+		Other: other,
+	}
 }
 
 // Executable is a convenience function that returns the same as

@@ -50,6 +50,7 @@ var workDir string
 var finalDir string
 var multiInodes int
 var multiCh string
+var forcedQueue string
 
 // multiCmd represents the multi command.
 var multiCmd = &cobra.Command{
@@ -116,7 +117,7 @@ deleted.`,
 			die("at least 1 directory of interest must be supplied")
 		}
 
-		s, d := newScheduler(workDir, moreMemory)
+		s, d := newScheduler(workDir, forcedQueue, moreMemory)
 		defer d()
 
 		unique := scheduler.UniqueString()
@@ -126,7 +127,7 @@ deleted.`,
 			die("failed to create working dir: %s", err)
 		}
 
-		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s)
+		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, forcedQueue, s)
 		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	},
 }
@@ -140,19 +141,24 @@ func init() {
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
+	multiCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	n int, yamlPath string, s *scheduler.Scheduler) {
+	n int, yamlPath, queue string, s *scheduler.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
 	cmd := fmt.Sprintf("%s walk -n %d ", s.Executable(), n)
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
+	}
+
+	if queue != "" {
+		cmd += fmt.Sprintf("--queue %s ", queue)
 	}
 
 	if sudo {

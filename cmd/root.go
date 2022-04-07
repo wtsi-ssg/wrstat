@@ -165,8 +165,11 @@ func die(msg string, a ...interface{}) {
 
 // newScheduler returns a new Scheduler, exiting on error. It also returns a
 // function you should defer.
-func newScheduler(cwd string) (*scheduler.Scheduler, func()) {
-	s, err := scheduler.New(deployment, cwd, connectTimeout, appLogger, sudo)
+//
+// If you provide a non-blank queue, that queue will be used when scheduling.
+func newScheduler(cwd, queue string) (*scheduler.Scheduler, func()) {
+	s, err := scheduler.New(deployment, cwd, queue, connectTimeout, appLogger, sudo)
+
 	if err != nil {
 		die("%s", err)
 	}
