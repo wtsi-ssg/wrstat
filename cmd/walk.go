@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2021, 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -26,6 +26,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,6 +39,17 @@ import (
 )
 
 const defaultInodesPerJob = 2000000
+const walkLogOutputBasename = "walk.log"
+
+// WriteError is an error received when trying to write discovered paths to
+// disk.
+type WriteError struct {
+	Err error
+}
+
+func (e *WriteError) Error() string { return e.Err.Error() }
+
+func (e *WriteError) Unwrap() error { return e.Err }
 
 // options for this cmd.
 var outputDir string
@@ -87,6 +99,8 @@ completed (eg. by adding your own job that depends on that group, such as a
 		if walkID == "" {
 			walkID = statRepGrp(desiredDir, scheduler.UniqueString())
 		}
+
+		logToFile(filepath.Join(outputDir, walkLogOutputBasename))
 
 		walkDirAndScheduleStats(desiredDir, outputDir, walkInodesPerJob, depGroup, walkID, walkCh, s)
 	},
@@ -207,6 +221,8 @@ func walkDir(desiredDir string, files []*os.File) error {
 	i := 0
 	max := len(files)
 
+	var writeError *WriteError
+
 	return godirwalk.Walk(desiredDir, &godirwalk.Options{
 		Callback: func(path string, de *godirwalk.Dirent) error {
 			_, err := files[i].WriteString(path + "\n")
@@ -215,7 +231,20 @@ func walkDir(desiredDir string, files []*os.File) error {
 				i = 0
 			}
 
+			if err != nil {
+				err = &WriteError{Err: err}
+			}
+
 			return err
+		},
+		ErrorCallback: func(path string, err error) godirwalk.ErrorAction {
+			warn("error processing %s: %s", path, err)
+
+			if errors.As(err, &writeError) {
+				return godirwalk.Halt
+			}
+
+			return godirwalk.SkipNode
 		},
 		Unsorted: true,
 	})
