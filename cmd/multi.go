@@ -29,15 +29,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/scheduler"
 )
 
-// moreMemory is how much memory we force some ostensibly low memory jobs to
-// use, because otherwise LSF could kill them for using disk-cache memory.
-const moreMemory = 16000
+const (
+	walkTime    = 19 * time.Hour
+	combineTime = 40 * time.Minute
+	combineRAM  = 150
+)
 
 // options for this cmd.
 var workDir string
@@ -112,9 +115,6 @@ deleted.`,
 		s, d := newScheduler(workDir)
 		defer d()
 
-		sMem, dMem := newScheduler(workDir, moreMemory)
-		defer dMem()
-
 		unique := scheduler.UniqueString()
 		outputRoot := filepath.Join(workDir, unique)
 		err := os.MkdirAll(outputRoot, userOnlyPerm)
@@ -122,8 +122,8 @@ deleted.`,
 			die("failed to create working dir: %s", err)
 		}
 
-		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s, sMem)
-		scheduleTidyJob(outputRoot, finalDir, unique, sMem)
+		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s)
+		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	},
 }
 
@@ -142,7 +142,7 @@ func init() {
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	n int, yamlPath string, s *scheduler.Scheduler, sHigherMemory *scheduler.Scheduler) {
+	n int, yamlPath string, s *scheduler.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
@@ -155,20 +155,27 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 		cmd += "--sudo "
 	}
 
+	req := scheduler.DefaultRequirements()
+	reqWalk := req.Clone()
+	reqWalk.Time = walkTime
+	reqCombine := req.Clone()
+	reqCombine.Time = combineTime
+	reqCombine.RAM = combineRAM
+
 	for i, path := range desiredPaths {
 		thisUnique := scheduler.UniqueString()
 		outDir := filepath.Join(outputRoot, filepath.Base(path), thisUnique)
 
 		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -o %s -i %s %s",
 			cmd, thisUnique, outDir, statRepGrp(path, unique), path),
-			walkRepGrp(path, unique), "wrstat-walk", thisUnique, "")
+			walkRepGrp(path, unique), "wrstat-walk", thisUnique, "", reqWalk)
 
-		combineJobs[i] = sHigherMemory.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
-			combineRepGrp(path, unique), "wrstat-combine", unique, thisUnique)
+		combineJobs[i] = s.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
+			combineRepGrp(path, unique), "wrstat-combine", unique, thisUnique, reqCombine)
 	}
 
 	addJobsToQueue(s, walkJobs)
-	addJobsToQueue(sHigherMemory, combineJobs)
+	addJobsToQueue(s, combineJobs)
 }
 
 // walkRepGrp returns a rep_grp that can be used for the walk jobs multi will
@@ -188,7 +195,7 @@ func combineRepGrp(dir, unique string) string {
 // directory.
 func scheduleTidyJob(outputRoot, finalDir, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s tidy -f %s -d %s %s", s.Executable(), finalDir, dateStamp(), outputRoot),
-		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique)
+		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique, nil)
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }

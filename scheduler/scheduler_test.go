@@ -79,19 +79,19 @@ func TestStatFile(t *testing.T) {
 			So(s.jq, ShouldNotBeNil)
 
 			Convey("which lets you create jobs", func() {
-				job := s.NewJob("cmd", "rep", "req", "", "")
+				job := s.NewJob("cmd", "rep", "req", "", "", nil)
 				So(job.Cmd, ShouldEqual, "cmd")
 				So(job.RepGroup, ShouldEqual, "rep")
 				So(job.ReqGroup, ShouldEqual, "req")
 				So(job.Cwd, ShouldEqual, wd)
 				So(job.CwdMatters, ShouldBeTrue)
-				So(job.Requirements, ShouldResemble, &jqs.Requirements{RAM: 50, Time: 2 * time.Second, Cores: 1, Disk: 1})
+				So(job.Requirements, ShouldResemble, &jqs.Requirements{RAM: 100, Time: 10 * time.Second, Cores: 1, Disk: 1})
 				So(job.Retries, ShouldEqual, 30)
 				So(job.DepGroups, ShouldBeNil)
 				So(job.Dependencies, ShouldBeNil)
 				So(job.Override, ShouldEqual, 0)
 
-				job2 := s.NewJob("cmd2", "rep", "req", "a", "b")
+				job2 := s.NewJob("cmd2", "rep", "req", "a", "b", nil)
 				So(job2.Cmd, ShouldEqual, "cmd2")
 				So(job2.DepGroups, ShouldResemble, []string{"a"})
 				So(job2.Dependencies, ShouldResemble, jobqueue.Dependencies{{DepGroup: "b"}})
@@ -135,7 +135,7 @@ func TestStatFile(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
-			job := s.NewJob("cmd", "rep", "req", "", "")
+			job := s.NewJob("cmd", "rep", "req", "", "", nil)
 			So(job.Cwd, ShouldEqual, cwd)
 			So(job.CwdMatters, ShouldBeTrue)
 		})
@@ -160,16 +160,19 @@ func TestStatFile(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
-			job := s.NewJob("cmd", "rep", "req", "", "")
+			job := s.NewJob("cmd", "rep", "req", "", "", nil)
 			So(job.Cmd, ShouldEqual, "sudo cmd")
 		})
 
-		Convey("You can make a Scheduler with a RAM override", func() {
-			s, err := New(deployment, "", timeout, logger, false, 16000)
+		Convey("You can make a Scheduler with a Req override", func() {
+			s, err := New(deployment, "", timeout, logger, false)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
-			job := s.NewJob("cmd", "rep", "req", "", "")
+			req := DefaultRequirements()
+			req.RAM = 16000
+
+			job := s.NewJob("cmd", "rep", "req", "", "", req)
 			So(job.Requirements.RAM, ShouldEqual, 16000)
 			So(job.Override, ShouldEqual, 1)
 		})

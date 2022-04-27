@@ -45,29 +45,26 @@ const dupJobsErr = Error("some of the added jobs were duplicates")
 
 // some consts for the jobs returned by NewJob().
 const jobRetries uint8 = 30
-const reqRAM = 50
-const reqTime = 2 * time.Second
+const reqRAM = 100
+const reqTime = 10 * time.Second
 const reqCores = 1
 const reqDisk = 1
 
 // Scheduler can be used to schedule commands to be executed by adding them to
 // wr's queue.
 type Scheduler struct {
-	cwd          string
-	exe          string
-	requirements *jqs.Requirements
-	jq           *jobqueue.Client
-	sudo         bool
-	override     int
+	cwd  string
+	exe  string
+	jq   *jobqueue.Client
+	sudo bool
 }
 
 // New returns a Scheduler that is connected to wr manager using the given
 // deployment, timeout and logger. If sudo is true, NewJob() will prefix 'sudo'
 // to commands. Added jobs will have the given cwd, which matters. If cwd is
-// blank, the current working dir is used. If ram is supplied, we set override
-// 1, otherwise it defaults to 50MB with no override.
+// blank, the current working dir is used.
 func New(deployment, cwd string, timeout time.Duration, logger log15.Logger,
-	sudo bool, ram ...int) (*Scheduler, error) {
+	sudo bool) (*Scheduler, error) {
 	cwd, err := pickCWD(cwd)
 	if err != nil {
 		return nil, err
@@ -81,20 +78,11 @@ func New(deployment, cwd string, timeout time.Duration, logger log15.Logger,
 
 	exe, err := os.Executable()
 
-	rram, override := parseRAM(ram)
-
 	return &Scheduler{
-		cwd: cwd,
-		exe: exe,
-		requirements: &jqs.Requirements{
-			RAM:   rram,
-			Time:  reqTime,
-			Cores: reqCores,
-			Disk:  reqDisk,
-		},
-		override: override,
-		jq:       jq,
-		sudo:     sudo,
+		cwd:  cwd,
+		exe:  exe,
+		jq:   jq,
+		sudo: sudo,
 	}, err
 }
 
@@ -110,28 +98,25 @@ func pickCWD(cwd string) (string, error) {
 	return cwd, err
 }
 
-// parseRAM looks at the ram arg from New() and returns a ram amount and an
-// override value.
-func parseRAM(ram []int) (int, int) {
-	override := 0
-
-	rram := reqRAM
-	if len(ram) == 1 {
-		rram = ram[0]
-		override = 1
-	}
-
-	return rram, override
-}
-
 // Executable is a convenience function that returns the same as
 // os.Executable(), but without the error.
 func (s *Scheduler) Executable() string {
 	return s.exe
 }
 
+// DefaultRequirements returns a minimal set of requirments, which is what
+// NewJob() will use by default.
+func DefaultRequirements() *jqs.Requirements {
+	return &jqs.Requirements{
+		RAM:   reqRAM,
+		Time:  reqTime,
+		Cores: reqCores,
+		Disk:  reqDisk,
+	}
+}
+
 // NewJob is a convenience function for creating Jobs. It sets the job's Cwd
-// to the current working directory, sets CwdMatters to true, applies a minimal
+// to the current working directory, sets CwdMatters to true, applies the given
 // Requirements, and sets Retries to 3.
 //
 // If this Scheduler had been made with sudo: true, cmd will be prefixed with
@@ -139,33 +124,63 @@ func (s *Scheduler) Executable() string {
 //
 // THe supplied depGroup and dep can be blank to not set DepGroups and
 // Dependencies.
-func (s *Scheduler) NewJob(cmd, rep, req, depGroup, dep string) *jobqueue.Job {
-	var depGroups []string
-	if depGroup != "" {
-		depGroups = []string{depGroup}
-	}
-
-	var dependencies jobqueue.Dependencies
-	if dep != "" {
-		dependencies = jobqueue.Dependencies{{DepGroup: dep}}
-	}
-
+//
+// If req is supplied, sets the job override to 1. Otherwise, req will default
+// to a minimal set of requirments, and override will be 0.
+func (s *Scheduler) NewJob(cmd, repGroup, reqGroup, depGroup, dep string, req *jqs.Requirements) *jobqueue.Job {
 	if s.sudo {
 		cmd = "sudo " + cmd
 	}
+
+	req, override := determineOverrideAndReq(req)
 
 	return &jobqueue.Job{
 		Cmd:          cmd,
 		Cwd:          s.cwd,
 		CwdMatters:   true,
-		RepGroup:     rep,
-		ReqGroup:     req,
-		Requirements: s.requirements,
-		DepGroups:    depGroups,
-		Dependencies: dependencies,
+		RepGroup:     repGroup,
+		ReqGroup:     reqGroup,
+		Requirements: req,
+		DepGroups:    createDepGroups(depGroup),
+		Dependencies: createDependencies(dep),
 		Retries:      jobRetries,
-		Override:     uint8(s.override),
+		Override:     override,
 	}
+}
+
+// createDepGroups returns the given depGroup inside a string slice, unless
+// blank, in which case returns nil slice.
+func createDepGroups(depGroup string) []string {
+	var depGroups []string
+	if depGroup != "" {
+		depGroups = []string{depGroup}
+	}
+
+	return depGroups
+}
+
+// createDependencies returns the given dep as a Dependencies if not blank,
+// otherwise nil.
+func createDependencies(dep string) jobqueue.Dependencies {
+	var dependencies jobqueue.Dependencies
+	if dep != "" {
+		dependencies = jobqueue.Dependencies{{DepGroup: dep}}
+	}
+
+	return dependencies
+}
+
+// determineOverrideAndReq returns the given req and an override of 1 if req is
+// not nil, otherwise returns a default req and override of 0.
+func determineOverrideAndReq(req *jqs.Requirements) (*jqs.Requirements, uint8) {
+	override := 1
+
+	if req == nil {
+		req = DefaultRequirements()
+		override = 0
+	}
+
+	return req, uint8(override)
 }
 
 // SubmitJobs adds the given jobs to wr's queue, passing through current

@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/karrick/godirwalk"
@@ -38,8 +39,12 @@ import (
 	"github.com/wtsi-ssg/wrstat/scheduler"
 )
 
-const defaultInodesPerJob = 2000000
-const walkLogOutputBasename = "walk.log"
+const (
+	defaultInodesPerJob   = 2000000
+	walkLogOutputBasename = "walk.log"
+	statTime              = 12 * time.Hour
+	statRAM               = 750
+)
 
 // WriteError is an error received when trying to write discovered paths to
 // disk.
@@ -261,8 +266,12 @@ func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath strin
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
 	}
 
+	req := scheduler.DefaultRequirements()
+	req.Time = statTime
+	req.RAM = statRAM
+
 	for i, path := range outPaths {
-		jobs[i] = s.NewJob(cmd+path, repGrp, "wrstat-stat", depGroup, "")
+		jobs[i] = s.NewJob(cmd+path, repGrp, "wrstat-stat", depGroup, "", req)
 	}
 
 	addJobsToQueue(s, jobs)
