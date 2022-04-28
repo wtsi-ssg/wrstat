@@ -26,35 +26,23 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
-	"github.com/karrick/godirwalk"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/scheduler"
+	"github.com/wtsi-ssg/wrstat/walk"
 )
 
 const (
-	defaultInodesPerJob   = 2000000
+	defaultInodesPerJob   = 1000000
 	walkLogOutputBasename = "walk.log"
 	statTime              = 12 * time.Hour
 	statRAM               = 750
 )
-
-// WriteError is an error received when trying to write discovered paths to
-// disk.
-type WriteError struct {
-	Err error
-}
-
-func (e *WriteError) Error() string { return e.Err.Error() }
-
-func (e *WriteError) Unwrap() error { return e.Err }
 
 // options for this cmd.
 var outputDir string
@@ -154,36 +142,28 @@ func statRepGrp(dir, unique string) string {
 // walkDirAndScheduleStats does the main work.
 func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup, repGroup,
 	yamlPath string, s *scheduler.Scheduler) {
-	outPaths := writeAllPathsToFiles(desiredDir, outputDir, inodes)
-	scheduleStatJobs(outPaths, depGroup, repGroup, yamlPath, s)
-}
-
-// writeAllPathsToFiles quickly traverses the entire file tree, writing out
-// paths it encounters split over n files. It returns the paths to the output
-// files created.
-func writeAllPathsToFiles(desiredDir, outputDir string, inodes int) []string {
 	n := calculateSplitBasedOnInodes(inodes, desiredDir)
-	outPaths := make([]string, n)
 
-	files := make([]*os.File, n)
-	for i := range files {
-		files[i] = createWalkOutputFile(outputDir, i)
-		defer func(num int) {
-			err := files[num].Close()
-			if err != nil {
-				warn("failed to close file: %s", err)
-			}
-		}(i)
-
-		outPaths[i] = files[i].Name()
+	walker, err := walk.New(outputDir, n)
+	if err != nil {
+		die("failed to create walk output files: %s", err)
 	}
 
-	err := walkDir(desiredDir, files)
+	defer func() {
+		err = walker.Close()
+		if err != nil {
+			warn("failed to close walk output file: %s", err)
+		}
+	}()
+
+	err = walker.Walk(desiredDir, func(path string, err error) {
+		warn("error processing %s: %s", path, err)
+	})
 	if err != nil {
 		die("failed to walk the filesystem: %s", err)
 	}
 
-	return outPaths
+	scheduleStatJobs(walker.OutputPaths(), depGroup, repGroup, yamlPath, s)
 }
 
 // calculateSplitBasedOnInodes sees how many used inodes are on the given path
@@ -191,7 +171,7 @@ func writeAllPathsToFiles(desiredDir, outputDir string, inodes int) []string {
 func calculateSplitBasedOnInodes(n int, mount string) int {
 	var statfs syscall.Statfs_t
 	if err := syscall.Statfs(mount, &statfs); err != nil {
-		die("failed to stat the filesystem: %s", err)
+		die("failed to stat the filesystem at %s: %s", mount, err)
 	}
 
 	inodes := statfs.Files - statfs.Ffree
@@ -203,56 +183,6 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 	}
 
 	return jobs
-}
-
-// createWalkOutputFile creates an output file named 'walk.n' within the
-// out directory. Creates out directory if necessary.
-func createWalkOutputFile(out string, n int) *os.File {
-	if err := os.MkdirAll(out, userOnlyPerm); err != nil {
-		die("failed to create output directory: %s", err)
-	}
-
-	outFile, err := os.Create(filepath.Join(out, fmt.Sprintf("walk.%d", n)))
-	if err != nil {
-		die("failed to create output file: %s", err)
-	}
-
-	return outFile
-}
-
-// walkDir walks the file system and writes every path encountered split across
-// the given files.
-func walkDir(desiredDir string, files []*os.File) error {
-	i := 0
-	max := len(files)
-
-	var writeError *WriteError
-
-	return godirwalk.Walk(desiredDir, &godirwalk.Options{
-		Callback: func(path string, de *godirwalk.Dirent) error {
-			_, err := files[i].WriteString(path + "\n")
-			i++
-			if i == max {
-				i = 0
-			}
-
-			if err != nil {
-				err = &WriteError{Err: err}
-			}
-
-			return err
-		},
-		ErrorCallback: func(path string, err error) godirwalk.ErrorAction {
-			warn("error processing %s: %s", path, err)
-
-			if errors.As(err, &writeError) {
-				return godirwalk.Halt
-			}
-
-			return godirwalk.SkipNode
-		},
-		Unsorted: true,
-	})
 }
 
 // scheduleStatJobs adds a 'wrstat stat' job to wr's queue for each out path.
