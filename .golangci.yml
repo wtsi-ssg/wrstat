@@ -6,7 +6,7 @@ run:
 
 linters-settings:
   dupl:
-    threshold: 50
+    threshold: 100
   errcheck:
     check-type-assertions: true
     check-blank: true
@@ -17,10 +17,11 @@ linters-settings:
     statements: 20
   gocognit:
     min-complexity: 9
-  nestif:
-    min-complexity: 2
   gocyclo:
     min-complexity: 7
+  gomnd:
+    ignored-functions:
+      - 'strconv.Parse*'
   govet:
     check-shadowing: true
     enable-all: true
@@ -33,6 +34,8 @@ linters-settings:
     locale: UK
   nakedret:
     max-func-lines: 20
+  nestif:
+    min-complexity: 2
   prealloc:
     simple: true
     range-loops: true
@@ -53,6 +56,8 @@ issues:
     - path: _test\.go
       linters:
         - funlen
+        - maintidx
+        - contextcheck
     - path: cmd
       linters:
         - gochecknoinits
@@ -85,9 +90,13 @@ linters:
     - typecheck
     - unused
     - varcheck
+    - containedctx
+    - contextcheck
     - cyclop
     - dogsled
     - dupl
+    - durationcheck
+    - errname
     - errorlint
     - exportloopref
     - exhaustive
@@ -105,24 +114,27 @@ linters:
     - godox
     - goerr113
     - goimports
-    - golint
     - gomnd
     - gosec
     - ifshort
     - importas
     - lll
+    - maintidx
     - makezero
     - misspell
     - nakedret
     - nestif
     - nilerr
+    - nilnil
     - nlreturn
     - noctx
     - nolintlint
     - prealloc
     - predeclared
+    - revive
     - rowserrcheck
     - stylecheck
+    - tenv
     - thelper
     - unconvert
     - unparam
@@ -131,9 +143,11 @@ linters:
     - wsl
   # disable:
   #   - asciicheck
+  #   - bidichk
   #   - bodyclose
+  #   - decorder
   #   - depguard
-  #   - durationcheck
+  #   - errchkjson
   #   - exhaustivestruct
   #   - gofmt
   #   - gofumpt
@@ -141,8 +155,9 @@ linters:
   #   - gomoddirectives
   #   - gomodguard
   #   - goprintffuncname
+  #   - grouper
   #   - interfacer
-  #   - maligned
+  #   - ireturn
   #   - paralleltest
   #   - promlinter
   #   - revive
@@ -150,4 +165,5 @@ linters:
   #   - tagliatelle
   #   - testpackage
   #   - tparallel
+  #   - varnamelen
   #   - wrapcheck
