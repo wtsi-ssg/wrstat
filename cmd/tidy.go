@@ -226,7 +226,7 @@ func matchOwnership(path string, current, desired fs.FileInfo) error {
 // getUIDAndGID extracts the UID and GID from a FileInfo. NB: this will only
 // work on linux.
 func getUIDAndGID(info fs.FileInfo) (int, int) {
-	return int(info.Sys().(*syscall.Stat_t).Uid), int(info.Sys().(*syscall.Stat_t).Gid)
+	return int(info.Sys().(*syscall.Stat_t).Uid), int(info.Sys().(*syscall.Stat_t).Gid) //nolint: forcetypeassert
 }
 
 // matchReadWrite ensures that the given file with the current fileinfo has the

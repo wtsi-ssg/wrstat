@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
+	jqs "github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/scheduler"
 )
@@ -155,12 +156,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 		cmd += "--sudo "
 	}
 
-	req := scheduler.DefaultRequirements()
-	reqWalk := req.Clone()
-	reqWalk.Time = walkTime
-	reqCombine := req.Clone()
-	reqCombine.Time = combineTime
-	reqCombine.RAM = combineRAM
+	reqWalk, reqCombine := reqs()
 
 	for i, path := range desiredPaths {
 		thisUnique := scheduler.UniqueString()
@@ -176,6 +172,18 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 
 	addJobsToQueue(s, walkJobs)
 	addJobsToQueue(s, combineJobs)
+}
+
+// reqs returns Requirements suitable for walk and combine jobs.
+func reqs() (*jqs.Requirements, *jqs.Requirements) {
+	req := scheduler.DefaultRequirements()
+	reqWalk := req.Clone()
+	reqWalk.Time = walkTime
+	reqCombine := req.Clone()
+	reqCombine.Time = combineTime
+	reqCombine.RAM = combineRAM
+
+	return reqWalk, reqCombine
 }
 
 // walkRepGrp returns a rep_grp that can be used for the walk jobs multi will

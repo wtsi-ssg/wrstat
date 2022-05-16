@@ -39,7 +39,7 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
-const testErr = Error("test error")
+const errTest = Error("test error")
 
 func TestReporter(t *testing.T) {
 	var opErr error
@@ -72,7 +72,7 @@ func TestReporter(t *testing.T) {
 				So(err, ShouldBeNil)
 				err = r.TimeOperation(op)
 				So(err, ShouldBeNil)
-				opErr = testErr
+				opErr = errTest
 				err = r.TimeOperation(op)
 				So(err, ShouldNotBeNil)
 				opErr = nil
