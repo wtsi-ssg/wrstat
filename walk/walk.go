@@ -139,8 +139,8 @@ func (w *Walker) Walk(dir string, cb ErrorCallback) error {
 		go func(thisDir string) {
 			defer wg.Done()
 
-			err = w.walkDir(thisDir, cb)
-			errCh <- err
+			werr := w.walkDir(thisDir, cb)
+			errCh <- werr
 		}(dir)
 	}
 
