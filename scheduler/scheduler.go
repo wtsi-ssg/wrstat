@@ -41,7 +41,7 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
-const dupJobsErr = Error("some of the added jobs were duplicates")
+const errDupJobs = Error("some of the added jobs were duplicates")
 
 // some consts for the jobs returned by NewJob().
 const jobRetries uint8 = 30
@@ -197,7 +197,7 @@ func (s *Scheduler) SubmitJobs(jobs []*jobqueue.Job) error {
 	}
 
 	if inserts != len(jobs) {
-		return dupJobsErr
+		return errDupJobs
 	}
 
 	return nil
