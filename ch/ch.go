@@ -136,7 +136,7 @@ func (c *chain) Call(f func() error) {
 // getGIDFromFileInfo extracts the GID from a FileInfo. NB: this will only work
 // on linux.
 func getGIDFromFileInfo(info fs.FileInfo) int {
-	return int(info.Sys().(*syscall.Stat_t).Gid)
+	return int(info.Sys().(*syscall.Stat_t).Gid) //nolint: forcetypeassert
 }
 
 // chownGroup chown's path to have newGID as its group owner, if newGID is
