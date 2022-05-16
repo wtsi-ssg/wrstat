@@ -32,6 +32,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -43,8 +44,13 @@ func TestWalk(t *testing.T) {
 	Convey("Given a directory to walk and an output directory", t, func() {
 		walkDir, outDir, expectedPaths := prepareTestDirs(t)
 
+		var mu sync.Mutex
+
 		var walkErrors []error
 		cb := func(_ string, err error) {
+			mu.Lock()
+			defer mu.Unlock()
+
 			walkErrors = append(walkErrors, err)
 		}
 

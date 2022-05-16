@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/karrick/godirwalk"
 )
@@ -52,8 +53,12 @@ func (e *WriteError) Unwrap() error { return e.Err }
 // Walker can be used to quickly walk a filesystem to just see what paths there
 // are on it.
 type Walker struct {
-	outDir string
-	files  []*os.File
+	outDir   string
+	files    []*os.File
+	filesI   int
+	filesMax int
+	mu       sync.Mutex
+	mus      []sync.Mutex
 }
 
 // New creates a new Walker that can Walk() a filesystem and write all the
@@ -89,6 +94,8 @@ func (w *Walker) createOutputFiles(n int) error {
 	}
 
 	w.files = files
+	w.filesMax = len(files)
+	w.mus = make([]sync.Mutex, len(files))
 
 	return nil
 }
@@ -112,24 +119,116 @@ type ErrorCallback func(path string, err error)
 // will mean the path isn't output, but the walk will continue and this method
 // won't return an error.
 func (w *Walker) Walk(dir string, cb ErrorCallback) error {
-	i := 0
-	max := len(w.files)
+	subDirs, otherEntries, ok := w.getImmediateChildren(dir, cb)
+	if !ok {
+		return nil
+	}
 
+	err := w.writeEntries(append(otherEntries, dir), cb)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+
+	errCh := make(chan error, len(subDirs))
+
+	for _, dir := range subDirs {
+		wg.Add(1)
+
+		go func(thisDir string) {
+			defer wg.Done()
+
+			err = w.walkDir(thisDir, cb)
+			errCh <- err
+		}(dir)
+	}
+
+	wg.Wait()
+
+	for range subDirs {
+		gerr := <-errCh
+		if gerr != nil {
+			return gerr
+		}
+	}
+
+	return nil
+}
+
+// getImmediateChildren finds the immediate children of the given directory
+// and returns any entries that are subdirectories, then any other entries. Like
+// walkDir(), any failure to read is passed to the given callback, but we don't
+// return an error (just nil results and false).
+func (w *Walker) getImmediateChildren(dir string, cb ErrorCallback) ([]string, []string, bool) {
+	children, err := godirwalk.ReadDirents(dir, nil)
+	if err != nil {
+		cb(dir, err)
+
+		return nil, nil, false
+	}
+
+	var subDirs, otherEntries []string
+
+	for _, child := range children {
+		path := filepath.Join(dir, child.Name())
+
+		if child.ModeType().IsDir() {
+			subDirs = append(subDirs, path)
+		} else {
+			otherEntries = append(otherEntries, path)
+		}
+	}
+
+	return subDirs, otherEntries, true
+}
+
+// writeEntries writes the given paths to our output files.
+func (w *Walker) writeEntries(paths []string, cb ErrorCallback) error {
+	for _, path := range paths {
+		if err := w.writePath(path); err != nil {
+			cb(path, err)
+
+			return err
+		}
+	}
+
+	return nil
+}
+
+// writePath is a thread-safe way of writing the given path to our next output
+// file. Returns a WriteError on failure to write to an output file.
+func (w *Walker) writePath(path string) error {
+	w.mu.Lock()
+	i := w.filesI
+	w.filesI++
+
+	if w.filesI == w.filesMax {
+		w.filesI = 0
+	}
+
+	w.mu.Unlock()
+
+	w.mus[i].Lock()
+	defer w.mus[i].Unlock()
+
+	_, err := w.files[i].WriteString(path + "\n")
+	if err != nil {
+		err = &WriteError{Err: err}
+	}
+
+	return err
+}
+
+// walkDir walks the given directory, writing the paths to entries found to our
+// output files. Ends the walk if we fail to write to an output file, skips
+// entries we can't read. All errors are supplied to the given error callback.
+func (w *Walker) walkDir(dir string, cb ErrorCallback) error {
 	var writeError *WriteError
 
 	return godirwalk.Walk(dir, &godirwalk.Options{
 		Callback: func(path string, de *godirwalk.Dirent) error {
-			_, err := w.files[i].WriteString(path + "\n")
-			i++
-			if i == max {
-				i = 0
-			}
-
-			if err != nil {
-				err = &WriteError{Err: err}
-			}
-
-			return err
+			return w.writePath(path)
 		},
 		ErrorCallback: func(path string, err error) godirwalk.ErrorAction {
 			cb(path, err)
