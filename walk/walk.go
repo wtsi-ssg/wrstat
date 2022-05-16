@@ -124,36 +124,11 @@ func (w *Walker) Walk(dir string, cb ErrorCallback) error {
 		return nil
 	}
 
-	err := w.writeEntries(append(otherEntries, dir), cb)
-	if err != nil {
+	if err := w.writeEntries(append(otherEntries, dir), cb); err != nil {
 		return err
 	}
 
-	var wg sync.WaitGroup
-
-	errCh := make(chan error, len(subDirs))
-
-	for _, dir := range subDirs {
-		wg.Add(1)
-
-		go func(thisDir string) {
-			defer wg.Done()
-
-			werr := w.walkDir(thisDir, cb)
-			errCh <- werr
-		}(dir)
-	}
-
-	wg.Wait()
-
-	for range subDirs {
-		gerr := <-errCh
-		if gerr != nil {
-			return gerr
-		}
-	}
-
-	return nil
+	return w.walkSubDirs(subDirs, cb)
 }
 
 // getImmediateChildren finds the immediate children of the given directory
@@ -218,6 +193,34 @@ func (w *Walker) writePath(path string) error {
 	}
 
 	return err
+}
+
+// walkSubDirs calls walkDir() on each given subDir concurrently.
+func (w *Walker) walkSubDirs(subDirs []string, cb ErrorCallback) error {
+	var wg sync.WaitGroup
+
+	errCh := make(chan error, len(subDirs))
+
+	for _, dir := range subDirs {
+		wg.Add(1)
+
+		go func(thisDir string) {
+			defer wg.Done()
+
+			werr := w.walkDir(thisDir, cb)
+			errCh <- werr
+		}(dir)
+	}
+
+	wg.Wait()
+
+	for range subDirs {
+		if err := <-errCh; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // walkDir walks the given directory, writing the paths to entries found to our
