@@ -41,8 +41,6 @@ const (
 	walkTime    = 19 * time.Hour
 	combineTime = 40 * time.Minute
 	combineRAM  = 150
-	dbTime      = 12 * time.Hour
-	dbRAM       = 16000
 )
 
 // options for this cmd.
@@ -117,7 +115,7 @@ deleted.`,
 			die("at least 1 directory of interest must be supplied")
 		}
 
-		s, d := newScheduler(workDir, forcedQueue, moreMemory)
+		s, d := newScheduler(workDir, forcedQueue)
 		defer d()
 
 		unique := scheduler.UniqueString()

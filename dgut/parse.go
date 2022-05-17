@@ -74,11 +74,7 @@ func parseDGUTLines(data io.Reader, cb dgutParserCallBack) error {
 		}
 
 		if thisDir != dgut.Dir {
-			if dgut.Dir != "" {
-				dgut.GUTs = guts
-				cb(dgut)
-			}
-
+			populateAndEmitDGUT(dgut, guts, cb)
 			dgut, guts = &DGUT{Dir: thisDir}, []*GUT{}
 		}
 
@@ -91,6 +87,15 @@ func parseDGUTLines(data io.Reader, cb dgutParserCallBack) error {
 	}
 
 	return scanner.Err()
+}
+
+// populateAndEmitDGUT adds guts to dguts and sends dgut to cb, but only if
+// the dgut has a Dir.
+func populateAndEmitDGUT(dgut *DGUT, guts []*GUT, cb dgutParserCallBack) {
+	if dgut.Dir != "" {
+		dgut.GUTs = guts
+		cb(dgut)
+	}
 }
 
 // parseDGUTLine parses a line of summary.DirGroupUserType.Output() into a
