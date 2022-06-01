@@ -312,6 +312,15 @@ func TestServer(t *testing.T) {
 				expected, err := tree.Where("/", nil, 2)
 				So(err, ShouldBeNil)
 
+				expectedNonRoot := make(dgut.DCSs, len(expected))
+				for i, dcs := range expected {
+					expectedNonRoot[i] = dcs
+
+					if dcs.Dir == "/a" {
+						expectedNonRoot[i] = &dgut.DirCountSize{Dir: "/a", Count: 14, Size: 85}
+					}
+				}
+
 				tree.Close()
 
 				Convey("You can get results after calling LoadDGUTDB", func() {
@@ -332,7 +341,7 @@ func TestServer(t *testing.T) {
 						groups := gidsToGroups(t, gids...)
 
 						matrix := map[string]dgut.DCSs{
-							"?groups=" + groups[0] + "," + groups[1]: expected,
+							"?groups=" + groups[0] + "," + groups[1]: expectedNonRoot,
 							"?groups=" + groups[0]: {
 								{Dir: "/a/b", Count: 9, Size: 80},
 								{Dir: "/a/b/d", Count: 7, Size: 70},
@@ -343,7 +352,7 @@ func TestServer(t *testing.T) {
 							},
 							"?users=root," + username: expected,
 							"?users=root": {
-								{Dir: "/a", Count: 9, Size: 45},
+								{Dir: "/a", Count: 10, Size: 46},
 								{Dir: "/a/b/d/g", Count: 4, Size: 40},
 								{Dir: "/a/c/d", Count: 5, Size: 5},
 							},
@@ -362,7 +371,7 @@ func TestServer(t *testing.T) {
 								{Dir: "/", Count: 0, Size: 0},
 							},
 							"?splits=0": {
-								{Dir: "/a", Count: 14, Size: 85},
+								{Dir: "/a", Count: 15, Size: 86},
 							},
 							"?dir=/a/b/e/h": {
 								{Dir: "/a/b/e/h", Count: 2, Size: 10},
@@ -461,16 +470,22 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
-			So(dcss[0].Count, ShouldEqual, 14)
+			So(dcss[0].Count, ShouldEqual, 15)
 
 			json, dcss, errg = GetWhereDataIs(addr, cert, token, "/", g.Name, "", "", "0")
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
 			So(dcss[0].Count, ShouldEqual, 9)
+
+			json, dcss, errg = GetWhereDataIs(addr, cert, token, "/", "", "root", "", "0")
+			So(errg, ShouldBeNil)
+			So(string(json), ShouldNotBeBlank)
+			So(len(dcss), ShouldEqual, 1)
+			So(dcss[0].Count, ShouldEqual, 10)
 		})
 
-		Convey("Normal users have restricted access", func() {
+		Convey("Normal users have access restricted only by group", func() {
 			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
 				return true, []string{uid}, gids
 			})
@@ -486,16 +501,19 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
-			So(dcss[0].Count, ShouldEqual, 5)
+			So(dcss[0].Count, ShouldEqual, 14)
 
 			json, dcss, errg = GetWhereDataIs(addr, cert, token, "/", g.Name, "", "", "0")
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
-			So(dcss[0].Count, ShouldEqual, 5)
+			So(dcss[0].Count, ShouldEqual, 9)
 
 			_, _, errg = GetWhereDataIs(addr, cert, token, "/", "", "root", "", "0")
-			So(errg, ShouldNotBeNil)
+			So(errg, ShouldBeNil)
+			So(string(json), ShouldNotBeBlank)
+			So(len(dcss), ShouldEqual, 1)
+			So(dcss[0].Count, ShouldEqual, 9)
 		})
 	})
 }
@@ -626,11 +644,13 @@ func exampleDGUTData(uid, gidA, gidB string) string {
 /	x	z	7	1	5
 /	x	0	0	4	40
 /	y	0	0	5	5
+/	0	0	0	1	1
 /a	x	z	0	3	30
 /a	x	z	1	2	10
 /a	x	z	7	1	5
 /a	x	0	0	4	40
 /a	y	0	0	5	5
+/a	0	0	0	1	1
 /a/b	x	z	0	3	30
 /a/b	x	z	1	2	10
 /a/b	x	z	7	1	5

@@ -110,13 +110,15 @@ certificate can be provided with --cert, or the WRSTAT_SERVER_CERT environment
 variable, to force trust in it.
 
 On first usage, you will be asked to provide your (LDAP) password to
-authenticate with the server. The server will find out what unix groups and
-users you are allowed to know about, and a JWT with this information will be
-stored in your home directory at ~/.wrstat.jwt.
+authenticate with the server. The server will find out what unix groups you are
+allowed to know about, and a JWT with this information will be stored in your
+home directory at ~/.wrstat.jwt.
 
-When you run this, you will effectively have hardcoded --groups and --users
-filters corresponding to your permissions, though you can restrict it further
-to just some of the groups and users you are allowed to see.
+When you run this, you will effectively have a hardcoded --groups filter
+corresponding to your permissions, though you can restrict it further to a
+subset of the groups you are allowed to see. (You will by default see
+information about files created by all users that are group owned by the groups
+you belong to, but can also filter on --users as well if desired.)
 
 With the JWT in place, you won't have to provide your password again, until it
 expires. Expiry time is 5 days, but the JWT is automatically refreshed every
