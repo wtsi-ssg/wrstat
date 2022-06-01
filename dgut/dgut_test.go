@@ -64,6 +64,11 @@ func TestDGUT(t *testing.T) {
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			So(err.Error(), ShouldEqual, "the provided data was not in dgut format")
+
+			_, _, err = parseDGUTLine("\t\t\t\t\t\n")
+			So(err, ShouldEqual, ErrBlankLine)
+
+			So(err.Error(), ShouldEqual, "the provided line had no information")
 		})
 	})
 
@@ -513,6 +518,7 @@ func testDGUTData() string {
 /a/b/e/h/tmp	1	101	1	1	5
 /a/b/e/h/tmp	1	101	7	1	5
 /a/c	2	102	0	5	5
+					
 /a/c/d	2	102	0	5	5
 `
 }
