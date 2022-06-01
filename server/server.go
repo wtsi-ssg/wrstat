@@ -199,7 +199,7 @@ func (s *Server) getWhere(c *gin.Context) {
 		return
 	}
 
-	filterUIDs, err := s.restrictedUsers(c, users)
+	filterUIDs, err := s.userIDsFromNames(users)
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
 
@@ -319,25 +319,18 @@ func restrictIDsToWanted(ids []string, wanted map[string]bool) ([]string, error)
 	return final, nil
 }
 
-// restrictedUsers checks our JWT if present, and will return the user IDs that
-// user is allowed to query. If users arg is not blank, but a comma separated
-// list of user names, further limits the users returned to be amongst those.
-// If the JWT has no users specified, returns all the given users as UIDs.
-func (s *Server) restrictedUsers(c *gin.Context, users string) ([]string, error) {
-	ids, wanted, err := getWantedIDs(users, userNameToUID)
+// userIDsFromNames returns the user IDs that correspond to the given comma
+// separated list of user names. This does not check the usernames stored in the
+// JWT, because users are allowed to know about files owned by other users in
+// the groups they belong to; security restrictions are purely based on the
+// enforced restrictedGroups().
+func (s *Server) userIDsFromNames(users string) ([]string, error) {
+	ids, _, err := getWantedIDs(users, userNameToUID)
 	if err != nil {
 		return nil, err
 	}
 
-	allowedIDs := s.getRestrictedIDs(c, func(u *User) []string {
-		return u.UIDs
-	})
-
-	if allowedIDs == nil {
-		return ids, nil
-	}
-
-	return restrictIDsToWanted(allowedIDs, wanted)
+	return ids, nil
 }
 
 // userNameToUID converts user name to UID.
