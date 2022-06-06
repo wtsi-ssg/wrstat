@@ -47,46 +47,51 @@ func TestTree(t *testing.T) {
 		So(errc, ShouldBeNil)
 		So(tree, ShouldNotBeNil)
 
+		expectedUIDs := []uint32{101, 102}
+		expectedGIDs := []uint32{1, 2}
+		expectedUIDsOne := []uint32{101}
+		expectedGIDsOne := []uint32{1}
+
 		Convey("You can query the Tree for DirInfo", func() {
 			di, err := tree.DirInfo("/", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirCountSize{"/", 14, 85},
-				Children: []*DirCountSize{
-					{"/a", 14, 85},
+				Current: &DirSummary{"/", 14, 85, expectedUIDs, expectedGIDs},
+				Children: []*DirSummary{
+					{"/a", 14, 85, expectedUIDs, expectedGIDs},
 				},
 			})
 
 			di, err = tree.DirInfo("/a", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirCountSize{"/a", 14, 85},
-				Children: []*DirCountSize{
-					{"/a/b", 9, 80},
-					{"/a/c", 5, 5},
+				Current: &DirSummary{"/a", 14, 85, expectedUIDs, expectedGIDs},
+				Children: []*DirSummary{
+					{"/a/b", 9, 80, expectedUIDs, expectedGIDsOne},
+					{"/a/c", 5, 5, []uint32{102}, []uint32{2}},
 				},
 			})
 
 			di, err = tree.DirInfo("/a", &Filter{FTs: []summary.DirGUTFileType{1}})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirCountSize{"/a", 2, 10},
-				Children: []*DirCountSize{
-					{"/a/b", 2, 10},
+				Current: &DirSummary{"/a", 2, 10, expectedUIDsOne, expectedGIDsOne},
+				Children: []*DirSummary{
+					{"/a/b", 2, 10, expectedUIDsOne, expectedGIDsOne},
 				},
 			})
 
 			di, err = tree.DirInfo("/a/b/e/h/tmp", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current:  &DirCountSize{"/a/b/e/h/tmp", 1, 5},
+				Current:  &DirSummary{"/a/b/e/h/tmp", 1, 5, expectedUIDsOne, expectedGIDsOne},
 				Children: nil,
 			})
 
 			di, err = tree.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{3}})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current:  &DirCountSize{"/", 0, 0},
+				Current:  &DirSummary{"/", 0, 0, []uint32{}, []uint32{}},
 				Children: nil,
 			})
 		})
@@ -95,29 +100,29 @@ func TestTree(t *testing.T) {
 			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 0)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30},
+				{"/a/b/d", 3, 30, expectedUIDsOne, expectedGIDsOne},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, 0)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b", 5, 40},
+				{"/a/b", 5, 40, expectedUIDsOne, expectedGIDsOne},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 1)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30},
-				{"/a/b/d/g", 2, 20},
-				{"/a/b/d/f", 1, 10},
+				{"/a/b/d", 3, 30, expectedUIDsOne, expectedGIDsOne},
+				{"/a/b/d/g", 2, 20, expectedUIDsOne, expectedGIDsOne},
+				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 2)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30},
-				{"/a/b/d/g", 2, 20},
-				{"/a/b/d/f", 1, 10},
+				{"/a/b/d", 3, 30, expectedUIDsOne, expectedGIDsOne},
+				{"/a/b/d/g", 2, 20, expectedUIDsOne, expectedGIDsOne},
+				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne},
 			})
 
 			_, err = tree.Where("/foo", nil, 1)
@@ -128,7 +133,7 @@ func TestTree(t *testing.T) {
 			_, err := tree.DirInfo("/foo", nil)
 			So(err, ShouldNotBeNil)
 
-			di := &DirInfo{Current: &DirCountSize{"/", 14, 85}}
+			di := &DirInfo{Current: &DirSummary{"/", 14, 85, expectedUIDs, expectedGIDs}}
 			err = tree.addChildInfo(di, []string{"/foo"}, nil)
 			So(err, ShouldNotBeNil)
 		})
@@ -166,15 +171,15 @@ func TestTree(t *testing.T) {
 		dcss, err := tree.Where("/", nil, 0)
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2},
+			{"/a/b/c", 2, 2, []uint32{11}, []uint32{1}},
 		})
 
 		dcss, err = tree.Where("/", nil, 1)
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2},
-			{"/a/b/c/d", 1, 1},
-			{"/a/b/c/e", 1, 1},
+			{"/a/b/c", 2, 2, []uint32{11}, []uint32{1}},
+			{"/a/b/c/d", 1, 1, []uint32{11}, []uint32{1}},
+			{"/a/b/c/e", 1, 1, []uint32{11}, []uint32{1}},
 		})
 	})
 }

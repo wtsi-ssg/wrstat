@@ -443,12 +443,13 @@ func (d *DB) Close() {
 }
 
 // DirInfo tells you the total number of files and their total size nested under
-// the given directory. See GUTs.CountAndSize for an explanation of the filter.
+// the given directory, along with the UIDs and GIDs of those files. See
+// GUTs.Summary for an explanation of the filter.
 //
 // Returns an error if dir doesn't exist.
 //
 // You must call Open() before calling this.
-func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, error) {
+func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, []uint32, []uint32, error) {
 	var notFound int
 
 	dgut := &DGUT{}
@@ -464,12 +465,12 @@ func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, error) {
 	}
 
 	if notFound == len(d.readSets) {
-		return 0, 0, ErrDirNotFound
+		return 0, 0, nil, nil, ErrDirNotFound
 	}
 
-	c, s := dgut.CountAndSize(filter)
+	c, s, u, g := dgut.Summary(filter)
 
-	return c, s, nil
+	return c, s, u, g, nil
 }
 
 // getDGUTFromDBAndAppend calls getDGUTFromDB() and appends the result

@@ -25,7 +25,11 @@
 
 package dgut
 
-import "github.com/wtsi-ssg/wrstat/summary"
+import (
+	"sort"
+
+	"github.com/wtsi-ssg/wrstat/summary"
+)
 
 // GUT handles group,user,type,count,size information.
 type GUT struct {
@@ -127,12 +131,12 @@ func (g *GUT) amTempAndNotFilteredJustForTemp(filter *Filter) bool {
 	return g.FT == summary.DGUTFileTypeTemp && len(filter.FTs) > 1
 }
 
-// GUTs is a slice of *GUT, offering ways to filter and sum the information in
-// our *GUTs.
+// GUTs is a slice of *GUT, offering ways to filter and summarise the
+// information in our *GUTs.
 type GUTs []*GUT
 
-// CountAndSize sums the count and size of all our GUT elements and returns the
-// results.
+// Summary sums the count and size of all our GUT elements and returns the
+// results, along with lists of the unique UIDs and GIDs in our GUT elements.
 //
 // Provide a Filter to ignore GUT elements that do not match one of the
 // specified GIDs, one of the UIDs, and one of the FTs. If one of those
@@ -143,17 +147,38 @@ type GUTs []*GUT
 // Note that FT 7 is "temporary" files, and because a file can be both
 // temporary and another type, if your Filter's FTs slice doesn't contain
 // just DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored.
-func (g GUTs) CountAndSize(filter *Filter) (uint64, uint64) {
-	var c, s uint64
+func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32) {
+	var count, size uint64
+
+	uniqueUIDs := make(map[uint32]bool)
+	uniqueGIDs := make(map[uint32]bool)
 
 	for _, gut := range g {
 		if !gut.PassesFilter(filter) {
 			continue
 		}
 
-		c += gut.Count
-		s += gut.Size
+		count += gut.Count
+		size += gut.Size
+
+		uniqueUIDs[gut.UID] = true
+		uniqueGIDs[gut.GID] = true
 	}
 
-	return c, s
+	return count, size, idMapToSlice(uniqueUIDs), idMapToSlice(uniqueGIDs)
+}
+
+// idMapToSlice returns a sorted slice of the given keys.
+func idMapToSlice(m map[uint32]bool) []uint32 {
+	ids := make([]uint32, len(m))
+	i := 0
+
+	for id := range m {
+		ids[i] = id
+		i++
+	}
+
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+
+	return ids
 }

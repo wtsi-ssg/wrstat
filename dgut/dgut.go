@@ -60,11 +60,12 @@ func decodeDGUTbytes(ch codec.Handle, dir, encoded []byte) *DGUT {
 	}
 }
 
-// CountAndSize sums the count and size of all our GUTs and returns the results.
+// Summary sums the count and size of all our GUTs and returns the results,
+// along with the unique set of UIDs and GIDs in all our GUTs.
 //
-// See GUTs.CountAndSize for an explanation of the filter.
-func (d *DGUT) CountAndSize(filter *Filter) (uint64, uint64) {
-	return d.GUTs.CountAndSize(filter)
+// See GUTs.Summary for an explanation of the filter.
+func (d *DGUT) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32) {
+	return d.GUTs.Summary(filter)
 }
 
 // Append appends the GUTs in the given DGUT to our own. Useful when you have

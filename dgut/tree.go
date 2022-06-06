@@ -45,15 +45,18 @@ func NewTree(paths ...string) (*Tree, error) {
 	return &Tree{db: db}, nil
 }
 
-// DirCountSize holds nested file count and size information on a directory.
-type DirCountSize struct {
+// DirSummary holds nested file count and size information on a directory. It
+// also holds which users and groups own files nested under the directory.
+type DirSummary struct {
 	Dir   string
 	Count uint64
 	Size  uint64
+	UIDs  []uint32
+	GIDs  []uint32
 }
 
-// DCSs is a Size-sortable slice of DirCountSize.
-type DCSs []*DirCountSize
+// DCSs is a Size-sortable slice of DirSummary.
+type DCSs []*DirSummary
 
 func (d DCSs) Len() int {
 	return len(d)
@@ -65,11 +68,11 @@ func (d DCSs) Less(i, j int) bool {
 	return d[i].Size > d[j].Size
 }
 
-// DirInfo holds nested file count and size information on a directory, and also
-// its immediate child directories.
+// DirInfo holds nested file count, size, UID and GID information on a
+// directory, and also its immediate child directories.
 type DirInfo struct {
-	Current  *DirCountSize
-	Children []*DirCountSize
+	Current  *DirSummary
+	Children []*DirSummary
 }
 
 // IsSameAsChild tells you if this DirInfo has only 1 child, and the child
@@ -79,7 +82,8 @@ func (d *DirInfo) IsSameAsChild() bool {
 }
 
 // DirInfo tells you the total number of files and their total size nested under
-// the given directory. See GUTs.CountAndSize for an explanation of the filter.
+// the given directory, along with the UIDs and GIDs that own those files.
+// See GUTs.Summary for an explanation of the filter.
 //
 // It also tells you the same information about the immediate child directories
 // of the given directory (if the children have files in them that pass the
@@ -87,7 +91,7 @@ func (d *DirInfo) IsSameAsChild() bool {
 //
 // Returns an error if dir doesn't exist.
 func (t *Tree) DirInfo(dir string, filter *Filter) (*DirInfo, error) {
-	dcs, err := t.getDirCountSizeInfo(dir, filter)
+	dcs, err := t.getSummaryInfo(dir, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -102,26 +106,29 @@ func (t *Tree) DirInfo(dir string, filter *Filter) (*DirInfo, error) {
 	return di, err
 }
 
-// getDirCountSizeInfo accesses the database to retrieve the count and size info
-// for a given directory and filter.
-func (t *Tree) getDirCountSizeInfo(dir string, filter *Filter) (*DirCountSize, error) {
-	c, s, err := t.db.DirInfo(dir, filter)
+// getSummaryInfo accesses the database to retrieve the count and size info
+// for a given directory and filter, along with the UIDs and GIDs that own those
+// files.
+func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
+	c, s, u, g, err := t.db.DirInfo(dir, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	return &DirCountSize{
+	return &DirSummary{
 		Dir:   dir,
 		Count: c,
 		Size:  s,
+		UIDs:  u,
+		GIDs:  g,
 	}, nil
 }
 
-// addChildInfo adds DirCountSize info of the given child paths to the di's
+// addChildInfo adds DirSummary info of the given child paths to the di's
 // Children. If a child dir has no files in it, it is ignored.
 func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) error {
 	for _, child := range children {
-		dcs, errc := t.getDirCountSizeInfo(child, filter)
+		dcs, errc := t.getSummaryInfo(child, filter)
 		if errc != nil {
 			return errc
 		}
@@ -142,7 +149,7 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 // depth of 0 on each of the deepest directory's children would give. And so on
 // recursively for higher depths.
 //
-// See GUTs.CountAndSize for an explanation of the filter.
+// See GUTs.Summary for an explanation of the filter.
 //
 // For example, if all user 354's files are in the directories /a/b/c/d (2
 // files), /a/b/c/d/1 (1 files), /a/b/c/d/2 (2 files) and /a/b/e/f/g (2 files),
@@ -152,7 +159,7 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 // would tell you that "/a/b" has 7 files, "/a/b/c/d" has 5 files, "/a/b/c/d/1"
 // has 1 file, "/a/b/c/d/2" has 2 files, and "/a/b/e/f/g" has 2 files.
 //
-// The returned DirCountSizes are sorted by Size, largest first.
+// The returned DirSummarys are sorted by Size, largest first.
 //
 // Returns an error if dir doesn't exist.
 func (t *Tree) Where(dir string, filter *Filter, depth int) (DCSs, error) {
@@ -168,7 +175,7 @@ func (t *Tree) Where(dir string, filter *Filter, depth int) (DCSs, error) {
 	children := di.Children
 
 	for i := 0; i < depth; i++ {
-		var theseChildren []*DirCountSize
+		var theseChildren []*DirSummary
 
 		for _, dcs := range children {
 			// where0 can't return an error here, because we're supplying it a
