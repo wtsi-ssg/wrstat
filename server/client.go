@@ -30,7 +30,6 @@ import (
 	"strings"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/wtsi-ssg/wrstat/dgut"
 )
 
 type Error string
@@ -130,7 +129,7 @@ func newAuthenticatedClientRequest(url, cert, jwt string) *resty.Request {
 
 // GetWhereDataIs is a client call to a Server listening at the given
 // domain:port url that queries where data is and returns the raw response body
-// (JSON string), and that body converted in to dgut.DCSs.
+// (JSON string), and that body converted in to a slice of *DirSummary.
 //
 // Provide a non-blank path to a certificate to force us to trust that
 // certificate, eg. if the server was started with a self-signed certificate.
@@ -138,10 +137,10 @@ func newAuthenticatedClientRequest(url, cert, jwt string) *resty.Request {
 // You must first Login() to get a JWT that you must supply here.
 //
 // The other parameters correspond to arguments that dgut.Tree.Where() takes.
-func GetWhereDataIs(url, cert, jwt, dir, groups, users, types, splits string) ([]byte, dgut.DCSs, error) {
+func GetWhereDataIs(url, cert, jwt, dir, groups, users, types, splits string) ([]byte, []*DirSummary, error) {
 	r := newAuthenticatedClientRequest(url, cert, jwt)
 
-	resp, err := r.SetResult(dgut.DCSs{}).
+	resp, err := r.SetResult([]*DirSummary{}).
 		ForceContentType("application/json").
 		SetQueryParams(map[string]string{
 			"dir":    dir,
@@ -159,7 +158,7 @@ func GetWhereDataIs(url, cert, jwt, dir, groups, users, types, splits string) ([
 	case http.StatusUnauthorized, http.StatusNotFound:
 		return nil, nil, ErrNoAuth
 	case http.StatusOK:
-		return resp.Body(), *resp.Result().(*dgut.DCSs), nil //nolint:forcetypeassert
+		return resp.Body(), *resp.Result().(*[]*DirSummary), nil //nolint:forcetypeassert
 	}
 
 	return nil, nil, ErrBadQuery

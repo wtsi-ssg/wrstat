@@ -35,6 +35,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -63,6 +64,39 @@ func TestServer(t *testing.T) {
 	Convey("Given a Server", t, func() {
 		var logWriter strings.Builder
 		s := New(&logWriter)
+
+		Convey("You can convert dgut.DCSs to DirSummarys", func() {
+			uid32, err := strconv.Atoi(uid)
+			So(err, ShouldBeNil)
+			gid32, err := strconv.Atoi(gids[0])
+			So(err, ShouldBeNil)
+
+			dcss := dgut.DCSs{
+				{
+					Dir:   "/foo",
+					Count: 1,
+					Size:  2,
+					UIDs:  []uint32{uint32(uid32), 9999999},
+					GIDs:  []uint32{uint32(gid32), 9999999},
+				},
+				{
+					Dir:   "/bar",
+					Count: 1,
+					Size:  2,
+					UIDs:  []uint32{uint32(uid32), 9999999},
+					GIDs:  []uint32{uint32(gid32), 9999999},
+				},
+			}
+
+			dss := s.dcssToSummaries(dcss)
+
+			So(len(dss), ShouldEqual, 2)
+			So(dss[0].Dir, ShouldEqual, "/foo")
+			So(dss[0].Count, ShouldEqual, 1)
+			So(dss[0].Size, ShouldEqual, 2)
+			So(dss[0].Users, ShouldResemble, []string{username, "unknown"})
+			So(dss[0].Groups, ShouldResemble, []string{gidToGroup(t, gids[0]), "unknown"})
+		})
 
 		Convey("You can Start the Server", func() {
 			checker, err := port.NewChecker("localhost")
@@ -308,20 +342,18 @@ func TestServer(t *testing.T) {
 			Convey("And given a dgut database", func() {
 				path, err := createExampleDB(t, uid, gids[0], gids[1])
 				So(err, ShouldBeNil)
-				gidA, erra := strconv.Atoi(gids[0])
-				So(erra, ShouldBeNil)
-				gidB, erra := strconv.Atoi(gids[1])
-				So(erra, ShouldBeNil)
-				uidUser, erra := strconv.Atoi(uid)
-				So(erra, ShouldBeNil)
+				groupA := gidToGroup(t, gids[0])
+				groupB := gidToGroup(t, gids[1])
 
 				tree, err := dgut.NewTree(path)
 				So(err, ShouldBeNil)
 
-				expected, err := tree.Where("/", nil, 2)
+				expectedRaw, err := tree.Where("/", nil, 2)
 				So(err, ShouldBeNil)
 
-				expectedNonRoot, expectedGIDsRoot := adjustedExpectations(expected, gidA, gidB)
+				expected := s.dcssToSummaries(expectedRaw)
+
+				expectedNonRoot, expectedGroupsRoot := adjustedExpectations(expected, groupA, groupB)
 
 				tree.Close()
 
@@ -342,48 +374,49 @@ func TestServer(t *testing.T) {
 					Convey("And you can filter results", func() {
 						groups := gidsToGroups(t, gids...)
 
-						expectedUIDs := expectedNonRoot[0].UIDs
-						expectedUIDsUser := []uint32{uint32(uidUser)}
-						expectedUIDsRoot := []uint32{0}
-						expectedGIDsA := []uint32{uint32(gidA)}
-						expectedGIDsB := []uint32{uint32(gidB)}
+						expectedUsers := expectedNonRoot[0].Users
+						sort.Strings(expectedUsers)
+						expectedUser := []string{username}
+						expectedRoot := []string{"root"}
+						expectedGroupsA := []string{groupA}
+						expectedGroupsB := []string{groupB}
 
-						matrix := map[string]dgut.DCSs{
+						matrix := map[string][]*DirSummary{
 							"?groups=" + groups[0] + "," + groups[1]: expectedNonRoot,
 							"?groups=" + groups[0]: {
-								{Dir: "/a/b", Count: 9, Size: 80, UIDs: expectedUIDs, GIDs: expectedGIDsA},
-								{Dir: "/a/b/d", Count: 7, Size: 70, UIDs: expectedUIDs, GIDs: expectedGIDsA},
-								{Dir: "/a/b/d/g", Count: 6, Size: 60, UIDs: expectedUIDs, GIDs: expectedGIDsA},
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
-								{Dir: "/a/b/d/f", Count: 1, Size: 10, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
+								{Dir: "/a/b", Count: 9, Size: 80, Users: expectedUsers, Groups: expectedGroupsA},
+								{Dir: "/a/b/d", Count: 7, Size: 70, Users: expectedUsers, Groups: expectedGroupsA},
+								{Dir: "/a/b/d/g", Count: 6, Size: 60, Users: expectedUsers, Groups: expectedGroupsA},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA},
+								{Dir: "/a/b/d/f", Count: 1, Size: 10, Users: expectedUser, Groups: expectedGroupsA},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA},
 							},
 							"?users=root," + username: expected,
 							"?users=root": {
-								{Dir: "/a", Count: 10, Size: 46, UIDs: expectedUIDsRoot, GIDs: expectedGIDsRoot},
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, UIDs: expectedUIDsRoot, GIDs: expectedGIDsA},
-								{Dir: "/a/c/d", Count: 5, Size: 5, UIDs: expectedUIDsRoot, GIDs: expectedGIDsB},
+								{Dir: "/a", Count: 10, Size: 46, Users: expectedRoot, Groups: expectedGroupsRoot},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA},
+								{Dir: "/a/c/d", Count: 5, Size: 5, Users: expectedRoot, Groups: expectedGroupsB},
 							},
 							"?groups=" + groups[0] + "&users=root": {
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, UIDs: expectedUIDsRoot, GIDs: expectedGIDsA},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA},
 							},
 							"?types=cram,bam": expected,
 							"?types=bam": {
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA},
 							},
 							"?groups=" + groups[0] + "&users=root&types=cram,bam": {
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, UIDs: expectedUIDsRoot, GIDs: expectedGIDsA},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA},
 							},
 							"?groups=" + groups[0] + "&users=root&types=bam": {
-								{Dir: "/", Count: 0, Size: 0, UIDs: []uint32{}, GIDs: []uint32{}},
+								{Dir: "/", Count: 0, Size: 0, Users: []string{}, Groups: []string{}},
 							},
 							"?splits=0": {
-								{Dir: "/a", Count: 15, Size: 86, UIDs: expectedUIDs, GIDs: expectedGIDsRoot},
+								{Dir: "/a", Count: 15, Size: 86, Users: expectedUsers, Groups: expectedGroupsRoot},
 							},
 							"?dir=/a/b/e/h": {
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA},
 							},
 						}
 
@@ -633,8 +666,8 @@ func queryREST(s *Server, endpoint, extra string) (*httptest.ResponseRecorder, e
 }
 
 // decodeWhereResult decodes the result of a Where query.
-func decodeWhereResult(response *httptest.ResponseRecorder) (dgut.DCSs, error) {
-	var result dgut.DCSs
+func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, error) {
+	var result []*DirSummary
 	err := json.NewDecoder(response.Body).Decode(&result)
 
 	return result, err
@@ -736,45 +769,55 @@ func gidsToGroups(t *testing.T, gids ...string) []string {
 	groups := make([]string, len(gids))
 
 	for i, gid := range gids {
-		g, err := user.LookupGroupId(gid)
-		if err != nil {
-			t.Fatalf("LookupGroupId(%s) failed: %s", gid, err)
-		}
-
-		groups[i] = g.Name
+		groups[i] = gidToGroup(t, gid)
 	}
 
 	return groups
 }
 
+// gidToGroup converts the given gid to a group name.
+func gidToGroup(t *testing.T, gid string) string {
+	t.Helper()
+
+	g, err := user.LookupGroupId(gid)
+	if err != nil {
+		t.Fatalf("LookupGroupId(%s) failed: %s", gid, err)
+	}
+
+	return g.Name
+}
+
 // adjustedExpectations returns expected altered so that /a only has the given
-// GIDs and values appropriate for non-root. It also returns root's unaltered
-// set of GIDs.
-func adjustedExpectations(expected dgut.DCSs, gidA, gidB int) (dgut.DCSs, []uint32) {
-	var expectedGIDsRoot []uint32
+// groups and values appropriate for non-root. It also returns root's unaltered
+// set of groups.
+func adjustedExpectations(expected []*DirSummary, groupA, groupB string) ([]*DirSummary, []string) {
+	var expectedGroupsRoot []string
 
-	expectedNonRoot := make(dgut.DCSs, len(expected))
-	for i, dcs := range expected {
-		expectedNonRoot[i] = dcs
+	expectedNonRoot := make([]*DirSummary, len(expected))
+	for i, ds := range expected {
+		expectedNonRoot[i] = ds
 
-		if dcs.Dir == "/a" {
-			expectedNonRoot[i] = &dgut.DirSummary{
-				Dir:   "/a",
-				Count: 14,
-				Size:  85,
-				UIDs:  dcs.UIDs,
-				GIDs:  []uint32{uint32(gidA), uint32(gidB)},
+		if ds.Dir == "/a" {
+			groups := []string{groupA, groupB}
+			sort.Strings(groups)
+
+			expectedNonRoot[i] = &DirSummary{
+				Dir:    "/a",
+				Count:  14,
+				Size:   85,
+				Users:  ds.Users,
+				Groups: groups,
 			}
 
-			expectedGIDsRoot = dcs.GIDs
+			expectedGroupsRoot = ds.Groups
 		}
 	}
 
-	return expectedNonRoot, expectedGIDsRoot
+	return expectedNonRoot, expectedGroupsRoot
 }
 
 // runMapMatrixTest tests queries against expected results on the Server.
-func runMapMatrixTest(t *testing.T, matrix map[string]dgut.DCSs, s *Server) {
+func runMapMatrixTest(t *testing.T, matrix map[string][]*DirSummary, s *Server) {
 	t.Helper()
 
 	for filter, exp := range matrix {

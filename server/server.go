@@ -33,6 +33,7 @@ import (
 	"log"
 	"net/http"
 	"os/user"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -81,11 +82,13 @@ type AuthCallback func(username, password string) (bool, []string, []string)
 // Server is used to start a web server that provides a REST API to the dgut
 // package's database, and a website that displays the information nicely.
 type Server struct {
-	router    *gin.Engine
-	tree      *dgut.Tree
-	srv       *graceful.Server
-	authGroup *gin.RouterGroup
-	authCB    AuthCallback
+	router         *gin.Engine
+	tree           *dgut.Tree
+	srv            *graceful.Server
+	authGroup      *gin.RouterGroup
+	authCB         AuthCallback
+	uidToNameCache map[uint32]string
+	gidToNameCache map[uint32]string
 }
 
 // New creates a Server which can serve a REST API and website.
@@ -118,7 +121,9 @@ func New(logWriter io.Writer) *Server {
 	r.Use(gin.RecoveryWithWriter(logWriter))
 
 	return &Server{
-		router: r,
+		router:         r,
+		uidToNameCache: make(map[uint32]string),
+		gidToNameCache: make(map[uint32]string),
 	}
 }
 
@@ -213,7 +218,7 @@ func (s *Server) getWhere(c *gin.Context) {
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, dcss)
+	c.IndentedJSON(http.StatusOK, s.dcssToSummaries(dcss))
 }
 
 // restrictedGroups checks our JWT if present, and will return the GIDs that
@@ -430,4 +435,90 @@ func convertSplitsValue(splits string) int {
 	}
 
 	return int(splitsN)
+}
+
+// DirSummary holds nested file count and size information on a directory. It
+// also holds which users and groups own files nested under the directory. It
+// differs from dgut.DirSummary in having string names for users and groups,
+// instead of ids.
+type DirSummary struct {
+	Dir    string
+	Count  uint64
+	Size   uint64
+	Users  []string
+	Groups []string
+}
+
+// dcssToSummaries converts the given DCSs to our own DirSummary, the difference
+// being we change the UIDs to usernames and the GIDs to group names. On failure
+// to convert, the name will be "unknown".
+func (s *Server) dcssToSummaries(dcss dgut.DCSs) []*DirSummary {
+	summaries := make([]*DirSummary, len(dcss))
+
+	for i, dcs := range dcss {
+		summaries[i] = &DirSummary{
+			Dir:    dcs.Dir,
+			Count:  dcs.Count,
+			Size:   dcs.Size,
+			Users:  s.uidsToUsernames(dcs.UIDs),
+			Groups: s.gidsToNames(dcs.GIDs),
+		}
+	}
+
+	return summaries
+}
+
+// uidsToUsernames converts the given user IDs to usernames, sorted on the
+// names.
+func (s *Server) uidsToUsernames(uids []uint32) []string {
+	return idsToSortedNames(uids, s.uidToNameCache, func(uid string) (string, error) {
+		u, err := user.LookupId(uid)
+		if err != nil {
+			return "", err
+		}
+
+		return u.Username, nil
+	})
+}
+
+// idsToSortedNames uses the given callback to convert the given ids to names
+// (or "unknown" if the cb errors), and sorts them. It caches results in the
+// given map, avoiding the use of the cb if we already have the answer.
+func idsToSortedNames(ids []uint32, cache map[uint32]string, cb func(string) (string, error)) []string {
+	names := make([]string, len(ids))
+
+	for i, id := range ids {
+		name, found := cache[id]
+		if found {
+			names[i] = name
+
+			continue
+		}
+
+		name, err := cb(fmt.Sprintf("%d", id))
+		if err != nil {
+			names[i] = "unknown"
+		} else {
+			names[i] = name
+		}
+
+		cache[id] = names[i]
+	}
+
+	sort.Strings(names)
+
+	return names
+}
+
+// gidsToNames converts the given unix group IDs to group names, sorted
+// on the names, and returns as a comma separated string.
+func (s *Server) gidsToNames(gids []uint32) []string {
+	return idsToSortedNames(gids, s.gidToNameCache, func(gid string) (string, error) {
+		g, err := user.LookupGroupId(gid)
+		if err != nil {
+			return "", err
+		}
+
+		return g.Name, nil
+	})
 }
