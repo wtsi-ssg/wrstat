@@ -37,7 +37,6 @@ import (
 	"github.com/dustin/go-humanize" //nolint:misspell
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/dgut"
 	"github.com/wtsi-ssg/wrstat/server"
 	"golang.org/x/term"
 )
@@ -204,7 +203,7 @@ func where(url, cert, dir, groups, users, types, splits, order string, minSizeBy
 		return err
 	}
 
-	body, dcss, err := server.GetWhereDataIs(url, cert, token, dir, groups, users, types, splits)
+	body, dss, err := server.GetWhereDataIs(url, cert, token, dir, groups, users, types, splits)
 	if err != nil {
 		return err
 	}
@@ -215,9 +214,9 @@ func where(url, cert, dir, groups, users, types, splits, order string, minSizeBy
 		return nil
 	}
 
-	orderDCSS(dcss, order)
+	orderDSs(dss, order)
 
-	printWhereDataIs(dcss, minSizeBytes)
+	printWhereDataIs(dss, minSizeBytes)
 
 	return nil
 }
@@ -297,24 +296,24 @@ func storeJWT(token string) error {
 	return os.WriteFile(path, []byte(token), privatePerms)
 }
 
-// orderDCSS reorders the given DCSs by count or dir, does nothing if order is
-// size (the default) or invalid.
-func orderDCSS(dcss dgut.DCSs, order string) {
+// orderDSs reorders the given DirSummarys by count or dir, does nothing if
+// order is size (the default) or invalid.
+func orderDSs(dss []*server.DirSummary, order string) {
 	switch order {
 	case "count":
-		sort.Slice(dcss, func(i, j int) bool {
-			return dcss[i].Count > dcss[j].Count
+		sort.Slice(dss, func(i, j int) bool {
+			return dss[i].Count > dss[j].Count
 		})
 	case "dir":
-		sort.Slice(dcss, func(i, j int) bool {
-			return dcss[i].Dir < dcss[j].Dir
+		sort.Slice(dss, func(i, j int) bool {
+			return dss[i].Dir < dss[j].Dir
 		})
 	}
 }
 
 // printWhereDataIs formats query results and prints it to STDOUT.
-func printWhereDataIs(dcss dgut.DCSs, minSizeBytes uint64) {
-	if len(dcss) == 0 || (len(dcss) == 1 && dcss[0].Count == 0) {
+func printWhereDataIs(dss []*server.DirSummary, minSizeBytes uint64) {
+	if len(dss) == 0 || (len(dss) == 1 && dss[0].Count == 0) {
 		warn("no results")
 
 		return
@@ -323,14 +322,14 @@ func printWhereDataIs(dcss dgut.DCSs, minSizeBytes uint64) {
 	table := prepareWhereTable()
 	skipped := 0
 
-	for _, dcs := range dcss {
-		if dcs.Size < minSizeBytes {
+	for _, ds := range dss {
+		if ds.Size < minSizeBytes {
 			skipped++
 
 			continue
 		}
 
-		table.Append(columns(dcs))
+		table.Append(columns(ds))
 	}
 
 	table.Render()
@@ -352,60 +351,14 @@ func prepareWhereTable() *tablewriter.Table {
 }
 
 // columns returns the column data to display in the table for a given row.
-func columns(dcs *dgut.DirSummary) []string {
-	cols := []string{dcs.Dir}
+func columns(ds *server.DirSummary) []string {
+	cols := []string{ds.Dir}
 
 	if whereShowUG {
-		cols = append(cols, UIDsToSortedNames(dcs.UIDs), GIDsToSortedNames(dcs.GIDs))
+		cols = append(cols, strings.Join(ds.Users, ","), strings.Join(ds.Groups, ","))
 	}
 
-	return append(cols, fmt.Sprintf("%d", dcs.Count), humanize.Bytes(dcs.Size))
-}
-
-// UIDsToSortedNames converts the given user IDs to usernames, sorted on the
-// names, and returns as a comma separated string.
-func UIDsToSortedNames(uids []uint32) string {
-	return IDsToSortedNames(uids, func(uid string) (string, error) {
-		u, err := user.LookupId(uid)
-		if err != nil {
-			return "", err
-		}
-
-		return u.Username, nil
-	})
-}
-
-// IDsToSortedNames uses the given callback to convert the given ids to names
-// (or "unknown" if the cb errors), sorts them, and returns them as a comma
-// separated string.
-func IDsToSortedNames(ids []uint32, cb func(string) (string, error)) string {
-	names := make([]string, len(ids))
-
-	for i, id := range ids {
-		name, err := cb(fmt.Sprintf("%d", id))
-		if err != nil {
-			names[i] = "unknown"
-		} else {
-			names[i] = name
-		}
-	}
-
-	sort.Strings(names)
-
-	return strings.Join(names, ",")
-}
-
-// GIDsToSortedNames converts the given unix group IDs to group names, sorted
-// on the names, and returns as a comma separated string.
-func GIDsToSortedNames(gids []uint32) string {
-	return IDsToSortedNames(gids, func(gid string) (string, error) {
-		g, err := user.LookupGroupId(gid)
-		if err != nil {
-			return "", err
-		}
-
-		return g.Name, nil
-	})
+	return append(cols, fmt.Sprintf("%d", ds.Count), humanize.Bytes(ds.Size))
 }
 
 // printSkipped prints the given number of results were skipped.
