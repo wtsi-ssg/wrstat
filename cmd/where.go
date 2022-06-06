@@ -60,6 +60,7 @@ var whereMinimum int
 var whereCert string
 var whereJSON bool
 var whereOrder string
+var whereShowUG bool
 
 // whereCmd represents the where command.
 var whereCmd = &cobra.Command{
@@ -104,6 +105,9 @@ You can change the sort --order from the default of by 'size', to by 'count' or
 --minimum and --sort are ignored, however, if you choose --json output, which
 will just give you all the filtered results. In the JSON output, the Size is in
 bytes.
+
+--show_ug adds columns for the users and groups that own files nested under each
+directory.
 
 If the wrstat server is using an untrusted certificate, the path to its
 certificate can be provided with --cert, or the WRSTAT_SERVER_CERT environment
@@ -177,6 +181,8 @@ func init() {
 		"path to the server's certificate to force trust in it")
 	whereCmd.Flags().StringVarP(&whereOrder, "order", "o", "size",
 		"sort order of results; size, count or dir")
+	whereCmd.Flags().BoolVar(&whereShowUG, "show_ug", false,
+		"output USERS and GROUPS columns")
 	whereCmd.Flags().BoolVarP(&whereJSON, "json", "j", false,
 		"output JSON (ignores --minimum and --order)")
 
@@ -324,7 +330,7 @@ func printWhereDataIs(dcss dgut.DCSs, minSizeBytes uint64) {
 			continue
 		}
 
-		table.Append([]string{dcs.Dir, fmt.Sprintf("%d", dcs.Count), humanize.Bytes(dcs.Size)})
+		table.Append(columns(dcs))
 	}
 
 	table.Render()
@@ -335,9 +341,71 @@ func printWhereDataIs(dcss dgut.DCSs, minSizeBytes uint64) {
 // prepareWhereTable creates a table with a header that outputs to STDOUT.
 func prepareWhereTable() *tablewriter.Table {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Directory", "Count", "Size"})
+
+	if whereShowUG {
+		table.SetHeader([]string{"Directory", "Users", "Groups", "Count", "Size"})
+	} else {
+		table.SetHeader([]string{"Directory", "Count", "Size"})
+	}
 
 	return table
+}
+
+// columns returns the column data to display in the table for a given row.
+func columns(dcs *dgut.DirSummary) []string {
+	cols := []string{dcs.Dir}
+
+	if whereShowUG {
+		cols = append(cols, UIDsToSortedNames(dcs.UIDs), GIDsToSortedNames(dcs.GIDs))
+	}
+
+	return append(cols, fmt.Sprintf("%d", dcs.Count), humanize.Bytes(dcs.Size))
+}
+
+// UIDsToSortedNames converts the given user IDs to usernames, sorted on the
+// names, and returns as a comma separated string.
+func UIDsToSortedNames(uids []uint32) string {
+	return IDsToSortedNames(uids, func(uid string) (string, error) {
+		u, err := user.LookupId(uid)
+		if err != nil {
+			return "", err
+		}
+
+		return u.Username, nil
+	})
+}
+
+// IDsToSortedNames uses the given callback to convert the given ids to names
+// (or "unknown" if the cb errors), sorts them, and returns them as a comma
+// separated string.
+func IDsToSortedNames(ids []uint32, cb func(string) (string, error)) string {
+	names := make([]string, len(ids))
+
+	for i, id := range ids {
+		name, err := cb(fmt.Sprintf("%d", id))
+		if err != nil {
+			names[i] = "unknown"
+		} else {
+			names[i] = name
+		}
+	}
+
+	sort.Strings(names)
+
+	return strings.Join(names, ",")
+}
+
+// GIDsToSortedNames converts the given unix group IDs to group names, sorted
+// on the names, and returns as a comma separated string.
+func GIDsToSortedNames(gids []uint32) string {
+	return IDsToSortedNames(gids, func(gid string) (string, error) {
+		g, err := user.LookupGroupId(gid)
+		if err != nil {
+			return "", err
+		}
+
+		return g.Name, nil
+	})
 }
 
 // printSkipped prints the given number of results were skipped.

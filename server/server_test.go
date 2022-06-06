@@ -35,6 +35,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -51,8 +52,8 @@ import (
 
 func TestServer(t *testing.T) {
 	username, uid, gids := getUserAndGroups(t)
-
-	exampleUser := &User{Username: "user", UIDs: []string{"1", "2"}, GIDs: []string{"3", "4"}}
+	exampleGIDs := getExampleGIDs(gids)
+	exampleUser := &User{Username: "user", UIDs: []string{"1", "2"}, GIDs: exampleGIDs}
 
 	Convey("hasError tells you about errors", t, func() {
 		So(hasError(nil, nil), ShouldBeFalse)
@@ -106,7 +107,7 @@ func TestServer(t *testing.T) {
 				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, []string, []string) {
 					ok := p == "pass"
 
-					return ok, []string{"1", "2"}, []string{"3", "4"}
+					return ok, []string{"1", "2"}, exampleGIDs
 				})
 				So(err, ShouldBeNil)
 
@@ -227,6 +228,8 @@ func TestServer(t *testing.T) {
 				So(ok, ShouldBeTrue)
 				So(user, ShouldResemble, exampleUser)
 				So(gu, ShouldResemble, exampleUser)
+
+				testRestrictedGroups(t, gids, s, r, exampleGIDs)
 			})
 
 			Convey("authPayLoad correctly maps a User to claims, or returns none", func() {
@@ -239,7 +242,7 @@ func TestServer(t *testing.T) {
 				So(claims, ShouldResemble, jwt.MapClaims{
 					claimKeyUsername: "user",
 					claimKeyUIDs:     "1,2",
-					claimKeyGIDs:     "3,4",
+					claimKeyGIDs:     fmt.Sprintf("%s,%s", exampleGIDs[0], exampleGIDs[1]),
 				})
 			})
 
@@ -305,6 +308,12 @@ func TestServer(t *testing.T) {
 			Convey("And given a dgut database", func() {
 				path, err := createExampleDB(t, uid, gids[0], gids[1])
 				So(err, ShouldBeNil)
+				gidA, erra := strconv.Atoi(gids[0])
+				So(erra, ShouldBeNil)
+				gidB, erra := strconv.Atoi(gids[1])
+				So(erra, ShouldBeNil)
+				uidUser, erra := strconv.Atoi(uid)
+				So(erra, ShouldBeNil)
 
 				tree, err := dgut.NewTree(path)
 				So(err, ShouldBeNil)
@@ -312,14 +321,7 @@ func TestServer(t *testing.T) {
 				expected, err := tree.Where("/", nil, 2)
 				So(err, ShouldBeNil)
 
-				expectedNonRoot := make(dgut.DCSs, len(expected))
-				for i, dcs := range expected {
-					expectedNonRoot[i] = dcs
-
-					if dcs.Dir == "/a" {
-						expectedNonRoot[i] = &dgut.DirCountSize{Dir: "/a", Count: 14, Size: 85}
-					}
-				}
+				expectedNonRoot, expectedGIDsRoot := adjustedExpectations(expected, gidA, gidB)
 
 				tree.Close()
 
@@ -340,42 +342,48 @@ func TestServer(t *testing.T) {
 					Convey("And you can filter results", func() {
 						groups := gidsToGroups(t, gids...)
 
+						expectedUIDs := expectedNonRoot[0].UIDs
+						expectedUIDsUser := []uint32{uint32(uidUser)}
+						expectedUIDsRoot := []uint32{0}
+						expectedGIDsA := []uint32{uint32(gidA)}
+						expectedGIDsB := []uint32{uint32(gidB)}
+
 						matrix := map[string]dgut.DCSs{
 							"?groups=" + groups[0] + "," + groups[1]: expectedNonRoot,
 							"?groups=" + groups[0]: {
-								{Dir: "/a/b", Count: 9, Size: 80},
-								{Dir: "/a/b/d", Count: 7, Size: 70},
-								{Dir: "/a/b/d/g", Count: 6, Size: 60},
-								{Dir: "/a/b/e/h", Count: 2, Size: 10},
-								{Dir: "/a/b/d/f", Count: 1, Size: 10},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5},
+								{Dir: "/a/b", Count: 9, Size: 80, UIDs: expectedUIDs, GIDs: expectedGIDsA},
+								{Dir: "/a/b/d", Count: 7, Size: 70, UIDs: expectedUIDs, GIDs: expectedGIDsA},
+								{Dir: "/a/b/d/g", Count: 6, Size: 60, UIDs: expectedUIDs, GIDs: expectedGIDsA},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
+								{Dir: "/a/b/d/f", Count: 1, Size: 10, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
 							},
 							"?users=root," + username: expected,
 							"?users=root": {
-								{Dir: "/a", Count: 10, Size: 46},
-								{Dir: "/a/b/d/g", Count: 4, Size: 40},
-								{Dir: "/a/c/d", Count: 5, Size: 5},
+								{Dir: "/a", Count: 10, Size: 46, UIDs: expectedUIDsRoot, GIDs: expectedGIDsRoot},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, UIDs: expectedUIDsRoot, GIDs: expectedGIDsA},
+								{Dir: "/a/c/d", Count: 5, Size: 5, UIDs: expectedUIDsRoot, GIDs: expectedGIDsB},
 							},
 							"?groups=" + groups[0] + "&users=root": {
-								{Dir: "/a/b/d/g", Count: 4, Size: 40},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, UIDs: expectedUIDsRoot, GIDs: expectedGIDsA},
 							},
 							"?types=cram,bam": expected,
 							"?types=bam": {
-								{Dir: "/a/b/e/h", Count: 2, Size: 10},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
 							},
 							"?groups=" + groups[0] + "&users=root&types=cram,bam": {
-								{Dir: "/a/b/d/g", Count: 4, Size: 40},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, UIDs: expectedUIDsRoot, GIDs: expectedGIDsA},
 							},
 							"?groups=" + groups[0] + "&users=root&types=bam": {
-								{Dir: "/", Count: 0, Size: 0},
+								{Dir: "/", Count: 0, Size: 0, UIDs: []uint32{}, GIDs: []uint32{}},
 							},
 							"?splits=0": {
-								{Dir: "/a", Count: 15, Size: 86},
+								{Dir: "/a", Count: 15, Size: 86, UIDs: expectedUIDs, GIDs: expectedGIDsRoot},
 							},
 							"?dir=/a/b/e/h": {
-								{Dir: "/a/b/e/h", Count: 2, Size: 10},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, UIDs: expectedUIDsUser, GIDs: expectedGIDsA},
 							},
 						}
 
@@ -420,6 +428,18 @@ func TestServer(t *testing.T) {
 			So(logWriter.String(), ShouldContainSubstring, "panic")
 		})
 	})
+}
+
+// getExampleGIDs returns some example GIDs to test with, using 2 real ones from
+// the given slice if the slice is long enough.
+func getExampleGIDs(gids []string) []string {
+	exampleGIDs := []string{"3", "4"}
+	if len(gids) > 1 {
+		exampleGIDs[0] = gids[0]
+		exampleGIDs[1] = gids[1]
+	}
+
+	return exampleGIDs
 }
 
 // testWhereClientOnRealServer tests our client method GetWhereDataIs on a real
@@ -677,6 +697,38 @@ func exampleDGUTData(uid, gidA, gidB string) string {
 	return data
 }
 
+// testRestrictedGroups does tests for s.restrictedGroups() if user running the
+// test has enough groups to make the test viable.
+func testRestrictedGroups(t *testing.T, gids []string, s *Server, r *resty.Request, exampleGIDs []string) {
+	t.Helper()
+
+	if len(gids) < 3 {
+		return
+	}
+
+	var filterGIDs []string
+
+	var errg error
+
+	s.authGroup.GET("/groups", func(c *gin.Context) {
+		groups := c.Query("groups")
+		filterGIDs, errg = s.restrictedGroups(c, groups)
+	})
+
+	groups := gidsToGroups(t, gids...)
+	_, err := r.Get(EndPointAuth + "/groups?groups=" + groups[0])
+	So(err, ShouldBeNil)
+
+	So(errg, ShouldBeNil)
+	So(filterGIDs, ShouldResemble, []string{exampleGIDs[0]})
+
+	_, err = r.Get(EndPointAuth + "/groups?groups=" + groups[2])
+	So(err, ShouldBeNil)
+
+	So(errg, ShouldNotBeNil)
+	So(filterGIDs, ShouldBeNil)
+}
+
 // gidsToGroups converts the given gids to group names.
 func gidsToGroups(t *testing.T, gids ...string) []string {
 	t.Helper()
@@ -693,6 +745,32 @@ func gidsToGroups(t *testing.T, gids ...string) []string {
 	}
 
 	return groups
+}
+
+// adjustedExpectations returns expected altered so that /a only has the given
+// GIDs and values appropriate for non-root. It also returns root's unaltered
+// set of GIDs.
+func adjustedExpectations(expected dgut.DCSs, gidA, gidB int) (dgut.DCSs, []uint32) {
+	var expectedGIDsRoot []uint32
+
+	expectedNonRoot := make(dgut.DCSs, len(expected))
+	for i, dcs := range expected {
+		expectedNonRoot[i] = dcs
+
+		if dcs.Dir == "/a" {
+			expectedNonRoot[i] = &dgut.DirSummary{
+				Dir:   "/a",
+				Count: 14,
+				Size:  85,
+				UIDs:  dcs.UIDs,
+				GIDs:  []uint32{uint32(gidA), uint32(gidB)},
+			}
+
+			expectedGIDsRoot = dcs.GIDs
+		}
+	}
+
+	return expectedNonRoot, expectedGIDsRoot
 }
 
 // runMapMatrixTest tests queries against expected results on the Server.
