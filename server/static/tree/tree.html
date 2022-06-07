@@ -7,7 +7,19 @@
 </head>
 
 <body>
-	<div id="body">
+	<div id="login" style="display: none;">
+		<form action="/" id="loginForm">
+			<input type="text" placeholder="Username" name="username">
+			<br />
+			<input type="password" placeholder="Password" name="password">
+			<br />
+			<input type="submit" value="Login">
+		</form>
+
+		<div id="loginFailure"></div>
+	</div>
+
+	<div id="body" style="display: none;">
 		<div id="chart">
 		</div>
 		<div id="filters">
@@ -58,11 +70,12 @@
 			</div>
 		</div>
 		<div id="footer">
-			<div id="title">LustreTree (<span id="dates"></span>)</div>
+			<div id="title">DiskTree (<span id="dates"></span>)</div>
 			<div id="status"></div>
 			<div id="error"></div>
 		</div>
 	</div>
+
 	<script data-main="js/main" src="js/require.js"></script>
 </body>
 
