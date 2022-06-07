@@ -1,4 +1,4 @@
-define(["d3", "lodash", "queue"], function (d3, _, queue) {
+define(["d3", "lodash", "queue", "cookie"], function (d3, _, queue, cookie) {
     console.log("treemap using d3 v" + d3.version + ", underscore v" + _.VERSION + ", queue v" + queue.version);
 
     var BINARY_UNIT_LABELS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"];
@@ -299,7 +299,7 @@ define(["d3", "lodash", "queue"], function (d3, _, queue) {
         .attr("dy", ".75em");
 
     var path_data_url_templates = {
-        "/lustre/": _.template("/rest/v1/auth/tree?depth=1&path=<%= path %>"),
+        "/lustre/": _.template("/rest/v1/auth/tree?path=<%= path %>"),
     };
 
     function reloadButIgnoreScratchesThatCannotBeLoaded(retry_d, treemap, onload_cb) {
@@ -327,7 +327,7 @@ define(["d3", "lodash", "queue"], function (d3, _, queue) {
 
         _.forEach(path_data_url_templates, function (value, key) {
             url = path_data_url_templates[key](retry_d);
-            d3.json(url).get(createCallback(key, onComplete));
+            d3.json(url).header("Authorization", "Bearer " + cookie.get('jwt')).get(createCallback(key, onComplete));
         });
     }
 
@@ -358,13 +358,20 @@ define(["d3", "lodash", "queue"], function (d3, _, queue) {
     }
 
     function queueTreemapDataRequests(d) {
-        //console.log("queueTreemapDataRequests d=", d);
+        console.log("queueTreemapDataRequests d=", d);
         var q = queue();
         _.forEach(path_data_url_templates, function (n, root_path) {
             if (_.startsWith(d.path, root_path) || _.startsWith(root_path, d.path)) {
                 url = path_data_url_templates[root_path](d);
+                header = "Bearer " + cookie.get('jwt')
+
                 console.log("queueTreemapDataRequests: requesting url=" + url);
-                q.defer(d3.json, url);
+
+                function d3get() {
+                    d3.json(url).header("Authorization", "Bearer " + cookie.get('jwt'));
+                }
+
+                q.defer(d3get);
             }
         });
         return q;
@@ -463,6 +470,8 @@ define(["d3", "lodash", "queue"], function (d3, _, queue) {
                         console.log("Error invoking onload_cb ", onload_cb);
                         console.log("error was ", result.name, ": ", result.message, "(", result.fileName, " line ", result.lineNumber, ")");
                     }
+
+                    console.log("loaded")
                     // clear error message
                     //            displayError("");
                 } else {

@@ -74,6 +74,10 @@ const (
 	// TreePath is the path to the static tree website.
 	TreePath = "/tree"
 
+	// EndPointAuthTree is the endpoint for making treemap queries when
+	// authorization is implemented.
+	EndPointAuthTree = EndPointAuth + TreePath
+
 	ErrNeedsAuth = Error("authentication must be enabled")
 
 	defaultDir    = "/"
@@ -199,7 +203,7 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 
 // getWhere responds with a list of directory stats describing where data is on
 // disks. LoadDGUTDB() must already have been called. This is called when there
-// is a GET on /rest/v1/where.
+// is a GET on /rest/v1/where or /rest/v1/auth/where.
 func (s *Server) getWhere(c *gin.Context) {
 	dir := c.DefaultQuery("dir", defaultDir)
 	splits := c.DefaultQuery("splits", defaultSplits)
@@ -533,8 +537,9 @@ func (s *Server) gidsToNames(gids []uint32) []string {
 	})
 }
 
-// AddTreePage adds the /tree static web page to the server. It only works if
-// EnableAuth() has been called first.
+// AddTreePage adds the /tree static web page to the server, along with the
+// /rest/v1/auth/tree endpoint. It only works if EnableAuth() has been called
+// first.
 func (s *Server) AddTreePage() error {
 	if s.authGroup == nil {
 		return ErrNeedsAuth
@@ -551,5 +556,92 @@ func (s *Server) AddTreePage() error {
 		c.Redirect(http.StatusMovedPermanently, "/tree/tree.html")
 	})
 
+	s.authGroup.GET(TreePath, s.getTree)
+
 	return nil
 }
+
+type TreeMapGroupData struct {
+	All          string `json:"*,omitempty"`
+	Bam          string `json:"bam,omitempty"`
+	Compressed   string `json:"compressed,omitempty"`
+	Directory    string `json:"directory,omitempty"`
+	File         string `json:"file,omitempty"`
+	Index        string `json:"index,omitempty"`
+	Link         string `json:"link,omitempty"`
+	Other        string `json:"other,omitempty"`
+	Temporary    string `json:"temporary,omitempty"`
+	Uncompressed string `json:"uncompressed,omitempty"`
+}
+type TreeMapData struct {
+	Atime map[string]*TreeMapGroupData `json:"atime"`
+	Ctime map[string]*TreeMapGroupData `json:"ctime"`
+	Mtime map[string]*TreeMapGroupData `json:"mtime"`
+	Count map[string]*TreeMapGroupData `json:"count"`
+	Size  map[string]*TreeMapGroupData `json:"size"`
+}
+type TreeMap struct {
+	Name      string         `json:"name"`
+	Path      string         `json:"path"`
+	ChildDirs []*TreeMapData `json:"child_dirs"`
+	Data      *TreeMapData   `json:"data"`
+}
+
+type TreeMapContainer struct {
+	Date string   `json:"date"`
+	Tree *TreeMap `json:"tree"`
+}
+
+// getTree responds with the data needed by the tree web interface. LoadDGUTDB()
+// must already have been called. This is called when there is a GET on
+// /rest/v1/auth/tree.
+func (s *Server) getTree(c *gin.Context) {
+	// path := c.DefaultQuery("path", "/")
+
+	tmc := &TreeMapContainer{
+		Date: "unknown",
+		Tree: &TreeMap{
+			Name: "/",
+			Path: "/",
+			Data: &TreeMapData{
+				Count: map[string]*TreeMapGroupData{
+					"*": {
+						All: "8",
+					},
+					"team123": {
+						All: "6",
+					},
+					"team456": {
+						All: "2",
+					},
+				},
+				Size: map[string]*TreeMapGroupData{
+					"*": {
+						All: "10",
+					},
+					"team123": {
+						All: "4",
+					},
+					"team456": {
+						All: "6",
+					},
+				},
+			},
+		},
+	}
+
+	c.JSON(http.StatusOK, tmc)
+}
+
+// {
+// 	name: "",
+// 	path: "/",
+// 	child_dirs: new Array(),
+// 	data: {
+// 		atime: { '*': { '*': { '*': 0 } } },
+// 		ctime: { '*': { '*': { '*': 0 } } },
+// 		mtime: { '*': { '*': { '*': 0 } } },
+// 		count: { '*': { '*': { '*': 0 } } },
+// 		size: { '*': { '*': { '*': 0 } } }
+// 	}
+// }
