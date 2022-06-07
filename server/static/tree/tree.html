@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<link href="style.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+	<div id="body">
+		<div id="chart">
+		</div>
+		<div id="filters">
+			<div id="select_size">
+				<div id="select_size_metric">
+					<span class="select_label_head">Area:</span><br />
+					<form id="select_size_metric_form">
+					</form>
+				</div>
+				<div id="select_size_group">
+					<span class="select_label">Group owner:</span>
+					<select id="select_size_group_form">
+					</select>
+				</div>
+				<div id="select_size_user">
+					<span class="select_label">User owner:</span>
+					<select id="select_size_user_form">
+					</select>
+				</div>
+				<div id="select_size_tag">
+					<span class="select_label">Tag:</span>
+					<select id="select_size_tag_form">
+					</select>
+				</div>
+			</div>
+			<hr />
+			<div id="select_fill_form">
+				<div id="select_fill_metric">
+					<span class="select_label_head">Colour:</span><br />
+					<form id="select_fill_metric_form">
+					</form>
+				</div>
+				<div id="select_fill_group">
+					<span class="select_label">Group owner:</span>
+					<select id="select_fill_group_form">
+					</select>
+				</div>
+				<div id="select_fill_user">
+					<span class="select_label">User owner:</span>
+					<select id="select_fill_user_form">
+					</select>
+				</div>
+				<div id="select_fill_tag">
+					<span class="select_label">Tag:</span>
+					<select id="select_fill_tag_form">
+					</select>
+				</div>
+			</div>
+		</div>
+		<div id="footer">
+			<div id="title">LustreTree (<span id="dates"></span>)</div>
+			<div id="status"></div>
+			<div id="error"></div>
+		</div>
+	</div>
+	<script data-main="js/main" src="js/require.js"></script>
+</body>
+
+</html>

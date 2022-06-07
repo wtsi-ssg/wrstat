@@ -28,8 +28,10 @@
 package server
 
 import (
+	"embed"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os/user"
@@ -44,6 +46,9 @@ import (
 	"github.com/wtsi-ssg/wrstat/summary"
 	"gopkg.in/tylerb/graceful.v1"
 )
+
+//go:embed static
+var staticFS embed.FS
 
 const (
 	// EndPointREST is the base location for all REST endpoints.
@@ -65,6 +70,11 @@ const (
 	// EndPointAuthWhere is the endpoint for making where queries if
 	// authorization is implemented.
 	EndPointAuthWhere = EndPointAuth + wherePath
+
+	// TreePath is the path to the static tree website.
+	TreePath = "/tree"
+
+	ErrNeedsAuth = Error("authentication must be enabled")
 
 	defaultDir    = "/"
 	defaultSplits = "2"
@@ -521,4 +531,25 @@ func (s *Server) gidsToNames(gids []uint32) []string {
 
 		return g.Name, nil
 	})
+}
+
+// AddTreePage adds the /tree static web page to the server. It only works if
+// EnableAuth() has been called first.
+func (s *Server) AddTreePage() error {
+	if s.authGroup == nil {
+		return ErrNeedsAuth
+	}
+
+	fsys, err := fs.Sub(staticFS, "static/tree")
+	if err != nil {
+		return err
+	}
+
+	s.router.StaticFS(TreePath, http.FS(fsys))
+
+	s.router.NoRoute(func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/tree/tree.html")
+	})
+
+	return nil
 }
