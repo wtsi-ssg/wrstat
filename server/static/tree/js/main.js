@@ -10,12 +10,6 @@ require.config({
 
 requirejs(['jquery', 'cookie'], function ($, cookie) {
     function showMap(jwt) {
-        $.ajaxSetup({
-            headers: {
-                'Authorization': "Bearer " + jwt
-            }
-        })
-
         $("#login").hide()
         $("#body").show()
 
@@ -51,6 +45,6 @@ requirejs(['jquery', 'cookie'], function ($, cookie) {
         posting.fail(function () {
             $("#loginFailure").empty().append("Incorrect username or password");
             $("#body").hide()
-        })
+        });
     });
 });
