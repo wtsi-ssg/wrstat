@@ -129,6 +129,13 @@ ctrl-z; bg.
 			die(msg)
 		}
 
+		err = s.AddTreePage()
+		if err != nil {
+			msg := fmt.Sprintf("failed to add tree page: %s", err)
+			syslogWriter.Crit(msg) //nolint:errcheck
+			die(msg)
+		}
+
 		defer s.Stop()
 
 		err = s.Start(serverBind, serverCert, serverKey)
