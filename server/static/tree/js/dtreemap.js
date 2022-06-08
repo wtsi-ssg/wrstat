@@ -111,7 +111,11 @@ define(["d3", "cookie"], function (d3, cookie) {
             if (transitioning || !d) return;
             transitioning = true;
 
-            reroot(d.path, function (d) {
+            getData(d.path, function (data) {
+                console.log("got child data ", data)
+                d.children = data.root.children
+                layout(d)
+
                 var g2 = display(d),
                     t1 = g1.transition().duration(750),
                     t2 = g2.transition().duration(750);
@@ -188,17 +192,11 @@ define(["d3", "cookie"], function (d3, cookie) {
             .get();
     }
 
-    function reroot(path, loadFunction) {
-        getData(path, function (data) {
-            console.log("got data ", data)
-            root = data.root;
-            initialize(root);
-            layout(root);
-            loadFunction(root)
-        });
-    }
-
-    reroot("/", function (root) {
+    getData("/", function (data) {
+        console.log("got data ", data)
+        root = data.root;
+        initialize(root);
+        layout(root);
         display(root);
     });
 });
