@@ -111,11 +111,7 @@ define(["d3", "cookie"], function (d3, cookie) {
             if (transitioning || !d) return;
             transitioning = true;
 
-            getData(d.path, function (data) {
-                console.log("got child data ", data)
-                d.children = data.root.children
-                layout(d)
-
+            function do_transition(d) {
                 var g2 = display(d),
                     t1 = g1.transition().duration(750),
                     t2 = g2.transition().duration(750);
@@ -144,7 +140,18 @@ define(["d3", "cookie"], function (d3, cookie) {
                     svg.style("shape-rendering", "crispEdges");
                     transitioning = false;
                 });
-            });
+            }
+
+            if (d.children) {
+                do_transition(d)
+            } else {
+                getData(d.path, function (data) {
+                    console.log("got child data ", data)
+                    d.children = data.root.children
+                    layout(d)
+                    do_transition(d)
+                });
+            }
         }
 
         return g;
