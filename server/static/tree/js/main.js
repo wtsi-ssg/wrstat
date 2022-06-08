@@ -10,32 +10,6 @@ require.config({
 
 requirejs(['jquery', 'cookie'], function ($, cookie) {
     function showMap(jwt) {
-        header = "Bearer " + jwt
-        $.ajaxSetup({
-            headers: {
-                'Authorization': header
-            }
-        })
-
-        $("#login").hide()
-        $("#body").show()
-
-        var got = $.ajax({
-            type: 'GET',
-            url: '/rest/v1/auth/tree?path=/',
-            dataType: 'json',
-        });
-
-        got.done(function (data) {
-            console.log("worked with ajax")
-            console.log(data)
-        });
-
-        got.fail(function (data) {
-            console.log("failed")
-            console.log(data)
-        });
-
         require(["dtreemap"], function () {
             console.log("treemap module loaded");
         });
