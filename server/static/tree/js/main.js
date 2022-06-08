@@ -36,11 +36,9 @@ requirejs(['jquery', 'cookie'], function ($, cookie) {
             console.log(data)
         });
 
-        require(["treemap"],
-            function (treemap) {
-                console.log("treemap module loaded: ", treemap);
-            }
-        );
+        require(["dtreemap"], function () {
+            console.log("treemap module loaded");
+        });
     }
 
     $(document).ready(function () {

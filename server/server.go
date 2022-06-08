@@ -561,51 +561,63 @@ func (s *Server) AddTreePage() error {
 	return nil
 }
 
-type TreeMapGroupData struct {
-	All          string `json:"*,omitempty"`
-	Bam          string `json:"bam,omitempty"`
-	Compressed   string `json:"compressed,omitempty"`
-	Directory    string `json:"directory,omitempty"`
-	File         string `json:"file,omitempty"`
-	Index        string `json:"index,omitempty"`
-	Link         string `json:"link,omitempty"`
-	Other        string `json:"other,omitempty"`
-	Temporary    string `json:"temporary,omitempty"`
-	Uncompressed string `json:"uncompressed,omitempty"`
-}
-type TreeMapData struct {
-	Atime map[string]*TreeMapGroupData `json:"atime"`
-	Ctime map[string]*TreeMapGroupData `json:"ctime"`
-	Mtime map[string]*TreeMapGroupData `json:"mtime"`
-	Count map[string]*TreeMapGroupData `json:"count"`
-	Size  map[string]*TreeMapGroupData `json:"size"`
-}
-type TreeMap struct {
-	Name      string         `json:"name"`
-	Path      string         `json:"path"`
-	ChildDirs []*TreeMapData `json:"child_dirs"`
-	Data      *TreeMapData   `json:"data"`
+// type TreeMapGroupData struct {
+// 	All          string `json:"*,omitempty"`
+// 	Bam          string `json:"bam,omitempty"`
+// 	Compressed   string `json:"compressed,omitempty"`
+// 	Directory    string `json:"directory,omitempty"`
+// 	File         string `json:"file,omitempty"`
+// 	Index        string `json:"index,omitempty"`
+// 	Link         string `json:"link,omitempty"`
+// 	Other        string `json:"other,omitempty"`
+// 	Temporary    string `json:"temporary,omitempty"`
+// 	Uncompressed string `json:"uncompressed,omitempty"`
+// }
+// type TreeMapData struct {
+// 	Atime map[string]*TreeMapGroupData `json:"atime"`
+// 	Ctime map[string]*TreeMapGroupData `json:"ctime"`
+// 	Mtime map[string]*TreeMapGroupData `json:"mtime"`
+// 	Count map[string]*TreeMapGroupData `json:"count"`
+// 	Size  map[string]*TreeMapGroupData `json:"size"`
+// }
+// type TreeMap struct {
+// 	Name      string         `json:"name"`
+// 	Path      string         `json:"path"`
+// 	ChildDirs []*TreeMapData `json:"child_dirs"`
+// 	Data      *TreeMapData   `json:"data"`
+// }
+
+// type TreeMapContainer struct {
+// 	Date string   `json:"date"`
+// 	Tree *TreeMap `json:"tree"`
+// }
+
+type TreeElement struct {
+	Name        string         `json:"name"`
+	Path        string         `json:"path"`
+	Value       int            `json:"value"`
+	HasChildren bool           `json:"has_children"`
+	Children    []*TreeElement `json:"children,omitempty"`
 }
 
-type TreeMapContainer struct {
-	Date string   `json:"date"`
-	Tree *TreeMap `json:"tree"`
+type TreeMap struct {
+	Root *TreeElement `json:"root"`
 }
 
 // getTree responds with the data needed by the tree web interface. LoadDGUTDB()
 // must already have been called. This is called when there is a GET on
 // /rest/v1/auth/tree.
 func (s *Server) getTree(c *gin.Context) {
-	// path := c.DefaultQuery("path", "/")
+	path := c.DefaultQuery("path", "/")
 
-	fsys, err := fs.Sub(staticFS, "static/tree")
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err) //nolint:errcheck
+	// fsys, err := fs.Sub(staticFS, "static/tree")
+	// if err != nil {
+	// 	c.AbortWithError(http.StatusInternalServerError, err) //nolint:errcheck
 
-		return
-	}
+	// 	return
+	// }
 
-	c.FileFromFS("out.v2.json", http.FS(fsys))
+	// c.FileFromFS("out.v2.json", http.FS(fsys))
 
 	// tmc := &TreeMapContainer{
 	// 	Date: "unknown",
@@ -639,5 +651,62 @@ func (s *Server) getTree(c *gin.Context) {
 	// 	},
 	// }
 
-	// c.JSON(http.StatusOK, tmc)
+	var tm *TreeMap
+
+	switch path {
+	case "/":
+		tm = &TreeMap{
+			Root: &TreeElement{
+				Name:        "papa",
+				Path:        "/",
+				Value:       10,
+				HasChildren: true,
+				Children: []*TreeElement{
+					{
+						Name:        "c1",
+						Path:        "/c1",
+						Value:       2,
+						HasChildren: false,
+					},
+					{
+						Name:        "c2",
+						Path:        "/c2",
+						Value:       3,
+						HasChildren: true,
+					},
+					{
+						Name:        "c3",
+						Path:        "/c3",
+						Value:       5,
+						HasChildren: false,
+					},
+				},
+			},
+		}
+	case "/c2":
+		tm = &TreeMap{
+			Root: &TreeElement{
+				Name:        "c2",
+				Path:        "/c2",
+				Value:       5,
+				HasChildren: true,
+				Children: []*TreeElement{
+					{
+						Name:        "c4",
+						Path:        "/c2/c4",
+						Value:       2,
+						HasChildren: false,
+					},
+					{
+						Name:        "c5",
+						Path:        "/c2/c5",
+						Value:       3,
+						HasChildren: false,
+					},
+				},
+			},
+		}
+	}
+
+	c.JSON(http.StatusOK, tm)
 }
