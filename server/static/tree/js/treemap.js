@@ -363,15 +363,8 @@ define(["d3", "lodash", "queue", "cookie"], function (d3, _, queue, cookie) {
         _.forEach(path_data_url_templates, function (n, root_path) {
             if (_.startsWith(d.path, root_path) || _.startsWith(root_path, d.path)) {
                 url = path_data_url_templates[root_path](d);
-                header = "Bearer " + cookie.get('jwt')
-
                 console.log("queueTreemapDataRequests: requesting url=" + url);
-
-                function d3get() {
-                    d3.json(url).header("Authorization", "Bearer " + cookie.get('jwt'));
-                }
-
-                q.defer(d3get);
+                q.defer(d3get, url);
             }
         });
         return q;
@@ -380,7 +373,7 @@ define(["d3", "lodash", "queue", "cookie"], function (d3, _, queue, cookie) {
     function awaitTreemapDataRequests(q, retry_d, treemap, onload_cb) {
         //console.log("awaitTreemapDataRequests d=", d, " old_root=", old_root);
         q.await(function () {
-            //console.log("awaitTreemapDataRequests: have treemap.root:", treemap.root);
+            console.log("awaitTreemapDataRequests: have treemap.root:", treemap.root);
             error = _(arguments).shift();
             data = arguments;
             if (error) {
@@ -438,6 +431,7 @@ define(["d3", "lodash", "queue", "cookie"], function (d3, _, queue, cookie) {
                     window.location.reload();
                 }
             } else { // successful result
+                console.log("no error")
                 http_retries = HTTP_RETRY_COUNT;
                 if (_.every(data, _.isObject) && data.length >= 1) {
                     if (_.isEmpty(treemap.root)) {
@@ -483,11 +477,57 @@ define(["d3", "lodash", "queue", "cookie"], function (d3, _, queue, cookie) {
     }
 
     function fetchTreemapData(d, treemap, load_callback) {
-        //console.log("fetchTreemapData d=", d, "treemap.root=", treemap.root)
+        console.log("fetchTreemapData d=", d, "treemap.root=", treemap.root)
         if (!_.includes(treemap.loaded_paths, d.path)) {
             if (startLoading()) {
-                var q = queueTreemapDataRequests(d);
-                awaitTreemapDataRequests(q, d, treemap, load_callback)
+                // var q = queueTreemapDataRequests(d);
+                // awaitTreemapDataRequests(q, d, treemap, load_callback)
+
+                _.forEach(path_data_url_templates, function (n, root_path) {
+                    if (_.startsWith(d.path, root_path) || _.startsWith(root_path, d.path)) {
+                        url = path_data_url_templates[root_path](d);
+                        console.log("fetchTreemapData: requesting url=" + url);
+
+                        d3.json(url)
+                            .header("Authorization", "Bearer " + cookie.get('jwt'))
+                            .on("error", function (error) {
+                                console.log("failure getting json data", error);
+                            })
+                            .on("load", function (data) {
+                                console.log("got data ", data)
+
+                                if (_.isEmpty(treemap.root)) {
+                                    var root = {
+                                        name: "",
+                                        path: "/",
+                                        child_dirs: new Array(),
+                                        data: {
+                                            atime: { '*': { '*': { '*': 0 } } },
+                                            ctime: { '*': { '*': { '*': 0 } } },
+                                            mtime: { '*': { '*': { '*': 0 } } },
+                                            count: { '*': { '*': { '*': 0 } } },
+                                            size: { '*': { '*': { '*': 0 } } }
+                                        }
+                                    };
+                                    console.log("treemap.root is empty: ", treemap.root, "creating root node: ", root);
+                                    treemap.root = root;
+                                }
+
+                                mergeLustreTree(treemap.root, data.tree);
+                                treemap.loaded_paths.push(data.tree.path);
+
+                                var result = _.attempt(load_callback);
+
+                                if (_.isError(result)) {
+                                    console.log("Error invoking onload_cb ", load_callback);
+                                    console.log("error was ", result.name, ": ", result.message, "(", result.fileName, " line ", result.lineNumber, ")");
+                                } else {
+                                    console.log("initialDataLoad worked")
+                                }
+                            })
+                            .get();
+                    }
+                });
             }
         } else {
             console.log("fetchTreemapData d.path=", d.path, " already loaded. treemap.loaded_paths=", treemap.loaded_paths);

@@ -598,50 +598,46 @@ type TreeMapContainer struct {
 func (s *Server) getTree(c *gin.Context) {
 	// path := c.DefaultQuery("path", "/")
 
-	tmc := &TreeMapContainer{
-		Date: "unknown",
-		Tree: &TreeMap{
-			Name: "/",
-			Path: "/",
-			Data: &TreeMapData{
-				Count: map[string]*TreeMapGroupData{
-					"*": {
-						All: "8",
-					},
-					"team123": {
-						All: "6",
-					},
-					"team456": {
-						All: "2",
-					},
-				},
-				Size: map[string]*TreeMapGroupData{
-					"*": {
-						All: "10",
-					},
-					"team123": {
-						All: "4",
-					},
-					"team456": {
-						All: "6",
-					},
-				},
-			},
-		},
+	fsys, err := fs.Sub(staticFS, "static/tree")
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err) //nolint:errcheck
+
+		return
 	}
 
-	c.JSON(http.StatusOK, tmc)
-}
+	c.FileFromFS("out.v2.json", http.FS(fsys))
 
-// {
-// 	name: "",
-// 	path: "/",
-// 	child_dirs: new Array(),
-// 	data: {
-// 		atime: { '*': { '*': { '*': 0 } } },
-// 		ctime: { '*': { '*': { '*': 0 } } },
-// 		mtime: { '*': { '*': { '*': 0 } } },
-// 		count: { '*': { '*': { '*': 0 } } },
-// 		size: { '*': { '*': { '*': 0 } } }
-// 	}
-// }
+	// tmc := &TreeMapContainer{
+	// 	Date: "unknown",
+	// 	Tree: &TreeMap{
+	// 		Name: "/",
+	// 		Path: "/",
+	// 		Data: &TreeMapData{
+	// 			Count: map[string]*TreeMapGroupData{
+	// 				"*": {
+	// 					All: "8",
+	// 				},
+	// 				"team123": {
+	// 					All: "6",
+	// 				},
+	// 				"team456": {
+	// 					All: "2",
+	// 				},
+	// 			},
+	// 			Size: map[string]*TreeMapGroupData{
+	// 				"*": {
+	// 					All: "10",
+	// 				},
+	// 				"team123": {
+	// 					All: "4",
+	// 				},
+	// 				"team456": {
+	// 					All: "6",
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+
+	// c.JSON(http.StatusOK, tmc)
+}
