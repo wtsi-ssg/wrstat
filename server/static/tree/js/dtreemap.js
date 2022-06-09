@@ -112,9 +112,7 @@ define(["d3", "cookie"], function (d3, cookie) {
         g.on("mouseover", mouseover).on("mouseout", mouseout);
 
         function mouseover(g) {
-            d3.select('#details_path').text(g.path)
-            d3.select('#details_size').text(g.size)
-            d3.select('#details_count').text(g.count)
+            showDetails(g)
         }
 
         function mouseout() {
@@ -218,10 +216,30 @@ define(["d3", "cookie"], function (d3, cookie) {
         }
     }
 
+    var BINARY_UNIT_LABELS = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"];
+
+    function bytesHuman(bytes) {
+        var e = Math.floor(Math.log(bytes) / Math.log(1024));
+        return parseFloat((bytes / Math.pow(1024, e)).toFixed(2)) + " " + BINARY_UNIT_LABELS[e];
+    }
+
+    var NUMBER_UNIT_LABELS = ["", "K", "M", "B", "T", "Q"];
+
+    function countHuman(count) {
+        var unit = Math.floor((count / 1.0e+1).toFixed(0).toString().length)
+        var r = unit % 3
+        var x = Math.abs(Number(count)) / Number('1.0e+' + (unit - r)).toFixed(2)
+        return parseFloat(x.toFixed(2)) + ' ' + NUMBER_UNIT_LABELS[Math.floor(unit / 3)]
+    }
+
+    function showDetails(node) {
+        d3.select('#details_path').text(node.path)
+        d3.select('#details_size').text(bytesHuman(node.size))
+        d3.select('#details_count').text(countHuman(node.count))
+    }
+
     function showCurrentDetails() {
-        d3.select('#details_path').text(current.path)
-        d3.select('#details_size').text(current.size)
-        d3.select('#details_count').text(current.count)
+        showDetails(current)
     }
 
     function updateDetails(node) {
