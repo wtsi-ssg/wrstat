@@ -41,105 +41,6 @@ body {
   text-shadow: 0 1px 0 #fff;
 }
 
-#header.inverted {
-  color: #fff;
-  text-shadow: 0 1px 4px #000;
-}
-
-form,
-.select_label {
-  font-size: 60%;
-  font-weight: 50%;
-}
-
-rect {
-  fill: none;
-  pointer-events: all;
-}
-
-pre {
-  font-size: 18px;
-}
-
-line {
-  stroke: #000;
-  stroke-width: 1.5px;
-}
-
-.string,
-.regexp {
-  color: #f39;
-}
-
-.keyword {
-  color: #00c;
-}
-
-.comment {
-  color: #777;
-  font-style: oblique;
-}
-
-.number {
-  color: #369;
-}
-
-.class,
-.special {
-  color: #1181B8;
-}
-
-a:link,
-a:visited {
-  color: #000;
-  text-decoration: none;
-}
-
-a:hover {
-  color: #666;
-}
-
-
-text {
-  pointer-events: none;
-}
-
-.grandparent text {
-  font-weight: bold;
-}
-
-rect {
-  fill: none;
-  stroke: #fff;
-}
-
-rect.parent,
-.grandparent rect {
-  stroke-width: 2px;
-}
-
-.grandparent rect {
-  fill: orange;
-}
-
-.grandparent:hover rect {
-  fill: #ee9700;
-}
-
-.children rect.parent,
-.grandparent rect {
-  cursor: pointer;
-}
-
-.children rect.parent {
-  fill: #bbb;
-  fill-opacity: .5;
-}
-
-.children:hover rect.child {
-  fill: #bbb;
-}
-
 #details {
   text-align: left;
   white-space: nowrap;
@@ -164,6 +65,43 @@ rect.parent,
 #details table {
   padding: 0.5em;
   margin: 0;
+}
+
+form,
+.select_label {
+  font-size: 60%;
+  font-weight: 50%;
+}
+
+.grandparent text {
+  font-weight: bold;
+}
+
+rect {
+  fill: none;
+  stroke: #fff;
+}
+
+rect.parent,
+.grandparent rect {
+  stroke-width: 2px;
+}
+
+.grandparent rect {
+  fill: orange;
+}
+
+.grandparent:hover rect {
+  fill: #ee9700;
+}
+
+.children rect.parent {
+  fill: #bbb;
+  fill-opacity: .5;
+}
+
+.children:hover rect.child {
+  fill: #bbb;
 }
 
 .lds-ellipsis {
