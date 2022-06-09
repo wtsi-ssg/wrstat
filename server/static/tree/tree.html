@@ -24,6 +24,19 @@
 		</div>
 
 		<div id="filters">
+			<div id="header">
+				<div id="title">
+					DiskTree
+					<div id="spinner" class="lds-ellipsis" style="display: none;">
+						<div></div>
+						<div></div>
+						<div></div>
+						<div></div>
+					</div>
+				</div>
+				<div id="error"></div>
+			</div>
+
 			<div id="select_size">
 				<div id="select_size_metric">
 					<span class="select_label_head">Area:</span><br />
@@ -71,26 +84,18 @@
 			</div>
 		</div>
 
-		<div id="footer">
-			<table id="details">
-				<caption id="details_path">
-				</caption>
+		<div id="details">
+			<span id="details_path"></span>
+			<table>
 				<tr>
-					<th>Metric</th>
-					<th>Total</th>
-				<tr>
-					<td>Size</td>
+					<th>Size</th>
 					<td id="details_size"></td>
 				</tr>
 				<tr>
-					<td>Count</td>
+					<th>Count</th>
 					<td id="details_count"></td>
 				</tr>
 			</table>
-
-			<div id="title">DiskTree</div>
-			<div id="status"></div>
-			<div id="error"></div>
 		</div>
 
 	</div>

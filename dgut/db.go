@@ -509,8 +509,7 @@ func getDGUTFromDB(b *bolt.Bucket, dir string, ch codec.Handle) (*DGUT, error) {
 // Children returns the directory paths that are directly inside the given
 // directory.
 //
-// Returns an error if there was a problem reading from the database, but no
-// error and an empty slice if dir had no children (because it was a leaf dir,
+// Returns an empty slice if dir had no children (because it was a leaf dir,
 // or didn't exist at all).
 //
 // The same children from multiple databases are de-duplicated.

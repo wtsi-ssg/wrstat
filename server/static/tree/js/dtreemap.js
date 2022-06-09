@@ -78,6 +78,7 @@ define(["d3", "cookie"], function (d3, cookie) {
             .datum(d.parent)
             .on("click", transition)
             .on("mouseover", showCurrentDetails)
+            .style("cursor", "pointer")
             .select("text")
             .text(path(d));
 
@@ -91,6 +92,7 @@ define(["d3", "cookie"], function (d3, cookie) {
 
         g.filter(function (d) { return d.has_children; })
             .classed("children", true)
+            .style("cursor", "pointer")
             .on("click", transition);
 
         g.selectAll(".child")
@@ -158,7 +160,6 @@ define(["d3", "cookie"], function (d3, cookie) {
                 do_transition(d)
             } else {
                 getData(d.path, function (data) {
-                    console.log("got child data ", data)
                     d.children = data.root.children
                     setValues(d);
                     layout(d)
@@ -199,12 +200,17 @@ define(["d3", "cookie"], function (d3, cookie) {
     }
 
     function getData(path, loadFunction) {
+        d3.select("#spinner").style("display", "inline-block")
         d3.json("/rest/v1/auth/tree?path=" + path)
             .header("Authorization", "Bearer " + cookie.get('jwt'))
             .on("error", function (error) {
-                console.log("failure getting json data", error);
+                d3.select("#spinner").style("display", "none")
+                d3.select("#error").text("error: " + error);
             })
-            .on("load", loadFunction)
+            .on("load", function (data) {
+                d3.select("#spinner").style("display", "none")
+                loadFunction(data)
+            })
             .get();
     }
 
@@ -248,7 +254,6 @@ define(["d3", "cookie"], function (d3, cookie) {
     }
 
     getData("/", function (data) {
-        console.log("got data ", data)
         root = data.root;
         initialize(root);
         setValues(root);
