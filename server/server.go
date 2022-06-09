@@ -31,9 +31,9 @@ import (
 	"embed"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"os/user"
 	"path/filepath"
 	"sort"
@@ -552,12 +552,12 @@ func (s *Server) AddTreePage() error {
 		return ErrNeedsAuth
 	}
 
-	fsys, err := fs.Sub(staticFS, "static/tree")
-	if err != nil {
-		return err
-	}
+	// fsys, err := fs.Sub(staticFS, "static/tree")
+	// if err != nil {
+	// 	return err
+	// }
 
-	s.router.StaticFS(TreePath, http.FS(fsys))
+	s.router.StaticFS(TreePath, http.FS(os.DirFS("/nfs/users/nfs_s/sb10/src/go/github.com/wtsi-ssg/wrstat/server/static/tree"))) // http.FS(fsys)
 
 	s.router.NoRoute(func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/tree/tree.html")
