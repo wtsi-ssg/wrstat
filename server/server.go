@@ -35,6 +35,7 @@ import (
 	"log"
 	"net/http"
 	"os/user"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -207,25 +208,15 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 func (s *Server) getWhere(c *gin.Context) {
 	dir := c.DefaultQuery("dir", defaultDir)
 	splits := c.DefaultQuery("splits", defaultSplits)
-	groups := c.Query("groups")
-	users := c.Query("users")
-	types := c.Query("types")
 
-	filterGIDs, err := s.restrictedGroups(c, groups)
+	filter, err := s.getFilter(c)
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
 
 		return
 	}
 
-	filterUIDs, err := s.userIDsFromNames(users)
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
-
-		return
-	}
-
-	dcss, err := s.callWhere(dir, splits, filterGIDs, filterUIDs, types)
+	dcss, err := s.tree.Where(dir, filter, convertSplitsValue(splits))
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
 
@@ -233,6 +224,26 @@ func (s *Server) getWhere(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, s.dcssToSummaries(dcss))
+}
+
+// getFilter extracts the user's filter requests, as restricted by their jwt,
+// and returns a tree filter.
+func (s *Server) getFilter(c *gin.Context) (*dgut.Filter, error) {
+	groups := c.Query("groups")
+	users := c.Query("users")
+	types := c.Query("types")
+
+	filterGIDs, err := s.restrictedGroups(c, groups)
+	if err != nil {
+		return nil, err
+	}
+
+	filterUIDs, err := s.userIDsFromNames(users)
+	if err != nil {
+		return nil, err
+	}
+
+	return makeTreeFilter(filterGIDs, filterUIDs, types)
 }
 
 // restrictedGroups checks our JWT if present, and will return the GIDs that
@@ -362,16 +373,6 @@ func userNameToUID(name string) (string, error) {
 	return u.Uid, nil
 }
 
-// callWhere interprets string filters and passes them to tree.Where().
-func (s *Server) callWhere(dir, splits string, gids, uids []string, types string) (dgut.DCSs, error) {
-	filter, err := makeTreeFilter(gids, uids, types)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.tree.Where(dir, filter, convertSplitsValue(splits))
-}
-
 // makeTreeFilter creates a filter from string args.
 func makeTreeFilter(gids, uids []string, types string) (*dgut.Filter, error) {
 	filter := makeTreeGroupFilter(gids)
@@ -469,17 +470,23 @@ type DirSummary struct {
 func (s *Server) dcssToSummaries(dcss dgut.DCSs) []*DirSummary {
 	summaries := make([]*DirSummary, len(dcss))
 
-	for i, dcs := range dcss {
-		summaries[i] = &DirSummary{
-			Dir:    dcs.Dir,
-			Count:  dcs.Count,
-			Size:   dcs.Size,
-			Users:  s.uidsToUsernames(dcs.UIDs),
-			Groups: s.gidsToNames(dcs.GIDs),
-		}
+	for i, dds := range dcss {
+		summaries[i] = s.dgutDStoSummary(dds)
 	}
 
 	return summaries
+}
+
+// dgutDStoSummary converts the given dgut.DirSummary to one of our DirSummary,
+// basically just converting the *IDs to names.
+func (s *Server) dgutDStoSummary(dds *dgut.DirSummary) *DirSummary {
+	return &DirSummary{
+		Dir:    dds.Dir,
+		Count:  dds.Count,
+		Size:   dds.Size,
+		Users:  s.uidsToUsernames(dds.UIDs),
+		Groups: s.gidsToNames(dds.GIDs),
+	}
 }
 
 // uidsToUsernames converts the given user IDs to usernames, sorted on the
@@ -561,46 +568,19 @@ func (s *Server) AddTreePage() error {
 	return nil
 }
 
-// type TreeMapGroupData struct {
-// 	All          string `json:"*,omitempty"`
-// 	Bam          string `json:"bam,omitempty"`
-// 	Compressed   string `json:"compressed,omitempty"`
-// 	Directory    string `json:"directory,omitempty"`
-// 	File         string `json:"file,omitempty"`
-// 	Index        string `json:"index,omitempty"`
-// 	Link         string `json:"link,omitempty"`
-// 	Other        string `json:"other,omitempty"`
-// 	Temporary    string `json:"temporary,omitempty"`
-// 	Uncompressed string `json:"uncompressed,omitempty"`
-// }
-// type TreeMapData struct {
-// 	Atime map[string]*TreeMapGroupData `json:"atime"`
-// 	Ctime map[string]*TreeMapGroupData `json:"ctime"`
-// 	Mtime map[string]*TreeMapGroupData `json:"mtime"`
-// 	Count map[string]*TreeMapGroupData `json:"count"`
-// 	Size  map[string]*TreeMapGroupData `json:"size"`
-// }
-// type TreeMap struct {
-// 	Name      string         `json:"name"`
-// 	Path      string         `json:"path"`
-// 	ChildDirs []*TreeMapData `json:"child_dirs"`
-// 	Data      *TreeMapData   `json:"data"`
-// }
-
-// type TreeMapContainer struct {
-// 	Date string   `json:"date"`
-// 	Tree *TreeMap `json:"tree"`
-// }
-
+// TreeElement holds tree.DirInfo type information in a form suited to passing
+// to the treemap web interface.
 type TreeElement struct {
 	Name        string         `json:"name"`
 	Path        string         `json:"path"`
-	Size        int            `json:"size"`
-	Count       int            `json:"count"`
+	Count       uint64         `json:"count"`
+	Size        uint64         `json:"size"`
 	HasChildren bool           `json:"has_children"`
 	Children    []*TreeElement `json:"children,omitempty"`
 }
 
+// TreeMap holds a root TreeElement and other information needed by the treemap
+// web interface.
 type TreeMap struct {
 	Root *TreeElement `json:"root"`
 }
@@ -611,110 +591,59 @@ type TreeMap struct {
 func (s *Server) getTree(c *gin.Context) {
 	path := c.DefaultQuery("path", "/")
 
-	// fsys, err := fs.Sub(staticFS, "static/tree")
-	// if err != nil {
-	// 	c.AbortWithError(http.StatusInternalServerError, err) //nolint:errcheck
+	filter, err := s.getFilter(c)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
 
-	// 	return
-	// }
-
-	// c.FileFromFS("out.v2.json", http.FS(fsys))
-
-	// tmc := &TreeMapContainer{
-	// 	Date: "unknown",
-	// 	Tree: &TreeMap{
-	// 		Name: "/",
-	// 		Path: "/",
-	// 		Data: &TreeMapData{
-	// 			Count: map[string]*TreeMapGroupData{
-	// 				"*": {
-	// 					All: "8",
-	// 				},
-	// 				"team123": {
-	// 					All: "6",
-	// 				},
-	// 				"team456": {
-	// 					All: "2",
-	// 				},
-	// 			},
-	// 			Size: map[string]*TreeMapGroupData{
-	// 				"*": {
-	// 					All: "10",
-	// 				},
-	// 				"team123": {
-	// 					All: "4",
-	// 				},
-	// 				"team456": {
-	// 					All: "6",
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// }
-
-	var tm *TreeMap
-
-	switch path {
-	case "/":
-		tm = &TreeMap{
-			Root: &TreeElement{
-				Name:        "papa",
-				Path:        "/",
-				Size:        21000000000000,
-				Count:       1100000,
-				HasChildren: true,
-				Children: []*TreeElement{
-					{
-						Name:        "c1",
-						Path:        "/c1",
-						Size:        2,
-						Count:       700,
-						HasChildren: false,
-					},
-					{
-						Name:        "c2",
-						Path:        "/c2",
-						Size:        3,
-						Count:       2000,
-						HasChildren: true,
-					},
-					{
-						Name:        "c3",
-						Path:        "/c3",
-						Size:        5,
-						Count:       1000000000,
-						HasChildren: false,
-					},
-				},
-			},
-		}
-	case "/c2":
-		tm = &TreeMap{
-			Root: &TreeElement{
-				Name:        "c2",
-				Path:        "/c2",
-				Size:        5,
-				Count:       3,
-				HasChildren: true,
-				Children: []*TreeElement{
-					{
-						Name:        "c4",
-						Path:        "/c2/c4",
-						Size:        2,
-						Count:       2,
-						HasChildren: false,
-					},
-					{
-						Name:        "c5",
-						Path:        "/c2/c5",
-						Size:        3,
-						Count:       1,
-						HasChildren: false,
-					},
-				},
-			},
-		}
+		return
 	}
 
-	c.JSON(http.StatusOK, tm)
+	di, err := s.tree.DirInfo(path, filter)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
+
+		return
+	}
+
+	c.JSON(http.StatusOK, s.diToTreeMap(di, filter))
+}
+
+// diToTreeMap converts the given dgut.DirInfo to our own TreeMap. It has to do
+// additional database queries to find out if di's children have children.
+func (s *Server) diToTreeMap(di *dgut.DirInfo, filter *dgut.Filter) *TreeMap {
+	tm := &TreeMap{
+		Root: ddsToTreeElement(di.Current),
+	}
+
+	tm.Root.HasChildren = len(di.Children) > 0
+
+	childElements := make([]*TreeElement, len(di.Children))
+
+	for i, dds := range di.Children {
+		te := ddsToTreeElement(dds)
+
+		hasChildren, err := s.tree.DirHasChildren(dds.Dir, filter)
+		if err != nil {
+			hasChildren = false
+		}
+
+		te.HasChildren = hasChildren
+
+		childElements[i] = te
+	}
+
+	tm.Root.Children = childElements
+
+	return tm
+}
+
+// ddsToTreeElement converts a dgut.DirSummary to a TreeElement, but with no
+// child info.
+func ddsToTreeElement(dds *dgut.DirSummary) *TreeElement {
+	return &TreeElement{
+		Name:  filepath.Base(dds.Dir),
+		Path:  dds.Dir,
+		Count: dds.Count,
+		Size:  dds.Size,
+	}
 }

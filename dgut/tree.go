@@ -106,6 +106,26 @@ func (t *Tree) DirInfo(dir string, filter *Filter) (*DirInfo, error) {
 	return di, err
 }
 
+// DirHasChildren tells you if the given directory has any child directories
+// with files in them that pass the filter. See GUTs.Summary for an explanation
+// of the filter.
+func (t *Tree) DirHasChildren(dir string, filter *Filter) (bool, error) {
+	children := t.db.Children(dir)
+
+	for _, child := range children {
+		ds, err := t.getSummaryInfo(child, filter)
+		if err != nil {
+			return false, err
+		}
+
+		if ds.Count > 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // getSummaryInfo accesses the database to retrieve the count and size info
 // for a given directory and filter, along with the UIDs and GIDs that own those
 // files.
