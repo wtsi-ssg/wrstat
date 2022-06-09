@@ -22,6 +22,7 @@
 	<div id="body" style="display: none;">
 		<div id="chart">
 		</div>
+
 		<div id="filters">
 			<div id="select_size">
 				<div id="select_size_metric">
@@ -69,11 +70,29 @@
 				</div>
 			</div>
 		</div>
+
 		<div id="footer">
+			<table id="details">
+				<caption id="details_path">
+				</caption>
+				<tr>
+					<th>Metric</th>
+					<th>Total</th>
+				<tr>
+					<td>Size</td>
+					<td id="details_size"></td>
+				</tr>
+				<tr>
+					<td>Count</td>
+					<td id="details_count"></td>
+				</tr>
+			</table>
+
 			<div id="title">DiskTree</div>
 			<div id="status"></div>
 			<div id="error"></div>
 		</div>
+
 	</div>
 
 	<script data-main="js/main" src="js/require.js"></script>

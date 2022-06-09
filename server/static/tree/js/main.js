@@ -10,6 +10,9 @@ require.config({
 
 requirejs(['jquery', 'cookie'], function ($, cookie) {
     function showMap(jwt) {
+        $("#login").hide()
+        $("#body").show()
+
         require(["dtreemap"], function () {
             console.log("treemap module loaded");
         });

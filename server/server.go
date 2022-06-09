@@ -595,7 +595,8 @@ func (s *Server) AddTreePage() error {
 type TreeElement struct {
 	Name        string         `json:"name"`
 	Path        string         `json:"path"`
-	Value       int            `json:"value"`
+	Size        int            `json:"size"`
+	Count       int            `json:"count"`
 	HasChildren bool           `json:"has_children"`
 	Children    []*TreeElement `json:"children,omitempty"`
 }
@@ -659,25 +660,29 @@ func (s *Server) getTree(c *gin.Context) {
 			Root: &TreeElement{
 				Name:        "papa",
 				Path:        "/",
-				Value:       10,
+				Size:        10,
+				Count:       10,
 				HasChildren: true,
 				Children: []*TreeElement{
 					{
 						Name:        "c1",
 						Path:        "/c1",
-						Value:       2,
+						Size:        2,
+						Count:       7,
 						HasChildren: false,
 					},
 					{
 						Name:        "c2",
 						Path:        "/c2",
-						Value:       3,
+						Size:        3,
+						Count:       2,
 						HasChildren: true,
 					},
 					{
 						Name:        "c3",
 						Path:        "/c3",
-						Value:       5,
+						Size:        5,
+						Count:       1,
 						HasChildren: false,
 					},
 				},
@@ -688,19 +693,22 @@ func (s *Server) getTree(c *gin.Context) {
 			Root: &TreeElement{
 				Name:        "c2",
 				Path:        "/c2",
-				Value:       5,
+				Size:        5,
+				Count:       3,
 				HasChildren: true,
 				Children: []*TreeElement{
 					{
 						Name:        "c4",
 						Path:        "/c2/c4",
-						Value:       2,
+						Size:        2,
+						Count:       2,
 						HasChildren: false,
 					},
 					{
 						Name:        "c5",
 						Path:        "/c2/c5",
-						Value:       3,
+						Size:        3,
+						Count:       1,
 						HasChildren: false,
 					},
 				},

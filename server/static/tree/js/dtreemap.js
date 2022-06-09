@@ -1,6 +1,8 @@
 define(["d3", "cookie"], function (d3, cookie) {
     console.log("dtreemap using d3 v" + d3.version);
 
+    var current;
+
     var margin = { top: 20, right: 0, bottom: 0, left: 0 },
         width = 960,
         height = 500 - margin.top - margin.bottom,
@@ -75,6 +77,7 @@ define(["d3", "cookie"], function (d3, cookie) {
         grandparent
             .datum(d.parent)
             .on("click", transition)
+            .on("mouseover", showCurrentDetails)
             .select("text")
             .text(path(d));
 
@@ -99,13 +102,24 @@ define(["d3", "cookie"], function (d3, cookie) {
         g.append("rect")
             .attr("class", "parent")
             .call(rect)
-            .append("title")
-            .text(function (d) { return formatNumber(d.value); });
+            .append("title");
 
         g.append("text")
             .attr("dy", ".75em")
             .text(function (d) { return d.name; })
             .call(text);
+
+        g.on("mouseover", mouseover).on("mouseout", mouseout);
+
+        function mouseover(g) {
+            d3.select('#details_path').text(g.path)
+            d3.select('#details_size').text(g.size)
+            d3.select('#details_count').text(g.count)
+        }
+
+        function mouseout() {
+            showCurrentDetails()
+        }
 
         function transition(d) {
             if (transitioning || !d) return;
@@ -148,10 +162,13 @@ define(["d3", "cookie"], function (d3, cookie) {
                 getData(d.path, function (data) {
                     console.log("got child data ", data)
                     d.children = data.root.children
+                    setValues(d);
                     layout(d)
                     do_transition(d)
                 });
             }
+
+            updateDetails(d)
         }
 
         return g;
@@ -167,12 +184,6 @@ define(["d3", "cookie"], function (d3, cookie) {
             .attr("y", function (d) { return y(d.y); })
             .attr("width", function (d) { return x(d.x + d.dx) - x(d.x); })
             .attr("height", function (d) { return y(d.y + d.dy) - y(d.y); });
-    }
-
-    function name(d) {
-        return d.parent
-            ? name(d.parent) + "." + d.name
-            : d.name;
     }
 
     function path(d) {
@@ -199,11 +210,32 @@ define(["d3", "cookie"], function (d3, cookie) {
             .get();
     }
 
+    function setValues(d) {
+        d.value = d.size;
+
+        if (d.children) {
+            d.children.forEach(item => item.value = item.size);
+        }
+    }
+
+    function showCurrentDetails() {
+        d3.select('#details_path').text(current.path)
+        d3.select('#details_size').text(current.size)
+        d3.select('#details_count').text(current.count)
+    }
+
+    function updateDetails(node) {
+        current = node
+        showCurrentDetails()
+    }
+
     getData("/", function (data) {
         console.log("got data ", data)
         root = data.root;
         initialize(root);
+        setValues(root);
         layout(root);
         display(root);
+        updateDetails(root);
     });
 });
