@@ -269,9 +269,34 @@ define(["d3", "cookie"], function (d3, cookie) {
         }
     }
 
+    function constructAPIURL(path) {
+        url = "/rest/v1/auth/tree?path=" + path
+
+        group = d3.select('#select_group').property('value');
+        user = d3.select('#select_user').property('value');
+        filetype = d3.select('#select_filetype').property('value');
+
+        if (group != "*") {
+            url += '&groups=' + group
+        }
+
+        if (user != "*") {
+            url += '&users=' + user
+        }
+
+        if (filetype != "*") {
+            url += '&types=' + filetype
+        }
+
+        console.log("url:", url)
+
+        return url
+    }
+
     function getData(path, loadFunction) {
         d3.select("#spinner").style("display", "inline-block")
-        d3.json("/rest/v1/auth/tree?path=" + path)
+
+        d3.json(constructAPIURL(path))
             .header("Authorization", "Bearer " + cookie.get('jwt'))
             .on("error", function (error) {
                 d3.select("#spinner").style("display", "none")
@@ -340,6 +365,35 @@ define(["d3", "cookie"], function (d3, cookie) {
         showCurrentDetails()
     }
 
+    function setFilterOptions(data) {
+        setFilter('#select_group', data.groups);
+        setFilter('#select_user', data.users);
+        setFilter('#select_filetype', data.filetypes);
+    }
+
+    function setFilter(id, elements) {
+        console.log("have elements ", elements)
+        elements.unshift("*")
+
+        var select = d3.select(id)
+        // .on('change', onchange)
+
+        select
+            .selectAll('option')
+            .remove();
+
+        select
+            .selectAll('option')
+            .data(elements).enter()
+            .append('option')
+            .text(function (d) { return d; });
+
+        // function onchange() {
+        //     selectValue = d3.select(this).property('value');
+        //     console.log(selectValue + ' is the last selected option.');
+        // };
+    }
+
     getData("/", function (data) {
         root = data.root;
         initialize(root);
@@ -347,5 +401,6 @@ define(["d3", "cookie"], function (d3, cookie) {
         layout(root);
         display(root);
         updateDetails(root);
+        setFilterOptions(data);
     });
 });
