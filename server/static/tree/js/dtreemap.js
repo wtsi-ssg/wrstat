@@ -2,11 +2,11 @@ define(["d3", "cookie"], function (d3, cookie) {
     console.log("dtreemap using d3 v" + d3.version);
 
     var current;
+    let allNodes = new Map();
 
     var margin = { top: 20, right: 0, bottom: 0, left: 0 },
         width = 960,
         height = 500 - margin.top - margin.bottom,
-        formatNumber = d3.format(",d"),
         transitioning;
 
     var x = d3.scale.linear()
@@ -157,6 +157,13 @@ define(["d3", "cookie"], function (d3, cookie) {
         //         return d.name;
         //     });
 
+        d3.selectAll("#select_area input").on("change", function () {
+            console.log("area changed to ", this.value);
+            areaBasedOnSize = this.value == "size"
+            setAllValues()
+            transition(current);
+        });
+
         function mouseover(g) {
             showDetails(g)
         }
@@ -170,6 +177,8 @@ define(["d3", "cookie"], function (d3, cookie) {
             transitioning = true;
 
             function do_transition(d) {
+                layout(d);
+
                 var g2 = display(d),
                     t1 = g1.transition().duration(250),
                     t2 = g2.transition().duration(250);
@@ -208,7 +217,6 @@ define(["d3", "cookie"], function (d3, cookie) {
                 getData(d.path, function (data) {
                     d.children = data.root.children
                     setValues(d);
-                    layout(d)
                     do_transition(d)
                 });
             }
@@ -271,16 +279,33 @@ define(["d3", "cookie"], function (d3, cookie) {
             })
             .on("load", function (data) {
                 d3.select("#spinner").style("display", "none")
+                allNodes.set(data.root.path, data.root)
                 loadFunction(data)
             })
             .get();
     }
 
-    function setValues(d) {
-        d.value = d.size;
+    var areaBasedOnSize = true
 
-        if (d.children) {
-            d.children.forEach(item => item.value = item.size);
+    function setValues(d) {
+        if (areaBasedOnSize) {
+            d.value = d.size;
+
+            if (d.children) {
+                d.children.forEach(item => item.value = item.size);
+            }
+        } else {
+            d.value = d.count;
+
+            if (d.children) {
+                d.children.forEach(item => item.value = item.count);
+            }
+        }
+    }
+
+    function setAllValues() {
+        for (let d of allNodes.values()) {
+            setValues(d);
         }
     }
 

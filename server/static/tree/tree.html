@@ -37,48 +37,29 @@
 				<div id="error"></div>
 			</div>
 
-			<div id="select_size">
-				<div id="select_size_metric">
-					<span class="select_label_head">Area:</span><br />
-					<form id="select_size_metric_form">
+			<div>
+				<div>
+					<span class="select_label">Area:</span>
+					<form id="select_area">
+						<input type="radio" id="size" name="area" value="size" checked="checked">
+						<label for="size">Size</label>
+						<input type="radio" id="count" name="area" value="count">
+						<label for="count">Count</label>
 					</form>
 				</div>
-				<div id="select_size_group">
-					<span class="select_label">Group owner:</span>
-					<select id="select_size_group_form">
+				<div>
+					<span class="select_label">Group:</span>
+					<select id="select_group">
 					</select>
 				</div>
-				<div id="select_size_user">
-					<span class="select_label">User owner:</span>
-					<select id="select_size_user_form">
+				<div>
+					<span class="select_label">User:</span>
+					<select id="select_user">
 					</select>
 				</div>
-				<div id="select_size_tag">
-					<span class="select_label">Tag:</span>
-					<select id="select_size_tag_form">
-					</select>
-				</div>
-			</div>
-			<hr />
-			<div id="select_fill_form">
-				<div id="select_fill_metric">
-					<span class="select_label_head">Colour:</span><br />
-					<form id="select_fill_metric_form">
-					</form>
-				</div>
-				<div id="select_fill_group">
-					<span class="select_label">Group owner:</span>
-					<select id="select_fill_group_form">
-					</select>
-				</div>
-				<div id="select_fill_user">
-					<span class="select_label">User owner:</span>
-					<select id="select_fill_user_form">
-					</select>
-				</div>
-				<div id="select_fill_tag">
-					<span class="select_label">Tag:</span>
-					<select id="select_fill_tag_form">
+				<div>
+					<span class="select_label">Filetype:</span>
+					<select id="select_filetype">
 					</select>
 				</div>
 			</div>
