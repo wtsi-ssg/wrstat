@@ -32,6 +32,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
@@ -59,6 +60,26 @@ func TestServer(t *testing.T) {
 	Convey("hasError tells you about errors", t, func() {
 		So(hasError(nil, nil), ShouldBeFalse)
 		So(hasError(nil, ErrBadQuery, nil), ShouldBeTrue)
+	})
+
+	Convey("You can get access to static website files", t, func() {
+		envVals := []string{devEnvVal, "0"}
+
+		for _, envVal := range envVals {
+			os.Setenv(devEnvKey, envVal)
+			fsys, err := getStaticFS()
+			So(err, ShouldBeNil)
+
+			f, err := fsys.Open("tree.html")
+			So(err, ShouldBeNil)
+
+			clen := 15
+			content := make([]byte, clen)
+			n, err := f.Read(content)
+			So(err, ShouldBeNil)
+			So(n, ShouldEqual, clen)
+			So(string(content), ShouldEqual, "<!DOCTYPE html>")
+		}
 	})
 
 	Convey("Given a Server", t, func() {
@@ -314,7 +335,7 @@ func TestServer(t *testing.T) {
 				So(user2, ShouldBeNil)
 			})
 
-			testWhereClientOnRealServer(t, uid, gids, s, addr, certPath, keyPath)
+			testClientsOnRealServer(t, username, uid, gids, s, addr, certPath, keyPath)
 		})
 
 		if len(gids) < 2 {
@@ -475,9 +496,9 @@ func getExampleGIDs(gids []string) []string {
 	return exampleGIDs
 }
 
-// testWhereClientOnRealServer tests our client method GetWhereDataIs on a real
-// listening server, if we have at least 2 gids to test with.
-func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Server, addr, cert, key string) {
+// testClientsOnRealServer tests our client method GetWhereDataIs and the tree
+// webpage on a real listening server, if we have at least 2 gids to test with.
+func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, s *Server, addr, cert, key string) {
 	t.Helper()
 
 	if len(gids) < 2 {
@@ -487,20 +508,23 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 	g, errg := user.LookupGroupId(gids[0])
 	So(errg, ShouldBeNil)
 
-	Convey("The where endpoint works with a real server", func() {
+	Convey("Given a database", func() {
 		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 
 		path, err := createExampleDB(t, uid, gids[0], gids[1])
 		So(err, ShouldBeNil)
 
-		Convey("You can't get where data is without auth", func() {
+		Convey("You can't get where data is or add the tree page without auth", func() {
 			err = s.LoadDGUTDBs(path)
 			So(err, ShouldBeNil)
 
 			_, _, err = GetWhereDataIs(addr, cert, "", "/", "", "", "", "")
 			So(err, ShouldNotBeNil)
 			So(err, ShouldEqual, ErrNoAuth)
+
+			err = s.AddTreePage()
+			So(err, ShouldNotBeNil)
 		})
 
 		Convey("Root can see everything", func() {
@@ -567,6 +591,128 @@ func testWhereClientOnRealServer(t *testing.T, uid string, gids []string, s *Ser
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
 			So(dcss[0].Count, ShouldEqual, 9)
+		})
+
+		Convey("Once you add the tree page", func() {
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
+				return true, nil, nil
+			})
+			So(err, ShouldBeNil)
+
+			err = s.LoadDGUTDBs(path)
+			So(err, ShouldBeNil)
+
+			err = s.AddTreePage()
+			So(err, ShouldBeNil)
+
+			token, err := Login(addr, cert, "user", "pass")
+			So(err, ShouldBeNil)
+
+			Convey("You can get the static tree web page", func() {
+				r := newAuthenticatedClientRequest(addr, cert, token)
+
+				resp, err := r.Get("tree/tree.html")
+				So(err, ShouldBeNil)
+				So(string(resp.Body()), ShouldStartWith, "<!DOCTYPE html>")
+			})
+
+			Convey("You can access the tree API", func() {
+				r := newAuthenticatedClientRequest(addr, cert, token)
+
+				resp, err := r.SetResult(&TreeMap{}).
+					ForceContentType("application/json").
+					Get(EndPointAuthTree)
+
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+
+				users := []string{"root", username}
+				sort.Strings(users)
+				groups := gidsToGroups(t, gids[0], gids[1], "0")
+				sort.Strings(groups)
+
+				tm := *resp.Result().(*TreeMap) //nolint:forcetypeassert
+				So(tm, ShouldResemble, TreeMap{
+					Root: &TreeElement{
+						Name:        "/",
+						Path:        "/",
+						Count:       15,
+						Size:        86,
+						HasChildren: true,
+						Children: []*TreeElement{
+							{
+								Name:        "a",
+								Path:        "/a",
+								Count:       15,
+								Size:        86,
+								HasChildren: true,
+								Children:    nil,
+							},
+						},
+					},
+					Users:     users,
+					Groups:    groups,
+					FileTypes: []string{"file"},
+				})
+
+				resp, err = r.SetResult(&TreeMap{}).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"path":   "/",
+						"groups": g.Name,
+						// "users":  users,
+						// "types":  types,
+					}).
+					Get(EndPointAuthTree)
+
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+
+				tm = *resp.Result().(*TreeMap) //nolint:forcetypeassert
+				So(tm, ShouldResemble, TreeMap{
+					Root: &TreeElement{
+						Name:        "/",
+						Path:        "/",
+						Count:       9,
+						Size:        80,
+						HasChildren: true,
+						Children: []*TreeElement{
+							{
+								Name:        "a",
+								Path:        "/a",
+								Count:       9,
+								Size:        80,
+								HasChildren: true,
+								Children:    nil,
+							},
+						},
+					},
+					Users:     users,
+					Groups:    []string{g.Name},
+					FileTypes: []string{"file"},
+				})
+
+				resp, err = r.SetResult(&TreeMap{}).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"path":   "/",
+						"groups": "adsf@£$",
+					}).
+					Get(EndPointAuthTree)
+
+				So(err, ShouldBeNil)
+				So(resp.StatusCode(), ShouldEqual, http.StatusBadRequest)
+
+				resp, err = r.SetResult(&TreeMap{}).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"path": "/foo",
+					}).
+					Get(EndPointAuthTree)
+
+				So(err, ShouldBeNil)
+				So(resp.StatusCode(), ShouldEqual, http.StatusBadRequest)
+			})
 		})
 	})
 }

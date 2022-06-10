@@ -31,6 +31,7 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -84,6 +85,8 @@ const (
 	defaultDir    = "/"
 	defaultSplits = "2"
 	stopTimeout   = 10 * time.Second
+	devEnvKey     = "WRSTAT_SERVER_DEV"
+	devEnvVal     = "1"
 )
 
 // AuthCallback is a function that returns true if the given password is valid
@@ -552,12 +555,12 @@ func (s *Server) AddTreePage() error {
 		return ErrNeedsAuth
 	}
 
-	// fsys, err := fs.Sub(staticFS, "static/tree")
-	// if err != nil {
-	// 	return err
-	// }
+	fsys, err := getStaticFS()
+	if err != nil {
+		return err
+	}
 
-	s.router.StaticFS(TreePath, http.FS(os.DirFS("/nfs/users/nfs_s/sb10/src/go/github.com/wtsi-ssg/wrstat/server/static/tree"))) // http.FS(fsys)
+	s.router.StaticFS(TreePath, http.FS(fsys))
 
 	s.router.NoRoute(func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/tree/tree.html")
@@ -566,6 +569,26 @@ func (s *Server) AddTreePage() error {
 	s.authGroup.GET(TreePath, s.getTree)
 
 	return nil
+}
+
+// getStaticFS returns an FS for the static files needed for the tree webpage.
+// Returns embedded files by default, or a live view of the git repo files if
+// env var WRSTAT_SERVER_DEV is set to 1.
+func getStaticFS() (fs.FS, error) {
+	var (
+		fsys fs.FS
+		err  error
+	)
+
+	treeDir := "static/tree"
+
+	if os.Getenv(devEnvKey) == devEnvVal {
+		fsys = os.DirFS(treeDir)
+	} else {
+		fsys, err = fs.Sub(staticFS, treeDir)
+	}
+
+	return fsys, err
 }
 
 // TreeElement holds tree.DirInfo type information in a form suited to passing
@@ -582,7 +605,10 @@ type TreeElement struct {
 // TreeMap holds a root TreeElement and other information needed by the treemap
 // web interface.
 type TreeMap struct {
-	Root *TreeElement `json:"root"`
+	Root      *TreeElement `json:"root"`
+	Users     []string     `json:"users"`
+	Groups    []string     `json:"groups"`
+	FileTypes []string     `json:"filetypes"`
 }
 
 // getTree responds with the data needed by the tree web interface. LoadDGUTDB()
@@ -611,8 +637,12 @@ func (s *Server) getTree(c *gin.Context) {
 // diToTreeMap converts the given dgut.DirInfo to our own TreeMap. It has to do
 // additional database queries to find out if di's children have children.
 func (s *Server) diToTreeMap(di *dgut.DirInfo, filter *dgut.Filter) *TreeMap {
+	ds := s.dgutDStoSummary(di.Current)
 	tm := &TreeMap{
-		Root: ddsToTreeElement(di.Current),
+		Root:      ddsToTreeElement(di.Current),
+		Users:     ds.Users,
+		Groups:    ds.Groups,
+		FileTypes: []string{"file"},
 	}
 
 	tm.Root.HasChildren = len(di.Children) > 0
@@ -621,14 +651,8 @@ func (s *Server) diToTreeMap(di *dgut.DirInfo, filter *dgut.Filter) *TreeMap {
 
 	for i, dds := range di.Children {
 		te := ddsToTreeElement(dds)
-
-		hasChildren, err := s.tree.DirHasChildren(dds.Dir, filter)
-		if err != nil {
-			hasChildren = false
-		}
-
+		hasChildren := s.tree.DirHasChildren(dds.Dir, filter)
 		te.HasChildren = hasChildren
-
 		childElements[i] = te
 	}
 
