@@ -90,28 +90,84 @@ define(["d3", "cookie"], function (d3, cookie) {
             .data(getChildren(d))
             .enter().append("g");
 
-        g.filter(function (d) { return d.has_children; })
-            .classed("children", true)
-            .style("cursor", "pointer")
+        // g.filter(function (d) { return d.has_children; })
+        //     .classed("children", true)
+        //     .style("cursor", "pointer")
+        //     .on("click", transition);
+
+        // g.selectAll(".child")
+        //     .data(function (d) { return getChildren(d) || [d]; })
+        //     .enter().append("rect")
+        //     .attr("class", "child")
+        //     .call(rect);
+
+        // g.append("rect")
+        //     .attr("class", "parent")
+        //     .call(rect);
+
+        // g.append("svg")
+        //     .attr("class", "parent")
+        //     .attr("viewBox", "-100 -10 200 20")
+        //     .call(rect);
+
+        // g.append("text")
+        //     .attr("dy", ".75em")
+        //     // .attr("font-size", 16)
+        //     // .attr("x", 0)
+        //     // .attr("y", 0)
+        //     // .attr("width", 200)
+        //     // .attr("height", 20)
+        //     // .attr("dy", ".3em")
+        //     // .style("text-anchor", "middle")
+        //     .text(function (d) { return d.name; })
+        //     .call(text);
+
+        // g.on("mouseover", mouseover).on("mouseout", mouseout);
+
+        var parent_and_children = g1.selectAll("g.parent_and_children")
+            .data(getChildren(d))
+            .enter().append("svg:g");
+
+        parent_and_children
+            .classed("parent_and_children", true)
+            .on("mouseover", mouseover)
+            .on("mouseout", mouseout);
+
+        parent_and_children
             .on("click", transition);
 
-        g.selectAll(".child")
-            .data(function (d) { return getChildren(d) || [d]; })
+        parent_and_children.selectAll(".child")
+            .data(function (d) {
+                return d.children || [d];
+            })
             .enter().append("rect")
-            .attr("class", "child")
-            .call(rect);
+            .classed("child", true)
+            .call(treebox)
+            .style("fill", "red");
 
-        g.append("rect")
-            .attr("class", "parent")
-            .call(rect)
-            .append("title");
+        parent_and_children.append("rect")
+            .classed("parent", true)
+            .call(treebox)
+            .style("fill", "blue");
 
-        g.append("text")
-            .attr("dy", ".75em")
-            .text(function (d) { return d.name; })
-            .call(text);
+        var titlesvg = parent_and_children.append("svg")
+            .classed("parent_title", true)
+            .attr("viewBox", "-100 -10 200 20")
+            .attr("preserveAspectRatio", "xMidYMid meet")
+            .call(treebox);
 
-        g.on("mouseover", mouseover).on("mouseout", mouseout);
+        titlesvg.append("text")
+            .attr("font-size", 16)
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", 200)
+            .attr("height", 20)
+            .attr("dy", ".3em")
+            .style("text-anchor", "middle")
+            .text(function (d) {
+                return d.name;
+            });
+
 
         function mouseover(g) {
             showDetails(g)
@@ -144,6 +200,8 @@ define(["d3", "cookie"], function (d3, cookie) {
                 g2.selectAll("text").style("fill-opacity", 0);
 
                 // Transition to the new view.
+                t1.selectAll(".parent_title").call(treebox);
+                t2.selectAll(".parent_title").call(treebox);
                 t1.selectAll("text").call(text).style("fill-opacity", 0);
                 t2.selectAll("text").call(text).style("fill-opacity", 1);
                 t1.selectAll("rect").call(rect);
@@ -183,6 +241,22 @@ define(["d3", "cookie"], function (d3, cookie) {
             .attr("y", function (d) { return y(d.y); })
             .attr("width", function (d) { return x(d.x + d.dx) - x(d.x); })
             .attr("height", function (d) { return y(d.y + d.dy) - y(d.y); });
+    }
+
+    function treebox(b) {
+        b.attr("x", function (d) {
+            //console.log("treebox: d.x=", d.x, " x(d.x)=", x(d.x), " d=", d);
+            return x(d.x);
+        })
+            .attr("y", function (d) {
+                return y(d.y);
+            })
+            .attr("width", function (d) {
+                return x(d.x + d.dx) - x(d.x);
+            })
+            .attr("height", function (d) {
+                return y(d.y + d.dy) - y(d.y);
+            });
     }
 
     function path(d) {
