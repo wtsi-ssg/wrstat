@@ -96,6 +96,22 @@ func TestTree(t *testing.T) {
 			})
 		})
 
+		Convey("You can ask the Tree if a dir has children", func() {
+			has := tree.DirHasChildren("/", nil)
+			So(has, ShouldBeTrue)
+
+			has = tree.DirHasChildren("/a/b/e/h/tmp", nil)
+			So(has, ShouldBeFalse)
+
+			has = tree.DirHasChildren("/", &Filter{
+				GIDs: []uint32{9999},
+			})
+			So(has, ShouldBeFalse)
+
+			has = tree.DirHasChildren("/foo", nil)
+			So(has, ShouldBeFalse)
+		})
+
 		Convey("You can find Where() in the Tree files are", func() {
 			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 0)
 			So(err, ShouldBeNil)
