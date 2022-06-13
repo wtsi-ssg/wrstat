@@ -122,6 +122,7 @@ ctrl-z; bg.
 			die(msg)
 		}
 
+		info("opening databases, please wait...")
 		err = s.LoadDGUTDBs(args...)
 		if err != nil {
 			msg := fmt.Sprintf("failed to load database: %s", err)
@@ -138,6 +139,7 @@ ctrl-z; bg.
 
 		defer s.Stop()
 
+		info("server started")
 		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
 			msg := fmt.Sprintf("non-graceful stop: %s", err)
