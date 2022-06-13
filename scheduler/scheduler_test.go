@@ -176,6 +176,19 @@ func TestStatFile(t *testing.T) {
 			So(job.Requirements.RAM, ShouldEqual, 16000)
 			So(job.Override, ShouldEqual, 1)
 		})
+
+		Convey("You can make a Scheduler with a queue override", func() {
+			s, err := New(deployment, "", "foo", timeout, logger, false)
+			So(err, ShouldBeNil)
+			So(s, ShouldNotBeNil)
+
+			dreq := DefaultRequirements()
+
+			job := s.NewJob("cmd", "rep", "req", "", "", nil)
+			So(job.Requirements.RAM, ShouldEqual, dreq.RAM)
+			So(job.Override, ShouldEqual, 0)
+			So(job.Requirements.Other, ShouldResemble, map[string]string{"scheduler_queue": "foo"})
+		})
 	})
 
 	Convey("When the jobqueue server is not up, you can't make a Scheduler", t, func() {
