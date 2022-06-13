@@ -152,6 +152,11 @@ func cliPrint(msg string, a ...interface{}) {
 	fmt.Fprintf(os.Stdout, msg, a...)
 }
 
+// info is a convenience to log a message at the Info level.
+func info(msg string, a ...interface{}) {
+	appLogger.Info(fmt.Sprintf(msg, a...))
+}
+
 // warn is a convenience to log a message at the Warn level.
 func warn(msg string, a ...interface{}) {
 	appLogger.Warn(fmt.Sprintf(msg, a...))
