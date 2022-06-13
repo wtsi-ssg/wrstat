@@ -555,10 +555,7 @@ func (s *Server) AddTreePage() error {
 		return ErrNeedsAuth
 	}
 
-	fsys, err := getStaticFS()
-	if err != nil {
-		return err
-	}
+	fsys := getStaticFS()
 
 	s.router.StaticFS(TreePath, http.FS(fsys))
 
@@ -574,21 +571,18 @@ func (s *Server) AddTreePage() error {
 // getStaticFS returns an FS for the static files needed for the tree webpage.
 // Returns embedded files by default, or a live view of the git repo files if
 // env var WRSTAT_SERVER_DEV is set to 1.
-func getStaticFS() (fs.FS, error) {
-	var (
-		fsys fs.FS
-		err  error
-	)
+func getStaticFS() fs.FS {
+	var fsys fs.FS
 
 	treeDir := "static/tree"
 
 	if os.Getenv(devEnvKey) == devEnvVal {
 		fsys = os.DirFS(treeDir)
 	} else {
-		fsys, err = fs.Sub(staticFS, treeDir)
+		fsys, _ = fs.Sub(staticFS, treeDir) //nolint::errcheck
 	}
 
-	return fsys, err
+	return fsys
 }
 
 // TreeElement holds tree.DirInfo type information in a form suited to passing

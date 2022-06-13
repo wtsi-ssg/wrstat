@@ -67,8 +67,7 @@ func TestServer(t *testing.T) {
 
 		for _, envVal := range envVals {
 			os.Setenv(devEnvKey, envVal)
-			fsys, err := getStaticFS()
-			So(err, ShouldBeNil)
+			fsys := getStaticFS()
 
 			f, err := fsys.Open("tree.html")
 			So(err, ShouldBeNil)
@@ -120,27 +119,11 @@ func TestServer(t *testing.T) {
 		})
 
 		Convey("You can Start the Server", func() {
-			checker, err := port.NewChecker("localhost")
-			So(err, ShouldBeNil)
-			port, _, err := checker.AvailableRange(2)
-			So(err, ShouldBeNil)
-
-			addr := fmt.Sprintf("localhost:%d", port)
 			certPath, keyPath, err := createTestCert(t)
 			So(err, ShouldBeNil)
 
-			var g errgroup.Group
-			g.Go(func() error {
-				return s.Start(addr, certPath, keyPath)
-			})
-
-			<-time.After(100 * time.Millisecond)
-
-			defer func() {
-				s.Stop()
-				err = g.Wait()
-				So(err, ShouldBeNil)
-			}()
+			addr, dfunc := startTestServer(s, certPath, keyPath)
+			defer dfunc()
 
 			client := resty.New()
 			client.SetRootCertificate(certPath)
@@ -594,6 +577,9 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		})
 
 		Convey("Once you add the tree page", func() {
+			var logWriter strings.Builder
+			s := New(&logWriter)
+
 			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
 				return true, nil, nil
 			})
@@ -605,6 +591,9 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			err = s.AddTreePage()
 			So(err, ShouldBeNil)
 
+			addr, dfunc := startTestServer(s, cert, key)
+			defer dfunc()
+
 			token, err := Login(addr, cert, "user", "pass")
 			So(err, ShouldBeNil)
 
@@ -614,11 +603,14 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				resp, err := r.Get("tree/tree.html")
 				So(err, ShouldBeNil)
 				So(string(resp.Body()), ShouldStartWith, "<!DOCTYPE html>")
+
+				resp, err = r.Get("")
+				So(err, ShouldBeNil)
+				So(string(resp.Body()), ShouldStartWith, "<!DOCTYPE html>")
 			})
 
 			Convey("You can access the tree API", func() {
 				r := newAuthenticatedClientRequest(addr, cert, token)
-
 				resp, err := r.SetResult(&TreeMap{}).
 					ForceContentType("application/json").
 					Get(EndPointAuthTree)
@@ -655,13 +647,12 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					FileTypes: []string{"file"},
 				})
 
+				r = newAuthenticatedClientRequest(addr, cert, token)
 				resp, err = r.SetResult(&TreeMap{}).
 					ForceContentType("application/json").
 					SetQueryParams(map[string]string{
 						"path":   "/",
 						"groups": g.Name,
-						// "users":  users,
-						// "types":  types,
 					}).
 					Get(EndPointAuthTree)
 
@@ -692,6 +683,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					FileTypes: []string{"file"},
 				})
 
+				r = newAuthenticatedClientRequest(addr, cert, token)
 				resp, err = r.SetResult(&TreeMap{}).
 					ForceContentType("application/json").
 					SetQueryParams(map[string]string{
@@ -703,6 +695,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				So(err, ShouldBeNil)
 				So(resp.StatusCode(), ShouldEqual, http.StatusBadRequest)
 
+				r = newAuthenticatedClientRequest(addr, cert, token)
 				resp, err = r.SetResult(&TreeMap{}).
 					ForceContentType("application/json").
 					SetQueryParams(map[string]string{
@@ -985,5 +978,29 @@ func runSliceMatrixTest(t *testing.T, matrix []string, s *Server) {
 		response, err := queryWhere(s, filter)
 		So(err, ShouldBeNil)
 		So(response.Code, ShouldEqual, http.StatusBadRequest)
+	}
+}
+
+// startTestServer starts the given server using the given cert and key paths
+// and returns the address and a func you should defer to stop the server.
+func startTestServer(s *Server, certPath, keyPath string) (string, func()) {
+	checker, err := port.NewChecker("localhost")
+	So(err, ShouldBeNil)
+	port, _, err := checker.AvailableRange(2)
+	So(err, ShouldBeNil)
+
+	addr := fmt.Sprintf("localhost:%d", port)
+
+	var g errgroup.Group
+	g.Go(func() error {
+		return s.Start(addr, certPath, keyPath)
+	})
+
+	<-time.After(100 * time.Millisecond)
+
+	return addr, func() {
+		s.Stop()
+		err = g.Wait()
+		So(err, ShouldBeNil)
 	}
 }
