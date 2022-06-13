@@ -34,7 +34,6 @@ requirejs(['jquery', 'cookie'], function ($, cookie) {
         var posting = $.post("/rest/v1/jwt", $("#loginForm").serialize(), "json");
 
         posting.done(function (data) {
-            console.log(data)
             cookie.set('jwt', data, { expires: 7, path: '', secure: true, sameSite: 'strict' })
 
             showMap(data)
