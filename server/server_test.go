@@ -114,8 +114,8 @@ func TestServer(t *testing.T) {
 			So(dss[0].Dir, ShouldEqual, "/foo")
 			So(dss[0].Count, ShouldEqual, 1)
 			So(dss[0].Size, ShouldEqual, 2)
-			So(dss[0].Users, ShouldResemble, []string{username, "unknown"})
-			So(dss[0].Groups, ShouldResemble, []string{gidToGroup(t, gids[0]), "unknown"})
+			So(dss[0].Users, ShouldResemble, []string{username})
+			So(dss[0].Groups, ShouldResemble, []string{gidToGroup(t, gids[0])})
 		})
 
 		Convey("You can Start the Server", func() {
