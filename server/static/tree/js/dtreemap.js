@@ -177,7 +177,6 @@ define(["d3", "cookie"], function (d3, cookie) {
         //     });
 
         d3.selectAll("#select_area input").on("change", function () {
-            console.log("area changed to ", this.value);
             areaBasedOnSize = this.value == "size"
             setAllValues()
             transition(current);
