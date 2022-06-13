@@ -87,6 +87,7 @@ const (
 	stopTimeout   = 10 * time.Second
 	devEnvKey     = "WRSTAT_SERVER_DEV"
 	devEnvVal     = "1"
+	unknown       = "#unknown"
 )
 
 // AuthCallback is a function that returns true if the given password is valid
@@ -469,7 +470,7 @@ type DirSummary struct {
 
 // dcssToSummaries converts the given DCSs to our own DirSummary, the difference
 // being we change the UIDs to usernames and the GIDs to group names. On failure
-// to convert, the name will be "unknown".
+// to convert, the name will skipped.
 func (s *Server) dcssToSummaries(dcss dgut.DCSs) []*DirSummary {
 	summaries := make([]*DirSummary, len(dcss))
 
@@ -506,8 +507,8 @@ func (s *Server) uidsToUsernames(uids []uint32) []string {
 }
 
 // idsToSortedNames uses the given callback to convert the given ids to names
-// (or "unknown" if the cb errors), and sorts them. It caches results in the
-// given map, avoiding the use of the cb if we already have the answer.
+// (skipping if the cb errors), and sorts them. It caches results in the given
+// map, avoiding the use of the cb if we already have the answer.
 func idsToSortedNames(ids []uint32, cache map[uint32]string, cb func(string) (string, error)) []string {
 	names := make([]string, len(ids))
 
@@ -521,7 +522,7 @@ func idsToSortedNames(ids []uint32, cache map[uint32]string, cb func(string) (st
 
 		name, err := cb(fmt.Sprintf("%d", id))
 		if err != nil {
-			names[i] = "unknown"
+			names[i] = unknown
 		} else {
 			names[i] = name
 		}
@@ -529,9 +530,24 @@ func idsToSortedNames(ids []uint32, cache map[uint32]string, cb func(string) (st
 		cache[id] = names[i]
 	}
 
+	names = removeUnknown(names)
+
 	sort.Strings(names)
 
 	return names
+}
+
+// removeUnknown does a no-allocation filter of slice to remove unknown entries.
+func removeUnknown(slice []string) []string {
+	filtered := slice[:0]
+
+	for _, item := range slice {
+		if item != unknown {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return filtered
 }
 
 // gidsToNames converts the given unix group IDs to group names, sorted
