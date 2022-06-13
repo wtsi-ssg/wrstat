@@ -51,6 +51,25 @@ define(["d3", "cookie"], function (d3, cookie) {
         root.depth = 0;
     }
 
+    var filterIDs = ['#select_group', '#select_user', '#select_filetype'];
+    let filters = new Map();
+    filterIDs.forEach(id => filters.set(id, "*"));
+
+    function getFilters() {
+        str = "";
+        filterIDs.forEach(id => str += id + ':' + filters.get(id) + ';');
+        return str;
+    }
+
+    function storeFilters(node) {
+        currentFilters = getFilters();
+        node.filters = currentFilters;
+
+        if (node.children) {
+            node.children.forEach(child => child.filters = currentFilters);
+        }
+    }
+
     // Compute the treemap layout recursively such that each group of siblings
     // uses the same size (1×1) rather than the dimensions of the parent cell.
     // This optimizes the layout for the current zoom state. Note that a wrapper
@@ -164,6 +183,22 @@ define(["d3", "cookie"], function (d3, cookie) {
             transition(current);
         });
 
+        filterIDs.forEach(id => d3.select(id).on('change', function () {
+            selectValue = d3.select(this).property('value');
+            filters.set(id, selectValue);
+            getData(current.path, function (data) {
+                updated = data.root;
+                current.size = updated.size;
+                current.count = updated.count;
+                current.children = updated.children;
+                current.has_children = updated.has_children;
+                setValues(current);
+                storeFilters(current);
+                transition(current);
+                updateDetails(current);
+            });
+        }));
+
         function mouseover(g) {
             showDetails(g)
         }
@@ -211,12 +246,14 @@ define(["d3", "cookie"], function (d3, cookie) {
                 });
             }
 
-            if (d.children) {
+            if (d.children && d.filters == getFilters()) {
                 do_transition(d)
             } else {
+                // console.log('getting fresh data for ', d.path);
                 getData(d.path, function (data) {
-                    d.children = data.root.children
+                    d.children = data.root.children;
                     setValues(d);
+                    storeFilters(d);
                     do_transition(d)
                 });
             }
@@ -288,8 +325,6 @@ define(["d3", "cookie"], function (d3, cookie) {
             url += '&types=' + filetype
         }
 
-        console.log("url:", url)
-
         return url
     }
 
@@ -303,9 +338,10 @@ define(["d3", "cookie"], function (d3, cookie) {
                 d3.select("#error").text("error: " + error);
             })
             .on("load", function (data) {
-                d3.select("#spinner").style("display", "none")
-                allNodes.set(data.root.path, data.root)
-                loadFunction(data)
+                d3.select("#spinner").style("display", "none");
+                allNodes.set(data.root.path, data.root);
+                setFilterOptions(data);
+                loadFunction(data);
             })
             .get();
     }
@@ -372,11 +408,9 @@ define(["d3", "cookie"], function (d3, cookie) {
     }
 
     function setFilter(id, elements) {
-        console.log("have elements ", elements)
         elements.unshift("*")
 
         var select = d3.select(id)
-        // .on('change', onchange)
 
         select
             .selectAll('option')
@@ -386,21 +420,17 @@ define(["d3", "cookie"], function (d3, cookie) {
             .selectAll('option')
             .data(elements).enter()
             .append('option')
-            .text(function (d) { return d; });
-
-        // function onchange() {
-        //     selectValue = d3.select(this).property('value');
-        //     console.log(selectValue + ' is the last selected option.');
-        // };
+            .text(function (d) { return d; })
+            .property("selected", function (d) { return d === filters.get(id) });
     }
 
     getData("/", function (data) {
         root = data.root;
         initialize(root);
         setValues(root);
+        storeFilters(root);
         layout(root);
         display(root);
         updateDetails(root);
-        setFilterOptions(data);
     });
 });
