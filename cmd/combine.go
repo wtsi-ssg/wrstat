@@ -53,7 +53,7 @@ const numSummaryColumns = 2
 const groupSumCols = 2
 const userGroupSumCols = 3
 const intBase = 10
-const dgutSumCols = 2
+const dgutSumCols = 4
 const dgutStoreBatchSize = 100000
 
 // combineCmd represents the combine command.
@@ -483,9 +483,9 @@ func createCombineDGUTOutputDir(dir string) string {
 	return path
 }
 
-// mergeDGUTAndStoreInDB merges pre-sorted (pre-merged) dgut data (eg. from a
-// `sort -m` of .dgut files), summing consecutive lines with the first 4
-// columns, and outputs the results to an embedded database.
+// mergeDGUTAndStoreInDB merges pre-sorted dgut data, summing consecutive lines
+// with the same first 4 columns, and outputs the results to an embedded
+// database.
 func mergeDGUTAndStoreInDB(inputs []string, outputDir string) error {
 	sortMergeOutput, cleanup, err := mergeSortedFiles(inputs)
 	if err != nil {
@@ -543,9 +543,8 @@ func mergeLogAndCompress(inputs []string, output *os.File) error {
 	return mergeFilesAndStreamToOutput(inputs, output, mergeLogStreamToCompressedFile)
 }
 
-// mergeLogStreamToCompressedFile merges pre-sorted (pre-merged) log data (eg.
-// from a `sort -m` of .byusergroup files), outputting the results to a file,
-// compressed.
+// mergeLogStreamToCompressedFile combines log data, outputting the results to a
+// file, compressed.
 func mergeLogStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
 	zw, closeOutput := compressOutput(output)
 
