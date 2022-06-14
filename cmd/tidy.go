@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2021-2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -292,5 +292,17 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date str
 		}
 	}
 
-	return nil
+	return matchPermsInsideDir(destDir, destDirInfo)
+}
+
+// matchPermsInsideDir does matchPerms for all the files in the given dir
+// recursively.
+func matchPermsInsideDir(dir string, desired fs.FileInfo) error {
+	return filepath.WalkDir(dir, func(path string, de fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		return matchPerms(path, desired)
+	})
 }
