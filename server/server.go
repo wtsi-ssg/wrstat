@@ -457,15 +457,16 @@ func convertSplitsValue(splits string) int {
 }
 
 // DirSummary holds nested file count and size information on a directory. It
-// also holds which users and groups own files nested under the directory. It
-// differs from dgut.DirSummary in having string names for users and groups,
-// instead of ids.
+// also holds which users and groups own files nested under the directory, and
+// their file types. It differs from dgut.DirSummary in having string names for
+// users, groups and types, instead of ids.
 type DirSummary struct {
-	Dir    string
-	Count  uint64
-	Size   uint64
-	Users  []string
-	Groups []string
+	Dir       string
+	Count     uint64
+	Size      uint64
+	Users     []string
+	Groups    []string
+	FileTypes []string
 }
 
 // dcssToSummaries converts the given DCSs to our own DirSummary, the difference
@@ -485,11 +486,12 @@ func (s *Server) dcssToSummaries(dcss dgut.DCSs) []*DirSummary {
 // basically just converting the *IDs to names.
 func (s *Server) dgutDStoSummary(dds *dgut.DirSummary) *DirSummary {
 	return &DirSummary{
-		Dir:    dds.Dir,
-		Count:  dds.Count,
-		Size:   dds.Size,
-		Users:  s.uidsToUsernames(dds.UIDs),
-		Groups: s.gidsToNames(dds.GIDs),
+		Dir:       dds.Dir,
+		Count:     dds.Count,
+		Size:      dds.Size,
+		Users:     s.uidsToUsernames(dds.UIDs),
+		Groups:    s.gidsToNames(dds.GIDs),
+		FileTypes: s.ftsToNames(dds.FTs),
 	}
 }
 
@@ -551,7 +553,7 @@ func removeUnknown(slice []string) []string {
 }
 
 // gidsToNames converts the given unix group IDs to group names, sorted
-// on the names, and returns as a comma separated string.
+// on the names.
 func (s *Server) gidsToNames(gids []uint32) []string {
 	return idsToSortedNames(gids, s.gidToNameCache, func(gid string) (string, error) {
 		g, err := user.LookupGroupId(gid)
@@ -561,6 +563,19 @@ func (s *Server) gidsToNames(gids []uint32) []string {
 
 		return g.Name, nil
 	})
+}
+
+// ftsToNames converts the given file types to their names, sorted on the names.
+func (s *Server) ftsToNames(fts []summary.DirGUTFileType) []string {
+	names := make([]string, len(fts))
+
+	for i, ft := range fts {
+		names[i] = ft.String()
+	}
+
+	sort.Strings(names)
+
+	return names
 }
 
 // AddTreePage adds the /tree static web page to the server, along with the
@@ -652,7 +667,7 @@ func (s *Server) diToTreeMap(di *dgut.DirInfo, filter *dgut.Filter) *TreeMap {
 		Root:      ddsToTreeElement(di.Current),
 		Users:     ds.Users,
 		Groups:    ds.Groups,
-		FileTypes: []string{"file"},
+		FileTypes: ds.FileTypes,
 	}
 
 	tm.Root.HasChildren = len(di.Children) > 0

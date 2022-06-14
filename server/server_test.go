@@ -384,43 +384,46 @@ func TestServer(t *testing.T) {
 						expectedRoot := []string{"root"}
 						expectedGroupsA := []string{groupA}
 						expectedGroupsB := []string{groupB}
+						expectedFTs := expectedNonRoot[0].FileTypes
+						expectedBams := []string{"bam"}
+						expectedCrams := []string{"cram"}
 
 						matrix := map[string][]*DirSummary{
 							"?groups=" + groups[0] + "," + groups[1]: expectedNonRoot,
 							"?groups=" + groups[0]: {
-								{Dir: "/a/b", Count: 9, Size: 80, Users: expectedUsers, Groups: expectedGroupsA},
-								{Dir: "/a/b/d", Count: 7, Size: 70, Users: expectedUsers, Groups: expectedGroupsA},
-								{Dir: "/a/b/d/g", Count: 6, Size: 60, Users: expectedUsers, Groups: expectedGroupsA},
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA},
-								{Dir: "/a/b/d/f", Count: 1, Size: 10, Users: expectedUser, Groups: expectedGroupsA},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA},
+								{Dir: "/a/b", Count: 9, Size: 80, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedFTs},
+								{Dir: "/a/b/d", Count: 7, Size: 70, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/d/g", Count: 6, Size: 60, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
+								{Dir: "/a/b/d/f", Count: 1, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
 							},
 							"?users=root," + username: expected,
 							"?users=root": {
-								{Dir: "/a", Count: 10, Size: 46, Users: expectedRoot, Groups: expectedGroupsRoot},
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA},
-								{Dir: "/a/c/d", Count: 5, Size: 5, Users: expectedRoot, Groups: expectedGroupsB},
+								{Dir: "/a", Count: 10, Size: 46, Users: expectedRoot, Groups: expectedGroupsRoot, FileTypes: expectedCrams},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/c/d", Count: 5, Size: 5, Users: expectedRoot, Groups: expectedGroupsB, FileTypes: expectedCrams},
 							},
 							"?groups=" + groups[0] + "&users=root": {
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
 							},
 							"?types=cram,bam": expected,
 							"?types=bam": {
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
 							},
 							"?groups=" + groups[0] + "&users=root&types=cram,bam": {
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
 							},
 							"?groups=" + groups[0] + "&users=root&types=bam": {
-								{Dir: "/", Count: 0, Size: 0, Users: []string{}, Groups: []string{}},
+								{Dir: "/", Count: 0, Size: 0, Users: []string{}, Groups: []string{}, FileTypes: []string{}},
 							},
 							"?splits=0": {
-								{Dir: "/a", Count: 15, Size: 86, Users: expectedUsers, Groups: expectedGroupsRoot},
+								{Dir: "/a", Count: 15, Size: 86, Users: expectedUsers, Groups: expectedGroupsRoot, FileTypes: expectedFTs},
 							},
 							"?dir=/a/b/e/h": {
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
 							},
 						}
 
@@ -623,6 +626,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				groups := gidsToGroups(t, gids[0], gids[1], "0")
 				sort.Strings(groups)
 
+				expectedFTs := []string{"bam", "cram"}
+
 				tm := *resp.Result().(*TreeMap) //nolint:forcetypeassert
 				So(tm, ShouldResemble, TreeMap{
 					Root: &TreeElement{
@@ -644,7 +649,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					},
 					Users:     users,
 					Groups:    groups,
-					FileTypes: []string{"file"},
+					FileTypes: expectedFTs,
 				})
 
 				r = newAuthenticatedClientRequest(addr, cert, token)
@@ -680,7 +685,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					},
 					Users:     users,
 					Groups:    []string{g.Name},
-					FileTypes: []string{"file"},
+					FileTypes: expectedFTs,
 				})
 
 				r = newAuthenticatedClientRequest(addr, cert, token)
@@ -941,11 +946,12 @@ func adjustedExpectations(expected []*DirSummary, groupA, groupB string) ([]*Dir
 			sort.Strings(groups)
 
 			expectedNonRoot[i] = &DirSummary{
-				Dir:    "/a",
-				Count:  14,
-				Size:   85,
-				Users:  ds.Users,
-				Groups: groups,
+				Dir:       "/a",
+				Count:     14,
+				Size:      85,
+				Users:     ds.Users,
+				Groups:    groups,
+				FileTypes: ds.FileTypes,
 			}
 
 			expectedGroupsRoot = ds.Groups
