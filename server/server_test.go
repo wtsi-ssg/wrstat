@@ -992,6 +992,7 @@ func startTestServer(s *Server, certPath, keyPath string) (string, func()) {
 	addr := fmt.Sprintf("localhost:%d", port)
 
 	var g errgroup.Group
+
 	g.Go(func() error {
 		return s.Start(addr, certPath, keyPath)
 	})
@@ -1000,6 +1001,7 @@ func startTestServer(s *Server, certPath, keyPath string) (string, func()) {
 
 	return addr, func() {
 		s.Stop()
+
 		err = g.Wait()
 		So(err, ShouldBeNil)
 	}
