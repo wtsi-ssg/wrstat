@@ -595,7 +595,7 @@ func getStaticFS() fs.FS {
 	if os.Getenv(devEnvKey) == devEnvVal {
 		fsys = os.DirFS(treeDir)
 	} else {
-		fsys, _ = fs.Sub(staticFS, treeDir) //nolint::errcheck
+		fsys, _ = fs.Sub(staticFS, treeDir) //nolint:errcheck
 	}
 
 	return fsys
