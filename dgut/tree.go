@@ -25,7 +25,11 @@
 
 package dgut
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/wtsi-ssg/wrstat/summary"
+)
 
 // Tree is used to do high-level queries on DB.Store() database files.
 type Tree struct {
@@ -46,13 +50,15 @@ func NewTree(paths ...string) (*Tree, error) {
 }
 
 // DirSummary holds nested file count and size information on a directory. It
-// also holds which users and groups own files nested under the directory.
+// also holds which users and groups own files nested under the directory, and
+// what the file types are.
 type DirSummary struct {
 	Dir   string
 	Count uint64
 	Size  uint64
 	UIDs  []uint32
 	GIDs  []uint32
+	FTs   []summary.DirGUTFileType
 }
 
 // DCSs is a Size-sortable slice of DirSummary.
@@ -125,9 +131,9 @@ func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 
 // getSummaryInfo accesses the database to retrieve the count and size info
 // for a given directory and filter, along with the UIDs and GIDs that own those
-// files.
+// files, the file types of those files.
 func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
-	c, s, u, g, err := t.db.DirInfo(dir, filter)
+	c, s, u, g, fts, err := t.db.DirInfo(dir, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +144,7 @@ func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
 		Size:  s,
 		UIDs:  u,
 		GIDs:  g,
+		FTs:   fts,
 	}, nil
 }
 

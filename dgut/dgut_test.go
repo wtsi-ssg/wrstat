@@ -108,13 +108,15 @@ func TestDGUT(t *testing.T) {
 
 	expectedUIDs := []uint32{101, 102}
 	expectedGIDs := []uint32{1, 2}
+	expectedFTs := []summary.DirGUTFileType{0, 1}
 
-	Convey("GUTs can sum the count and size and provide UIDs and GIDs of their GUT elements", t, func() {
-		c, s, u, g := expectedRootGUTs.Summary(nil)
+	Convey("GUTs can sum the count and size and provide UIDs, GIDs and FTs of their GUT elements", t, func() {
+		c, s, u, g, t := expectedRootGUTs.Summary(nil)
 		So(c, ShouldEqual, 14)
 		So(s, ShouldEqual, 85)
 		So(u, ShouldResemble, expectedUIDs)
 		So(g, ShouldResemble, expectedGIDs)
+		So(t, ShouldResemble, expectedFTs)
 	})
 
 	Convey("A DGUT can be encoded and decoded", t, func() {
@@ -127,12 +129,13 @@ func TestDGUT(t *testing.T) {
 		So(d, ShouldResemble, expected[0])
 	})
 
-	Convey("A DGUT can sum the count and size and provide UIDs and GIDs of its GUTs", t, func() {
-		c, s, u, g := expected[0].Summary(nil)
+	Convey("A DGUT can sum the count and size and provide UIDs, GIDs and FTs of its GUTs", t, func() {
+		c, s, u, g, t := expected[0].Summary(nil)
 		So(c, ShouldEqual, 14)
 		So(s, ShouldEqual, 85)
 		So(u, ShouldResemble, expectedUIDs)
 		So(g, ShouldResemble, expectedGIDs)
+		So(t, ShouldResemble, expectedFTs)
 	})
 
 	Convey("Given multiline dgut data", t, func() {
@@ -200,53 +203,59 @@ func TestDGUT(t *testing.T) {
 						err = db.Open()
 						So(err, ShouldBeNil)
 
-						c, s, u, g, errd := db.DirInfo("/", nil)
+						c, s, u, g, t, errd := db.DirInfo("/", nil)
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 14)
 						So(s, ShouldEqual, 85)
 						So(u, ShouldResemble, expectedUIDs)
 						So(g, ShouldResemble, expectedGIDs)
+						So(t, ShouldResemble, expectedFTs)
 
-						c, s, u, g, errd = db.DirInfo("/a/c/d", nil)
+						c, s, u, g, t, errd = db.DirInfo("/a/c/d", nil)
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 5)
 						So(s, ShouldEqual, 5)
 						So(u, ShouldResemble, []uint32{102})
 						So(g, ShouldResemble, []uint32{2})
+						So(t, ShouldResemble, []summary.DirGUTFileType{0})
 
-						c, s, u, g, errd = db.DirInfo("/a/b/d/g", nil)
+						c, s, u, g, t, errd = db.DirInfo("/a/b/d/g", nil)
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 6)
 						So(s, ShouldEqual, 60)
 						So(u, ShouldResemble, expectedUIDs)
 						So(g, ShouldResemble, []uint32{1})
+						So(t, ShouldResemble, []summary.DirGUTFileType{0})
 
-						_, _, _, _, errd = db.DirInfo("/foo", nil)
+						_, _, _, _, _, errd = db.DirInfo("/foo", nil)
 						So(errd, ShouldNotBeNil)
 						So(errd, ShouldEqual, ErrDirNotFound)
 
-						c, s, u, g, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}})
+						c, s, u, g, t, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}})
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 9)
 						So(s, ShouldEqual, 80)
 						So(u, ShouldResemble, expectedUIDs)
 						So(g, ShouldResemble, []uint32{1})
+						So(t, ShouldResemble, expectedFTs)
 
-						c, s, u, g, errd = db.DirInfo("/", &Filter{UIDs: []uint32{102}})
+						c, s, u, g, t, errd = db.DirInfo("/", &Filter{UIDs: []uint32{102}})
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 9)
 						So(s, ShouldEqual, 45)
 						So(u, ShouldResemble, []uint32{102})
 						So(g, ShouldResemble, expectedGIDs)
+						So(t, ShouldResemble, []summary.DirGUTFileType{0})
 
-						c, s, u, g, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
+						c, s, u, g, t, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 4)
 						So(s, ShouldEqual, 40)
 						So(u, ShouldResemble, []uint32{102})
 						So(g, ShouldResemble, []uint32{1})
+						So(t, ShouldResemble, []summary.DirGUTFileType{0})
 
-						c, s, u, g, errd = db.DirInfo("/", &Filter{
+						c, s, u, g, t, errd = db.DirInfo("/", &Filter{
 							GIDs: []uint32{1},
 							UIDs: []uint32{102},
 							FTs:  []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
@@ -255,13 +264,15 @@ func TestDGUT(t *testing.T) {
 						So(s, ShouldEqual, 0)
 						So(u, ShouldResemble, []uint32{})
 						So(g, ShouldResemble, []uint32{})
+						So(t, ShouldResemble, []summary.DirGUTFileType{})
 
-						c, s, u, g, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
+						c, s, u, g, t, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 1)
 						So(s, ShouldEqual, 5)
 						So(u, ShouldResemble, []uint32{101})
 						So(g, ShouldResemble, []uint32{1})
+						So(t, ShouldResemble, []summary.DirGUTFileType{7})
 
 						children := db.Children("/a")
 						So(children, ShouldResemble, []string{"/a/b", "/a/c"})
@@ -325,12 +336,13 @@ func TestDGUT(t *testing.T) {
 							err = db.Open()
 							So(err, ShouldBeNil)
 
-							c, s, u, g, errd := db.DirInfo("/", nil)
+							c, s, u, g, t, errd := db.DirInfo("/", nil)
 							So(errd, ShouldBeNil)
 							So(c, ShouldEqual, 16)
 							So(s, ShouldEqual, 87)
 							So(u, ShouldResemble, []uint32{101, 102, 103})
 							So(g, ShouldResemble, []uint32{1, 2, 3})
+							So(t, ShouldResemble, expectedFTs)
 
 							children := db.Children("/")
 							So(children, ShouldResemble, []string{"/a", "/i"})
