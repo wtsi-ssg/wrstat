@@ -34,6 +34,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/ugorji/go/codec"
+	"github.com/wtsi-ssg/wrstat/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -443,13 +444,13 @@ func (d *DB) Close() {
 }
 
 // DirInfo tells you the total number of files and their total size nested under
-// the given directory, along with the UIDs and GIDs of those files. See
+// the given directory, along with the UIDs, GIDs and FTs of those files. See
 // GUTs.Summary for an explanation of the filter.
 //
 // Returns an error if dir doesn't exist.
 //
 // You must call Open() before calling this.
-func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, []uint32, []uint32, error) {
+func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, []uint32, []uint32, []summary.DirGUTFileType, error) {
 	var notFound int
 
 	dgut := &DGUT{}
@@ -465,12 +466,12 @@ func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, []uint32, []ui
 	}
 
 	if notFound == len(d.readSets) {
-		return 0, 0, nil, nil, ErrDirNotFound
+		return 0, 0, nil, nil, nil, ErrDirNotFound
 	}
 
-	c, s, u, g := dgut.Summary(filter)
+	c, s, u, g, t := dgut.Summary(filter)
 
-	return c, s, u, g, nil
+	return c, s, u, g, t, nil
 }
 
 // getDGUTFromDBAndAppend calls getDGUTFromDB() and appends the result

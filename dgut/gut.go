@@ -136,7 +136,8 @@ func (g *GUT) amTempAndNotFilteredJustForTemp(filter *Filter) bool {
 type GUTs []*GUT
 
 // Summary sums the count and size of all our GUT elements and returns the
-// results, along with lists of the unique UIDs and GIDs in our GUT elements.
+// results, along with lists of the unique UIDs, GIDs and FTs in our GUT
+// elements.
 //
 // Provide a Filter to ignore GUT elements that do not match one of the
 // specified GIDs, one of the UIDs, and one of the FTs. If one of those
@@ -144,14 +145,15 @@ type GUTs []*GUT
 //
 // Provide nil to do no filtering.
 //
-// Note that FT 7 is "temporary" files, and because a file can be both
-// temporary and another type, if your Filter's FTs slice doesn't contain
-// just DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored.
-func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32) {
+// Note that FT 7 is "temporary" files, and because a file can be both temporary
+// and another type, if your Filter's FTs slice doesn't contain just
+// DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored.
+func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32, []summary.DirGUTFileType) {
 	var count, size uint64
 
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
+	uniqueFTs := make(map[summary.DirGUTFileType]bool)
 
 	for _, gut := range g {
 		if !gut.PassesFilter(filter) {
@@ -163,9 +165,10 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32) {
 
 		uniqueUIDs[gut.UID] = true
 		uniqueGIDs[gut.GID] = true
+		uniqueFTs[gut.FT] = true
 	}
 
-	return count, size, idMapToSlice(uniqueUIDs), idMapToSlice(uniqueGIDs)
+	return count, size, idMapToSlice(uniqueUIDs), idMapToSlice(uniqueGIDs), ftMapToSlice(uniqueFTs)
 }
 
 // idMapToSlice returns a sorted slice of the given keys.
@@ -181,4 +184,19 @@ func idMapToSlice(m map[uint32]bool) []uint32 {
 	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 
 	return ids
+}
+
+// ftMapToSlice returns a sorted slice of the given FTs.
+func ftMapToSlice(m map[summary.DirGUTFileType]bool) []summary.DirGUTFileType {
+	fts := make([]summary.DirGUTFileType, len(m))
+	i := 0
+
+	for ft := range m {
+		fts[i] = ft
+		i++
+	}
+
+	sort.Slice(fts, func(i, j int) bool { return fts[i] < fts[j] })
+
+	return fts
 }
