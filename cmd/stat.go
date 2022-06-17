@@ -83,7 +83,7 @@ The output file format is 11 tab separated columns with the following contents:
 
 It also summarises file count and size information by grouping on
 user+group+directory, and stores this summary in another file named after the
-input file with a ".byusergroup.gz" suffix. This is 5 tab separated columns with
+input file with a ".byusergroup" suffix. This is 5 tab separated columns with
 the following contents (sorted on the first 3 columns):
 
 1. username
@@ -104,7 +104,7 @@ joe	lemur	/disk1/dir1/dir1a	3	30
 joe	lemur	/disk1/dir2	1	10
 
 Likewise, it produces a similar file that also shows nested numbers, with these
-6 tab separated columns, with a ".dgut.gz" suffix:
+6 tab separated columns, with a ".dgut" suffix:
 
 1. directory
 2. gid
