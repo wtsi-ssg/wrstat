@@ -195,7 +195,7 @@ func whereMinMBToBytes(mbs int) uint64 {
 	return uint64(mbs * bytesPerK * bytesPerK)
 }
 
-// where does the main job of quering the server to answer where the data is on
+// where does the main job of querying the server to answer where the data is on
 // disk.
 func where(url, cert, dir, groups, users, types, splits, order string, minSizeBytes uint64, json bool) error {
 	token, err := getJWT(url, cert)
