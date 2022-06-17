@@ -623,17 +623,11 @@ type TreeElement struct {
 	Path        string         `json:"path"`
 	Count       uint64         `json:"count"`
 	Size        uint64         `json:"size"`
+	Users       []string       `json:"users"`
+	Groups      []string       `json:"groups"`
+	FileTypes   []string       `json:"filetypes"`
 	HasChildren bool           `json:"has_children"`
 	Children    []*TreeElement `json:"children,omitempty"`
-}
-
-// TreeMap holds a root TreeElement and other information needed by the treemap
-// web interface.
-type TreeMap struct {
-	Root      *TreeElement `json:"root"`
-	Users     []string     `json:"users"`
-	Groups    []string     `json:"groups"`
-	FileTypes []string     `json:"filetypes"`
 }
 
 // getTree responds with the data needed by the tree web interface. LoadDGUTDB()
@@ -656,43 +650,38 @@ func (s *Server) getTree(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, s.diToTreeMap(di, filter))
+	c.JSON(http.StatusOK, s.diToTreeElement(di, filter))
 }
 
-// diToTreeMap converts the given dgut.DirInfo to our own TreeMap. It has to do
-// additional database queries to find out if di's children have children.
-func (s *Server) diToTreeMap(di *dgut.DirInfo, filter *dgut.Filter) *TreeMap {
-	ds := s.dgutDStoSummary(di.Current)
-	tm := &TreeMap{
-		Root:      ddsToTreeElement(di.Current),
-		Users:     ds.Users,
-		Groups:    ds.Groups,
-		FileTypes: ds.FileTypes,
-	}
-
-	tm.Root.HasChildren = len(di.Children) > 0
-
+// diToTreeElement converts the given dgut.DirInfo to our own TreeElement. It
+// has to do additional database queries to find out if di's children have
+// children.
+func (s *Server) diToTreeElement(di *dgut.DirInfo, filter *dgut.Filter) *TreeElement {
+	te := s.ddsToTreeElement(di.Current)
+	te.HasChildren = len(di.Children) > 0
 	childElements := make([]*TreeElement, len(di.Children))
 
 	for i, dds := range di.Children {
-		te := ddsToTreeElement(dds)
-		hasChildren := s.tree.DirHasChildren(dds.Dir, filter)
-		te.HasChildren = hasChildren
-		childElements[i] = te
+		childTE := s.ddsToTreeElement(dds)
+		childTE.HasChildren = s.tree.DirHasChildren(dds.Dir, filter)
+		childElements[i] = childTE
 	}
 
-	tm.Root.Children = childElements
+	te.Children = childElements
 
-	return tm
+	return te
 }
 
 // ddsToTreeElement converts a dgut.DirSummary to a TreeElement, but with no
 // child info.
-func ddsToTreeElement(dds *dgut.DirSummary) *TreeElement {
+func (s *Server) ddsToTreeElement(dds *dgut.DirSummary) *TreeElement {
 	return &TreeElement{
-		Name:  filepath.Base(dds.Dir),
-		Path:  dds.Dir,
-		Count: dds.Count,
-		Size:  dds.Size,
+		Name:      filepath.Base(dds.Dir),
+		Path:      dds.Dir,
+		Count:     dds.Count,
+		Size:      dds.Size,
+		Users:     s.uidsToUsernames(dds.UIDs),
+		Groups:    s.gidsToNames(dds.GIDs),
+		FileTypes: s.ftsToNames(dds.FTs),
 	}
 }

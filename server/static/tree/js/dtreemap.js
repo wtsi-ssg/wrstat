@@ -160,15 +160,16 @@ define(["d3", "cookie"], function (d3, cookie) {
             selectValue = d3.select(this).property('value');
             filters.set(id, selectValue);
             getData(current.path, function (data) {
-                updated = data.root;
-                current.size = updated.size;
-                current.count = updated.count;
-                current.children = updated.children;
-                current.has_children = updated.has_children;
+                current.size = data.size;
+                current.count = data.count;
+                current.groups = data.groups;
+                current.users = data.users;
+                current.filetypes = data.filetypes;
+                current.children = data.children;
+                current.has_children = data.has_children;
                 setValues(current);
                 storeFilters(current);
                 transition(current);
-                updateDetails(current);
             });
         }));
 
@@ -224,14 +225,15 @@ define(["d3", "cookie"], function (d3, cookie) {
             } else {
                 // console.log('getting fresh data for ', d.path);
                 getData(d.path, function (data) {
-                    d.children = data.root.children;
+                    d.children = data.children;
                     setValues(d);
                     storeFilters(d);
                     do_transition(d)
                 });
             }
 
-            updateDetails(d)
+            updateDetails(d);
+            setFilterOptions(d);
         }
 
         return g;
@@ -286,8 +288,7 @@ define(["d3", "cookie"], function (d3, cookie) {
             })
             .on("load", function (data) {
                 d3.select("#spinner").style("display", "none");
-                allNodes.set(data.root.path, data.root);
-                setFilterOptions(data);
+                allNodes.set(data.path, data);
                 loadFunction(data);
             })
             .get();
@@ -327,25 +328,32 @@ define(["d3", "cookie"], function (d3, cookie) {
     var NUMBER_UNIT_LABELS = ["", "K", "M", "B", "T", "Q"];
 
     function countHuman(count) {
-        var unit = Math.floor((count / 1.0e+1).toFixed(0).toString().length)
-        var r = unit % 3
-        var x = Math.abs(Number(count)) / Number('1.0e+' + (unit - r)).toFixed(2)
-        return parseFloat(x.toFixed(2)) + ' ' + NUMBER_UNIT_LABELS[Math.floor(unit / 3)]
+        var unit = Math.floor((count / 1.0e+1).toFixed(0).toString().length);
+        var r = unit % 3;
+        var x = Math.abs(Number(count)) / Number('1.0e+' + (unit - r)).toFixed(2);
+        return parseFloat(x.toFixed(2)) + ' ' + NUMBER_UNIT_LABELS[Math.floor(unit / 3)];
+    }
+
+    function commaSep(list) {
+        return list.join(", ");
     }
 
     function showDetails(node) {
-        d3.select('#details_path').text(node.path)
-        d3.select('#details_size').text(bytesHuman(node.size))
-        d3.select('#details_count').text(countHuman(node.count))
+        d3.select('#details_path').text(node.path);
+        d3.select('#details_size').text(bytesHuman(node.size));
+        d3.select('#details_count').text(countHuman(node.count));
+        d3.select('#details_groups').text(commaSep(node.groups));
+        d3.select('#details_users').text(commaSep(node.users));
+        d3.select('#details_filetypes').text(commaSep(node.filetypes));
     }
 
     function showCurrentDetails() {
-        showDetails(current)
+        showDetails(current);
     }
 
     function updateDetails(node) {
-        current = node
-        showCurrentDetails()
+        current = node;
+        showCurrentDetails();
     }
 
     function setFilterOptions(data) {
@@ -355,9 +363,10 @@ define(["d3", "cookie"], function (d3, cookie) {
     }
 
     function setFilter(id, elements) {
-        elements.unshift("*")
+        withStar = [...elements];
+        withStar.unshift("*");
 
-        var select = d3.select(id)
+        var select = d3.select(id);
 
         select
             .selectAll('option')
@@ -365,19 +374,19 @@ define(["d3", "cookie"], function (d3, cookie) {
 
         select
             .selectAll('option')
-            .data(elements).enter()
+            .data(withStar).enter()
             .append('option')
             .text(function (d) { return d; })
             .property("selected", function (d) { return d === filters.get(id) });
     }
 
     getData("/", function (data) {
-        root = data.root;
-        initialize(root);
-        setValues(root);
-        storeFilters(root);
-        layout(root);
-        display(root);
-        updateDetails(root);
+        initialize(data);
+        setValues(data);
+        layout(data);
+        display(data);
+        updateDetails(data);
+        setFilterOptions(data);
+        storeFilters(data);
     });
 });
