@@ -113,6 +113,10 @@ rect.parent,
   fill: #ddd;
 }
 
+text {
+  user-select: none;
+}
+
 .lds-ellipsis {
   display: inline-block;
   position: relative;
