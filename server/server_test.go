@@ -614,7 +614,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 
 			Convey("You can access the tree API", func() {
 				r := newAuthenticatedClientRequest(addr, cert, token)
-				resp, err := r.SetResult(&TreeMap{}).
+				resp, err := r.SetResult(&TreeElement{}).
 					ForceContentType("application/json").
 					Get(EndPointAuthTree)
 
@@ -628,32 +628,33 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 
 				expectedFTs := []string{"bam", "cram"}
 
-				tm := *resp.Result().(*TreeMap) //nolint:forcetypeassert
-				So(tm, ShouldResemble, TreeMap{
-					Root: &TreeElement{
-						Name:        "/",
-						Path:        "/",
-						Count:       15,
-						Size:        86,
-						HasChildren: true,
-						Children: []*TreeElement{
-							{
-								Name:        "a",
-								Path:        "/a",
-								Count:       15,
-								Size:        86,
-								HasChildren: true,
-								Children:    nil,
-							},
+				tm := *resp.Result().(*TreeElement) //nolint:forcetypeassert
+				So(tm, ShouldResemble, TreeElement{
+					Name:        "/",
+					Path:        "/",
+					Count:       15,
+					Size:        86,
+					Users:       users,
+					Groups:      groups,
+					FileTypes:   expectedFTs,
+					HasChildren: true,
+					Children: []*TreeElement{
+						{
+							Name:        "a",
+							Path:        "/a",
+							Count:       15,
+							Size:        86,
+							Users:       users,
+							Groups:      groups,
+							FileTypes:   expectedFTs,
+							HasChildren: true,
+							Children:    nil,
 						},
 					},
-					Users:     users,
-					Groups:    groups,
-					FileTypes: expectedFTs,
 				})
 
 				r = newAuthenticatedClientRequest(addr, cert, token)
-				resp, err = r.SetResult(&TreeMap{}).
+				resp, err = r.SetResult(&TreeElement{}).
 					ForceContentType("application/json").
 					SetQueryParams(map[string]string{
 						"path":   "/",
@@ -664,32 +665,33 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				So(err, ShouldBeNil)
 				So(resp.Result(), ShouldNotBeNil)
 
-				tm = *resp.Result().(*TreeMap) //nolint:forcetypeassert
-				So(tm, ShouldResemble, TreeMap{
-					Root: &TreeElement{
-						Name:        "/",
-						Path:        "/",
-						Count:       9,
-						Size:        80,
-						HasChildren: true,
-						Children: []*TreeElement{
-							{
-								Name:        "a",
-								Path:        "/a",
-								Count:       9,
-								Size:        80,
-								HasChildren: true,
-								Children:    nil,
-							},
+				tm = *resp.Result().(*TreeElement) //nolint:forcetypeassert
+				So(tm, ShouldResemble, TreeElement{
+					Name:        "/",
+					Path:        "/",
+					Count:       9,
+					Size:        80,
+					Users:       users,
+					Groups:      []string{g.Name},
+					FileTypes:   expectedFTs,
+					HasChildren: true,
+					Children: []*TreeElement{
+						{
+							Name:        "a",
+							Path:        "/a",
+							Count:       9,
+							Size:        80,
+							Users:       users,
+							Groups:      []string{g.Name},
+							FileTypes:   expectedFTs,
+							HasChildren: true,
+							Children:    nil,
 						},
 					},
-					Users:     users,
-					Groups:    []string{g.Name},
-					FileTypes: expectedFTs,
 				})
 
 				r = newAuthenticatedClientRequest(addr, cert, token)
-				resp, err = r.SetResult(&TreeMap{}).
+				resp, err = r.SetResult(&TreeElement{}).
 					ForceContentType("application/json").
 					SetQueryParams(map[string]string{
 						"path":   "/",
@@ -701,7 +703,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				So(resp.StatusCode(), ShouldEqual, http.StatusBadRequest)
 
 				r = newAuthenticatedClientRequest(addr, cert, token)
-				resp, err = r.SetResult(&TreeMap{}).
+				resp, err = r.SetResult(&TreeElement{}).
 					ForceContentType("application/json").
 					SetQueryParams(map[string]string{
 						"path": "/foo",

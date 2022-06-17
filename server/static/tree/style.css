@@ -67,6 +67,13 @@ body {
   margin: 0;
 }
 
+#details_groups,
+#details_users,
+#details_filetypes {
+  max-width: 850px;
+  overflow: auto;
+}
+
 form,
 .select_label {
   font-size: 60%;
@@ -113,8 +120,14 @@ rect.parent,
   fill: #ddd;
 }
 
-text {
+text,
+#filters,
+#details {
   user-select: none;
+}
+
+#details:hover {
+  user-select: text;
 }
 
 .lds-ellipsis {
