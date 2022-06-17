@@ -130,17 +130,7 @@ time you use this, with refreshes possible up to 5 days after expiry.
 	Run: func(cmd *cobra.Command, args []string) {
 		setCLIFormat()
 
-		var url string
-
-		if len(args) == 1 {
-			url = args[0]
-		} else {
-			url = os.Getenv("WRSTAT_SERVER")
-
-			if url == "" {
-				die("you must supply the server url")
-			}
-		}
+		url := getServerURL(args)
 
 		if whereCert == "" {
 			whereCert = os.Getenv("WRSTAT_SERVER_CERT")
@@ -188,6 +178,24 @@ func init() {
 	whereCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
 		hideGlobalFlags(whereCmd, command, strings)
 	})
+}
+
+// getServerURL gets the wrstat server URL from the commandline arg or
+// WRSTAT_SERVER env var.
+func getServerURL(args []string) string {
+	var url string
+
+	if len(args) == 1 {
+		url = args[0]
+	} else {
+		url = os.Getenv("WRSTAT_SERVER")
+	}
+
+	if url == "" {
+		die("you must supply the server url")
+	}
+
+	return url
 }
 
 // whereMinMBToBytes converts a number of MB to a number of bytes.
