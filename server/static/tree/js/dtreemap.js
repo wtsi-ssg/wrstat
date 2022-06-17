@@ -118,6 +118,10 @@ define(["d3", "cookie"], function (d3, cookie) {
             .style("cursor", "pointer")
             .on("click", transition);
 
+        g.filter(function (d) { return !d.has_children; })
+            .classed("childless", true)
+            .style("cursor", "default");
+
         g.selectAll(".child")
             .data(function (d) { return getChildren(d) || [d]; })
             .enter().append("rect")

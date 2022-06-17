@@ -104,6 +104,15 @@ rect.parent,
   fill: #bbb;
 }
 
+.childless rect.parent {
+  fill: #ddd;
+  fill-opacity: 0.5;
+}
+
+.childless rect.child {
+  fill: #ddd;
+}
+
 .lds-ellipsis {
   display: inline-block;
   position: relative;
