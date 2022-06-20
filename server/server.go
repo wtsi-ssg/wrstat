@@ -110,6 +110,7 @@ type Server struct {
 	authCB         AuthCallback
 	uidToNameCache map[uint32]string
 	gidToNameCache map[uint32]string
+	logger         *log.Logger
 }
 
 // New creates a Server which can serve a REST API and website.
@@ -145,6 +146,7 @@ func New(logWriter io.Writer) *Server {
 		router:         r,
 		uidToNameCache: make(map[uint32]string),
 		gidToNameCache: make(map[uint32]string),
+		logger:         logger,
 	}
 }
 
@@ -214,7 +216,11 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 
 		for range c {
 			s.tree.Close()
-			s.tree, _ = dgut.NewTree(paths...)
+
+			s.tree, err = dgut.NewTree(paths...)
+			if err != nil {
+				s.logger.Printf("reloading dgut dbs failed: %s", err)
+			}
 		}
 	}()
 
