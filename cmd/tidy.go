@@ -75,7 +75,7 @@ dgut.dbs
 Note that in your --final_output directory, if a directory called dgut.dbs
 exists, it will be moved aside and replaced with new data. If you have a wrstat
 server using the database files inside, you'll need to send it the SIGHUP signal
-after this completes.
+after this completes, then delete the dgut.dbs.old directory.
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
