@@ -103,7 +103,12 @@ The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
 Finally, the unique subdirectory of --working_directory that was created is
-deleted.`,
+deleted.
+
+Note that in your --final_output directory, if a directory called dgut.dbs
+exists, it will be moved aside and replaced with new data. If you have a wrstat
+server using the database files inside, you'll need to send it the SIGHUP signal
+after all multi jobs complete.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if workDir == "" {
 			die("--working_directory is required")

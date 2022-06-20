@@ -35,11 +35,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/secure"
@@ -189,6 +191,9 @@ func (s *Server) Stop() {
 //
 // The where endpoint can take the dir, splits, groups, users and types
 // parameters, which correspond to arguments that dgut.Tree.Where() takes.
+//
+// It adds a SIGHUP handler to the server that will make it reload the databases
+// at these given paths.
 func (s *Server) LoadDGUTDBs(paths ...string) error {
 	tree, err := dgut.NewTree(paths...)
 	if err != nil {
@@ -202,6 +207,16 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 	} else {
 		s.authGroup.GET(wherePath, s.getWhere)
 	}
+
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGHUP)
+
+		for range c {
+			s.tree.Close()
+			s.tree, _ = dgut.NewTree(paths...)
+		}
+	}()
 
 	return nil
 }

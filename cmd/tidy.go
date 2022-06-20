@@ -40,6 +40,7 @@ import (
 const modeRW = 0666
 
 const dgutDBsBasename = "dgut.dbs"
+const dgutDBsOldBasename = dgutDBsBasename + ".old"
 
 // options for this cmd.
 var tidyDir string
@@ -69,8 +70,12 @@ Final output files are named to include the given --date as follows:
 Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
 
 It also moves the combine.dgut.db directories to inside a directory named:
-[date].[multi unique].dgut.dbs
+dgut.dbs
 (making them sequentially numbered sub-directories)
+Note that in your --final_output directory, if a directory called dgut.dbs
+exists, it will be moved aside and replaced with new data. If you have a wrstat
+server using the database files inside, you'll need to send it the SIGHUP signal
+after this completes.
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -144,7 +149,7 @@ func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date stri
 		return err
 	}
 
-	if err := findAndMoveDBs(sourceDir, destDir, destDirInfo, date); err != nil {
+	if err := findAndMoveDBs(sourceDir, destDir, destDirInfo); err != nil {
 		return err
 	}
 
@@ -261,12 +266,18 @@ func matchReadWrite(path string, current, desired fs.FileInfo) error {
 }
 
 // findAndMoveDBs finds the combine.dgut.db directories in the given sourceDir
-// and moves them to destDir, including date in the name, and adjusting
-// ownership and permissions to match the destDir.
-func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
+// and moves them to a fixed dir in destDir (first moving aside any dir with the
+// same name in there), and adjusting ownership and permissions to match the
+// destDir.
+func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo) error {
 	sources, errg := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, combineDGUTOutputFileBasename))
 	if errg != nil {
 		return errg
+	}
+
+	dbsDir, err := makeDBsDir(destDir, destDirInfo)
+	if err != nil {
+		return err
 	}
 
 	for i, source := range sources {
@@ -274,17 +285,7 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date str
 			return err
 		}
 
-		dest := filepath.Join(destDir, fmt.Sprintf("%s.%s.%s/%d",
-			date,
-			filepath.Base(sourceDir),
-			dgutDBsBasename,
-			i))
-
-		newDir := filepath.Dir(dest)
-
-		if err := os.MkdirAll(newDir, destDirInfo.Mode().Perm()); err != nil {
-			return err
-		}
+		dest := filepath.Join(dbsDir, fmt.Sprintf("%d", i))
 
 		err := renameAndMatchPerms(source, dest, destDirInfo)
 		if err != nil {
@@ -292,7 +293,26 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date str
 		}
 	}
 
-	return matchPermsInsideDir(destDir, destDirInfo)
+	return matchPermsInsideDir(dbsDir, destDirInfo)
+}
+
+// makeDBsDir makes a directory in destDir to hold database files. It has a
+// fixed name so that the server will have a single known location to load the
+// databases from. If the directory already exists, first moves it aside.
+func makeDBsDir(destDir string, destDirInfo fs.FileInfo) (string, error) {
+	dbsDir := filepath.Join(destDir, dgutDBsBasename)
+
+	err := os.Mkdir(dbsDir, destDirInfo.Mode().Perm())
+	if os.IsExist(err) {
+		err = os.Rename(dbsDir, filepath.Join(destDir, dgutDBsOldBasename))
+		if err != nil {
+			return "", err
+		}
+
+		err = os.Mkdir(dbsDir, destDirInfo.Mode().Perm())
+	}
+
+	return dbsDir, err
 }
 
 // matchPermsInsideDir does matchPerms for all the files in the given dir
