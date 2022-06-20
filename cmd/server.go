@@ -34,6 +34,7 @@ import (
 	"os/user"
 	"regexp"
 	"strings"
+	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
 	"github.com/spf13/cobra"
@@ -80,7 +81,7 @@ might want to filter away 'STATUS=200' to find problems.
 The server must be running for 'wrstat where' calls to succeed.
 
 This command will block forever in the foreground; you can background it with
-ctrl-z; bg.
+ctrl-z; bg. Or better yet, use the daemonize program to daemonize this.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
@@ -139,7 +140,8 @@ ctrl-z; bg.
 
 		defer s.Stop()
 
-		info("server started")
+		sayStarted()
+
 		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
 			msg := fmt.Sprintf("non-graceful stop: %s", err)
@@ -352,4 +354,14 @@ func getGIDsForUser(uid string) ([]string, error) {
 	}
 
 	return u.GroupIds()
+}
+
+// sayStarted logs to console that the server stated. It does this a second
+// after being calling in a goroutine, when we can assume the server has
+// actually started; if it failed, we expect it to do so in less than a second
+// and exit.
+func sayStarted() {
+	<-time.After(1 * time.Second)
+
+	info("server started")
 }
