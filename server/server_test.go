@@ -474,6 +474,9 @@ func TestServer(t *testing.T) {
 						err = file.Close()
 						So(err, ShouldBeNil)
 
+						err = s.dgutWatcher.Close()
+						So(err, ShouldBeNil)
+
 						err = s.EnableDGUTDBReloading(sentinel, oldPath)
 						So(err, ShouldBeNil)
 
@@ -533,6 +536,8 @@ func TestServer(t *testing.T) {
 
 						<-time.After(50 * time.Millisecond)
 
+						s.treeMutex.RLock()
+						defer s.treeMutex.RUnlock()
 						So(logWriter.String(), ShouldContainSubstring, "deleting dgut dbs failed")
 
 						tryTestingInotifyFails(path, sentinel)

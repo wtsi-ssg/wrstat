@@ -40,6 +40,9 @@ import (
 // The where endpoint can take the dir, splits, groups, users and types
 // parameters, which correspond to arguments that dgut.Tree.Where() takes.
 func (s *Server) LoadDGUTDBs(paths ...string) error {
+	s.treeMutex.Lock()
+	defer s.treeMutex.Unlock()
+
 	tree, err := dgut.NewTree(paths...)
 	if err != nil {
 		return err
@@ -76,7 +79,7 @@ func (s *Server) EnableDGUTDBReloading(watchPath, oldDir string) error {
 
 	s.dgutWatcher = watcher
 
-	go s.reactToWatcher(oldDir)
+	go s.reactToWatcher(watcher, oldDir)
 
 	err = watcher.Add(watchPath)
 	if err != nil {
@@ -88,9 +91,9 @@ func (s *Server) EnableDGUTDBReloading(watchPath, oldDir string) error {
 
 // reactToWatcher loops on watcher events and calls reloadDGUTDBs() in response.
 // Call this in a goroutine.
-func (s *Server) reactToWatcher(oldDir string) {
+func (s *Server) reactToWatcher(watcher *fsnotify.Watcher, oldDir string) {
 	for {
-		_, ok := <-s.dgutWatcher.Events
+		_, ok := <-watcher.Events
 		if !ok {
 			return
 		}
@@ -106,6 +109,9 @@ func (s *Server) reactToWatcher(oldDir string) {
 //
 // Logs any errors.
 func (s *Server) reloadDGUTDBs(oldDir string) {
+	s.treeMutex.Lock()
+	defer s.treeMutex.Unlock()
+
 	var err error
 
 	s.tree.Close()

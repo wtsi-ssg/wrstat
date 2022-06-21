@@ -50,6 +50,9 @@ func (s *Server) getWhere(c *gin.Context) {
 		return
 	}
 
+	s.treeMutex.Lock()
+	defer s.treeMutex.Unlock()
+
 	dcss, err := s.tree.Where(dir, filter, convertSplitsValue(splits))
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
