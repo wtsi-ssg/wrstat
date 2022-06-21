@@ -50,7 +50,7 @@ func TestCh(t *testing.T) {
 	primaryGID, otherGIDs := getGIDs(t)
 
 	if len(otherGIDs) == 0 {
-		SkipConvey("Can't test Ch since you don't belong to multiple groups")
+		SkipConvey("Can't test Ch since you don't belong to multiple groups", t, func() {})
 
 		return
 	}
