@@ -32,6 +32,7 @@ import (
 	"log/syslog"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -61,9 +62,10 @@ var serverCmd = &cobra.Command{
 	Short: "Start the web server",
 	Long: `Start the web server.
 
-Starting the web server brings up a REST API that can use the given dgut.db
-files (as produced by 'wrstat dgut' during 'wrstat mutli') to answer questions
-about where data is on the disks. (Provide the list as unamed args.)
+Starting the web server brings up a web interface and REST API that can use the
+dgut.dbs directory inside the given 'wrstat multi' output directory to answer
+questions about where data is on the disks. (Provide your 'wrstat multi -f'
+argument as an unamed argument to this command.)
 
 Your --bind address should include the port, and for it to work with your
 --cert, you probably need to specify it as fqdn:port.
@@ -82,10 +84,15 @@ The server must be running for 'wrstat where' calls to succeed.
 
 This command will block forever in the foreground; you can background it with
 ctrl-z; bg. Or better yet, use the daemonize program to daemonize this.
+
+It will monitor a file called ".dgut.dbs.updated" in the given directory and
+attempt to reload the databases when the file is updated by another run of
+'wrstat multi' with the same output directory. After reloading, will delete the
+dgut.dbs.old directory containing the previous run's database files.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			die("you must supply the path(s) to your dgut.db file(s)")
+		if len(args) != 1 {
+			die("you must supply the path to your 'wrstat multi -f' output directory")
 		}
 
 		if serverBind == "" {
@@ -124,9 +131,19 @@ ctrl-z; bg. Or better yet, use the daemonize program to daemonize this.
 		}
 
 		info("opening databases, please wait...")
-		err = s.LoadDGUTDBs(args...)
+		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
 		if err != nil {
 			msg := fmt.Sprintf("failed to load database: %s", err)
+			syslogWriter.Crit(msg) //nolint:errcheck
+			die(msg)
+		}
+
+		sentinel := filepath.Join(args[0], dgutDBsSentinelBasename)
+		oldDB := filepath.Join(args[0], dgutDBsOldBasename)
+
+		err = s.EnableDGUTDBReloading(sentinel, oldDB)
+		if err != nil {
+			msg := fmt.Sprintf("failed to set up database reloading: %s", err)
 			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
@@ -354,6 +371,17 @@ func getGIDsForUser(uid string) ([]string, error) {
 	}
 
 	return u.GroupIds()
+}
+
+// dgutDBPaths returns the dgut db directories that 'wrstat tidy' creates in the
+// given output directory.
+func dgutDBPaths(dir string) []string {
+	paths, err := filepath.Glob(fmt.Sprintf("%s/%s/*", dir, dgutDBsBasename))
+	if err != nil || len(paths) == 0 {
+		die("failed to find dgut database directories based on [%s/%s/*] (err: %s)", dir, dgutDBsBasename, err)
+	}
+
+	return paths
 }
 
 // sayStarted logs to console that the server stated. It does this a second

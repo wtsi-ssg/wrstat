@@ -6,6 +6,7 @@ require (
 	github.com/VertebrateResequencing/wr v0.31.2
 	github.com/appleboy/gin-jwt/v2 v2.8.0
 	github.com/dustin/go-humanize v1.0.0
+	github.com/fsnotify/fsnotify v1.5.4
 	github.com/gin-contrib/secure v0.0.1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-ldap/ldap/v3 v3.4.3

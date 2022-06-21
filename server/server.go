@@ -35,15 +35,14 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"os/user"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
 	"github.com/wtsi-ssg/wrstat/dgut"
@@ -110,6 +109,8 @@ type Server struct {
 	authCB         AuthCallback
 	uidToNameCache map[uint32]string
 	gidToNameCache map[uint32]string
+	dgutPaths      []string
+	dgutWatcher    *fsnotify.Watcher
 	logger         *log.Logger
 }
 
@@ -177,12 +178,24 @@ func (s *Server) Start(addr, certFile, keyFile string) error {
 // connections to close and the port to be available again. It also closes the
 // database if you LoadDGUTDBs().
 func (s *Server) Stop() {
-	ch := s.srv.StopChan()
-	s.srv.Stop(stopTimeout)
+	if s.srv == nil {
+		return
+	}
+
+	srv := s.srv
+	s.srv = nil
+	ch := srv.StopChan()
+	srv.Stop(stopTimeout)
 	<-ch
+
+	if s.dgutWatcher != nil {
+		s.dgutWatcher.Close()
+		s.dgutWatcher = nil
+	}
 
 	if s.tree != nil {
 		s.tree.Close()
+		s.tree = nil
 	}
 }
 
@@ -193,9 +206,6 @@ func (s *Server) Stop() {
 //
 // The where endpoint can take the dir, splits, groups, users and types
 // parameters, which correspond to arguments that dgut.Tree.Where() takes.
-//
-// It adds a SIGHUP handler to the server that will make it reload the databases
-// at these given paths.
 func (s *Server) LoadDGUTDBs(paths ...string) error {
 	tree, err := dgut.NewTree(paths...)
 	if err != nil {
@@ -203,6 +213,7 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 	}
 
 	s.tree = tree
+	s.dgutPaths = paths
 
 	if s.authGroup == nil {
 		s.router.GET(EndPointWhere, s.getWhere)
@@ -210,21 +221,77 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 		s.authGroup.GET(wherePath, s.getWhere)
 	}
 
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGHUP)
-
-		for range c {
-			s.tree.Close()
-
-			s.tree, err = dgut.NewTree(paths...)
-			if err != nil {
-				s.logger.Printf("reloading dgut dbs failed: %s", err)
-			}
-		}
-	}()
-
 	return nil
+}
+
+// EnableDGUTDBReloading will wait for changes to the file at watchPath, then
+// close any previously loaded dgut database files before reloading the paths
+// you previously called LoadDGUTDBs on. It will then delete the oldDir path.
+//
+// The idea would be to LoadDGUTDBs(paths_in_dirX), then when you want to use
+// new database files, mv dirX to oldDir, put new database files in
+// paths_in_dirX and touch watchPath. The new database files will get used, and
+// the old ones will be deleted.
+//
+// It will only return an error if trying to watch watchPath immediately fails.
+// Other errors (eg. reloading or deleting oldDir) will be logged.
+func (s *Server) EnableDGUTDBReloading(watchPath, oldDir string) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	s.dgutWatcher = watcher
+
+	go s.reactToWatcher(oldDir)
+
+	err = watcher.Add(watchPath)
+	if err != nil {
+		watcher.Close()
+	}
+
+	return err
+}
+
+// reactToWatcher loops on watcher events and calls reloadDGUTDBs() in response.
+// Call this in a goroutine.
+func (s *Server) reactToWatcher(oldDir string) {
+	for {
+		_, ok := <-s.dgutWatcher.Events
+		if !ok {
+			return
+		}
+
+		s.reloadDGUTDBs(oldDir)
+	}
+}
+
+// reloadDGUTDBs closes database files previously loaded during LoadDGUTDBs(),
+// then reloads (presumably new) ones at the same paths as the prior load.
+//
+// On success, deletes the given directory.
+//
+// Logs any errors.
+func (s *Server) reloadDGUTDBs(oldDir string) {
+	var err error
+
+	s.tree.Close()
+
+	s.tree, err = dgut.NewTree(s.dgutPaths...)
+	if err != nil {
+		s.logger.Println("reloading dgut dbs failed: ", err)
+
+		return
+	}
+
+	s.deleteDir(oldDir)
+}
+
+// deleteDir deletes the given directory. Logs any errors.
+func (s *Server) deleteDir(dir string) {
+	if err := os.RemoveAll(dir); err != nil {
+		s.logger.Println("deleting dgut dbs failed: ", err)
+	}
 }
 
 // getWhere responds with a list of directory stats describing where data is on
