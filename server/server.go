@@ -33,6 +33,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -96,7 +97,9 @@ type AuthCallback func(username, password string) (bool, []string, []string)
 type Server struct {
 	router         *gin.Engine
 	tree           *dgut.Tree
+	treeMutex      sync.RWMutex
 	srv            *graceful.Server
+	srvMutex       sync.Mutex
 	authGroup      *gin.RouterGroup
 	authCB         AuthCallback
 	uidToNameCache map[uint32]string
@@ -161,7 +164,9 @@ func (s *Server) Start(addr, certFile, keyFile string) error {
 		},
 	}
 
+	s.srvMutex.Lock()
 	s.srv = srv
+	s.srvMutex.Unlock()
 
 	return srv.ListenAndServeTLS(certFile, keyFile)
 }
@@ -170,15 +175,24 @@ func (s *Server) Start(addr, certFile, keyFile string) error {
 // connections to close and the port to be available again. It also closes the
 // database if you LoadDGUTDBs().
 func (s *Server) Stop() {
+	s.srvMutex.Lock()
+
 	if s.srv == nil {
+		s.srvMutex.Unlock()
+
 		return
 	}
 
 	srv := s.srv
 	s.srv = nil
+	s.srvMutex.Unlock()
+
 	ch := srv.StopChan()
 	srv.Stop(stopTimeout)
 	<-ch
+
+	s.treeMutex.Lock()
+	defer s.treeMutex.Unlock()
 
 	if s.dgutWatcher != nil {
 		s.dgutWatcher.Close()

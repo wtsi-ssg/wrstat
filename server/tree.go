@@ -100,6 +100,9 @@ func (s *Server) getTree(c *gin.Context) {
 		return
 	}
 
+	s.treeMutex.RLock()
+	defer s.treeMutex.RUnlock()
+
 	di, err := s.tree.DirInfo(path, filter)
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
