@@ -441,11 +441,101 @@ func TestServer(t *testing.T) {
 					})
 
 					Convey("Unless you provide an invalid directory", func() {
-						response, err := queryWhere(s, "?dir=/foo")
+						response, err = queryWhere(s, "?dir=/foo")
 						So(err, ShouldBeNil)
 						So(response.Code, ShouldEqual, http.StatusBadRequest)
 						So(logWriter.String(), ShouldContainSubstring, "STATUS=400")
 						So(logWriter.String(), ShouldContainSubstring, "Error #01: directory not found")
+					})
+
+					Convey("And you can auto-reload a new database", func() {
+						pathNew, errc := createExampleDB(t, uid, gids[1], gids[0])
+						So(errc, ShouldBeNil)
+
+						oldPath := path + ".old"
+						err = os.Rename(path, oldPath)
+						So(err, ShouldBeNil)
+						err = os.Rename(pathNew, path)
+						So(err, ShouldBeNil)
+
+						response, err = queryWhere(s, "")
+						So(err, ShouldBeNil)
+						result, err = decodeWhereResult(response)
+						So(err, ShouldBeNil)
+						So(result, ShouldResemble, expected)
+
+						sentinel := path + ".sentinel"
+
+						err = s.EnableDGUTDBReloading(sentinel, oldPath)
+						So(err, ShouldNotBeNil)
+
+						file, err := os.Create(sentinel)
+						So(err, ShouldBeNil)
+						err = file.Close()
+						So(err, ShouldBeNil)
+
+						err = s.EnableDGUTDBReloading(sentinel, oldPath)
+						So(err, ShouldBeNil)
+
+						response, err = queryWhere(s, "")
+						So(err, ShouldBeNil)
+						result, err = decodeWhereResult(response)
+						So(err, ShouldBeNil)
+						So(result, ShouldResemble, expected)
+
+						_, err = os.Stat(oldPath)
+						So(err, ShouldBeNil)
+
+						now := time.Now().Local()
+						err = os.Chtimes(sentinel, now, now)
+						So(err, ShouldBeNil)
+
+						<-time.After(50 * time.Millisecond)
+
+						_, err = os.Stat(oldPath)
+						So(err, ShouldNotBeNil)
+
+						response, err = queryWhere(s, "")
+						So(err, ShouldBeNil)
+						So(response.Code, ShouldEqual, http.StatusOK)
+						result, err = decodeWhereResult(response)
+						So(err, ShouldBeNil)
+						So(result, ShouldNotResemble, expected)
+
+						So(s.dgutWatcher, ShouldNotBeNil)
+						So(s.tree, ShouldNotBeNil)
+
+						certPath, keyPath, err := createTestCert(t)
+						So(err, ShouldBeNil)
+						_, stop := startTestServer(s, certPath, keyPath)
+
+						stop()
+						So(s.dgutWatcher, ShouldBeNil)
+						So(s.tree, ShouldBeNil)
+
+						s.Stop()
+					})
+
+					Convey("EnableDGUTDBReloading logs errors", func() {
+						sentinel := path + ".sentinel"
+
+						file, err := os.Create(sentinel)
+						So(err, ShouldBeNil)
+						err = file.Close()
+						So(err, ShouldBeNil)
+
+						err = s.EnableDGUTDBReloading(sentinel, ".")
+						So(err, ShouldBeNil)
+
+						now := time.Now().Local()
+						err = os.Chtimes(sentinel, now, now)
+						So(err, ShouldBeNil)
+
+						<-time.After(50 * time.Millisecond)
+
+						So(logWriter.String(), ShouldContainSubstring, "deleting dgut dbs failed")
+
+						tryTestingInotifyFails(path, sentinel)
 					})
 				})
 			})
@@ -1012,5 +1102,55 @@ func startTestServer(s *Server, certPath, keyPath string) (string, func()) {
 
 		err = g.Wait()
 		So(err, ShouldBeNil)
+	}
+}
+
+// tryTestingInotifyFails sees if we have a low max_user_watches and then tries
+// to use them all to force an error in our watching code.
+func tryTestingInotifyFails(db, sentinel string) {
+	if hasManyMaxUserWatches() {
+		return
+	}
+
+	servers := make([]*Server, 9999)
+	oldPath := db + ".old"
+
+	defer closeDGUTWatchers(servers)
+
+	failed := false
+
+	for i := range servers {
+		var logWriter strings.Builder
+		s := New(&logWriter)
+		servers[i] = s
+
+		if err := s.LoadDGUTDBs(db); err != nil {
+			So(err, ShouldBeNil)
+		}
+
+		if err := s.EnableDGUTDBReloading(sentinel, oldPath); err != nil {
+			failed = true
+
+			break
+		}
+	}
+
+	So(failed, ShouldBeTrue)
+}
+
+// hasManyMaxUserWatches checks if max_user_watches is more than 9999.
+func hasManyMaxUserWatches() bool {
+	cmd := exec.Command("bash", "-c", "sysctl fs.inotify | grep max_user_watches | awk '{ print $NF }'")
+	out, err := cmd.CombinedOutput()
+
+	return err != nil || len(string(out)) > 5
+}
+
+// closeDGUTWatchers closes all the dgutWatchers in the given servers.
+func closeDGUTWatchers(servers []*Server) {
+	for _, s := range servers {
+		if s != nil && s.dgutWatcher != nil {
+			s.dgutWatcher.Close()
+		}
 	}
 }

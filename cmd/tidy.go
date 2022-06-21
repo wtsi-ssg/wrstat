@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	shutil "github.com/termie/go-shutil"
@@ -41,6 +42,7 @@ const modeRW = 0666
 
 const dgutDBsBasename = "dgut.dbs"
 const dgutDBsOldBasename = dgutDBsBasename + ".old"
+const dgutDBsSentinelBasename = ".dgut.dbs.updated"
 
 // options for this cmd.
 var tidyDir string
@@ -73,9 +75,9 @@ It also moves the combine.dgut.db directories to inside a directory named:
 dgut.dbs
 (making them sequentially numbered sub-directories)
 Note that in your --final_output directory, if a directory called dgut.dbs
-exists, it will be moved aside and replaced with new data. If you have a wrstat
-server using the database files inside, you'll need to send it the SIGHUP signal
-after this completes, then delete the dgut.dbs.old directory.
+exists, it will be moved aside to dgut.dbs.old and replaced with new data. If
+you have a wrstat server using the database files inside, it will reload the
+databases then delete the dgut.dbs.old directory.
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -281,19 +283,24 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo) error {
 	}
 
 	for i, source := range sources {
-		if _, err := os.Stat(source); err != nil {
+		if _, err = os.Stat(source); err != nil {
 			return err
 		}
 
 		dest := filepath.Join(dbsDir, fmt.Sprintf("%d", i))
 
-		err := renameAndMatchPerms(source, dest, destDirInfo)
+		err = renameAndMatchPerms(source, dest, destDirInfo)
 		if err != nil {
 			return err
 		}
 	}
 
-	return matchPermsInsideDir(dbsDir, destDirInfo)
+	err = matchPermsInsideDir(dbsDir, destDirInfo)
+	if err != nil {
+		return err
+	}
+
+	return touchDBUpdatedFile(destDir)
 }
 
 // makeDBsDir makes a directory in destDir to hold database files. It has a
@@ -325,4 +332,38 @@ func matchPermsInsideDir(dir string, desired fs.FileInfo) error {
 
 		return matchPerms(path, desired)
 	})
+}
+
+// touchDBUpdatedFile touches a file that the server monitors so that it knows
+// to try and reload the databases.
+func touchDBUpdatedFile(destDir string) error {
+	sentinel := filepath.Join(destDir, dgutDBsSentinelBasename)
+
+	_, err := os.Stat(sentinel)
+	if os.IsNotExist(err) {
+		err = createFile(sentinel)
+	} else {
+		err = touchFile(sentinel)
+	}
+
+	return err
+}
+
+// createFile creates the give path.
+func createFile(path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	file.Close()
+
+	return nil
+}
+
+// touchFile updates the a&mtime of the given path.
+func touchFile(path string) error {
+	now := time.Now().Local()
+
+	return os.Chtimes(path, now, now)
 }
