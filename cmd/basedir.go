@@ -138,7 +138,16 @@ func calculateBaseDirs(tree *dgut.Tree, outPath string, gids []uint32) error {
 		}
 	}
 
-	return nil
+	if err = outFile.Close(); err != nil {
+		return err
+	}
+
+	destDirInfo, err := os.Stat(filepath.Dir(outPath))
+	if err != nil {
+		return err
+	}
+
+	return matchPerms(outPath, destDirInfo)
 }
 
 // calculateBaseDirsOfGID uses the tree to work out what the base directories of
