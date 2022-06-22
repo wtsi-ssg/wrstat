@@ -45,7 +45,7 @@ const (
 	basedirMinDirsMDT = 5
 )
 
-var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d\/`)
+var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
 
 // basedirCmd represents the basedir command.
 var basedirCmd = &cobra.Command{
