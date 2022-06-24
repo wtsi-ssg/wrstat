@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/VertebrateResequencing/wr v0.31.2
+	github.com/adhocore/gronx v0.2.6
 	github.com/appleboy/gin-jwt/v2 v2.8.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.5.4
@@ -40,7 +41,6 @@ require (
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/VertebrateResequencing/muxfys/v4 v4.0.3 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
-	github.com/adhocore/gronx v0.2.6 // indirect
 	github.com/alexflint/go-filemutex v1.2.0 // indirect
 	github.com/creasty/defaults v1.6.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect

@@ -136,6 +136,13 @@ func TestTree(t *testing.T) {
 				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
 			})
 
+			dcss.SortByDir()
+			So(dcss, ShouldResemble, DCSs{
+				{"/a/b/d", 3, 30, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/g", 2, 20, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+			})
+
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 2)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
@@ -145,6 +152,20 @@ func TestTree(t *testing.T) {
 			})
 
 			_, err = tree.Where("/foo", nil, 1)
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("You can get the FileLocations()", func() {
+			dcss, err := tree.FileLocations("/",
+				&Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}})
+			So(err, ShouldBeNil)
+
+			So(dcss, ShouldResemble, DCSs{
+				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/g", 2, 20, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+			})
+
+			_, err = tree.FileLocations("/foo", nil)
 			So(err, ShouldNotBeNil)
 		})
 

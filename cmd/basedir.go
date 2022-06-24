@@ -30,7 +30,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -151,16 +150,15 @@ func calculateBaseDirs(tree *dgut.Tree, outPath string, gids []uint32) error {
 }
 
 // calculateBaseDirsOfGID uses the tree to work out what the base directories of
-// the given GID are.
+// the given GID are. We manipulate Where() results instead of using
+// FileLocations(), because empirically that is too noisy.
 func calculateBaseDirsOfGID(tree *dgut.Tree, gid uint32) ([]string, error) {
 	dcss, err := tree.Where("/", &dgut.Filter{GIDs: []uint32{gid}}, basedirSplits)
 	if err != nil {
 		return nil, err
 	}
 
-	sort.Slice(dcss, func(i, j int) bool {
-		return dcss[i].Dir < dcss[j].Dir
-	})
+	dcss.SortByDir()
 
 	var dirs []string //nolint:prealloc
 
