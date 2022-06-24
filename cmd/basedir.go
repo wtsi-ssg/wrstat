@@ -52,13 +52,14 @@ var basedirCmd = &cobra.Command{
 	Short: "Calculate base directories for every unix group.",
 	Long: `Calculate base directories for every unix group.
 
-Provide your 'wrstat multi -f' argument as an unamed argument to this command.
+Provide the unique subdirectory of your 'wrstat multi -w' directory as an unamed
+argument to this command.
 
-This is called by 'wrstat multi' after the tidy step has completed. It does some
-'wrstat where'-type calls for every unix group to come up with hopefully
+This is called by 'wrstat multi' after the combine step has completed. It does
+some 'wrstat where'-type calls for every unix group to come up with hopefully
 meaningful and useful "base directories" for every group.
 
-Unlike the real 'wrstat where', this is not restricuted by authorization and
+Unlike the real 'wrstat where', this is not restricted by authorization and
 directly accesses the database files to see all data.
 
 A base directory is a directory where all a group's data lies nested within.
@@ -74,15 +75,14 @@ The output file format is 2 tab separated columns with the following contents:
 1. Unix group ID.
 2. Absolute path of base directory.
 
-The output file has the fixed name 'base.dirs' in the given directory, and will
-overwrite any such file already there.`,
+The output file has the name 'base.dirs' in the given directory.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			die("you must supply the path to your 'wrstat multi -f' output directory")
+			die("you must supply the path to your unique subdir of your 'wrstat multi -w' working directory")
 		}
 
 		t := time.Now()
-		tree, err := dgut.NewTree(dgutDBPaths(args[0])...)
+		tree, err := dgut.NewTree(dgutDBCombinePaths(args[0])...)
 		if err != nil {
 			die("failed to load dgut databases: %s", err)
 		}
@@ -106,6 +106,18 @@ overwrite any such file already there.`,
 
 func init() {
 	RootCmd.AddCommand(basedirCmd)
+}
+
+// dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
+// creates in the given output directory.
+func dgutDBCombinePaths(dir string) []string {
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", dir, combineDGUTOutputFileBasename))
+	if err != nil || len(paths) == 0 {
+		die("failed to find dgut database directories based on [%s/*/*/%s] (err: %s)",
+			dir, combineDGUTOutputFileBasename, err)
+	}
+
+	return paths
 }
 
 // getAllGIDsInTree gets all the unix group IDs that own files in the given file
