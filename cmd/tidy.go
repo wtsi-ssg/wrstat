@@ -71,6 +71,9 @@ Final output files are named to include the given --date as follows:
 
 Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
 
+The base.dirs file directly inside the given "multi unique" directory is named:
+[date]_[multi unique].basedirs
+
 It also moves the combine.dgut.db directories to inside a directory named:
 dgut.dbs
 (making them sequentially numbered sub-directories)
@@ -85,7 +88,9 @@ user,group,other read & write permissions as the --final_output directory.
 Once all output files have been moved, the "multi unique" directory is deleted.
 
 It is safe to call this multiple times if it was, for example, killed half way
-through; it won't clobber final outputs already moved.`,
+through; it won't clobber final outputs already moved. (With the exception of
+failing during the final step of creating a new dgut.dbs folder, having moved
+one aside; you'll have to delete dgut.dbs.old if it exists before retrying.)`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if tidyDir == "" {
 			die("--final_output is required")
@@ -148,6 +153,10 @@ func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date stri
 
 	if err := findAndMoveOutputs(sourceDir, destDir, destDirInfo, date,
 		combineLogOutputFileBasename, "logs.gz"); err != nil {
+		return err
+	}
+
+	if err := moveBaseDirsFile(sourceDir, destDir, destDirInfo, date); err != nil {
 		return err
 	}
 
@@ -265,6 +274,18 @@ func matchReadWrite(path string, current, desired fs.FileInfo) error {
 	}
 
 	return os.Chmod(path, currentMode|desiredRW)
+}
+
+// moveBaseDirsFile moves the base.dirs file in sourceDir to a uniquely named
+// .basedirs file in destDir that includes the given date.
+func moveBaseDirsFile(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
+	source := filepath.Join(sourceDir, basedirBasename)
+
+	dest := filepath.Join(destDir, fmt.Sprintf("%s_%s.basedirs",
+		date,
+		filepath.Base(sourceDir)))
+
+	return renameAndMatchPerms(source, dest, destDirInfo)
 }
 
 // findAndMoveDBs finds the combine.dgut.db directories in the given sourceDir

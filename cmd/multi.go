@@ -97,13 +97,14 @@ It might produce:
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617.c35m8359bnc8ni7dgphg.basedirs
 /path/b/dgut.dbs
-/path/b/base.dirs
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
-The base.dirs file gets made by calling 'wrstat basedirs' after the 'tidy' step.
+The base.*.dirs file gets made by calling 'wrstat basedirs' after the 'combine'
+step.
 
 Finally, the unique subdirectory of --working_directory that was created is
 deleted.
@@ -162,8 +163,8 @@ func doMultiScheduling(args []string) error {
 	}
 
 	scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, forcedQueue, s)
+	scheduleBasedirsJob(outputRoot, unique, s)
 	scheduleTidyJob(outputRoot, finalDir, unique, s)
-	scheduleBasedirsJob(finalDir, unique, s)
 
 	return nil
 }
@@ -231,21 +232,21 @@ func combineRepGrp(dir, unique string) string {
 	return repGrp("combine", dir, unique)
 }
 
+// scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
+// from the combined dgut.dbs folders.
+func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
+	job := s.NewJob(fmt.Sprintf("%s basedir %s", s.Executable(), outputRoot),
+		repGrp("basedir", outputRoot, unique), "wrstat-basedir", unique+".basedir", unique, scheduler.DefaultRequirements())
+
+	addJobsToQueue(s, []*jobqueue.Job{job})
+}
+
 // scheduleTidyJob adds a job to wr's queue that for each working directory
 // subdir moves the output to the final location and then deletes the working
 // directory.
 func scheduleTidyJob(outputRoot, finalDir, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s tidy -f %s -d %s %s", s.Executable(), finalDir, dateStamp(), outputRoot),
-		repGrp("tidy", finalDir, unique), "wrstat-tidy", unique+".tidy", unique, scheduler.DefaultRequirements())
-
-	addJobsToQueue(s, []*jobqueue.Job{job})
-}
-
-// scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
-// in the final location, using the tidied dgut.dbs folder.
-func scheduleBasedirsJob(finalDir, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob(fmt.Sprintf("%s basedir %s", s.Executable(), finalDir),
-		repGrp("basedir", finalDir, unique), "wrstat-basedir", "", unique+".tidy", scheduler.DefaultRequirements())
+		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique+".basedir", scheduler.DefaultRequirements())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
