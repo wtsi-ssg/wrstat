@@ -113,29 +113,11 @@ exists, it will be moved aside and replaced with new data. If you have a wrstat
 server using the database files inside, it should automatically start using the
 new data and delete the old.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if workDir == "" {
-			die("--working_directory is required")
-		}
-		if finalDir == "" {
-			die("--final_output is required")
-		}
-		if len(args) == 0 {
-			die("at least 1 directory of interest must be supplied")
-		}
-
-		s, d := newScheduler(workDir, forcedQueue)
-		defer d()
-
-		unique := scheduler.UniqueString()
-		outputRoot := filepath.Join(workDir, unique)
-		err := os.MkdirAll(outputRoot, userOnlyPerm)
+		checkMultiArgs(args)
+		err := doMultiScheduling(args)
 		if err != nil {
-			die("failed to create working dir: %s", err)
+			die("%s", err)
 		}
-
-		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, forcedQueue, s)
-		scheduleTidyJob(outputRoot, finalDir, unique, s)
-		scheduleBasedirsJob(finalDir, unique, s)
 	},
 }
 
@@ -149,6 +131,41 @@ func init() {
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	multiCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
+}
+
+// checkMultiArgs ensures we have the required args for the multi sub-command.
+func checkMultiArgs(args []string) {
+	if workDir == "" {
+		die("--working_directory is required")
+	}
+
+	if finalDir == "" {
+		die("--final_output is required")
+	}
+
+	if len(args) == 0 {
+		die("at least 1 directory of interest must be supplied")
+	}
+}
+
+// doMultiScheduling does the main work of the multi sub-command.
+func doMultiScheduling(args []string) error {
+	s, d := newScheduler(workDir, forcedQueue)
+	defer d()
+
+	unique := scheduler.UniqueString()
+	outputRoot := filepath.Join(workDir, unique)
+
+	err := os.MkdirAll(outputRoot, userOnlyPerm)
+	if err != nil {
+		return err
+	}
+
+	scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, forcedQueue, s)
+	scheduleTidyJob(outputRoot, finalDir, unique, s)
+	scheduleBasedirsJob(finalDir, unique, s)
+
+	return nil
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
