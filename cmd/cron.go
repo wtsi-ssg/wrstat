@@ -28,10 +28,9 @@ package cmd
 import (
 	"context"
 
-	"github.com/spf13/cobra"
-
 	"github.com/adhocore/gronx"
 	"github.com/adhocore/gronx/pkg/tasker"
+	"github.com/spf13/cobra"
 )
 
 // options for this cmd.

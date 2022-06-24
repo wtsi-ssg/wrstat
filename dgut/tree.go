@@ -74,6 +74,13 @@ func (d DCSs) Less(i, j int) bool {
 	return d[i].Size > d[j].Size
 }
 
+// SortByDir sorts by Dir instead of Size.
+func (d DCSs) SortByDir() {
+	sort.Slice(d, func(i, j int) bool {
+		return d[i].Dir < d[j].Dir
+	})
+}
+
 // DirInfo holds nested file count, size, UID and GID information on a
 // directory, and also its immediate child directories.
 type DirInfo struct {
@@ -233,6 +240,45 @@ func (t *Tree) where0(dir string, filter *Filter) (*DirInfo, error) {
 	}
 
 	return di, nil
+}
+
+// FileLocations, starting from the given dir, finds the first directory that
+// directly contains filter-passing files along every branch from dir.
+//
+// See GUTs.Summary for an explanation of the filter.
+//
+// The results are returned sorted by directory.
+func (t *Tree) FileLocations(dir string, filter *Filter) (DCSs, error) {
+	var dcss DCSs
+
+	di, err := t.DirInfo(dir, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var childCount uint64
+
+	for _, child := range di.Children {
+		childCount += child.Count
+	}
+
+	if childCount < di.Current.Count {
+		dcss = append(dcss, di.Current)
+
+		return dcss, nil
+	}
+
+	for _, child := range di.Children {
+		// FileLocations can't return an error here, because we're supplying it
+		// a directory name that came from the database.
+		//nolint:errcheck
+		childDCSs, _ := t.FileLocations(child.Dir, filter)
+		dcss = append(dcss, childDCSs...)
+	}
+
+	dcss.SortByDir()
+
+	return dcss, nil
 }
 
 // Close should be called after you've finished querying the tree to release its
