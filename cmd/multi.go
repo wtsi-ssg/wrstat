@@ -236,7 +236,7 @@ func combineRepGrp(dir, unique string) string {
 // from the combined dgut.dbs folders.
 func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s basedir %s", s.Executable(), outputRoot),
-		repGrp("basedir", outputRoot, unique), "wrstat-basedir", unique+".basedir", unique, scheduler.DefaultRequirements())
+		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, scheduler.DefaultRequirements())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }

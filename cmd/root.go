@@ -189,6 +189,10 @@ func newScheduler(cwd, queue string) (*scheduler.Scheduler, func()) {
 
 // repGrp returns a rep_grp that can be used for a wrstat job we will create.
 func repGrp(cmd, dir, unique string) string {
+	if dir == "" {
+		return fmt.Sprintf("wrstat-%s-%s-%s", cmd, dateStamp(), unique)
+	}
+
 	return fmt.Sprintf("wrstat-%s-%s-%s-%s", cmd, filepath.Base(dir), dateStamp(), unique)
 }
 
