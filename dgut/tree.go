@@ -284,5 +284,7 @@ func (t *Tree) FileLocations(dir string, filter *Filter) (DCSs, error) {
 // Close should be called after you've finished querying the tree to release its
 // database locks.
 func (t *Tree) Close() {
-	t.db.Close()
+	if t.db != nil {
+		t.db.Close()
+	}
 }

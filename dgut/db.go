@@ -47,7 +47,7 @@ const (
 )
 
 const ErrDBExists = Error("database already exists")
-const ErrDBNotExists = Error("database doesn't exists")
+const ErrDBNotExists = Error("database doesn't exist")
 const ErrDirNotFound = Error("directory not found")
 
 // a dbSet is 2 databases, one for storing DGUTs, one for storing children.
