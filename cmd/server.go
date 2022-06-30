@@ -139,9 +139,8 @@ dgut.dbs.old directory containing the previous run's database files.
 		}
 
 		sentinel := filepath.Join(args[0], dgutDBsSentinelBasename)
-		oldDB := filepath.Join(args[0], dgutDBsOldBasename)
 
-		err = s.EnableDGUTDBReloading(sentinel, oldDB)
+		err = s.EnableDGUTDBReloading(sentinel, args[0], dgutDBsSuffix)
 		if err != nil {
 			msg := fmt.Sprintf("failed to set up database reloading: %s", err)
 			syslogWriter.Crit(msg) //nolint:errcheck
@@ -376,9 +375,9 @@ func getGIDsForUser(uid string) ([]string, error) {
 // dgutDBPaths returns the dgut db directories that 'wrstat tidy' creates in the
 // given output directory.
 func dgutDBPaths(dir string) []string {
-	paths, err := filepath.Glob(fmt.Sprintf("%s/%s/*", dir, dgutDBsBasename))
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*.%s/*", dir, dgutDBsSuffix))
 	if err != nil || len(paths) == 0 {
-		die("failed to find dgut database directories based on [%s/%s/*] (err: %s)", dir, dgutDBsBasename, err)
+		die("failed to find dgut database directories based on [%s/*.%s/*] (err: %s)", dir, dgutDBsSuffix, err)
 	}
 
 	return paths

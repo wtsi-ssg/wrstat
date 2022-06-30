@@ -39,6 +39,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -51,6 +52,48 @@ import (
 	"github.com/wtsi-ssg/wrstat/dgut"
 	"golang.org/x/sync/errgroup"
 )
+
+const dirPerms = 0755
+const exampleDgutDirParentSuffix = "dgut.dbs"
+
+// stringLogger is a thread-safe logger that logs to a string.
+type stringLogger struct {
+	builder *strings.Builder
+	sync.RWMutex
+}
+
+// newStringLogger returns a new stringLogger.
+func newStringLogger() *stringLogger {
+	var builder strings.Builder
+
+	return &stringLogger{
+		builder: &builder,
+	}
+}
+
+// Write passes through to our strings.Builder while being thread-safe.
+func (s *stringLogger) Write(p []byte) (n int, err error) {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.builder.Write(p)
+}
+
+// String passes through to our strings.Builder while being thread-safe.
+func (s *stringLogger) String() string {
+	s.RLock()
+	defer s.RUnlock()
+
+	return s.builder.String()
+}
+
+// Reset passes through to our strings.Builder while being thread-safe.
+func (s *stringLogger) Reset() {
+	s.Lock()
+	defer s.Unlock()
+
+	s.builder.Reset()
+}
 
 func TestServer(t *testing.T) {
 	username, uid, gids := getUserAndGroups(t)
@@ -82,8 +125,8 @@ func TestServer(t *testing.T) {
 	})
 
 	Convey("Given a Server", t, func() {
-		var logWriter strings.Builder
-		s := New(&logWriter)
+		logWriter := newStringLogger()
+		s := New(logWriter)
 
 		Convey("You can convert dgut.DCSs to DirSummarys", func() {
 			uid32, err := strconv.Atoi(uid)
@@ -452,10 +495,15 @@ func TestServer(t *testing.T) {
 						pathNew, errc := createExampleDB(t, uid, gids[1], gids[0])
 						So(errc, ShouldBeNil)
 
-						oldPath := path + ".old"
-						err = os.Rename(path, oldPath)
+						grandparentDir := filepath.Dir(filepath.Dir(path))
+						newerPath := filepath.Join(grandparentDir, "newer."+exampleDgutDirParentSuffix, "0")
+						err = os.MkdirAll(filepath.Dir(newerPath), dirPerms)
 						So(err, ShouldBeNil)
-						err = os.Rename(pathNew, path)
+						err = os.Rename(pathNew, newerPath)
+						So(err, ShouldBeNil)
+
+						later := time.Now().Local().Add(1 * time.Second)
+						err = os.Chtimes(filepath.Dir(newerPath), later, later)
 						So(err, ShouldBeNil)
 
 						response, err = queryWhere(s, "")
@@ -466,7 +514,7 @@ func TestServer(t *testing.T) {
 
 						sentinel := path + ".sentinel"
 
-						err = s.EnableDGUTDBReloading(sentinel, oldPath)
+						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix)
 						So(err, ShouldNotBeNil)
 
 						file, err := os.Create(sentinel)
@@ -477,7 +525,7 @@ func TestServer(t *testing.T) {
 						err = s.dgutWatcher.Close()
 						So(err, ShouldBeNil)
 
-						err = s.EnableDGUTDBReloading(sentinel, oldPath)
+						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix)
 						So(err, ShouldBeNil)
 
 						response, err = queryWhere(s, "")
@@ -486,16 +534,16 @@ func TestServer(t *testing.T) {
 						So(err, ShouldBeNil)
 						So(result, ShouldResemble, expected)
 
-						_, err = os.Stat(oldPath)
+						_, err = os.Stat(path)
 						So(err, ShouldBeNil)
 
 						now := time.Now().Local()
 						err = os.Chtimes(sentinel, now, now)
 						So(err, ShouldBeNil)
 
-						<-time.After(50 * time.Millisecond)
+						waitForFileToBeDeleted(t, path)
 
-						_, err = os.Stat(oldPath)
+						_, err = os.Stat(path)
 						So(err, ShouldNotBeNil)
 
 						response, err = queryWhere(s, "")
@@ -521,24 +569,81 @@ func TestServer(t *testing.T) {
 
 					Convey("EnableDGUTDBReloading logs errors", func() {
 						sentinel := path + ".sentinel"
+						testSuffix := "test"
 
 						file, err := os.Create(sentinel)
 						So(err, ShouldBeNil)
 						err = file.Close()
 						So(err, ShouldBeNil)
 
-						err = s.EnableDGUTDBReloading(sentinel, ".")
-						So(err, ShouldBeNil)
+						testReloadFail := func(dir, message string) {
+							err = s.EnableDGUTDBReloading(sentinel, dir, testSuffix)
+							So(err, ShouldBeNil)
 
-						now := time.Now().Local()
-						err = os.Chtimes(sentinel, now, now)
-						So(err, ShouldBeNil)
+							now := time.Now().Local()
+							err = os.Chtimes(sentinel, now, now)
+							So(err, ShouldBeNil)
 
-						<-time.After(50 * time.Millisecond)
+							<-time.After(50 * time.Millisecond)
 
-						s.treeMutex.RLock()
-						defer s.treeMutex.RUnlock()
-						So(logWriter.String(), ShouldContainSubstring, "deleting dgut dbs failed")
+							s.treeMutex.RLock()
+							defer s.treeMutex.RUnlock()
+							So(logWriter.String(), ShouldContainSubstring, message)
+						}
+
+						grandparentDir := filepath.Dir(filepath.Dir(path))
+
+						makeTestPath := func() string {
+							tpath := filepath.Join(grandparentDir, "new."+testSuffix)
+							err = os.MkdirAll(tpath, dirPerms)
+							So(err, ShouldBeNil)
+
+							return tpath
+						}
+
+						Convey("when the directory doesn't contain the suffix", func() {
+							testReloadFail(".", "dgut database directory not found")
+						})
+
+						Convey("when the directory doesn't exist", func() {
+							testReloadFail("/sdf@£$", "no such file or directory")
+						})
+
+						Convey("when the suffix subdir can't be opened", func() {
+							tpath := makeTestPath()
+
+							err = os.Chmod(tpath, 0000)
+							So(err, ShouldBeNil)
+
+							testReloadFail(grandparentDir, "permission denied")
+						})
+
+						Convey("when the directory contains no subdirs", func() {
+							makeTestPath()
+
+							testReloadFail(grandparentDir, "dgut database directory not found")
+						})
+
+						Convey("when the new database path is invalid", func() {
+							tpath := makeTestPath()
+
+							dbPath := filepath.Join(tpath, "0")
+							err = os.Mkdir(dbPath, dirPerms)
+							So(err, ShouldBeNil)
+
+							testReloadFail(grandparentDir, "database doesn't exist")
+						})
+
+						Convey("when the old path can't be deleted", func() {
+							s.dgutPaths = []string{"."}
+							tpath := makeTestPath()
+
+							cmd := exec.Command("cp", "--recursive", path, filepath.Join(tpath, "0"))
+							err = cmd.Run()
+							So(err, ShouldBeNil)
+
+							testReloadFail(grandparentDir, "invalid argument")
+						})
 
 						tryTestingInotifyFails(path, sentinel)
 					})
@@ -919,13 +1024,28 @@ func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, erro
 func createExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
 	t.Helper()
 
-	dir := t.TempDir()
+	dir, err := createExampleDgutDir(t)
+	if err != nil {
+		return dir, err
+	}
 
 	dgutData := exampleDGUTData(uid, gidA, gidB)
 	data := strings.NewReader(dgutData)
 	db := dgut.NewDB(dir)
 
-	err := db.Store(data, 20)
+	err = db.Store(data, 20)
+
+	return dir, err
+}
+
+// createExampleDgutDir creates a temp directory structure to hold dgut db files
+// in the same way that 'wrstat tidy' organises them.
+func createExampleDgutDir(t *testing.T) (string, error) {
+	t.Helper()
+
+	tdir := t.TempDir()
+	dir := filepath.Join(tdir, "orig."+exampleDgutDirParentSuffix, "0")
+	err := os.MkdirAll(dir, dirPerms)
 
 	return dir, err
 }
@@ -1118,7 +1238,7 @@ func tryTestingInotifyFails(db, sentinel string) {
 	}
 
 	servers := make([]*Server, 9999)
-	oldPath := db + ".old"
+	grandparentDir := filepath.Dir(filepath.Dir(db))
 
 	defer closeDGUTWatchers(servers)
 
@@ -1133,7 +1253,7 @@ func tryTestingInotifyFails(db, sentinel string) {
 			So(err, ShouldBeNil)
 		}
 
-		if err := s.EnableDGUTDBReloading(sentinel, oldPath); err != nil {
+		if err := s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix); err != nil {
 			failed = true
 
 			break
@@ -1158,4 +1278,40 @@ func closeDGUTWatchers(servers []*Server) {
 			s.dgutWatcher.Close()
 		}
 	}
+}
+
+// waitForFileToBeDeleted waits for the given file to not exist. Times out after
+// 10 seconds.
+func waitForFileToBeDeleted(t *testing.T, path string) {
+	t.Helper()
+
+	wait := make(chan bool, 1)
+
+	go func() {
+		defer func() {
+			wait <- true
+		}()
+
+		limit := time.After(10 * time.Second)
+		ticker := time.NewTicker(50 * time.Millisecond)
+
+		for {
+			select {
+			case <-ticker.C:
+				_, err := os.Stat(path)
+				if err != nil {
+					ticker.Stop()
+
+					return
+				}
+			case <-limit:
+				ticker.Stop()
+				t.Logf("timed out waiting for deletion; %s still exists\n", path)
+
+				return
+			}
+		}
+	}()
+
+	<-wait
 }

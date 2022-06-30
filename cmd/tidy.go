@@ -41,8 +41,7 @@ import (
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
 
-const dgutDBsBasename = "dgut.dbs"
-const dgutDBsOldBasename = dgutDBsBasename + ".old"
+const dgutDBsSuffix = "dgut.dbs"
 const dgutDBsSentinelBasename = ".dgut.dbs.updated"
 
 // options for this cmd.
@@ -343,7 +342,7 @@ func makeDBsDir(sourceDir, destDir string, destDirInfo fs.FileInfo, date string)
 	dbsDir := filepath.Join(destDir, fmt.Sprintf("%s_%s.%s",
 		date,
 		filepath.Base(sourceDir),
-		dgutDBsBasename,
+		dgutDBsSuffix,
 	))
 
 	err := os.Mkdir(dbsDir, destDirInfo.Mode().Perm())
