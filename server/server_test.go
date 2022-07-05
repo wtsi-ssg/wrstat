@@ -95,10 +95,17 @@ func (s *stringLogger) Reset() {
 	s.builder.Reset()
 }
 
+func TestIDsToWanted(t *testing.T) {
+	Convey("restrictIDsToWanted returns bad query if you don't want any of the given ids", t, func() {
+		_, err := restrictIDsToWanted([]string{"a"}, map[string]bool{"b": true})
+		So(err, ShouldNotBeNil)
+	})
+}
+
 func TestServer(t *testing.T) {
 	username, uid, gids := getUserAndGroups(t)
 	exampleGIDs := getExampleGIDs(gids)
-	exampleUser := &User{Username: "user", UIDs: []string{"1", "2"}, GIDs: exampleGIDs}
+	exampleUser := &User{Username: "user", UIDs: []string{uid, "2"}}
 
 	Convey("hasError tells you about errors", t, func() {
 		So(hasError(nil, nil), ShouldBeFalse)
@@ -161,6 +168,16 @@ func TestServer(t *testing.T) {
 			So(dss[0].Groups, ShouldResemble, []string{gidToGroup(t, gids[0])})
 		})
 
+		Convey("userGIDs fails with bad UIDs", func() {
+			u := &User{
+				Username: username,
+				UIDs:     []string{"-1"},
+			}
+
+			_, err := s.userGIDs(u)
+			So(err, ShouldNotBeNil)
+		})
+
 		Convey("You can Start the Server", func() {
 			certPath, keyPath, err := createTestCert(t)
 			So(err, ShouldBeNil)
@@ -180,15 +197,15 @@ func TestServer(t *testing.T) {
 			So(resp.StatusCode(), ShouldEqual, http.StatusNotFound)
 
 			Convey("The jwt endpoint works after enabling it", func() {
-				err = s.EnableAuth("/foo", "/bar", func(u, p string) (bool, []string, []string) {
-					return false, nil, nil
+				err = s.EnableAuth("/foo", "/bar", func(u, p string) (bool, []string) {
+					return false, nil
 				})
 				So(err, ShouldNotBeNil)
 
-				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, []string, []string) {
+				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, []string) {
 					ok := p == "pass"
 
-					return ok, []string{"1", "2"}, exampleGIDs
+					return ok, []string{uid, "2"}
 				})
 				So(err, ShouldBeNil)
 
@@ -310,7 +327,20 @@ func TestServer(t *testing.T) {
 				So(user, ShouldResemble, exampleUser)
 				So(gu, ShouldResemble, exampleUser)
 
-				testRestrictedGroups(t, gids, s, r, exampleGIDs)
+				s.authCB = func(u, p string) (bool, []string) {
+					return true, []string{"-1"}
+				}
+
+				tokenBadUID, errl := Login(addr, certPath, "user", "pass")
+				So(errl, ShouldBeNil)
+				So(token, ShouldNotBeBlank)
+
+				rBadUID := newAuthenticatedClientRequest(addr, certPath, tokenBadUID)
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldBeBlank)
+
+				testRestrictedGroups(t, gids, s, r, rBadUID, exampleGIDs)
 			})
 
 			Convey("authPayLoad correctly maps a User to claims, or returns none", func() {
@@ -319,11 +349,10 @@ func TestServer(t *testing.T) {
 				So(len(claims), ShouldEqual, 0)
 
 				claims = authPayLoad(exampleUser)
-				So(len(claims), ShouldEqual, 3)
+				So(len(claims), ShouldEqual, 2)
 				So(claims, ShouldResemble, jwt.MapClaims{
 					claimKeyUsername: "user",
-					claimKeyUIDs:     "1,2",
-					claimKeyGIDs:     fmt.Sprintf("%s,%s", exampleGIDs[0], exampleGIDs[1]),
+					claimKeyUIDs:     uid + ",2",
 				})
 			})
 
@@ -714,8 +743,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		})
 
 		Convey("Root can see everything", func() {
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
-				return true, nil, nil
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
+				return true, nil
 			})
 			So(err, ShouldBeNil)
 
@@ -749,8 +778,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		})
 
 		Convey("Normal users have access restricted only by group", func() {
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
-				return true, []string{uid}, gids
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
+				return true, []string{uid}
 			})
 			So(err, ShouldBeNil)
 
@@ -783,8 +812,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			var logWriter strings.Builder
 			s := New(&logWriter)
 
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
-				return true, nil, nil
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
+				return true, nil
 			})
 			So(err, ShouldBeNil)
 
@@ -950,7 +979,6 @@ func makeTestToken(keyPath string, start, end time.Time, withUserClaims bool) (s
 	if withUserClaims {
 		claims[claimKeyUsername] = "root"
 		claims[claimKeyUIDs] = ""
-		claims[claimKeyGIDs] = ""
 	}
 
 	claims["orig_iat"] = start.Unix()
@@ -1093,7 +1121,7 @@ func exampleDGUTData(uid, gidA, gidB string) string {
 
 // testRestrictedGroups does tests for s.restrictedGroups() if user running the
 // test has enough groups to make the test viable.
-func testRestrictedGroups(t *testing.T, gids []string, s *Server, r *resty.Request, exampleGIDs []string) {
+func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *resty.Request, exampleGIDs []string) {
 	t.Helper()
 
 	if len(gids) < 3 {
@@ -1116,9 +1144,16 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r *resty.Reque
 	So(errg, ShouldBeNil)
 	So(filterGIDs, ShouldResemble, []string{exampleGIDs[0]})
 
-	_, err = r.Get(EndPointAuth + "/groups?groups=" + groups[2])
+	_, err = r.Get(EndPointAuth + "/groups?groups=0")
 	So(err, ShouldBeNil)
 
+	So(errg, ShouldNotBeNil)
+	So(filterGIDs, ShouldBeNil)
+
+	s.userToGIDs = make(map[string][]string)
+
+	_, err = rBadUID.Get(EndPointAuth + "/groups?groups=" + groups[0])
+	So(err, ShouldBeNil)
 	So(errg, ShouldNotBeNil)
 	So(filterGIDs, ShouldBeNil)
 }

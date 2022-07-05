@@ -29,7 +29,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"log/syslog"
+	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
@@ -43,12 +45,14 @@ import (
 )
 
 const sudoLRootPrivsUser = "ALL"
+const logFilePerms = 0644
 
 var sudoLMayRunRegexp = regexp.MustCompile(`\(\s*(\S+)\s*\)\s*ALL`)
 
 const sudoLMayRunRegexpMatches = 2
 
 // options for this cmd.
+var serverLogPath string
 var serverBind string
 var serverCert string
 var serverKey string
@@ -79,6 +83,7 @@ The server will log all messages (of any severity) to syslog at the INFO level,
 except for non-graceful stops of the server, which are sent at the CRIT level or
 include 'panic' in the message. The messages are tagged 'wrstat-server', and you
 might want to filter away 'STATUS=200' to find problems.
+If --logfile is supplied, logs to that file instaed of syslog.
 
 The server must be running for 'wrstat where' calls to succeed.
 
@@ -115,15 +120,9 @@ dgut.dbs.old directory containing the previous run's database files.
 			die("you must supply --ldap_dn")
 		}
 
-		var err error
-		syslogWriter, err = syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
-		if err != nil {
-			die("failed to connect to syslog: %s", err)
-		}
+		s := server.New(serverLogger(serverLogPath))
 
-		s := server.New(syslogWriter)
-
-		err = s.EnableAuth(serverCert, serverKey, authenticate)
+		err := s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
 			msg := fmt.Sprintf("failed to enable authentication: %s", err)
 			syslogWriter.Crit(msg) //nolint:errcheck
@@ -181,36 +180,51 @@ func init() {
 		"fqdn of your ldap server")
 	serverCmd.Flags().StringVarP(&serverLDAPBindDN, "ldap_dn", "l", "",
 		"ldap bind dn, with username replaced with %s")
+	serverCmd.Flags().StringVar(&serverLogPath, "logfile", "",
+		"log to this file instead of syslog")
 
 	serverCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
 		hideGlobalFlags(serverCmd, command, strings)
 	})
 }
 
+// serverLogger returns an io.Writer for the server to log to. The writer will
+// append to the given file. If the given path is blank, writes to syslog
+// instead.
+func serverLogger(path string) io.Writer {
+	if path == "" {
+		s, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
+		if err != nil {
+			die("failed to connect to syslog: %s", err)
+		}
+
+		return s
+	}
+
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, logFilePerms)
+	if err != nil {
+		die("failed to open log file: %s", err)
+	}
+
+	return f
+}
+
 // authenticate verifies the user's password against LDAP, and if correct
-// returns true alog with all the uids they can sudo as, and all the gids all
-// those users belong to.
-func authenticate(username, password string) (bool, []string, []string) {
+// returns true alog with all the uids they can sudo as.
+func authenticate(username, password string) (bool, []string) {
 	err := checkLDAPPassword(username, password)
 	if err != nil {
-		return false, nil, nil
+		return false, nil
 	}
 
 	uids, err := getUsersUIDs(username)
 	if err != nil {
 		syslogWriter.Warning(fmt.Sprintf("failed to get UIDs for %s: %s", username, err)) //nolint:errcheck
 
-		return false, nil, nil
+		return false, nil
 	}
 
-	gids, err := getGIDsForUsers(uids)
-	if err != nil {
-		syslogWriter.Warning(fmt.Sprintf("failed to get GIDs for %s: %s", username, err)) //nolint:errcheck
-
-		return false, nil, nil
-	}
-
-	return true, uids, gids
+	return true, uids
 }
 
 // checkLDAPPassword checks with LDAP if the given password is valid for the
@@ -329,47 +343,6 @@ func getUIDFromSudoLOutput(line string) string {
 	}
 
 	return u.Uid
-}
-
-// getGIDsForUsers returns the group ids the given user ids belong to. If no
-// users are supplied, returns nil.
-func getGIDsForUsers(uids []string) ([]string, error) {
-	if uids == nil {
-		return nil, nil
-	}
-
-	gidMap := make(map[string]bool)
-
-	for _, uid := range uids {
-		theseGids, err := getGIDsForUser(uid)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, gid := range theseGids {
-			gidMap[gid] = true
-		}
-	}
-
-	gids := make([]string, len(gidMap))
-	i := 0
-
-	for gid := range gidMap {
-		gids[i] = gid
-		i++
-	}
-
-	return gids, nil
-}
-
-// getGIDsForUser returns the group IDs that the given user belongs to.
-func getGIDsForUser(uid string) ([]string, error) {
-	u, err := user.LookupId(uid)
-	if err != nil {
-		return nil, err
-	}
-
-	return u.GroupIds()
 }
 
 // dgutDBPaths returns the dgut db directories that 'wrstat tidy' creates in the

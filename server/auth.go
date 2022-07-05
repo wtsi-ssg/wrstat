@@ -27,6 +27,7 @@ package server
 
 import (
 	"net/http"
+	"os/user"
 	"strings"
 	"time"
 
@@ -44,7 +45,6 @@ const (
 	userKey          = "user"
 	claimKeyUsername = "Username"
 	claimKeyUIDs     = "UIDs"
-	claimKeyGIDs     = "GIDs"
 	ErrBadJWTClaim   = Error("JWT had bad claims")
 )
 
@@ -52,16 +52,56 @@ const (
 type User struct {
 	Username string
 	UIDs     []string
-	GIDs     []string
+}
+
+// GIDs returns the unix group IDs that our UIDs belong to (unsorted, with no
+// duplicates).
+func (u *User) GIDs() ([]string, error) {
+	if u.UIDs == nil {
+		return nil, nil
+	}
+
+	gidMap := make(map[string]bool)
+
+	for _, uid := range u.UIDs {
+		theseGids, err := getGIDsForUID(uid)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, gid := range theseGids {
+			gidMap[gid] = true
+		}
+	}
+
+	gids := make([]string, len(gidMap))
+	i := 0
+
+	for gid := range gidMap {
+		gids[i] = gid
+		i++
+	}
+
+	return gids, nil
+}
+
+// getGIDsForUID returns the group IDs that the given UID belongs to.
+func getGIDsForUID(uid string) ([]string, error) {
+	u, err := user.LookupId(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	return u.GroupIds()
 }
 
 // EnableAuth adds the /rest/v1/jwt POST and GET endpoints to the REST API.
 //
 // The /rest/v1/jwt POST endpoint requires the username and password parameters
 // in a form or as JSON.
-// It passes these to the given callback, and if it returns true, a JWT is
-// returned (as a JSON string) in the response that contains Username,
-// UIDs and GIDs information (the latter 2 being comma separated strings).
+// It passes these to the given auth callback, and if it returns true, a JWT is
+// returned (as a JSON string) in the response that contains Username and UIDs
+// (comma separated strings).
 //
 // Queries to endpoints that need authorisation should include the JWT in the
 // authorization header as a bearer token. Those endpoints can be implemented
@@ -71,8 +111,8 @@ type User struct {
 //
 // GET on the endpoint will refresh the JWT. JWTs expire after 5 days, but can
 // be refreshed up until day 10 from issue.
-func (s *Server) EnableAuth(certFile, keyFile string, cb AuthCallback) error {
-	s.authCB = cb
+func (s *Server) EnableAuth(certFile, keyFile string, acb AuthCallback) error {
+	s.authCB = acb
 
 	authMiddleware, err := s.createAuthMiddleware(certFile, keyFile)
 	if err != nil {
@@ -121,7 +161,6 @@ func authPayLoad(data interface{}) jwt.MapClaims {
 		return jwt.MapClaims{
 			claimKeyUsername: v.Username,
 			claimKeyUIDs:     strings.Join(v.UIDs, ","),
-			claimKeyGIDs:     strings.Join(v.GIDs, ","),
 		}
 	}
 
@@ -136,16 +175,14 @@ func authIdentityHandler(c *gin.Context) interface{} {
 
 	username, err1 := retrieveClaimString(claims, claimKeyUsername)
 	uids, err2 := retrieveClaimString(claims, claimKeyUIDs)
-	gids, err3 := retrieveClaimString(claims, claimKeyGIDs)
 
-	if username == "" || hasError(err1, err2, err3) {
+	if username == "" || hasError(err1, err2) {
 		return nil
 	}
 
 	return &User{
 		Username: username,
 		UIDs:     splitCommaSeparatedString(uids),
-		GIDs:     splitCommaSeparatedString(gids),
 	}
 }
 
@@ -189,7 +226,7 @@ func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 	username := loginVals.Username
 	password := loginVals.Password
 
-	ok, uids, gids := s.authCB(username, password)
+	ok, uids := s.authCB(username, password)
 
 	if !ok {
 		return nil, jwt.ErrFailedAuthentication
@@ -198,7 +235,6 @@ func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 	return &User{
 		Username: username,
 		UIDs:     uids,
-		GIDs:     gids,
 	}, nil
 }
 
@@ -207,7 +243,7 @@ func tokenResponder(c *gin.Context, code int, token string, t time.Time) {
 	c.JSON(http.StatusOK, token)
 }
 
-// getUser retreives the *User information extracted from the JWT in the auth
+// getUser retrieves the *User information extracted from the JWT in the auth
 // header. This will only be present after calling EnableAuth(), on a route in
 // the authGroup.
 func (s *Server) getUser(c *gin.Context) *User {
@@ -222,4 +258,25 @@ func (s *Server) getUser(c *gin.Context) *User {
 	}
 
 	return user
+}
+
+// userGIDs returns the unix group IDs for the given User's UIDs. This calls
+// *User.GIDs(), but caches the result against username, and returns cached
+// results if possible.
+//
+// As a special case, if user.UIDs is nil (indicating the user can sudo as
+// root), returns a nil slice also.
+func (s *Server) userGIDs(u *User) ([]string, error) {
+	if gids, found := s.userToGIDs[u.Username]; found {
+		return gids, nil
+	}
+
+	gids, err := u.GIDs()
+	if err != nil {
+		return nil, err
+	}
+
+	s.userToGIDs[u.Username] = gids
+
+	return gids, nil
 }
