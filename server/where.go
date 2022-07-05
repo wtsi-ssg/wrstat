@@ -93,9 +93,14 @@ func (s *Server) restrictedGroups(c *gin.Context, groups string) ([]string, erro
 		return nil, err
 	}
 
-	allowedIDs := s.getRestrictedIDs(c, func(u *User) []string {
-		return u.GIDs
-	})
+	var allowedIDs []string
+
+	if u := s.getUserFromContext(c); u != nil {
+		allowedIDs, err = s.userGIDs(u)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if allowedIDs == nil {
 		return ids, nil
@@ -148,17 +153,14 @@ func splitCommaSeparatedString(value string) []string {
 	return parts
 }
 
-// getRestrictedIDs extracts the User information from our JWT and passes it to
-// the given callback, which should return the desired type of ID (GIDs or
-// UIDs). Returns nil without calling the callback if we're not doing auth.
-func (s *Server) getRestrictedIDs(c *gin.Context, cb func(*User) []string) []string {
+// getUserFromContext extracts the User information from our JWT. Returns nil if
+// we're not doing auth.
+func (s *Server) getUserFromContext(c *gin.Context) *User {
 	if s.authGroup == nil {
 		return nil
 	}
 
-	u := s.getUser(c)
-
-	return cb(u)
+	return s.getUser(c)
 }
 
 // restrictIDsToWanted returns the elements of ids that are in wanted. Will

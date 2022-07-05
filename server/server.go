@@ -85,12 +85,12 @@ const (
 )
 
 // AuthCallback is a function that returns true if the given password is valid
-// for the given username. It also returns the other UIDs this user can sudo as,
-// and all the groups this user and the sudoable users belong to.
+// for the given username. It also returns the user's UID and any other UIDs
+// this user can sudo as.
 //
-// As a special case, if the user can sudo as root, it should just return
-// nil slices.
-type AuthCallback func(username, password string) (bool, []string, []string)
+// As a special case, if the user can sudo as root, it should just return a nil
+// slice for the UIDs.
+type AuthCallback func(username, password string) (bool, []string)
 
 // Server is used to start a web server that provides a REST API to the dgut
 // package's database, and a website that displays the information nicely.
@@ -104,6 +104,7 @@ type Server struct {
 	authCB         AuthCallback
 	uidToNameCache map[uint32]string
 	gidToNameCache map[uint32]string
+	userToGIDs     map[string][]string
 	dgutPaths      []string
 	dgutWatcher    *fsnotify.Watcher
 	logger         *log.Logger
@@ -123,7 +124,23 @@ func New(logWriter io.Writer) *Server {
 	gin.DisableConsoleColor()
 	gin.DefaultWriter = logger.Writer()
 
-	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+	r.Use(ginLogger())
+
+	r.Use(gin.RecoveryWithWriter(logWriter))
+
+	return &Server{
+		router:         r,
+		uidToNameCache: make(map[uint32]string),
+		gidToNameCache: make(map[uint32]string),
+		userToGIDs:     make(map[string][]string),
+		logger:         logger,
+	}
+}
+
+// ginLogger returns a handler that will format logs in a way that is searchable
+// and nice in syslog output.
+func ginLogger() gin.HandlerFunc {
+	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		return fmt.Sprintf("%s - [%s %s %s \"%s\"] STATUS=%d %s %s\n",
 			param.ClientIP,
 			param.Method,
@@ -134,16 +151,7 @@ func New(logWriter io.Writer) *Server {
 			param.Latency,
 			param.ErrorMessage,
 		)
-	}))
-
-	r.Use(gin.RecoveryWithWriter(logWriter))
-
-	return &Server{
-		router:         r,
-		uidToNameCache: make(map[uint32]string),
-		gidToNameCache: make(map[uint32]string),
-		logger:         logger,
-	}
+	})
 }
 
 // Start will start listening to the given address (eg. "localhost:8080"), and
