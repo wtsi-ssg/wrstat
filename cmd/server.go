@@ -31,7 +31,6 @@ import (
 	"fmt"
 	"io"
 	"log/syslog"
-	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
@@ -40,12 +39,12 @@ import (
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
+	"github.com/inconshreveable/log15"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/server"
 )
 
 const sudoLRootPrivsUser = "ALL"
-const logFilePerms = 0644
 
 var sudoLMayRunRegexp = regexp.MustCompile(`\(\s*(\S+)\s*\)\s*ALL`)
 
@@ -58,7 +57,6 @@ var serverCert string
 var serverKey string
 var serverLDAPFQDN string
 var serverLDAPBindDN string
-var syslogWriter *syslog.Writer
 
 // serverCmd represents the server command.
 var serverCmd = &cobra.Command{
@@ -120,12 +118,13 @@ dgut.dbs.old directory containing the previous run's database files.
 			die("you must supply --ldap_dn")
 		}
 
-		s := server.New(serverLogger(serverLogPath))
+		logWriter := setServerLogger(serverLogPath)
+
+		s := server.New(logWriter)
 
 		err := s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
 			msg := fmt.Sprintf("failed to enable authentication: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
@@ -133,7 +132,6 @@ dgut.dbs.old directory containing the previous run's database files.
 		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
 		if err != nil {
 			msg := fmt.Sprintf("failed to load database: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
@@ -142,14 +140,12 @@ dgut.dbs.old directory containing the previous run's database files.
 		err = s.EnableDGUTDBReloading(sentinel, args[0], dgutDBsSuffix)
 		if err != nil {
 			msg := fmt.Sprintf("failed to set up database reloading: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
 		err = s.AddTreePage()
 		if err != nil {
 			msg := fmt.Sprintf("failed to add tree page: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
@@ -160,7 +156,6 @@ dgut.dbs.old directory containing the previous run's database files.
 		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
 			msg := fmt.Sprintf("non-graceful stop: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 	},
@@ -188,25 +183,39 @@ func init() {
 	})
 }
 
-// serverLogger returns an io.Writer for the server to log to. The writer will
-// append to the given file. If the given path is blank, writes to syslog
-// instead.
-func serverLogger(path string) io.Writer {
+// setServerLogger makes our appLogger log to the given path if non-blank,
+// otherwise to syslog. Returns an io.Writer version of our appLogger for the
+// server to log to.
+func setServerLogger(path string) io.Writer {
 	if path == "" {
-		s, err := syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
-		if err != nil {
-			die("failed to connect to syslog: %s", err)
-		}
-
-		return s
+		logToSyslog()
+	} else {
+		logToFile(path)
 	}
 
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, logFilePerms)
+	return &log15Writer{logger: appLogger}
+}
+
+// logToSyslog sets our applogger to log to syslog, dies if it can't.
+func logToSyslog() {
+	fh, err := log15.SyslogHandler(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server", log15.LogfmtFormat())
 	if err != nil {
-		die("failed to open log file: %s", err)
+		die("failed to log to syslog: %s", err)
 	}
 
-	return f
+	appLogger.SetHandler(fh)
+}
+
+// log15Writer wraps a log15.Logger to make it conform to io.Writer interface.
+type log15Writer struct {
+	logger log15.Logger
+}
+
+// Write conforms to the io.Writer interface.
+func (w *log15Writer) Write(p []byte) (n int, err error) {
+	w.logger.Info(string(p))
+
+	return len(p), nil
 }
 
 // authenticate verifies the user's password against LDAP, and if correct
@@ -219,7 +228,7 @@ func authenticate(username, password string) (bool, []string) {
 
 	uids, err := getUsersUIDs(username)
 	if err != nil {
-		syslogWriter.Warning(fmt.Sprintf("failed to get UIDs for %s: %s", username, err)) //nolint:errcheck
+		warn(fmt.Sprintf("failed to get UIDs for %s: %s", username, err))
 
 		return false, nil
 	}
@@ -280,7 +289,7 @@ func getSudoLOutput(username string) ([]byte, error) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		syslogWriter.Warning(fmt.Sprintf("failed to check sudo ability for %s: %s", username, err)) //nolint:errcheck
+		warn(fmt.Sprintf("failed to check sudo ability for %s: %s", username, err))
 
 		return nil, err
 	}
