@@ -332,7 +332,7 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date str
 		return err
 	}
 
-	return touchDBUpdatedFile(destDir)
+	return touchDBUpdatedFile(destDir, destDirInfo)
 }
 
 // makeDBsDir makes a uniquely named directory featuring the given date to hold
@@ -366,8 +366,9 @@ func matchPermsInsideDir(dir string, desired fs.FileInfo) error {
 }
 
 // touchDBUpdatedFile touches a file that the server monitors so that it knows
-// to try and reload the databases.
-func touchDBUpdatedFile(destDir string) error {
+// to try and reload the databases. Matches the permissions of the touched file
+// to the given permissions.
+func touchDBUpdatedFile(destDir string, desired fs.FileInfo) error {
 	sentinel := filepath.Join(destDir, dgutDBsSentinelBasename)
 
 	_, err := os.Stat(sentinel)
@@ -377,7 +378,11 @@ func touchDBUpdatedFile(destDir string) error {
 		err = touchFile(sentinel)
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return matchPerms(sentinel, desired)
 }
 
 // createFile creates the given path.
