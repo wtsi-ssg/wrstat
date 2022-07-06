@@ -40,7 +40,7 @@ type login struct {
 }
 
 const (
-	tokenDuration    = time.Hour * 8
+	tokenDuration    = time.Hour * 24 * 5
 	userKey          = "user"
 	claimKeyUsername = "Username"
 	claimKeyUIDs     = "UIDs"
