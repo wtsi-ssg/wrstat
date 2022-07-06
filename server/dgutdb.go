@@ -124,21 +124,21 @@ func (s *Server) reloadDGUTDBs(dir, suffix string) {
 
 	err := s.findNewDgutPaths(dir, suffix)
 	if err != nil {
-		s.logger.Println("reloading dgut dbs failed:", err)
+		s.logger.Printf("reloading dgut dbs failed: %s", err)
 
 		return
 	}
 
-	s.logger.Printf("reloading dgut dbs from %s\n", s.dgutPaths)
+	s.logger.Printf("reloading dgut dbs from %s", s.dgutPaths)
 
 	s.tree, err = dgut.NewTree(s.dgutPaths...)
 	if err != nil {
-		s.logger.Println("reloading dgut dbs failed:", err)
+		s.logger.Printf("reloading dgut dbs failed: %s", err)
 
 		return
 	}
 
-	s.logger.Println("server ready again after reloading dgut dbs")
+	s.logger.Printf("server ready again after reloading dgut dbs")
 
 	s.deleteDirs(oldPaths)
 }
@@ -193,7 +193,7 @@ func (s *Server) setNewDgutPaths(dir string) error {
 func (s *Server) deleteDirs(dirs []string) {
 	for _, dir := range dirs {
 		if err := os.RemoveAll(dir); err != nil {
-			s.logger.Println("deleting dgut dbs failed:", err)
+			s.logger.Printf("deleting dgut dbs failed: %s", err)
 		}
 	}
 }
