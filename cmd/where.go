@@ -272,7 +272,7 @@ func getJWT(url, cert string) (string, error) {
 // We also check if the token has private permissions, otherwise we won't use
 // it. This is as an attempt to reduce the likelihood of the token being
 // leaked with its long expiry time (used so the user doesn't have to continuously
-// log in, as We're not working with specific refresh tokens to get new access
+// log in, as we're not working with specific refresh tokens to get new access
 // tokens).
 func getStoredJWT(url, cert string) (string, error) {
 	path, err := jwtStoragePath()

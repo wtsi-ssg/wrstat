@@ -20,86 +20,91 @@
 	</div>
 
 	<div id="body" style="display: none;">
-		<div id="chart">
-		</div>
+		<div class="row">
+			<div id="chart">
+			</div>
 
-		<div id="filters">
-			<div id="header">
-				<div id="title">
-					DiskTree
-					<div id="spinner" class="lds-ellipsis" style="display: none;">
-						<div></div>
-						<div></div>
-						<div></div>
-						<div></div>
+			<div id="filters">
+				<div id="header">
+					<div id="title">
+						DiskTree
+						<div id="spinner" class="lds-ellipsis" style="display: none;">
+							<div></div>
+							<div></div>
+							<div></div>
+							<div></div>
+						</div>
+					</div>
+					<div id="error"></div>
+				</div>
+				<div>
+					<div>
+						<span class="select_label">Area:</span>
+						<form id="select_area">
+							<input type="radio" id="size" name="area" value="size" checked="checked">
+							<label for="size">Size</label>
+							<input type="radio" id="count" name="area" value="count">
+							<label for="count">Count</label>
+						</form>
+					</div>
+					<div>
+						<span class="select_label">Group:</span>
+						<select id="select_group">
+						</select>
+					</div>
+					<div>
+						<span class="select_label">User:</span>
+						<select id="select_user">
+						</select>
+					</div>
+					<div>
+						<span class="select_label">Filetype:</span>
+						<select id="select_filetype">
+						</select>
 					</div>
 				</div>
-				<div id="error"></div>
-			</div>
-			<p>Logged in as: <span id="username"></span></p>
-			<button id="logoutButton">Logout</button>
-			<div>
-				<div>
-					<span class="select_label">Area:</span>
-					<form id="select_area">
-						<input type="radio" id="size" name="area" value="size" checked="checked">
-						<label for="size">Size</label>
-						<input type="radio" id="count" name="area" value="count">
-						<label for="count">Count</label>
-					</form>
-				</div>
-				<div>
-					<span class="select_label">Group:</span>
-					<select id="select_group">
-					</select>
-				</div>
-				<div>
-					<span class="select_label">User:</span>
-					<select id="select_user">
-					</select>
-				</div>
-				<div>
-					<span class="select_label">Filetype:</span>
-					<select id="select_filetype">
-					</select>
-				</div>
 			</div>
 		</div>
+		<div class="row">
+			<div id="details">
+				<span id="details_path"></span>
+				<table>
+					<tr>
+						<th>Size</th>
+						<td id="details_size"></td>
+					</tr>
+					<tr>
+						<th>Count</th>
+						<td id="details_count"></td>
+					</tr>
+					<tr>
+						<th>Groups</th>
+						<td>
+							<div id="details_groups"></div>
+						</td>
+					</tr>
+					<tr>
+						<th>Users</th>
+						<td>
+							<div id="details_users"></div>
+						</td>
+					</tr>
+					<tr>
+						<th>Filetypes</th>
+						<td>
+							<div id="details_filetypes"></div>
+						</td>
+					</tr>
+				</table>
+				
+			</div>
 
-		<div id="details">
-			<span id="details_path"></span>
-			<table>
-				<tr>
-					<th>Size</th>
-					<td id="details_size"></td>
-				</tr>
-				<tr>
-					<th>Count</th>
-					<td id="details_count"></td>
-				</tr>
-				<tr>
-					<th>Groups</th>
-					<td>
-						<div id="details_groups"></div>
-					</td>
-				</tr>
-				<tr>
-					<th>Users</th>
-					<td>
-						<div id="details_users"></div>
-					</td>
-				</tr>
-				<tr>
-					<th>Filetypes</th>
-					<td>
-						<div id="details_filetypes"></div>
-					</td>
-				</tr>
-			</table>
+			<div id="login_info">
+				<small>Logged in as: <span id="username"></span></small>
+				<button id="logoutButton">Logout</button>
+			</div>
 		</div>
-
 	</div>
-
 	<script data-main="js/main" src="js/require.js"></script>
 </body>
 
