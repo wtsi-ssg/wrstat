@@ -1156,6 +1156,30 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 	So(err, ShouldBeNil)
 	So(errg, ShouldNotBeNil)
 	So(filterGIDs, ShouldBeNil)
+
+	s.WhiteListGroups(func(gid string) bool {
+		return gid == gids[0]
+	})
+
+	s.userToGIDs = make(map[string][]string)
+
+	_, err = r.Get(EndPointAuth + "/groups?groups=root")
+	So(err, ShouldBeNil)
+
+	So(errg, ShouldBeNil)
+	So(filterGIDs, ShouldResemble, []string{"0"})
+
+	s.WhiteListGroups(func(group string) bool {
+		return false
+	})
+
+	s.userToGIDs = make(map[string][]string)
+
+	_, err = r.Get(EndPointAuth + "/groups?groups=root")
+	So(err, ShouldBeNil)
+
+	So(errg, ShouldNotBeNil)
+	So(filterGIDs, ShouldBeNil)
 }
 
 // gidsToGroups converts the given gids to group names.

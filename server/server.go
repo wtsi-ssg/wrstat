@@ -102,6 +102,7 @@ type Server struct {
 	srvMutex       sync.Mutex
 	authGroup      *gin.RouterGroup
 	authCB         AuthCallback
+	whiteCB        WhiteListCallback
 	uidToNameCache map[uint32]string
 	gidToNameCache map[uint32]string
 	userToGIDs     map[string][]string

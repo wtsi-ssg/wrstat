@@ -86,7 +86,8 @@ func (s *Server) getFilter(c *gin.Context) (*dgut.Filter, error) {
 // restrictedGroups checks our JWT if present, and will return the GIDs that
 // user is allowed to query. If groups arg is not blank, but a comma separated
 // list of group names, further limits the GIDs returned to be amongst those. If
-// the JWT has no groups specified, returns all the given group names as GIDs.
+// the user is not restricted on GIDs, returns all the given group names as
+// GIDs.
 func (s *Server) restrictedGroups(c *gin.Context, groups string) ([]string, error) {
 	ids, wanted, err := getWantedIDs(groups, groupNameToGID)
 	if err != nil {
