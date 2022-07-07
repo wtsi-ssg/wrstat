@@ -128,6 +128,8 @@ dgut.dbs.old directory containing the previous run's database files.
 			die(msg)
 		}
 
+		s.WhiteListGroups(serverWhiteLister)
+
 		info("opening databases, please wait...")
 		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
 		if err != nil {
@@ -352,6 +354,22 @@ func getUIDFromSudoLOutput(line string) string {
 	}
 
 	return u.Uid
+}
+
+var whiteListGIDs = map[string]struct{}{
+	"1313":  {},
+	"1818":  {},
+	"15306": {},
+	"1662":  {},
+	"15394": {},
+}
+
+// serverWhiteLister is currently hard-coded to say that membership of certain
+// gids means users should be treated like root.
+func serverWhiteLister(gid string) bool {
+	_, ok := whiteListGIDs[gid]
+
+	return ok
 }
 
 // dgutDBPaths returns the dgut db directories that 'wrstat tidy' creates in the

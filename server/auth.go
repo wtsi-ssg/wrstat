@@ -265,7 +265,8 @@ func (s *Server) getUser(c *gin.Context) *User {
 // results if possible.
 //
 // As a special case, if user.UIDs is nil (indicating the user can sudo as
-// root), returns a nil slice also.
+// root), or if one of the groups is white-listed per WhiteListGroups(), returns
+// a nil slice also.
 func (s *Server) userGIDs(u *User) ([]string, error) {
 	if gids, found := s.userToGIDs[u.Username]; found {
 		return gids, nil
@@ -276,7 +277,42 @@ func (s *Server) userGIDs(u *User) ([]string, error) {
 		return nil, err
 	}
 
+	if s.whiteListed(gids) {
+		gids = nil
+	}
+
 	s.userToGIDs[u.Username] = gids
 
 	return gids, nil
+}
+
+// WhiteListCallback is passed to WhiteListGroups() and is used by the server
+// to determine if a given unix group ID is special, indicating that users
+// belonging to it have permission to view information about all other unix
+// groups. If it's a special group, return true; otherwise false.
+type WhiteListCallback func(gid string) bool
+
+// WhiteListGroups sets the given callback on the server, which will now be used
+// to check if any of the groups that a user belongs to have been whitelisted,
+// giving that user unrestricted access to know about all groups.
+//
+// Do NOT call this more than once or after the server has started responding to
+// client queries.
+func (s *Server) WhiteListGroups(wcb WhiteListCallback) {
+	s.whiteCB = wcb
+}
+
+// whiteListed returns true if one of the gids has been white-listed.
+func (s *Server) whiteListed(gids []string) bool {
+	if s.whiteCB == nil {
+		return false
+	}
+
+	for _, gid := range gids {
+		if s.whiteCB(gid) {
+			return true
+		}
+	}
+
+	return false
 }
