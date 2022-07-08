@@ -64,7 +64,7 @@ body {
 #details_groups,
 #details_users,
 #details_filetypes {
-  max-width: 850px;
+  max-width: 870px;
   overflow: auto;
 }
 
