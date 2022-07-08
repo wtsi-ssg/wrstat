@@ -8,10 +8,15 @@ require.config({
     }
 });
 
+const getUsernameFromJWT = (token) => {
+    return JSON.parse(atob(token.split('.')[1])).Username;
+};
+
 requirejs(['jquery', 'cookie'], function ($, cookie) {
     function showMap(jwt) {
         $("#login").hide()
         $("#body").show()
+        $("#username").text(getUsernameFromJWT(jwt));
 
         require(["dtreemap"], function () {
             console.log("treemap module loaded");
@@ -34,7 +39,7 @@ requirejs(['jquery', 'cookie'], function ($, cookie) {
         var posting = $.post("/rest/v1/jwt", $("#loginForm").serialize(), "json");
 
         posting.done(function (data) {
-            cookie.set('jwt', data, { expires: 7, path: '', secure: true, sameSite: 'strict' })
+            cookie.set('jwt', data, { path: '', secure: true, sameSite: 'strict' })
 
             showMap(data)
         });
@@ -43,5 +48,10 @@ requirejs(['jquery', 'cookie'], function ($, cookie) {
             $("#loginFailure").empty().append("Incorrect username or password");
             $("#body").hide()
         });
+    });
+
+    $("#logoutButton").click(() => {
+        cookie.remove("jwt", {path: ""});
+        window.location.reload();
     });
 });

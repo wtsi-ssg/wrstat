@@ -1,15 +1,13 @@
 body {
   background: url(texture-noise.png);
   overflow: auto;
-  margin: 0;
   font-size: 14px;
   font-family: "Helvetica Neue", Helvetica;
 }
 
-#chart,
-#filters {
-  position: absolute;
-  top: 0;
+.row{
+  margin-bottom: 1em;
+  display: flex;
 }
 
 #chart {
@@ -20,16 +18,16 @@ body {
 
 #filters {
   z-index: 1;
-  display: block;
   font-size: 24px;
   font-weight: 300;
   text-shadow: 0 1px 0 #fff;
-  margin: 1ex;
-  margin-top: 0;
-  padding-top: 0;
-  min-width: 10em;
-  height: 500px;
-  left: 960px;
+  padding: 1ex;
+  display: flex;
+  flex-direction: column;
+}
+
+#login_info {
+  margin-top: auto;
 }
 
 #header {
@@ -44,15 +42,11 @@ body {
 #details {
   text-align: left;
   white-space: nowrap;
-  float: left;
-  margin-top: 510px;
-  margin-left: 10px;
-  padding: 0.5em;
-  padding-top: 1em;
   font: 12px sans-serif;
   background: #ddd;
   border: solid 1px #aaa;
   border-radius: 8px;
+  padding: 1em 0.5em;
 }
 
 #details_path {
@@ -70,7 +64,7 @@ body {
 #details_groups,
 #details_users,
 #details_filetypes {
-  max-width: 850px;
+  max-width: 870px;
   overflow: auto;
 }
 
