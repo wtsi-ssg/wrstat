@@ -22,10 +22,12 @@ body {
   font-weight: 300;
   text-shadow: 0 1px 0 #fff;
   padding: 1ex;
+  display: flex;
+  flex-direction: column;
 }
 
 #login_info {
-  margin-left: 5em;
+  margin-top: auto;
 }
 
 #header {
