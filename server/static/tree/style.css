@@ -46,6 +46,7 @@ body {
   background: #ddd;
   border: solid 1px #aaa;
   border-radius: 8px;
+  padding: 1em 0.5em;
 }
 
 #details_path {
