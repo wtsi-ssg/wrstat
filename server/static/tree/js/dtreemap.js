@@ -1,3 +1,9 @@
+require.config({
+    paths: {
+        cookie: "js.cookie.min"
+    }
+})
+
 define(["d3", "cookie"], function (d3, cookie) {
     console.log("dtreemap using d3 v" + d3.version);
 
@@ -280,18 +286,24 @@ define(["d3", "cookie"], function (d3, cookie) {
     function getData(path, loadFunction) {
         d3.select("#spinner").style("display", "inline-block")
 
-        d3.json(constructAPIURL(path))
-            .header("Authorization", "Bearer " + cookie.get('jwt'))
-            .on("error", function (error) {
-                d3.select("#spinner").style("display", "none")
-                d3.select("#error").text("error: " + error);
-            })
-            .on("load", function (data) {
-                d3.select("#spinner").style("display", "none");
-                allNodes.set(data.path, data);
-                loadFunction(data);
-            })
-            .get();
+        fetch(constructAPIURL(path), {headers: {
+            "Authorization": `Bearer ${cookie.get('jwt')}`
+        }}).then(r => {
+            if (r.status === 401) {
+                cookie.remove("jwt", {path: ""});
+                window.location.reload();
+            } else {
+                return r.json()
+            }
+        }).then(d => {
+            d3.select("#spinner").style("display", "none");
+            allNodes.set(d.path, d);
+            loadFunction(d);
+        }).catch(e => {
+            d3.select("#spinner").style("display", "none");
+            d3.select("#error").text("error: " + e)
+        })
+
     }
 
     var areaBasedOnSize = true
