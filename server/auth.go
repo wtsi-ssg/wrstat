@@ -26,6 +26,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -81,6 +82,7 @@ func (s *Server) EnableAuth(certFile, keyFile string, cb AuthCallback) error {
 
 	s.router.POST(EndPointJWT, authMiddleware.LoginHandler)
 	s.router.GET(EndPointJWT, authMiddleware.RefreshHandler)
+	s.router.POST("/oidc-jwt", authMiddleware.LoginHandler)
 
 	auth := s.router.Group(EndPointAuth)
 	auth.Use(authMiddleware.MiddlewareFunc())
@@ -177,10 +179,8 @@ func retrieveClaimString(claims jwt.MapClaims, claim string) (string, error) {
 	return str, nil
 }
 
-// authenticator is a function property for jwt.GinJWTMiddleware. It gets the
-// username and password from the query, passes them to our authCB, and creates
-// a *User on success. That in turn gets passed to authPayload().
-func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
+// TODO comment
+func (s *Server) basicAuth(c *gin.Context) (interface{}, error) {
 	var loginVals login
 	if err := c.ShouldBind(&loginVals); err != nil {
 		return nil, jwt.ErrMissingLoginValues
@@ -200,6 +200,62 @@ func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 		UIDs:     uids,
 		GIDs:     gids,
 	}, nil
+}
+
+// TODO comment
+func (s *Server) oidcAuth(c *gin.Context) (interface{}, error) {
+	data, err := getProfileData(c.Request)
+	if err != nil {
+		s.logger.Fatal(err)
+	}
+
+	username, err := getUsername(data)
+	if err != nil {
+		s.logger.Fatal(err)
+	}
+
+	uids, err := getUsersUIDs(username)
+	if err != nil {
+		s.logger.Fatal(err)
+	}
+
+	gids, err := getGIDsForUsers(uids)
+	if err != nil {
+		s.logger.Fatal(err)
+	}
+
+	s.logger.Println(username, uids, gids)
+
+	return &User{
+		Username: username,
+		UIDs:     uids,
+		GIDs:     gids,
+	}, nil
+}
+
+// authenticator is a function property for jwt.GinJWTMiddleware. It gets the
+// username and password from the query, passes them to our authCB, and creates
+// a *User on success. That in turn gets passed to authPayload().
+func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
+	s.logger.Println(c.Request.RequestURI)
+
+	switch c.Request.RequestURI {
+	case EndPointJWT:
+		return s.basicAuth(c)
+	case "/oidc-jwt":
+		return s.oidcAuth(c)
+	default:
+		return nil, fmt.Errorf("%s is not a valid endpoint for auth", c.Request.RequestURI)
+	}
+}
+
+func getUsername(data map[string]string) (string, error) {
+	email, ok := data["email"]
+	if !ok {
+		return "", fmt.Errorf("field `email` not present")
+	}
+
+	return strings.Split(email, "@")[0], nil
 }
 
 // tokenResponder returns token as a simple JSON string.

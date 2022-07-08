@@ -30,6 +30,7 @@ import (
 	"bytes"
 	"fmt"
 	"log/syslog"
+	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
@@ -121,7 +122,7 @@ dgut.dbs.old directory containing the previous run's database files.
 			die("failed to connect to syslog: %s", err)
 		}
 
-		s := server.New(syslogWriter)
+		s := server.New(os.Stdout)
 
 		err = s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
@@ -154,6 +155,8 @@ dgut.dbs.old directory containing the previous run's database files.
 			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
+
+		s.AddOIDCRoutes()
 
 		defer s.Stop()
 

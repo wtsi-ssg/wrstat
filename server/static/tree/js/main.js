@@ -23,6 +23,23 @@ requirejs(['jquery', 'cookie'], function ($, cookie) {
 
         if (jwt && jwt.length !== 0) {
             showMap(jwt)
+            return
+        } 
+
+        let oidc = cookie.get("okta-hosted-login-session-store");
+        if (oidc && oidc.length !== 0) {
+            fetch("/oidc-jwt", {
+                method: "POST", 
+                body: JSON.stringify({
+                    token: oidc
+                })
+            })
+            .then(d => d.json())
+            .then((token) => {
+                cookie.set("jwt", token, {path: "", secure: true, sameSite: "strict"});
+                showMap(token);
+            })
+                
         } else {
             $("#login").show()
         }

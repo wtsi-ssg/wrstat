@@ -70,6 +70,13 @@ const (
 	// TreePath is the path to the static tree website.
 	TreePath = "/tree"
 
+	// TODO comment
+	EndpointOIDCLogin = "/login"
+
+	// EndpointAuthCallback is the endpoint where the OIDC provider will
+	// send the user back to after login
+	EndpointAuthCallback = "/callback"
+
 	// EndPointAuthTree is the endpoint for making treemap queries when
 	// authorization is implemented.
 	EndPointAuthTree = EndPointAuth + TreePath
