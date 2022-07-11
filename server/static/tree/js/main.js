@@ -4,7 +4,8 @@ require.config({
         queue: "queue.v1",
         lodash: "lodash.min",
         jquery: "jquery-3.6.0.min",
-        cookie: "js.cookie.min"
+        cookie: "js.cookie.min",
+        flexdatalist: "jquery.flexdatalist.min"
     }
 });
 
@@ -12,7 +13,7 @@ const getUsernameFromJWT = (token) => {
     return JSON.parse(atob(token.split('.')[1])).Username;
 };
 
-requirejs(['jquery', 'cookie'], function ($, cookie) {
+requirejs(['jquery', 'cookie', 'flexdatalist'], function ($, cookie) {
     function showMap(jwt) {
         $("#login").hide()
         $("#body").show()
@@ -51,7 +52,7 @@ requirejs(['jquery', 'cookie'], function ($, cookie) {
     });
 
     $("#logoutButton").click(() => {
-        cookie.remove("jwt", {path: ""});
+        cookie.remove("jwt", { path: "" });
         window.location.reload();
     });
 });
