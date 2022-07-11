@@ -71,11 +71,13 @@ const (
 	TreePath = "/tree"
 
 	// TODO comment
-	EndpointOIDCLogin = "/login"
+	EndpointOIDCLogin    = "/login"
+	EndpointOIDCCLILogin = "/login-cli"
 
 	// EndpointAuthCallback is the endpoint where the OIDC provider will
 	// send the user back to after login
-	EndpointAuthCallback = "/callback"
+	EndpointAuthCallback    = "/callback"
+	EndpointAuthCLICallback = "/callback-cli"
 
 	// EndPointAuthTree is the endpoint for making treemap queries when
 	// authorization is implemented.
@@ -114,6 +116,8 @@ type Server struct {
 	dgutPaths      []string
 	dgutWatcher    *fsnotify.Watcher
 	logger         *log.Logger
+	webOAuth       *oauthEnv
+	cliOAuth       *oauthEnv
 }
 
 // New creates a Server which can serve a REST API and website.

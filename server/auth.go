@@ -26,6 +26,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -82,7 +83,6 @@ func (s *Server) EnableAuth(certFile, keyFile string, cb AuthCallback) error {
 
 	s.router.POST(EndPointJWT, authMiddleware.LoginHandler)
 	s.router.GET(EndPointJWT, authMiddleware.RefreshHandler)
-	s.router.POST("/oidc-jwt", authMiddleware.LoginHandler)
 
 	auth := s.router.Group(EndPointAuth)
 	auth.Use(authMiddleware.MiddlewareFunc())
@@ -237,16 +237,12 @@ func (s *Server) oidcAuth(c *gin.Context) (interface{}, error) {
 // username and password from the query, passes them to our authCB, and creates
 // a *User on success. That in turn gets passed to authPayload().
 func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
-	s.logger.Println(c.Request.RequestURI)
-
-	switch c.Request.RequestURI {
-	case EndPointJWT:
+	_, err := c.Request.Cookie(oktaCookieName)
+	if errors.Is(err, http.ErrNoCookie) {
 		return s.basicAuth(c)
-	case "/oidc-jwt":
-		return s.oidcAuth(c)
-	default:
-		return nil, fmt.Errorf("%s is not a valid endpoint for auth", c.Request.RequestURI)
 	}
+
+	return s.oidcAuth(c)
 }
 
 func getUsername(data map[string]string) (string, error) {

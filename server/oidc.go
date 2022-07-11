@@ -43,20 +43,18 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// TODO replace globals
+type oauthEnv struct {
+	oauth2.Config
+	clientRedirect string
+}
+
+const oktaCookieName = "okta-hosted-login-session-store"
+
 var sessionStore = sessions.NewCookieStore([]byte("okta-hosted-login-session-store"))
-var oauthConfig *oauth2.Config
 
-// TODO comment
-func (s *Server) AddOIDCRoutes() {
-	s.router.GET(EndpointAuthCallback, s.HandleOIDCCallback)
-	s.router.GET(EndpointOIDCLogin, s.HandleOIDCLogin)
-
-	// TODO replace with CLI flags
-	godotenv.Load("./.okta.env")
-
-	oauthConfig = &oauth2.Config{
-		RedirectURL:  "https://172.27.24.73:3000/callback", // TODO replace
+func newOktaOauthConfig(callback string) oauth2.Config {
+	return oauth2.Config{
+		RedirectURL:  callback,
 		ClientID:     os.Getenv("OKTA_OAUTH2_CLIENT_ID"),
 		ClientSecret: os.Getenv("OKTA_OAUTH2_CLIENT_SECRET"),
 		Scopes:       []string{"openid", "profile", "email"},
@@ -69,9 +67,39 @@ func (s *Server) AddOIDCRoutes() {
 }
 
 // TODO comment
-func (s *Server) HandleOIDCCallback(c *gin.Context) {
-	// TODO Check Over
+func (s *Server) AddOIDCRoutes() {
+	// TODO replace with CLI flags
+	godotenv.Load("./.okta.env")
 
+	// TODO replace callbacks
+	s.webOAuth = &oauthEnv{
+		Config:         newOktaOauthConfig("https://172.27.24.73:3000/callback"),
+		clientRedirect: "/",
+	}
+
+	s.cliOAuth = &oauthEnv{
+		Config:         newOktaOauthConfig("https://172.27.24.73:3000/callback-cli"),
+		clientRedirect: "/auth-code",
+	}
+
+	s.router.GET(EndpointAuthCallback, s.webOAuth.HandleOIDCCallback)
+	s.router.GET(EndpointOIDCLogin, s.webOAuth.HandleOIDCLogin)
+
+	s.router.GET(EndpointAuthCLICallback, s.cliOAuth.HandleOIDCCallback)
+	s.router.GET(EndpointOIDCCLILogin, s.cliOAuth.HandleOIDCLogin)
+
+	s.router.GET("/auth-code", func(ctx *gin.Context) {
+		cookie, err := ctx.Request.Cookie("okta-hosted-login-session-store")
+		if err != nil {
+			// TODO
+		}
+		ctx.Writer.Write([]byte(cookie.Value))
+	})
+
+}
+
+// TODO comment
+func (o *oauthEnv) HandleOIDCCallback(c *gin.Context) {
 	session, err := sessionStore.Get(c.Request, "okta-hosted-login-session-store")
 	if err != nil {
 		c.AbortWithError(http.StatusForbidden, err)
@@ -96,7 +124,7 @@ func (s *Server) HandleOIDCCallback(c *gin.Context) {
 		return
 	}
 
-	token, err := oauthConfig.Exchange(
+	token, err := o.Exchange(
 		context.Background(),
 		c.Query("code"),
 		oauth2.SetAuthURLParam("code_verifier", session.Values["oauth_code_verifier"].(string)),
@@ -123,12 +151,11 @@ func (s *Server) HandleOIDCCallback(c *gin.Context) {
 		session.Save(c.Request, c.Writer)
 	}
 
-	c.Redirect(http.StatusFound, "/")
+	c.Redirect(http.StatusFound, o.clientRedirect)
 }
 
 // TODO comment
-func (s *Server) HandleOIDCLogin(c *gin.Context) {
-	// TODO check over
+func (o *oauthEnv) HandleOIDCLogin(c *gin.Context) {
 	c.Header("Cache-Control", "no-cache") // See https://github.com/okta/samples-golang/issues/20
 
 	session, err := sessionStore.Get(c.Request, "okta-hosted-login-session-store")
@@ -153,7 +180,7 @@ func (s *Server) HandleOIDCLogin(c *gin.Context) {
 
 	session.Save(c.Request, c.Writer)
 
-	redirectURI := oauthConfig.AuthCodeURL(
+	redirectURI := o.AuthCodeURL(
 		oauthState,
 		oauth2.SetAuthURLParam("code_challenge", oauthCodeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
@@ -172,7 +199,7 @@ func verifyToken(t string) (*verifier.Jwt, error) {
 
 	result, err := jv.New().VerifyIdToken(t)
 	if err != nil {
-		return nil, fmt.Errorf("%s", err)
+		return nil, err
 	}
 
 	if result != nil {
