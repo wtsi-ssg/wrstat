@@ -57,9 +57,15 @@ define(["d3", "cookie"], function (d3, cookie) {
         root.depth = 0;
     }
 
-    var filterIDs = ['#select_group', '#select_user', '#select_filetype'];
+    $('.flexdatalist').flexdatalist({
+        selectionRequired: 1,
+        minLength: 0
+    });
+
+    var $filter_inputs = $('.flexdatalist');
+
+    var filterIDs = ['groups_list', 'users_list', 'ft_list'];
     let filters = new Map();
-    filterIDs.forEach(id => filters.set(id, "*"));
 
     function getFilters() {
         str = "";
@@ -162,9 +168,7 @@ define(["d3", "cookie"], function (d3, cookie) {
             transition(current);
         });
 
-        filterIDs.forEach(id => d3.select(id).on('change', function () {
-            selectValue = d3.select(this).property('value');
-            filters.set(id, selectValue);
+        d3.select("#filterButton").on('click', function () {
             getData(current.path, function (data) {
                 current.size = data.size;
                 current.count = data.count;
@@ -177,7 +181,18 @@ define(["d3", "cookie"], function (d3, cookie) {
                 storeFilters(current);
                 transition(current);
             });
-        }));
+        });
+
+        var updateFilters = function ($target) {
+            $target.each(function () {
+                filters.set($(this).attr('id'), $(this).val());
+            });
+        };
+
+        $filter_inputs
+            .on('change:flexdatalist', function (e, set) {
+                updateFilters($(this));
+            });
 
         function mouseover(g) {
             showDetails(g)
@@ -264,20 +279,20 @@ define(["d3", "cookie"], function (d3, cookie) {
     function constructAPIURL(path) {
         url = "/rest/v1/auth/tree?path=" + path
 
-        group = d3.select('#select_group').property('value');
-        user = d3.select('#select_user').property('value');
-        filetype = d3.select('#select_filetype').property('value');
+        groups = d3.select('#groups_list').property('value');
+        users = d3.select('#users_list').property('value');
+        filetypes = d3.select('#ft_list').property('value');
 
-        if (group != "*") {
-            url += '&groups=' + group
+        if (groups != "") {
+            url += '&groups=' + groups
         }
 
-        if (user != "*") {
-            url += '&users=' + user
+        if (users != "") {
+            url += '&users=' + users
         }
 
-        if (filetype != "*") {
-            url += '&types=' + filetype
+        if (filetypes != "") {
+            url += '&types=' + filetypes
         }
 
         return url
@@ -286,19 +301,28 @@ define(["d3", "cookie"], function (d3, cookie) {
     function getData(path, loadFunction) {
         d3.select("#spinner").style("display", "inline-block")
 
-        fetch(constructAPIURL(path), {headers: {
-            "Authorization": `Bearer ${cookie.get('jwt')}`
-        }}).then(r => {
+        fetch(constructAPIURL(path), {
+            headers: {
+                "Authorization": `Bearer ${cookie.get('jwt')}`
+            }
+        }).then(r => {
             if (r.status === 401) {
-                cookie.remove("jwt", {path: ""});
+                cookie.remove("jwt", { path: "" });
                 window.location.reload();
             } else {
                 return r.json()
             }
         }).then(d => {
             d3.select("#spinner").style("display", "none");
-            allNodes.set(d.path, d);
-            loadFunction(d);
+            if (d.count > 0) {
+                d3.select("#error").text("")
+                allNodes.set(d.path, d);
+                loadFunction(d);
+            }
+            else {
+                d3.select("#error").text("error: no results")
+            }
+
         }).catch(e => {
             d3.select("#spinner").style("display", "none");
             d3.select("#error").text("error: " + e)
@@ -369,15 +393,12 @@ define(["d3", "cookie"], function (d3, cookie) {
     }
 
     function setFilterOptions(data) {
-        setFilter('#select_group', data.groups);
-        setFilter('#select_user', data.users);
-        setFilter('#select_filetype', data.filetypes);
+        setFilter('#groups_list', data.groups);
+        setFilter('#users_list', data.users);
+        setFilter('#ft_list', data.filetypes);
     }
 
     function setFilter(id, elements) {
-        withStar = [...elements];
-        withStar.unshift("*");
-
         var select = d3.select(id);
 
         select
@@ -386,7 +407,7 @@ define(["d3", "cookie"], function (d3, cookie) {
 
         select
             .selectAll('option')
-            .data(withStar).enter()
+            .data(elements).enter()
             .append('option')
             .text(function (d) { return d; })
             .property("selected", function (d) { return d === filters.get(id) });
