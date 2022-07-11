@@ -282,16 +282,41 @@ func login(url, cert string) (string, error) {
 		die("couldn't get user: %s", err)
 	}
 
-	cliPrint("Password: ")
+	cliPrint(`Select one of the following options:
+	
+1) Okta Login (recommended)
+2) LDAP Login
+:`)
 
-	passwordB, err := term.ReadPassword(syscall.Stdin)
-	if err != nil {
-		die("couldn't read password: %s", err)
+	var selectedOption string
+
+	fmt.Scanln(&selectedOption)
+
+	switch selectedOption {
+	case "1":
+		cliPrint("Login at this URL, and then copy and paste the given code back here: %s%s\n",
+			url, server.EndpointOIDCCLILogin)
+		cliPrint("Auth Code:")
+
+		var authCode string
+		fmt.Scanln(&authCode)
+
+		return server.LoginWithOKTA(url, cert, authCode)
+	case "2":
+		cliPrint("Password: ")
+
+		passwordB, err := term.ReadPassword(syscall.Stdin)
+		if err != nil {
+			die("couldn't read password: %s", err)
+		}
+
+		cliPrint("\n")
+
+		return server.Login(url, cert, user.Username, string(passwordB))
 	}
 
-	cliPrint("\n")
+	return login(url, cert)
 
-	return server.Login(url, cert, user.Username, string(passwordB))
 }
 
 // storeJWT writes the given token string to a private file in user's home dir.

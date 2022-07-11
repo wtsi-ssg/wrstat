@@ -66,6 +66,26 @@ func Login(url, cert, username, password string) (string, error) {
 	return jsonStringBodyToString(resp.Body()), nil
 }
 
+// TODO comment
+func LoginWithOKTA(url, cert, token string) (string, error) {
+	r := newClientRequest(url, cert)
+
+	resp, err := r.SetCookie(&http.Cookie{
+		Name:  oktaCookieName,
+		Value: token,
+	}).Post(EndPointJWT)
+
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return "", ErrNoAuth
+	}
+
+	return jsonStringBodyToString(resp.Body()), nil
+}
+
 // newClientRequest creates a resty Request that will trust the certificate at
 // the given path. cert can be blank to only trust the normal installed cert
 // chain.
