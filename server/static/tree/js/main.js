@@ -9,6 +9,14 @@ require.config({
     }
 });
 
+requirejs.config({
+    shim: {
+        'flexdatalist': {
+            deps: ['jquery']
+        },
+    }
+});
+
 const getUsernameFromJWT = (token) => {
     return JSON.parse(atob(token.split('.')[1])).Username;
 };
