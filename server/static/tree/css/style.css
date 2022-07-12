@@ -3,9 +3,10 @@ body {
   overflow: auto;
   font-size: 14px;
   font-family: "Helvetica Neue", Helvetica;
+  margin: 10px;
 }
 
-.row {
+.main {
   margin-bottom: 1em;
   display: flex;
 }
@@ -56,6 +57,10 @@ body {
 }
 
 #details {
+  position: absolute;
+  top: 520px;
+  left: 10px;
+  width: 945px;
   text-align: left;
   white-space: nowrap;
   font: 12px sans-serif;
