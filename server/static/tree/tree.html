@@ -21,7 +21,7 @@
 	</div>
 
 	<div id="body" style="display: none;">
-		<div class="row">
+		<div class="main">
 			<div id="chart">
 			</div>
 
@@ -67,7 +67,7 @@
 						</div>
 
 						<div class="filter">
-							<input type='text' placeholder='FileTypes' class='form-control flexdatalist' multiple=''
+							<input type='text' placeholder='File types' class='form-control flexdatalist' multiple=''
 								list='ft_list' name='ft_list' id='ft_list'>
 
 							<datalist id="ft_list"></datalist>
@@ -85,38 +85,36 @@
 			</div>
 		</div>
 
-		<div class="row">
-			<div id="details">
-				<span id="details_path"></span>
-				<table>
-					<tr>
-						<th>Size</th>
-						<td id="details_size"></td>
-					</tr>
-					<tr>
-						<th>Count</th>
-						<td id="details_count"></td>
-					</tr>
-					<tr>
-						<th>Groups</th>
-						<td>
-							<div id="details_groups"></div>
-						</td>
-					</tr>
-					<tr>
-						<th>Users</th>
-						<td>
-							<div id="details_users"></div>
-						</td>
-					</tr>
-					<tr>
-						<th>Filetypes</th>
-						<td>
-							<div id="details_filetypes"></div>
-						</td>
-					</tr>
-				</table>
-			</div>
+		<div id="details">
+			<span id="details_path"></span>
+			<table>
+				<tr>
+					<th>Size</th>
+					<td id="details_size"></td>
+				</tr>
+				<tr>
+					<th>Count</th>
+					<td id="details_count"></td>
+				</tr>
+				<tr>
+					<th>Groups</th>
+					<td>
+						<div id="details_groups"></div>
+					</td>
+				</tr>
+				<tr>
+					<th>Users</th>
+					<td>
+						<div id="details_users"></div>
+					</td>
+				</tr>
+				<tr>
+					<th>Filetypes</th>
+					<td>
+						<div id="details_filetypes"></div>
+					</td>
+				</tr>
+			</table>
 		</div>
 	</div>
 
