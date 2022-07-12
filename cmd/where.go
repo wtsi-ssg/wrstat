@@ -276,8 +276,9 @@ func jwtStoragePath() (string, error) {
 	return filepath.Join(dir, jwtBasename), nil
 }
 
-// login requests the currently logged-in user's password, and tries to use it
-// to log in to the server. Returns the JWT on success.
+// login will prompt the user to log in either with a password, or by going to
+// an Okta login, and copying an auth code back. It will (through either method)
+// return the JWT for the user.
 func login(url, cert string) (string, error) {
 	user, err := user.Current()
 	if err != nil {
