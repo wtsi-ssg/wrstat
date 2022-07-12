@@ -189,7 +189,7 @@ func (s *Server) basicAuth(c *gin.Context) (interface{}, error) {
 	username := loginVals.Username
 	password := loginVals.Password
 
-	ok, uids, gids := s.authCB(username, password)
+	ok, uids := s.authCB(username, password)
 
 	if !ok {
 		return nil, jwt.ErrFailedAuthentication
@@ -198,7 +198,6 @@ func (s *Server) basicAuth(c *gin.Context) (interface{}, error) {
 	return &User{
 		Username: username,
 		UIDs:     uids,
-		GIDs:     gids,
 	}, nil
 }
 
@@ -215,12 +214,7 @@ func (s *Server) oidcAuth(c *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	uids, err := getUsersUIDs(username)
-	if err != nil {
-		return nil, err
-	}
-
-	gids, err := getGIDsForUsers(uids)
+	uids, err := GetUsersUIDs(username)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +222,6 @@ func (s *Server) oidcAuth(c *gin.Context) (interface{}, error) {
 	return &User{
 		Username: username,
 		UIDs:     uids,
-		GIDs:     gids,
 	}, nil
 }
 

@@ -108,7 +108,7 @@ const (
 //
 // As a special case, if the user can sudo as root, it should just return
 // nil slices.
-type AuthCallback func(username, password string) (bool, []string, []string)
+type AuthCallback func(username, password string) (bool, []string)
 
 // Server is used to start a web server that provides a REST API to the dgut
 // package's database, and a website that displays the information nicely.

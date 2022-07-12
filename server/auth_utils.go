@@ -1,3 +1,30 @@
+/*******************************************************************************
+ * Copyright (c) 2022 Genome Research Ltd.
+ *
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Grace <mg38@sanger.ac.uk>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ ******************************************************************************/
+
 package server
 
 import (
@@ -17,9 +44,9 @@ var sudoLMayRunRegexp = regexp.MustCompile(`\(\s*(\S+)\s*\)\s*ALL`)
 
 const sudoLMayRunRegexpMatches = 2
 
-// getUsersUIDs returns the uid for the given username, and also the uids of any
+// GetUsersUIDs returns the uid for the given username, and also the uids of any
 // other users the user can sudo as. If the user can sudo as root, returns nil.
-func getUsersUIDs(username string) ([]string, error) {
+func GetUsersUIDs(username string) ([]string, error) {
 	u, err := user.Lookup(username)
 	if err != nil {
 		return nil, err
@@ -122,45 +149,4 @@ func getUIDFromSudoLOutput(line string) string {
 	}
 
 	return u.Uid
-}
-
-// getGIDsForUser returns the group IDs that the given user belongs to.
-func getGIDsForUser(uid string) ([]string, error) {
-	u, err := user.LookupId(uid)
-	if err != nil {
-		return nil, err
-	}
-
-	return u.GroupIds()
-}
-
-// getGIDsForUsers returns the group ids the given user ids belong to. If no
-// users are supplied, returns nil.
-func getGIDsForUsers(uids []string) ([]string, error) {
-	if uids == nil {
-		return nil, nil
-	}
-
-	gidMap := make(map[string]bool)
-
-	for _, uid := range uids {
-		theseGids, err := getGIDsForUser(uid)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, gid := range theseGids {
-			gidMap[gid] = true
-		}
-	}
-
-	gids := make([]string, len(gidMap))
-	i := 0
-
-	for gid := range gidMap {
-		gids[i] = gid
-		i++
-	}
-
-	return gids, nil
 }
