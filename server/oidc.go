@@ -31,11 +31,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/sessions"
-	"github.com/joho/godotenv"
 	verifier "github.com/okta/okta-jwt-verifier-golang"
 	oauthUtils "github.com/okta/okta-jwt-verifier-golang/utils"
 	"github.com/thanhpk/randstr"
@@ -43,43 +41,58 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type oauthEnv struct {
-	oauth2.Config
-	clientRedirect string
-}
-
 const oktaCookieName = "okta-hosted-login-session-store"
 
-var sessionStore = sessions.NewCookieStore([]byte("okta-hosted-login-session-store"))
+var sessionStore = sessions.NewCookieStore([]byte(oktaCookieName))
 
-func newOktaOauthConfig(callback string) oauth2.Config {
+type oAuthParameters struct {
+	issuer       string
+	clientID     string
+	clientSecret string
+}
+
+// newOktaOauthConfig returns a oauth2.Config with the appropriate values based
+// on defaults, the paramenters in oAuthParameters and the callack URL
+func (p oAuthParameters) newOktaOauthConfig(callback string) oauth2.Config {
 	return oauth2.Config{
 		RedirectURL:  callback,
-		ClientID:     os.Getenv("OKTA_OAUTH2_CLIENT_ID"),
-		ClientSecret: os.Getenv("OKTA_OAUTH2_CLIENT_SECRET"),
+		ClientID:     p.clientID,
+		ClientSecret: p.clientSecret,
 		Scopes:       []string{"openid", "profile", "email"},
 		Endpoint: oauth2.Endpoint{
-			AuthURL:   os.Getenv("OKTA_OAUTH2_ISSUER") + "/v1/authorize",
-			TokenURL:  os.Getenv("OKTA_OAUTH2_ISSUER") + "/v1/token",
+			AuthURL:   p.issuer + "/v1/authorize",
+			TokenURL:  p.issuer + "/v1/token",
 			AuthStyle: oauth2.AuthStyleInParams,
 		},
 	}
 }
 
-// TODO comment
-func (s *Server) AddOIDCRoutes() {
-	// TODO replace with CLI flags
-	godotenv.Load("./.okta.env")
+type oauthEnv struct {
+	oauth2.Config
+	params         oAuthParameters
+	clientRedirect string
+}
 
-	// TODO replace callbacks
+// AddOIDCRoutes creates the OAuth environments for both the web app and the CLI
+// and adds the login and callback endpoints, along with an endpoint to get an
+// auth code for the CLI.
+func (s *Server) AddOIDCRoutes(issuer, clientID, clientSecret string) {
+	params := oAuthParameters{
+		issuer:       issuer,
+		clientID:     clientID,
+		clientSecret: clientSecret,
+	}
+
 	s.webOAuth = &oauthEnv{
-		Config:         newOktaOauthConfig("https://172.27.24.73:3000/callback"),
+		Config:         params.newOktaOauthConfig(s.address + EndpointAuthCallback),
+		params:         params,
 		clientRedirect: "/",
 	}
 
 	s.cliOAuth = &oauthEnv{
-		Config:         newOktaOauthConfig("https://172.27.24.73:3000/callback-cli"),
-		clientRedirect: "/auth-code",
+		Config:         params.newOktaOauthConfig(s.address + EndpointAuthCLICallback),
+		params:         params,
+		clientRedirect: EndpointCLIAuthCode,
 	}
 
 	s.router.GET(EndpointAuthCallback, s.webOAuth.HandleOIDCCallback)
@@ -88,19 +101,21 @@ func (s *Server) AddOIDCRoutes() {
 	s.router.GET(EndpointAuthCLICallback, s.cliOAuth.HandleOIDCCallback)
 	s.router.GET(EndpointOIDCCLILogin, s.cliOAuth.HandleOIDCLogin)
 
-	s.router.GET("/auth-code", func(ctx *gin.Context) {
-		cookie, err := ctx.Request.Cookie("okta-hosted-login-session-store")
+	s.router.GET(EndpointCLIAuthCode, func(ctx *gin.Context) {
+		cookie, err := ctx.Request.Cookie(oktaCookieName)
 		if err != nil {
-			// TODO
+			ctx.Writer.Write([]byte(err.Error()))
+			return
 		}
 		ctx.Writer.Write([]byte(cookie.Value))
 	})
-
 }
 
-// TODO comment
+// HandleOIDCCallback is the handler function for any callback in OAuth. It will
+// eventually redirect the user to the clientRedirect in the oauthEnv
+// See: https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
 func (o *oauthEnv) HandleOIDCCallback(c *gin.Context) {
-	session, err := sessionStore.Get(c.Request, "okta-hosted-login-session-store")
+	session, err := sessionStore.Get(c.Request, oktaCookieName)
 	if err != nil {
 		c.AbortWithError(http.StatusForbidden, err)
 		return
@@ -140,7 +155,7 @@ func (o *oauthEnv) HandleOIDCCallback(c *gin.Context) {
 		c.AbortWithError(http.StatusUnauthorized, fmt.Errorf("id token missing from OAuth2 token"))
 		return
 	}
-	_, err = verifyToken(rawIDToken)
+	_, err = o.params.verifyToken(rawIDToken)
 
 	if err != nil {
 		c.AbortWithError(http.StatusForbidden, err)
@@ -154,11 +169,13 @@ func (o *oauthEnv) HandleOIDCCallback(c *gin.Context) {
 	c.Redirect(http.StatusFound, o.clientRedirect)
 }
 
-// TODO comment
+// HandleOIDCLogin handles redirecting the user to the Okta login, as well as
+// providing it challenge codes.
+// See: https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
 func (o *oauthEnv) HandleOIDCLogin(c *gin.Context) {
 	c.Header("Cache-Control", "no-cache") // See https://github.com/okta/samples-golang/issues/20
 
-	session, err := sessionStore.Get(c.Request, "okta-hosted-login-session-store")
+	session, err := sessionStore.Get(c.Request, oktaCookieName)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
@@ -189,11 +206,13 @@ func (o *oauthEnv) HandleOIDCLogin(c *gin.Context) {
 	c.Redirect(http.StatusFound, redirectURI)
 }
 
-func verifyToken(t string) (*verifier.Jwt, error) {
+// verifyToken passes the token and the oAuthParameters through a JWT verifier
+// See: https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
+func (p oAuthParameters) verifyToken(t string) (*verifier.Jwt, error) {
 	tv := map[string]string{}
-	tv["aud"] = os.Getenv("OKTA_OAUTH2_CLIENT_ID")
+	tv["aud"] = p.clientID
 	jv := verifier.JwtVerifier{
-		Issuer:           os.Getenv("OKTA_OAUTH2_ISSUER"),
+		Issuer:           p.issuer,
 		ClaimsToValidate: tv,
 	}
 
@@ -209,16 +228,19 @@ func verifyToken(t string) (*verifier.Jwt, error) {
 	return nil, fmt.Errorf("token could not be verified")
 }
 
-func getProfileData(r *http.Request) (map[string]string, error) {
+// getProfileData takes a HTTP request (containing things like the cookie) and
+// will get user information in a map from Okta
+// See: https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
+func (s *Server) getProfileData(r *http.Request) (map[string]string, error) {
 	m := make(map[string]string)
 
-	session, err := sessionStore.Get(r, "okta-hosted-login-session-store")
+	session, err := sessionStore.Get(r, oktaCookieName)
 
 	if err != nil || session.Values["access_token"] == nil || session.Values["access_token"] == "" {
 		return m, nil
 	}
 
-	reqUrl := os.Getenv("OKTA_OAUTH2_ISSUER") + "/v1/userinfo"
+	reqUrl := s.webOAuth.params.issuer + "/v1/userinfo"
 
 	req, err := http.NewRequest("GET", reqUrl, nil)
 	if err != nil {

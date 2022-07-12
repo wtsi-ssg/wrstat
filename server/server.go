@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Grace <mg38@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -70,14 +72,21 @@ const (
 	// TreePath is the path to the static tree website.
 	TreePath = "/tree"
 
-	// TODO comment
-	EndpointOIDCLogin    = "/login"
+	// EndpointOIDCLogin will be handled by redirecting the user to Okta
+	EndpointOIDCLogin = "/login"
+
+	// EndpointOIDCCLILogin will be handled by redirecting the user to Okta,
+	// to get an auth code back to copy paste.
 	EndpointOIDCCLILogin = "/login-cli"
 
 	// EndpointAuthCallback is the endpoint where the OIDC provider will
-	// send the user back to after login
+	// send the user back to after login.
 	EndpointAuthCallback    = "/callback"
 	EndpointAuthCLICallback = "/callback-cli"
+
+	// EndpointCLIAuthCode is the endpoint the user can get an auth code from
+	// to copy paste into the terminal for a CLI session.
+	EndpointCLIAuthCode = "/auth-code"
 
 	// EndPointAuthTree is the endpoint for making treemap queries when
 	// authorization is implemented.
@@ -118,6 +127,7 @@ type Server struct {
 	logger         *log.Logger
 	webOAuth       *oauthEnv
 	cliOAuth       *oauthEnv
+	address        string
 }
 
 // New creates a Server which can serve a REST API and website.
@@ -164,6 +174,7 @@ func New(logWriter io.Writer) *Server {
 // It blocks, but will gracefully shut down on SIGINT and SIGTERM. If you
 // Start() in a go-routine, you can call Stop() manually.
 func (s *Server) Start(addr, certFile, keyFile string) error {
+	s.address = addr
 	s.router.Use(secure.New(secure.DefaultConfig()))
 
 	srv := &graceful.Server{

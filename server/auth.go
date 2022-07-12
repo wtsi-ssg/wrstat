@@ -202,29 +202,28 @@ func (s *Server) basicAuth(c *gin.Context) (interface{}, error) {
 	}, nil
 }
 
-// TODO comment
+// oidcAuth takes the HTTP request, gets the user from it and returns
+// a `*User` object.
 func (s *Server) oidcAuth(c *gin.Context) (interface{}, error) {
-	data, err := getProfileData(c.Request)
+	data, err := s.getProfileData(c.Request)
 	if err != nil {
-		s.logger.Fatal(err)
+		return nil, err
 	}
 
 	username, err := getUsername(data)
 	if err != nil {
-		s.logger.Fatal(err)
+		return nil, err
 	}
 
 	uids, err := getUsersUIDs(username)
 	if err != nil {
-		s.logger.Fatal(err)
+		return nil, err
 	}
 
 	gids, err := getGIDsForUsers(uids)
 	if err != nil {
-		s.logger.Fatal(err)
+		return nil, err
 	}
-
-	s.logger.Println(username, uids, gids)
 
 	return &User{
 		Username: username,

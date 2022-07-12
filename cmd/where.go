@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Grace <mg38@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -299,9 +301,11 @@ func login(url, cert string) (string, error) {
 		cliPrint("Auth Code:")
 
 		var authCode string
+
 		fmt.Scanln(&authCode)
 
 		return server.LoginWithOKTA(url, cert, authCode)
+
 	case "2":
 		cliPrint("Password: ")
 
@@ -316,7 +320,6 @@ func login(url, cert string) (string, error) {
 	}
 
 	return login(url, cert)
-
 }
 
 // storeJWT writes the given token string to a private file in user's home dir.

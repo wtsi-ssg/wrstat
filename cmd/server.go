@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Grace <mg38@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -30,7 +32,6 @@ import (
 	"bytes"
 	"fmt"
 	"log/syslog"
-	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
@@ -56,6 +57,9 @@ var serverKey string
 var serverLDAPFQDN string
 var serverLDAPBindDN string
 var syslogWriter *syslog.Writer
+var oktaOAuthIssuer string
+var oktaOAuthClientID string
+var oktaOAuthClientSecret string
 
 // serverCmd represents the server command.
 var serverCmd = &cobra.Command{
@@ -116,13 +120,32 @@ dgut.dbs.old directory containing the previous run's database files.
 			die("you must supply --ldap_dn")
 		}
 
+		oktaCLIFlagCounter := 0
+		if oktaOAuthIssuer != "" {
+			oktaCLIFlagCounter++
+		}
+
+		if oktaOAuthClientID != "" {
+			oktaCLIFlagCounter++
+		}
+
+		if oktaOAuthClientSecret != "" {
+			oktaCLIFlagCounter++
+		}
+
+		if oktaCLIFlagCounter != 0 && oktaCLIFlagCounter != 3 {
+			// if part of the Okta info is specified, it all needs to
+			// be specified
+			die("to use Okta login, you must specify --okta_issuer, --okta_id and --okta_secret")
+		}
+
 		var err error
 		syslogWriter, err = syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
 		if err != nil {
 			die("failed to connect to syslog: %s", err)
 		}
 
-		s := server.New(os.Stdout)
+		s := server.New(syslogWriter)
 
 		err = s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
@@ -156,7 +179,7 @@ dgut.dbs.old directory containing the previous run's database files.
 			die(msg)
 		}
 
-		s.AddOIDCRoutes()
+		s.AddOIDCRoutes(oktaOAuthIssuer, oktaOAuthClientID, oktaOAuthClientSecret)
 
 		defer s.Stop()
 
@@ -185,6 +208,12 @@ func init() {
 		"fqdn of your ldap server")
 	serverCmd.Flags().StringVarP(&serverLDAPBindDN, "ldap_dn", "l", "",
 		"ldap bind dn, with username replaced with %s")
+	serverCmd.Flags().StringVarP(&oktaOAuthIssuer, "okta_issuer", "", "",
+		"URL for Okta Oauth")
+	serverCmd.Flags().StringVarP(&oktaOAuthClientID, "okta_id", "", "",
+		"Okta Client ID")
+	serverCmd.Flags().StringVarP(&oktaOAuthClientSecret, "okta_secret", "", "",
+		"Okta Client Secret")
 
 	serverCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
 		hideGlobalFlags(serverCmd, command, strings)
