@@ -67,6 +67,7 @@ requirejs(['jquery', 'cookie', 'flexdatalist'], function ($, cookie) {
 
     $("#logoutButton").click(() => {
         cookie.remove("jwt", { path: "" });
+        cookie.remove("okta-hosted-login-session-store");
         window.location.reload();
     });
 });

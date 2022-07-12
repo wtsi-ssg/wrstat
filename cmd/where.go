@@ -332,7 +332,7 @@ func login(url, cert string) (string, error) {
 
 	switch selectedOption {
 	case "1":
-		cliPrint("Login at this URL, and then copy and paste the given code back here: %s%s\n",
+		cliPrint("Login at this URL, and then copy and paste the given code back here: https://%s%s\n",
 			url, server.EndpointOIDCCLILogin)
 		cliPrint("Auth Code:")
 
