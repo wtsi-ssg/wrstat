@@ -137,11 +137,11 @@ dgut.dbs.old directory containing the previous run's database files.
 			// be specified
 			die("to use Okta login, you must specify --okta_issuer, --okta_id and --okta_secret")
 		}
-		
+
 		logWriter := setServerLogger(serverLogPath)
 
 		s := server.New(logWriter)
-    s.Address = userAddress
+		s.Address = userAddress
 
 		err := s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
@@ -149,7 +149,7 @@ dgut.dbs.old directory containing the previous run's database files.
 			die(msg)
 		}
 
-		s.WhiteListGroups(serverWhiteLister)
+		s.WhiteListGroups(server.ServerWhiteLister)
 
 		info("opening databases, please wait...")
 		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
@@ -259,7 +259,7 @@ func authenticate(username, password string) (bool, []string) {
 		return false, nil
 	}
 
-	uids, err := getUsersUIDs(username)
+	uids, err := server.GetUsersUIDs(username)
 	if err != nil {
 		warn(fmt.Sprintf("failed to get UIDs for %s: %s", username, err))
 		return false, nil

@@ -150,3 +150,19 @@ func getUIDFromSudoLOutput(line string) string {
 
 	return u.Uid
 }
+
+var whiteListGIDs = map[string]struct{}{
+	"1313":  {},
+	"1818":  {},
+	"15306": {},
+	"1662":  {},
+	"15394": {},
+}
+
+// serverWhiteLister is currently hard-coded to say that membership of certain
+// gids means users should be treated like root.
+func ServerWhiteLister(gid string) bool {
+	_, ok := whiteListGIDs[gid]
+
+	return ok
+}
