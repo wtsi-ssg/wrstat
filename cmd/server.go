@@ -47,6 +47,7 @@ const sudoLMayRunRegexpMatches = 2
 
 // options for this cmd.
 var serverBind string
+var userAddress string
 var serverCert string
 var serverKey string
 var serverLDAPFQDN string
@@ -141,6 +142,7 @@ dgut.dbs.old directory containing the previous run's database files.
 		}
 
 		s := server.New(syslogWriter)
+		s.Address = userAddress
 
 		err = s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
@@ -195,6 +197,8 @@ func init() {
 	// flags specific to this sub-command
 	serverCmd.Flags().StringVarP(&serverBind, "bind", "b", ":80",
 		"address to bind to, eg host:port")
+	serverCmd.Flags().StringVarP(&userAddress, "user_address", "", serverBind,
+		"the address the user will be visiting (and is used for the OAuth callbacks)")
 	serverCmd.Flags().StringVarP(&serverCert, "cert", "c", "",
 		"path to certificate file")
 	serverCmd.Flags().StringVarP(&serverKey, "key", "k", "",

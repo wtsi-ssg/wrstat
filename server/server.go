@@ -127,7 +127,7 @@ type Server struct {
 	logger         *log.Logger
 	webOAuth       *oauthEnv
 	cliOAuth       *oauthEnv
-	address        string
+	Address        string
 }
 
 // New creates a Server which can serve a REST API and website.
@@ -174,7 +174,6 @@ func New(logWriter io.Writer) *Server {
 // It blocks, but will gracefully shut down on SIGINT and SIGTERM. If you
 // Start() in a go-routine, you can call Stop() manually.
 func (s *Server) Start(addr, certFile, keyFile string) error {
-	s.address = addr
 	s.router.Use(secure.New(secure.DefaultConfig()))
 
 	srv := &graceful.Server{

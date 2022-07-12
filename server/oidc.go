@@ -84,13 +84,13 @@ func (s *Server) AddOIDCRoutes(issuer, clientID, clientSecret string) {
 	}
 
 	s.webOAuth = &oauthEnv{
-		Config:         params.newOktaOauthConfig(s.address + EndpointAuthCallback),
+		Config:         params.newOktaOauthConfig(s.Address + EndpointAuthCallback),
 		params:         params,
 		clientRedirect: "/",
 	}
 
 	s.cliOAuth = &oauthEnv{
-		Config:         params.newOktaOauthConfig(s.address + EndpointAuthCLICallback),
+		Config:         params.newOktaOauthConfig(s.Address + EndpointAuthCLICallback),
 		params:         params,
 		clientRedirect: EndpointCLIAuthCode,
 	}
