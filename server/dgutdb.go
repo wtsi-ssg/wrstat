@@ -26,11 +26,17 @@
 package server
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/wtsi-ssg/wrstat/dgut"
 )
+
+const ErrNoDgutDBDirFound = Error("dgut database directory not found")
 
 // LoadDGUTDBs loads the given dgut.db directories (as produced by one or more
 // invocations of dgut.DB.Store()) and adds the /rest/v1/where GET endpoint to
@@ -60,18 +66,15 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 	return nil
 }
 
-// EnableDGUTDBReloading will wait for changes to the file at watchPath, then
-// close any previously loaded dgut database files before reloading the paths
-// you previously called LoadDGUTDBs on. It will then delete the oldDir path.
-//
-// The idea would be to LoadDGUTDBs(paths_in_dirX), then when you want to use
-// new database files, mv dirX to oldDir, put new database files in
-// paths_in_dirX and touch watchPath. The new database files will get used, and
-// the old ones will be deleted.
+// EnableDGUTDBReloading will wait for changes to the file at watchPath, then:
+// 1. close any previously loaded dgut database files
+// 2. find the latest sub-directory in the given directory with the given suffix
+// 3. set the dgut.db directory paths to children of 2) and load those
+// 4. delete the old dgut.db directory paths to save space
 //
 // It will only return an error if trying to watch watchPath immediately fails.
-// Other errors (eg. reloading or deleting oldDir) will be logged.
-func (s *Server) EnableDGUTDBReloading(watchPath, oldDir string) error {
+// Other errors (eg. reloading or deleting files) will be logged.
+func (s *Server) EnableDGUTDBReloading(watchPath, dir, suffix string) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -79,7 +82,7 @@ func (s *Server) EnableDGUTDBReloading(watchPath, oldDir string) error {
 
 	s.dgutWatcher = watcher
 
-	go s.reactToWatcher(watcher, oldDir)
+	go s.reactToWatcher(watcher, dir, suffix)
 
 	err = watcher.Add(watchPath)
 	if err != nil {
@@ -91,44 +94,106 @@ func (s *Server) EnableDGUTDBReloading(watchPath, oldDir string) error {
 
 // reactToWatcher loops on watcher events and calls reloadDGUTDBs() in response.
 // Call this in a goroutine.
-func (s *Server) reactToWatcher(watcher *fsnotify.Watcher, oldDir string) {
+func (s *Server) reactToWatcher(watcher *fsnotify.Watcher, dir, suffix string) {
 	for {
 		_, ok := <-watcher.Events
 		if !ok {
 			return
 		}
 
-		s.reloadDGUTDBs(oldDir)
+		s.reloadDGUTDBs(dir, suffix)
 	}
 }
 
 // reloadDGUTDBs closes database files previously loaded during LoadDGUTDBs(),
-// then reloads (presumably new) ones at the same paths as the prior load.
+// looks for the latest subdirectory of the given directory that has the given
+// suffix, and loads the children of that as our new dgutPaths.
 //
-// On success, deletes the given directory.
+// On success, deletes the previous dgutPaths.
 //
 // Logs any errors.
-func (s *Server) reloadDGUTDBs(oldDir string) {
+func (s *Server) reloadDGUTDBs(dir, suffix string) {
 	s.treeMutex.Lock()
 	defer s.treeMutex.Unlock()
 
-	var err error
+	if s.tree != nil {
+		s.tree.Close()
+	}
 
-	s.tree.Close()
+	oldPaths := s.dgutPaths
 
-	s.tree, err = dgut.NewTree(s.dgutPaths...)
+	err := s.findNewDgutPaths(dir, suffix)
 	if err != nil {
-		s.logger.Println("reloading dgut dbs failed: ", err)
+		s.logger.Printf("reloading dgut dbs failed: %s", err)
 
 		return
 	}
 
-	s.deleteDir(oldDir)
+	s.logger.Printf("reloading dgut dbs from %s", s.dgutPaths)
+
+	s.tree, err = dgut.NewTree(s.dgutPaths...)
+	if err != nil {
+		s.logger.Printf("reloading dgut dbs failed: %s", err)
+
+		return
+	}
+
+	s.logger.Printf("server ready again after reloading dgut dbs")
+
+	s.deleteDirs(oldPaths)
 }
 
-// deleteDir deletes the given directory. Logs any errors.
-func (s *Server) deleteDir(dir string) {
-	if err := os.RemoveAll(dir); err != nil {
-		s.logger.Println("deleting dgut dbs failed: ", err)
+// findNewDgutPaths finds the latest subdirectory of dir that has the given
+// suffix, then sets our dgutPaths to the result's children.
+func (s *Server) findNewDgutPaths(dir, suffix string) error {
+	fis, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(fis, func(i, j int) bool {
+		return fis[i].ModTime().After(fis[j].ModTime())
+	})
+
+	for _, fi := range fis {
+		if strings.HasSuffix(fi.Name(), "."+suffix) {
+			return s.setNewDgutPaths(filepath.Join(dir, fi.Name()))
+		}
+	}
+
+	return ErrNoDgutDBDirFound
+}
+
+// setNewDgutPaths sets our dgutPaths to the directory contents of the given
+// dir.
+func (s *Server) setNewDgutPaths(dir string) error {
+	des, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	var paths []string
+
+	for _, de := range des {
+		if de.IsDir() {
+			paths = append(paths, filepath.Join(dir, de.Name()))
+		}
+	}
+
+	if len(paths) == 0 {
+		return ErrNoDgutDBDirFound
+	}
+
+	s.dgutPaths = paths
+
+	return nil
+}
+
+// deleteDirs deletes the given directories. Logs any errors.
+func (s *Server) deleteDirs(dirs []string) {
+	for _, dir := range dirs {
+		if err := os.RemoveAll(dir); err != nil {
+			s.logger.Printf("deleting dgut dbs failed: %s", err)
+		}
 	}
 }

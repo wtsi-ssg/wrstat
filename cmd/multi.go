@@ -41,6 +41,8 @@ const (
 	walkTime    = 19 * time.Hour
 	combineTime = 40 * time.Minute
 	combineRAM  = 150
+	basedirTime = 15 * time.Minute
+	basedirRAM  = 42000
 )
 
 // options for this cmd.
@@ -236,9 +238,21 @@ func combineRepGrp(dir, unique string) string {
 // from the combined dgut.dbs folders.
 func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s basedir %s", s.Executable(), outputRoot),
-		repGrp("basedir", outputRoot, unique), "wrstat-basedir", unique+".basedir", unique, scheduler.DefaultRequirements())
+		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
+}
+
+// basedirReqs returns Requirements suitable for basedir jobs. The RAM
+// requirement is currently set so high due to a bad LSF&cgroups interaction
+// that means LSF counts the mmap of the database files as the job's memory
+// usage.
+func basedirReqs() *jqs.Requirements {
+	req := scheduler.DefaultRequirements()
+	req.Time = basedirTime
+	req.RAM = basedirRAM
+
+	return req
 }
 
 // scheduleTidyJob adds a job to wr's queue that for each working directory

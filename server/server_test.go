@@ -39,6 +39,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -52,10 +53,59 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const dirPerms = 0755
+const exampleDgutDirParentSuffix = "dgut.dbs"
+
+// stringLogger is a thread-safe logger that logs to a string.
+type stringLogger struct {
+	builder *strings.Builder
+	sync.RWMutex
+}
+
+// newStringLogger returns a new stringLogger.
+func newStringLogger() *stringLogger {
+	var builder strings.Builder
+
+	return &stringLogger{
+		builder: &builder,
+	}
+}
+
+// Write passes through to our strings.Builder while being thread-safe.
+func (s *stringLogger) Write(p []byte) (n int, err error) {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.builder.Write(p)
+}
+
+// String passes through to our strings.Builder while being thread-safe.
+func (s *stringLogger) String() string {
+	s.RLock()
+	defer s.RUnlock()
+
+	return s.builder.String()
+}
+
+// Reset passes through to our strings.Builder while being thread-safe.
+func (s *stringLogger) Reset() {
+	s.Lock()
+	defer s.Unlock()
+
+	s.builder.Reset()
+}
+
+func TestIDsToWanted(t *testing.T) {
+	Convey("restrictIDsToWanted returns bad query if you don't want any of the given ids", t, func() {
+		_, err := restrictIDsToWanted([]string{"a"}, map[string]bool{"b": true})
+		So(err, ShouldNotBeNil)
+	})
+}
+
 func TestServer(t *testing.T) {
 	username, uid, gids := getUserAndGroups(t)
 	exampleGIDs := getExampleGIDs(gids)
-	exampleUser := &User{Username: "user", UIDs: []string{"1", "2"}, GIDs: exampleGIDs}
+	exampleUser := &User{Username: "user", UIDs: []string{uid, "2"}}
 
 	Convey("hasError tells you about errors", t, func() {
 		So(hasError(nil, nil), ShouldBeFalse)
@@ -82,8 +132,8 @@ func TestServer(t *testing.T) {
 	})
 
 	Convey("Given a Server", t, func() {
-		var logWriter strings.Builder
-		s := New(&logWriter)
+		logWriter := newStringLogger()
+		s := New(logWriter)
 
 		Convey("You can convert dgut.DCSs to DirSummarys", func() {
 			uid32, err := strconv.Atoi(uid)
@@ -118,6 +168,16 @@ func TestServer(t *testing.T) {
 			So(dss[0].Groups, ShouldResemble, []string{gidToGroup(t, gids[0])})
 		})
 
+		Convey("userGIDs fails with bad UIDs", func() {
+			u := &User{
+				Username: username,
+				UIDs:     []string{"-1"},
+			}
+
+			_, err := s.userGIDs(u)
+			So(err, ShouldNotBeNil)
+		})
+
 		Convey("You can Start the Server", func() {
 			certPath, keyPath, err := createTestCert(t)
 			So(err, ShouldBeNil)
@@ -137,15 +197,15 @@ func TestServer(t *testing.T) {
 			So(resp.StatusCode(), ShouldEqual, http.StatusNotFound)
 
 			Convey("The jwt endpoint works after enabling it", func() {
-				err = s.EnableAuth("/foo", "/bar", func(u, p string) (bool, []string, []string) {
-					return false, nil, nil
+				err = s.EnableAuth("/foo", "/bar", func(u, p string) (bool, []string) {
+					return false, nil
 				})
 				So(err, ShouldNotBeNil)
 
-				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, []string, []string) {
+				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, []string) {
 					ok := p == "pass"
 
-					return ok, []string{"1", "2"}, exampleGIDs
+					return ok, []string{uid, "2"}
 				})
 				So(err, ShouldBeNil)
 
@@ -267,7 +327,20 @@ func TestServer(t *testing.T) {
 				So(user, ShouldResemble, exampleUser)
 				So(gu, ShouldResemble, exampleUser)
 
-				testRestrictedGroups(t, gids, s, r, exampleGIDs)
+				s.authCB = func(u, p string) (bool, []string) {
+					return true, []string{"-1"}
+				}
+
+				tokenBadUID, errl := Login(addr, certPath, "user", "pass")
+				So(errl, ShouldBeNil)
+				So(token, ShouldNotBeBlank)
+
+				rBadUID := newAuthenticatedClientRequest(addr, certPath, tokenBadUID)
+				resp, err = r.Get(EndPointAuth + "/test")
+				So(err, ShouldBeNil)
+				So(resp.String(), ShouldBeBlank)
+
+				testRestrictedGroups(t, gids, s, r, rBadUID, exampleGIDs)
 			})
 
 			Convey("authPayLoad correctly maps a User to claims, or returns none", func() {
@@ -276,11 +349,10 @@ func TestServer(t *testing.T) {
 				So(len(claims), ShouldEqual, 0)
 
 				claims = authPayLoad(exampleUser)
-				So(len(claims), ShouldEqual, 3)
+				So(len(claims), ShouldEqual, 2)
 				So(claims, ShouldResemble, jwt.MapClaims{
 					claimKeyUsername: "user",
-					claimKeyUIDs:     "1,2",
-					claimKeyGIDs:     fmt.Sprintf("%s,%s", exampleGIDs[0], exampleGIDs[1]),
+					claimKeyUIDs:     uid + ",2",
 				})
 			})
 
@@ -452,10 +524,15 @@ func TestServer(t *testing.T) {
 						pathNew, errc := createExampleDB(t, uid, gids[1], gids[0])
 						So(errc, ShouldBeNil)
 
-						oldPath := path + ".old"
-						err = os.Rename(path, oldPath)
+						grandparentDir := filepath.Dir(filepath.Dir(path))
+						newerPath := filepath.Join(grandparentDir, "newer."+exampleDgutDirParentSuffix, "0")
+						err = os.MkdirAll(filepath.Dir(newerPath), dirPerms)
 						So(err, ShouldBeNil)
-						err = os.Rename(pathNew, path)
+						err = os.Rename(pathNew, newerPath)
+						So(err, ShouldBeNil)
+
+						later := time.Now().Local().Add(1 * time.Second)
+						err = os.Chtimes(filepath.Dir(newerPath), later, later)
 						So(err, ShouldBeNil)
 
 						response, err = queryWhere(s, "")
@@ -466,7 +543,7 @@ func TestServer(t *testing.T) {
 
 						sentinel := path + ".sentinel"
 
-						err = s.EnableDGUTDBReloading(sentinel, oldPath)
+						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix)
 						So(err, ShouldNotBeNil)
 
 						file, err := os.Create(sentinel)
@@ -477,7 +554,7 @@ func TestServer(t *testing.T) {
 						err = s.dgutWatcher.Close()
 						So(err, ShouldBeNil)
 
-						err = s.EnableDGUTDBReloading(sentinel, oldPath)
+						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix)
 						So(err, ShouldBeNil)
 
 						response, err = queryWhere(s, "")
@@ -486,16 +563,16 @@ func TestServer(t *testing.T) {
 						So(err, ShouldBeNil)
 						So(result, ShouldResemble, expected)
 
-						_, err = os.Stat(oldPath)
+						_, err = os.Stat(path)
 						So(err, ShouldBeNil)
 
 						now := time.Now().Local()
 						err = os.Chtimes(sentinel, now, now)
 						So(err, ShouldBeNil)
 
-						<-time.After(50 * time.Millisecond)
+						waitForFileToBeDeleted(t, path)
 
-						_, err = os.Stat(oldPath)
+						_, err = os.Stat(path)
 						So(err, ShouldNotBeNil)
 
 						response, err = queryWhere(s, "")
@@ -521,24 +598,81 @@ func TestServer(t *testing.T) {
 
 					Convey("EnableDGUTDBReloading logs errors", func() {
 						sentinel := path + ".sentinel"
+						testSuffix := "test"
 
 						file, err := os.Create(sentinel)
 						So(err, ShouldBeNil)
 						err = file.Close()
 						So(err, ShouldBeNil)
 
-						err = s.EnableDGUTDBReloading(sentinel, ".")
-						So(err, ShouldBeNil)
+						testReloadFail := func(dir, message string) {
+							err = s.EnableDGUTDBReloading(sentinel, dir, testSuffix)
+							So(err, ShouldBeNil)
 
-						now := time.Now().Local()
-						err = os.Chtimes(sentinel, now, now)
-						So(err, ShouldBeNil)
+							now := time.Now().Local()
+							err = os.Chtimes(sentinel, now, now)
+							So(err, ShouldBeNil)
 
-						<-time.After(50 * time.Millisecond)
+							<-time.After(50 * time.Millisecond)
 
-						s.treeMutex.RLock()
-						defer s.treeMutex.RUnlock()
-						So(logWriter.String(), ShouldContainSubstring, "deleting dgut dbs failed")
+							s.treeMutex.RLock()
+							defer s.treeMutex.RUnlock()
+							So(logWriter.String(), ShouldContainSubstring, message)
+						}
+
+						grandparentDir := filepath.Dir(filepath.Dir(path))
+
+						makeTestPath := func() string {
+							tpath := filepath.Join(grandparentDir, "new."+testSuffix)
+							err = os.MkdirAll(tpath, dirPerms)
+							So(err, ShouldBeNil)
+
+							return tpath
+						}
+
+						Convey("when the directory doesn't contain the suffix", func() {
+							testReloadFail(".", "dgut database directory not found")
+						})
+
+						Convey("when the directory doesn't exist", func() {
+							testReloadFail("/sdf@£$", "no such file or directory")
+						})
+
+						Convey("when the suffix subdir can't be opened", func() {
+							tpath := makeTestPath()
+
+							err = os.Chmod(tpath, 0000)
+							So(err, ShouldBeNil)
+
+							testReloadFail(grandparentDir, "permission denied")
+						})
+
+						Convey("when the directory contains no subdirs", func() {
+							makeTestPath()
+
+							testReloadFail(grandparentDir, "dgut database directory not found")
+						})
+
+						Convey("when the new database path is invalid", func() {
+							tpath := makeTestPath()
+
+							dbPath := filepath.Join(tpath, "0")
+							err = os.Mkdir(dbPath, dirPerms)
+							So(err, ShouldBeNil)
+
+							testReloadFail(grandparentDir, "database doesn't exist")
+						})
+
+						Convey("when the old path can't be deleted", func() {
+							s.dgutPaths = []string{"."}
+							tpath := makeTestPath()
+
+							cmd := exec.Command("cp", "--recursive", path, filepath.Join(tpath, "0"))
+							err = cmd.Run()
+							So(err, ShouldBeNil)
+
+							testReloadFail(grandparentDir, "invalid argument")
+						})
 
 						tryTestingInotifyFails(path, sentinel)
 					})
@@ -609,8 +743,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		})
 
 		Convey("Root can see everything", func() {
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
-				return true, nil, nil
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
+				return true, nil
 			})
 			So(err, ShouldBeNil)
 
@@ -644,8 +778,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		})
 
 		Convey("Normal users have access restricted only by group", func() {
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
-				return true, []string{uid}, gids
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
+				return true, []string{uid}
 			})
 			So(err, ShouldBeNil)
 
@@ -678,8 +812,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			var logWriter strings.Builder
 			s := New(&logWriter)
 
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string, []string) {
-				return true, nil, nil
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
+				return true, nil
 			})
 			So(err, ShouldBeNil)
 
@@ -845,7 +979,6 @@ func makeTestToken(keyPath string, start, end time.Time, withUserClaims bool) (s
 	if withUserClaims {
 		claims[claimKeyUsername] = "root"
 		claims[claimKeyUIDs] = ""
-		claims[claimKeyGIDs] = ""
 	}
 
 	claims["orig_iat"] = start.Unix()
@@ -919,13 +1052,28 @@ func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, erro
 func createExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
 	t.Helper()
 
-	dir := t.TempDir()
+	dir, err := createExampleDgutDir(t)
+	if err != nil {
+		return dir, err
+	}
 
 	dgutData := exampleDGUTData(uid, gidA, gidB)
 	data := strings.NewReader(dgutData)
 	db := dgut.NewDB(dir)
 
-	err := db.Store(data, 20)
+	err = db.Store(data, 20)
+
+	return dir, err
+}
+
+// createExampleDgutDir creates a temp directory structure to hold dgut db files
+// in the same way that 'wrstat tidy' organises them.
+func createExampleDgutDir(t *testing.T) (string, error) {
+	t.Helper()
+
+	tdir := t.TempDir()
+	dir := filepath.Join(tdir, "orig."+exampleDgutDirParentSuffix, "0")
+	err := os.MkdirAll(dir, dirPerms)
 
 	return dir, err
 }
@@ -973,7 +1121,7 @@ func exampleDGUTData(uid, gidA, gidB string) string {
 
 // testRestrictedGroups does tests for s.restrictedGroups() if user running the
 // test has enough groups to make the test viable.
-func testRestrictedGroups(t *testing.T, gids []string, s *Server, r *resty.Request, exampleGIDs []string) {
+func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *resty.Request, exampleGIDs []string) {
 	t.Helper()
 
 	if len(gids) < 3 {
@@ -996,7 +1144,38 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r *resty.Reque
 	So(errg, ShouldBeNil)
 	So(filterGIDs, ShouldResemble, []string{exampleGIDs[0]})
 
-	_, err = r.Get(EndPointAuth + "/groups?groups=" + groups[2])
+	_, err = r.Get(EndPointAuth + "/groups?groups=0")
+	So(err, ShouldBeNil)
+
+	So(errg, ShouldNotBeNil)
+	So(filterGIDs, ShouldBeNil)
+
+	s.userToGIDs = make(map[string][]string)
+
+	_, err = rBadUID.Get(EndPointAuth + "/groups?groups=" + groups[0])
+	So(err, ShouldBeNil)
+	So(errg, ShouldNotBeNil)
+	So(filterGIDs, ShouldBeNil)
+
+	s.WhiteListGroups(func(gid string) bool {
+		return gid == gids[0]
+	})
+
+	s.userToGIDs = make(map[string][]string)
+
+	_, err = r.Get(EndPointAuth + "/groups?groups=root")
+	So(err, ShouldBeNil)
+
+	So(errg, ShouldBeNil)
+	So(filterGIDs, ShouldResemble, []string{"0"})
+
+	s.WhiteListGroups(func(group string) bool {
+		return false
+	})
+
+	s.userToGIDs = make(map[string][]string)
+
+	_, err = r.Get(EndPointAuth + "/groups?groups=root")
 	So(err, ShouldBeNil)
 
 	So(errg, ShouldNotBeNil)
@@ -1118,7 +1297,7 @@ func tryTestingInotifyFails(db, sentinel string) {
 	}
 
 	servers := make([]*Server, 9999)
-	oldPath := db + ".old"
+	grandparentDir := filepath.Dir(filepath.Dir(db))
 
 	defer closeDGUTWatchers(servers)
 
@@ -1133,7 +1312,7 @@ func tryTestingInotifyFails(db, sentinel string) {
 			So(err, ShouldBeNil)
 		}
 
-		if err := s.EnableDGUTDBReloading(sentinel, oldPath); err != nil {
+		if err := s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix); err != nil {
 			failed = true
 
 			break
@@ -1158,4 +1337,40 @@ func closeDGUTWatchers(servers []*Server) {
 			s.dgutWatcher.Close()
 		}
 	}
+}
+
+// waitForFileToBeDeleted waits for the given file to not exist. Times out after
+// 10 seconds.
+func waitForFileToBeDeleted(t *testing.T, path string) {
+	t.Helper()
+
+	wait := make(chan bool, 1)
+
+	go func() {
+		defer func() {
+			wait <- true
+		}()
+
+		limit := time.After(10 * time.Second)
+		ticker := time.NewTicker(50 * time.Millisecond)
+
+		for {
+			select {
+			case <-ticker.C:
+				_, err := os.Stat(path)
+				if err != nil {
+					ticker.Stop()
+
+					return
+				}
+			case <-limit:
+				ticker.Stop()
+				t.Logf("timed out waiting for deletion; %s still exists\n", path)
+
+				return
+			}
+		}
+	}()
+
+	<-wait
 }

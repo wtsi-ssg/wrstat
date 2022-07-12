@@ -29,12 +29,14 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"log/syslog"
 	"path/filepath"
 	"regexp"
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
+	"github.com/inconshreveable/log15"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/server"
 )
@@ -46,13 +48,13 @@ var sudoLMayRunRegexp = regexp.MustCompile(`\(\s*(\S+)\s*\)\s*ALL`)
 const sudoLMayRunRegexpMatches = 2
 
 // options for this cmd.
+var serverLogPath string
 var serverBind string
 var userAddress string
 var serverCert string
 var serverKey string
 var serverLDAPFQDN string
 var serverLDAPBindDN string
-var syslogWriter *syslog.Writer
 var oktaOAuthIssuer string
 var oktaOAuthClientID string
 var oktaOAuthClientSecret string
@@ -80,6 +82,7 @@ The server will log all messages (of any severity) to syslog at the INFO level,
 except for non-graceful stops of the server, which are sent at the CRIT level or
 include 'panic' in the message. The messages are tagged 'wrstat-server', and you
 might want to filter away 'STATUS=200' to find problems.
+If --logfile is supplied, logs to that file instaed of syslog.
 
 The server must be running for 'wrstat where' calls to succeed.
 
@@ -134,45 +137,38 @@ dgut.dbs.old directory containing the previous run's database files.
 			// be specified
 			die("to use Okta login, you must specify --okta_issuer, --okta_id and --okta_secret")
 		}
+		
+		logWriter := setServerLogger(serverLogPath)
 
-		var err error
-		syslogWriter, err = syslog.New(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server")
-		if err != nil {
-			die("failed to connect to syslog: %s", err)
-		}
+		s := server.New(logWriter)
+    s.Address = userAddress
 
-		s := server.New(syslogWriter)
-		s.Address = userAddress
-
-		err = s.EnableAuth(serverCert, serverKey, authenticate)
+		err := s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
 			msg := fmt.Sprintf("failed to enable authentication: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
+
+		s.WhiteListGroups(serverWhiteLister)
 
 		info("opening databases, please wait...")
 		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
 		if err != nil {
 			msg := fmt.Sprintf("failed to load database: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
 		sentinel := filepath.Join(args[0], dgutDBsSentinelBasename)
-		oldDB := filepath.Join(args[0], dgutDBsOldBasename)
 
-		err = s.EnableDGUTDBReloading(sentinel, oldDB)
+		err = s.EnableDGUTDBReloading(sentinel, args[0], dgutDBsSuffix)
 		if err != nil {
 			msg := fmt.Sprintf("failed to set up database reloading: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
 		err = s.AddTreePage()
 		if err != nil {
 			msg := fmt.Sprintf("failed to add tree page: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 
@@ -185,7 +181,6 @@ dgut.dbs.old directory containing the previous run's database files.
 		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
 			msg := fmt.Sprintf("non-graceful stop: %s", err)
-			syslogWriter.Crit(msg) //nolint:errcheck
 			die(msg)
 		}
 	},
@@ -213,25 +208,60 @@ func init() {
 		"Okta Client ID")
 	serverCmd.Flags().StringVarP(&oktaOAuthClientSecret, "okta_secret", "", "",
 		"Okta Client Secret")
+	serverCmd.Flags().StringVar(&serverLogPath, "logfile", "",
+		"log to this file instead of syslog")
 
 	serverCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
 		hideGlobalFlags(serverCmd, command, strings)
 	})
 }
 
+// setServerLogger makes our appLogger log to the given path if non-blank,
+// otherwise to syslog. Returns an io.Writer version of our appLogger for the
+// server to log to.
+func setServerLogger(path string) io.Writer {
+	if path == "" {
+		logToSyslog()
+	} else {
+		logToFile(path)
+	}
+
+	return &log15Writer{logger: appLogger}
+}
+
+// logToSyslog sets our applogger to log to syslog, dies if it can't.
+func logToSyslog() {
+	fh, err := log15.SyslogHandler(syslog.LOG_INFO|syslog.LOG_DAEMON, "wrstat-server", log15.LogfmtFormat())
+	if err != nil {
+		die("failed to log to syslog: %s", err)
+	}
+
+	appLogger.SetHandler(fh)
+}
+
+// log15Writer wraps a log15.Logger to make it conform to io.Writer interface.
+type log15Writer struct {
+	logger log15.Logger
+}
+
+// Write conforms to the io.Writer interface.
+func (w *log15Writer) Write(p []byte) (n int, err error) {
+	w.logger.Info(string(p))
+
+	return len(p), nil
+}
+
 // authenticate verifies the user's password against LDAP, and if correct
-// returns true alog with all the uids they can sudo as, and all the gids all
-// those users belong to.
+// returns true alog with all the uids they can sudo as.
 func authenticate(username, password string) (bool, []string) {
 	err := checkLDAPPassword(username, password)
 	if err != nil {
 		return false, nil
 	}
 
-	uids, err := server.GetUsersUIDs(username)
+	uids, err := getUsersUIDs(username)
 	if err != nil {
-		syslogWriter.Warning(fmt.Sprintf("failed to get UIDs for %s: %s", username, err)) //nolint:errcheck
-
+		warn(fmt.Sprintf("failed to get UIDs for %s: %s", username, err))
 		return false, nil
 	}
 
@@ -252,9 +282,9 @@ func checkLDAPPassword(username, password string) error {
 // dgutDBPaths returns the dgut db directories that 'wrstat tidy' creates in the
 // given output directory.
 func dgutDBPaths(dir string) []string {
-	paths, err := filepath.Glob(fmt.Sprintf("%s/%s/*", dir, dgutDBsBasename))
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*.%s/*", dir, dgutDBsSuffix))
 	if err != nil || len(paths) == 0 {
-		die("failed to find dgut database directories based on [%s/%s/*] (err: %s)", dir, dgutDBsBasename, err)
+		die("failed to find dgut database directories based on [%s/*.%s/*] (err: %s)", dir, dgutDBsSuffix, err)
 	}
 
 	return paths

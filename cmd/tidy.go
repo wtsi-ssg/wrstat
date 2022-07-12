@@ -26,6 +26,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -40,8 +41,7 @@ import (
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
 
-const dgutDBsBasename = "dgut.dbs"
-const dgutDBsOldBasename = dgutDBsBasename + ".old"
+const dgutDBsSuffix = "dgut.dbs"
 const dgutDBsSentinelBasename = ".dgut.dbs.updated"
 
 // options for this cmd.
@@ -160,7 +160,7 @@ func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date stri
 		return err
 	}
 
-	if err := findAndMoveDBs(sourceDir, destDir, destDirInfo); err != nil {
+	if err := findAndMoveDBs(sourceDir, destDir, destDirInfo, date); err != nil {
 		return err
 	}
 
@@ -217,7 +217,16 @@ func moveOutput(source string, destDir string, destDirInfo fs.FileInfo, date, su
 // renameAndMatchPerms tries 2 ways to rename the file (resorting to a copy if
 // this is across filesystem boundaries), then matches the dest file permissions
 // to the given FileInfo.
+//
+// If source doesn't exist, but dest does, assumes the rename was done
+// previously and just tries to match the permissions.
 func renameAndMatchPerms(source, dest string, destDirInfo fs.FileInfo) error {
+	if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
+		if _, err = os.Stat(dest); err == nil {
+			return matchPerms(dest, destDirInfo)
+		}
+	}
+
 	err := os.Rename(source, dest)
 	if err != nil {
 		if err = shutil.CopyFile(source, dest, false); err != nil {
@@ -289,16 +298,18 @@ func moveBaseDirsFile(sourceDir, destDir string, destDirInfo fs.FileInfo, date s
 }
 
 // findAndMoveDBs finds the combine.dgut.db directories in the given sourceDir
-// and moves them to a fixed dir in destDir (first moving aside any dir with the
-// same name in there), and adjusting ownership and permissions to match the
-// destDir.
-func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo) error {
+// and moves them to a uniquely named dir in destDir that includes the given
+// date, and adjusts ownership and permissions to match the destDir.
+//
+// It also touches a file that 'wrstat server' monitors to know when to reload
+// its database files.
+func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
 	sources, errg := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, combineDGUTOutputFileBasename))
 	if errg != nil {
 		return errg
 	}
 
-	dbsDir, err := makeDBsDir(destDir, destDirInfo)
+	dbsDir, err := makeDBsDir(sourceDir, destDir, destDirInfo, date)
 	if err != nil {
 		return err
 	}
@@ -321,23 +332,22 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo) error {
 		return err
 	}
 
-	return touchDBUpdatedFile(destDir)
+	return touchDBUpdatedFile(destDir, destDirInfo)
 }
 
-// makeDBsDir makes a directory in destDir to hold database files. It has a
-// fixed name so that the server will have a single known location to load the
-// databases from. If the directory already exists, first moves it aside.
-func makeDBsDir(destDir string, destDirInfo fs.FileInfo) (string, error) {
-	dbsDir := filepath.Join(destDir, dgutDBsBasename)
+// makeDBsDir makes a uniquely named directory featuring the given date to hold
+// database files in destDir. If it already exists, does nothing. Returns the
+// path to the database directory and any error.
+func makeDBsDir(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) (string, error) {
+	dbsDir := filepath.Join(destDir, fmt.Sprintf("%s_%s.%s",
+		date,
+		filepath.Base(sourceDir),
+		dgutDBsSuffix,
+	))
 
 	err := os.Mkdir(dbsDir, destDirInfo.Mode().Perm())
 	if os.IsExist(err) {
-		err = os.Rename(dbsDir, filepath.Join(destDir, dgutDBsOldBasename))
-		if err != nil {
-			return "", err
-		}
-
-		err = os.Mkdir(dbsDir, destDirInfo.Mode().Perm())
+		err = nil
 	}
 
 	return dbsDir, err
@@ -356,8 +366,9 @@ func matchPermsInsideDir(dir string, desired fs.FileInfo) error {
 }
 
 // touchDBUpdatedFile touches a file that the server monitors so that it knows
-// to try and reload the databases.
-func touchDBUpdatedFile(destDir string) error {
+// to try and reload the databases. Matches the permissions of the touched file
+// to the given permissions.
+func touchDBUpdatedFile(destDir string, desired fs.FileInfo) error {
 	sentinel := filepath.Join(destDir, dgutDBsSentinelBasename)
 
 	_, err := os.Stat(sentinel)
@@ -367,10 +378,14 @@ func touchDBUpdatedFile(destDir string) error {
 		err = touchFile(sentinel)
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return matchPerms(sentinel, desired)
 }
 
-// createFile creates the give path.
+// createFile creates the given path.
 func createFile(path string) error {
 	file, err := os.Create(path)
 	if err != nil {

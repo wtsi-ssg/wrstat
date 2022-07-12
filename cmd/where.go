@@ -28,6 +28,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -44,11 +45,11 @@ import (
 )
 
 const (
-	bytesPerK     = 1024
-	defaultSplits = 2
-	defaultMinMB  = 50
-	jwtBasename   = ".wrstat.jwt"
-	privatePerms  = 0600
+	bytesPerK                 = 1024
+	defaultSplits             = 2
+	defaultMinMB              = 50
+	jwtBasename               = ".wrstat.jwt"
+	privatePerms  os.FileMode = 0600
 )
 
 // options for this cmd.
@@ -231,6 +232,19 @@ func where(url, cert, dir, groups, users, types, splits, order string, minSizeBy
 	return nil
 }
 
+// JWTPermissionsError is used to distinguish this type of error - where the
+// already stored JWT token doesn't have private permissions.
+type JWTPermissionsError struct {
+	tokenFile string
+}
+
+// Error is the print out string for JWTPermissionsError, so the user can
+// see and rectify the permissions issue.
+func (e JWTPermissionsError) Error() string {
+	return fmt.Sprintf("Token %s does not have %v permissions "+
+		"- won't use it", e.tokenFile, privatePerms)
+}
+
 // getJWT checks if we have stored a jwt in a file in user's home directory.
 // If so, the JWT is refreshed and returned.
 //
@@ -238,11 +252,17 @@ func where(url, cert, dir, groups, users, types, splits, order string, minSizeBy
 // the new JWT.
 func getJWT(url, cert string) (string, error) {
 	token, err := getStoredJWT(url, cert)
-	if err != nil {
-		token, err = login(url, cert)
-		if err == nil {
-			err = storeJWT(token)
-		}
+	if err == nil {
+		return token, nil
+	}
+
+	if errors.As(err, &JWTPermissionsError{}) {
+		return "", err
+	}
+
+	token, err = login(url, cert)
+	if err == nil {
+		err = storeJWT(token)
 	}
 
 	return token, err
@@ -250,10 +270,25 @@ func getJWT(url, cert string) (string, error) {
 
 // getStoredJWT sees if we've previously called storeJWT(), gets the token
 // from the file it made, then tries to refresh it on the Server.
+//
+// We also check if the token has private permissions, otherwise we won't use
+// it. This is as an attempt to reduce the likelihood of the token being
+// leaked with its long expiry time (used so the user doesn't have to continuously
+// log in, as we're not working with specific refresh tokens to get new access
+// tokens).
 func getStoredJWT(url, cert string) (string, error) {
 	path, err := jwtStoragePath()
 	if err != nil {
 		return "", err
+	}
+
+	stat, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+
+	if stat.Mode() != privatePerms {
+		return "", JWTPermissionsError{tokenFile: path}
 	}
 
 	content, err := os.ReadFile(path)

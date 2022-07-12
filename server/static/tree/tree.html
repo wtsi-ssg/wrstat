@@ -3,7 +3,8 @@
 
 <head>
 	<meta charset="utf-8">
-	<link href="style.css" rel="stylesheet" type="text/css" />
+	<link href="css/style.css" rel="stylesheet" type="text/css" />
+	<link href="css/jquery.flexdatalist.min.css" rel="stylesheet" type="text/css" />
 </head>
 
 <body>
@@ -23,47 +24,66 @@
 	</div>
 
 	<div id="body" style="display: none;">
-		<div id="chart">
-		</div>
-
-		<div id="filters">
-			<div id="header">
-				<div id="title">
-					DiskTree
-					<div id="spinner" class="lds-ellipsis" style="display: none;">
-						<div></div>
-						<div></div>
-						<div></div>
-						<div></div>
-					</div>
-				</div>
-				<div id="error"></div>
+		<div class="main">
+			<div id="chart">
 			</div>
 
-			<div>
-				<div>
-					<span class="select_label">Area:</span>
-					<form id="select_area">
-						<input type="radio" id="size" name="area" value="size" checked="checked">
-						<label for="size">Size</label>
-						<input type="radio" id="count" name="area" value="count">
-						<label for="count">Count</label>
-					</form>
+			<div id="sidebar">
+				<div id="header">
+					<div id="title">
+						DiskTree
+						<div id="spinner" class="lds-ellipsis" style="display: none;">
+							<div></div>
+							<div></div>
+							<div></div>
+							<div></div>
+						</div>
+					</div>
 				</div>
+
 				<div>
-					<span class="select_label">Group:</span>
-					<select id="select_group">
-					</select>
+					<div class="sidebar_section">
+						<span class="select_label">Area:</span>
+						<form id="select_area">
+							<input type="radio" id="size" name="area" value="size" checked="checked">
+							<label for="size">Size</label>
+							<input type="radio" id="count" name="area" value="count">
+							<label for="count">Count</label>
+						</form>
+					</div>
+
+					<div class="sidebar_section">
+						<span class="select_label">Filters:</span><br>
+
+						<div class="filter">
+							<input type='text' placeholder='Groups' class='form-control flexdatalist' multiple=''
+								list='groups_list' name='groups_list' id='groups_list'>
+
+							<datalist id="groups_list"></datalist>
+						</div>
+
+						<div class="filter">
+							<input type='text' placeholder='Users' class='form-control flexdatalist' multiple=''
+								list='users_list' name='users_list' id='users_list'>
+
+							<datalist id="users_list"></datalist>
+						</div>
+
+						<div class="filter">
+							<input type='text' placeholder='File types' class='form-control flexdatalist' multiple=''
+								list='ft_list' name='ft_list' id='ft_list'>
+
+							<datalist id="ft_list"></datalist>
+						</div>
+
+						<button id="filterButton">filter</button>
+					</div>
 				</div>
-				<div>
-					<span class="select_label">User:</span>
-					<select id="select_user">
-					</select>
-				</div>
-				<div>
-					<span class="select_label">Filetype:</span>
-					<select id="select_filetype">
-					</select>
+
+				<div id="error"></div>
+
+				<div id="login_info">
+					<button id="logoutButton">Logout <span id="username"></span></button>
 				</div>
 			</div>
 		</div>
@@ -99,7 +119,6 @@
 				</tr>
 			</table>
 		</div>
-
 	</div>
 
 	<script data-main="js/main" src="js/require.js"></script>
