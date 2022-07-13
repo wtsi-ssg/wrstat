@@ -32,7 +32,6 @@ import (
 	"io"
 	"log/syslog"
 	"path/filepath"
-	"regexp"
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
@@ -40,12 +39,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/server"
 )
-
-const sudoLRootPrivsUser = "ALL"
-
-var sudoLMayRunRegexp = regexp.MustCompile(`\(\s*(\S+)\s*\)\s*ALL`)
-
-const sudoLMayRunRegexpMatches = 2
 
 // options for this cmd.
 var serverLogPath string
@@ -149,7 +142,7 @@ dgut.dbs.old directory containing the previous run's database files.
 			die(msg)
 		}
 
-		s.WhiteListGroups(server.ServerWhiteLister)
+		s.WhiteListGroups(server.WhiteLister)
 
 		info("opening databases, please wait...")
 		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
@@ -262,6 +255,7 @@ func authenticate(username, password string) (bool, []string) {
 	uids, err := server.GetUsersUIDs(username)
 	if err != nil {
 		warn(fmt.Sprintf("failed to get UIDs for %s: %s", username, err))
+
 		return false, nil
 	}
 

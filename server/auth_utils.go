@@ -30,7 +30,6 @@ package server
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"log"
 	"os/exec"
 	"os/user"
@@ -86,7 +85,7 @@ func getSudoLOutput(username string) ([]byte, error) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Println(fmt.Sprintf("failed to check sudo ability for %s: %s", username, err)) //nolint:errcheck
+		log.Printf("failed to check sudo ability for %s: %s\n", username, err)
 
 		return nil, err
 	}
@@ -151,7 +150,7 @@ func getUIDFromSudoLOutput(line string) string {
 	return u.Uid
 }
 
-var whiteListGIDs = map[string]struct{}{
+var whiteListGIDs = map[string]struct{}{ // nolint:golint,gochecknoglobals // could this be in a config file
 	"1313":  {},
 	"1818":  {},
 	"15306": {},
@@ -159,9 +158,9 @@ var whiteListGIDs = map[string]struct{}{
 	"15394": {},
 }
 
-// serverWhiteLister is currently hard-coded to say that membership of certain
+// WhiteLister is currently hard-coded to say that membership of certain
 // gids means users should be treated like root.
-func ServerWhiteLister(gid string) bool {
+func WhiteLister(gid string) bool {
 	_, ok := whiteListGIDs[gid]
 
 	return ok

@@ -72,7 +72,7 @@ const (
 	// TreePath is the path to the static tree website.
 	TreePath = "/tree"
 
-	// EndpointOIDCLogin will be handled by redirecting the user to Okta
+	// EndpointOIDCLogin will be handled by redirecting the user to Okta.
 	EndpointOIDCLogin = "/login"
 
 	// EndpointOIDCCLILogin will be handled by redirecting the user to Okta,

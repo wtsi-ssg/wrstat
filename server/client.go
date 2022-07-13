@@ -69,7 +69,7 @@ func Login(url, cert, username, password string) (string, error) {
 }
 
 // LoginWithOKTA sends a request to the server containing the token as a
-// cookie, so it will be able to return back the JWT for the user
+// cookie, so it will be able to return back the JWT for the user.
 func LoginWithOKTA(url, cert, token string) (string, error) {
 	r := newClientRequest(url, cert)
 

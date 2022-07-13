@@ -29,7 +29,6 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"os/user"
 	"strings"
@@ -45,11 +44,12 @@ type login struct {
 }
 
 const (
-	tokenDuration    = time.Hour * 24 * 5
-	userKey          = "user"
-	claimKeyUsername = "Username"
-	claimKeyUIDs     = "UIDs"
-	ErrBadJWTClaim   = Error("JWT had bad claims")
+	tokenDuration      = time.Hour * 24 * 5
+	userKey            = "user"
+	claimKeyUsername   = "Username"
+	claimKeyUIDs       = "UIDs"
+	ErrBadJWTClaim     = Error("JWT had bad claims")
+	ErrEmailNotPresent = Error("field `email` not present")
 )
 
 // User is what we store in our JWTs.
@@ -285,7 +285,7 @@ func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 func getUsername(data map[string]string) (string, error) {
 	email, ok := data["email"]
 	if !ok {
-		return "", fmt.Errorf("field `email` not present")
+		return "", ErrEmailNotPresent
 	}
 
 	return strings.Split(email, "@")[0], nil

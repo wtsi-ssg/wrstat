@@ -311,15 +311,42 @@ func jwtStoragePath() (string, error) {
 	return filepath.Join(dir, jwtBasename), nil
 }
 
-// login will prompt the user to log in either with a password, or by going to
-// an Okta login, and copying an auth code back. It will (through either method)
-// return the JWT for the user.
-func login(url, cert string) (string, error) {
+// userGetsOktaLoginCode gives the user a URL to visit to log in using Okta,
+// which will give them back a code to paste here to authenticate.
+func userGetsOktaLoginCode(url, cert string) (string, error) {
+	cliPrint("Login at this URL, and then copy and paste the given code back here: https://%s%s\n",
+		url, server.EndpointOIDCCLILogin)
+	cliPrint("Auth Code:")
+
+	var authCode string
+
+	fmt.Scanln(&authCode)
+
+	return server.LoginWithOKTA(url, cert, authCode)
+}
+
+// traditionalPasswordLogin prompts the user for a password to log them in.
+func traditionalPasswordLogin(url, cert string) (string, error) {
 	user, err := user.Current()
 	if err != nil {
 		die("couldn't get user: %s", err)
 	}
 
+	cliPrint("Password: ")
+
+	passwordB, err := term.ReadPassword(syscall.Stdin)
+	if err != nil {
+		die("couldn't read password: %s", err)
+	}
+
+	cliPrint("\n")
+
+	return server.Login(url, cert, user.Username, string(passwordB))
+}
+
+// login will prompt the user to select a login method (either Okta or password).
+// It will (through either method) return the JWT for the user.
+func login(url, cert string) (string, error) {
 	cliPrint(`Select one of the following options:
 	
 1) Okta Login (recommended)
@@ -332,27 +359,9 @@ func login(url, cert string) (string, error) {
 
 	switch selectedOption {
 	case "1":
-		cliPrint("Login at this URL, and then copy and paste the given code back here: https://%s%s\n",
-			url, server.EndpointOIDCCLILogin)
-		cliPrint("Auth Code:")
-
-		var authCode string
-
-		fmt.Scanln(&authCode)
-
-		return server.LoginWithOKTA(url, cert, authCode)
-
+		return userGetsOktaLoginCode(url, cert)
 	case "2":
-		cliPrint("Password: ")
-
-		passwordB, err := term.ReadPassword(syscall.Stdin)
-		if err != nil {
-			die("couldn't read password: %s", err)
-		}
-
-		cliPrint("\n")
-
-		return server.Login(url, cert, user.Username, string(passwordB))
+		return traditionalPasswordLogin(url, cert)
 	}
 
 	return login(url, cert)
