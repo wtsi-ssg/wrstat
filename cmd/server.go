@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Grace <mg38@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -26,16 +28,10 @@
 package cmd
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"log/syslog"
-	"os/exec"
-	"os/user"
 	"path/filepath"
-	"regexp"
-	"strings"
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
@@ -44,19 +40,17 @@ import (
 	"github.com/wtsi-ssg/wrstat/server"
 )
 
-const sudoLRootPrivsUser = "ALL"
-
-var sudoLMayRunRegexp = regexp.MustCompile(`\(\s*(\S+)\s*\)\s*ALL`)
-
-const sudoLMayRunRegexpMatches = 2
-
 // options for this cmd.
 var serverLogPath string
 var serverBind string
+var userAddress string
 var serverCert string
 var serverKey string
 var serverLDAPFQDN string
 var serverLDAPBindDN string
+var oktaOAuthIssuer string
+var oktaOAuthClientID string
+var oktaOAuthClientSecret string
 
 // serverCmd represents the server command.
 var serverCmd = &cobra.Command{
@@ -118,9 +112,29 @@ dgut.dbs.old directory containing the previous run's database files.
 			die("you must supply --ldap_dn")
 		}
 
+		oktaCLIFlagCounter := 0
+		if oktaOAuthIssuer != "" {
+			oktaCLIFlagCounter++
+		}
+
+		if oktaOAuthClientID != "" {
+			oktaCLIFlagCounter++
+		}
+
+		if oktaOAuthClientSecret != "" {
+			oktaCLIFlagCounter++
+		}
+
+		if oktaCLIFlagCounter != 0 && oktaCLIFlagCounter != 3 {
+			// if part of the Okta info is specified, it all needs to
+			// be specified
+			die("to use Okta login, you must specify --okta_issuer, --okta_id and --okta_secret")
+		}
+
 		logWriter := setServerLogger(serverLogPath)
 
 		s := server.New(logWriter)
+		s.Address = userAddress
 
 		err := s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
@@ -128,7 +142,7 @@ dgut.dbs.old directory containing the previous run's database files.
 			die(msg)
 		}
 
-		s.WhiteListGroups(serverWhiteLister)
+		s.WhiteListGroups(server.WhiteLister)
 
 		info("opening databases, please wait...")
 		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
@@ -151,6 +165,8 @@ dgut.dbs.old directory containing the previous run's database files.
 			die(msg)
 		}
 
+		s.AddOIDCRoutes(oktaOAuthIssuer, oktaOAuthClientID, oktaOAuthClientSecret)
+
 		defer s.Stop()
 
 		sayStarted()
@@ -169,6 +185,8 @@ func init() {
 	// flags specific to this sub-command
 	serverCmd.Flags().StringVarP(&serverBind, "bind", "b", ":80",
 		"address to bind to, eg host:port")
+	serverCmd.Flags().StringVarP(&userAddress, "user_address", "", serverBind,
+		"the address the user will be visiting (and is used for the OAuth callbacks)")
 	serverCmd.Flags().StringVarP(&serverCert, "cert", "c", "",
 		"path to certificate file")
 	serverCmd.Flags().StringVarP(&serverKey, "key", "k", "",
@@ -177,6 +195,12 @@ func init() {
 		"fqdn of your ldap server")
 	serverCmd.Flags().StringVarP(&serverLDAPBindDN, "ldap_dn", "l", "",
 		"ldap bind dn, with username replaced with %s")
+	serverCmd.Flags().StringVarP(&oktaOAuthIssuer, "okta_issuer", "", "",
+		"URL for Okta Oauth")
+	serverCmd.Flags().StringVarP(&oktaOAuthClientID, "okta_id", "", "",
+		"Okta Client ID")
+	serverCmd.Flags().StringVarP(&oktaOAuthClientSecret, "okta_secret", "", "",
+		"Okta Client Secret")
 	serverCmd.Flags().StringVar(&serverLogPath, "logfile", "",
 		"log to this file instead of syslog")
 
@@ -228,7 +252,7 @@ func authenticate(username, password string) (bool, []string) {
 		return false, nil
 	}
 
-	uids, err := getUsersUIDs(username)
+	uids, err := server.GetUsersUIDs(username)
 	if err != nil {
 		warn(fmt.Sprintf("failed to get UIDs for %s: %s", username, err))
 
@@ -247,129 +271,6 @@ func checkLDAPPassword(username, password string) error {
 	}
 
 	return l.Bind(fmt.Sprintf(serverLDAPBindDN, username), password)
-}
-
-// getUsersUIDs returns the uid for the given username, and also the uids of any
-// other users the user can sudo as. If the user can sudo as root, returns nil.
-func getUsersUIDs(username string) ([]string, error) {
-	u, err := user.Lookup(username)
-	if err != nil {
-		return nil, err
-	}
-
-	uids, root := getSudoUsers(u.Username)
-
-	if root {
-		return nil, nil
-	}
-
-	uids = append(uids, u.Uid)
-
-	return uids, nil
-}
-
-// getSudoUsers tries to find out what other users the given user can sudo as.
-// Returns those UIDs, if any, and false. If the user can sudo as root, returns
-// nil and true. Errors encountered when trying to work this out are logged but
-// otherwise ignored, so that the user can still access info about their own
-// files.
-func getSudoUsers(username string) (uids []string, rootPower bool) {
-	out, err := getSudoLOutput(username)
-	if err != nil {
-		return uids, false
-	}
-
-	scanner := bufio.NewScanner(bytes.NewReader(out))
-
-	return parseSudoLOutput(scanner)
-}
-
-// getSudoLOutput runs `sudo -l -U usernamer` and returns the output, logging
-// any error.
-func getSudoLOutput(username string) ([]byte, error) {
-	cmd := exec.Command("sudo", "-l", "-U", username)
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		warn(fmt.Sprintf("failed to check sudo ability for %s: %s", username, err))
-
-		return nil, err
-	}
-
-	return out, nil
-}
-
-// parseSudoLOutput takes a scanner of the output of getSudoLOutput() and
-// returns the UIDs that the user can run ALL commands for, ie. can sudo as.
-// Returns nil, true if user can sudo as root.
-func parseSudoLOutput(scanner *bufio.Scanner) (uids []string, rootPower bool) {
-	var check bool
-
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "may run the following commands") {
-			check = true
-
-			continue
-		}
-
-		if !check {
-			continue
-		}
-
-		uid := getUIDFromSudoLOutput(scanner.Text())
-
-		if uid == "ALL" {
-			return nil, true
-		}
-
-		if uid != "" {
-			uids = append(uids, uid)
-		}
-	}
-
-	return uids, false
-}
-
-// getUIDFromSudoLOutput parses the username from the supplied line of output
-// from getSudoLOutput(). It converts the username to a UID and returns it. If
-// it returns "ALL", it means the user can sudo as root.
-func getUIDFromSudoLOutput(line string) string {
-	matches := sudoLMayRunRegexp.FindStringSubmatch(line)
-
-	if len(matches) != sudoLMayRunRegexpMatches {
-		return ""
-	}
-
-	if matches[1] == sudoLRootPrivsUser {
-		return sudoLRootPrivsUser
-	}
-
-	u, err := user.Lookup(matches[1])
-	if err != nil {
-		return ""
-	}
-
-	if u.Uid == "0" {
-		return sudoLRootPrivsUser
-	}
-
-	return u.Uid
-}
-
-var whiteListGIDs = map[string]struct{}{
-	"1313":  {},
-	"1818":  {},
-	"15306": {},
-	"1662":  {},
-	"15394": {},
-}
-
-// serverWhiteLister is currently hard-coded to say that membership of certain
-// gids means users should be treated like root.
-func serverWhiteLister(gid string) bool {
-	_, ok := whiteListGIDs[gid]
-
-	return ok
 }
 
 // dgutDBPaths returns the dgut db directories that 'wrstat tidy' creates in the

@@ -11,6 +11,20 @@ body {
   display: flex;
 }
 
+#login {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vh;
+  height: 100vh;
+  flex-direction: column;
+}
+
+#login-button {
+  background-color: #007DC1;
+  color: white;
+}
+
 #chart {
   width: 960px;
   height: 500px;

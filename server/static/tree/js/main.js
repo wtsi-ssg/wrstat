@@ -37,6 +37,20 @@ requirejs(['jquery', 'cookie', 'flexdatalist'], function ($, cookie) {
 
         if (jwt && jwt.length !== 0) {
             showMap(jwt)
+            return
+        } 
+
+        let oidc = cookie.get("okta-hosted-login-session-store");
+        if (oidc && oidc.length !== 0) {
+            fetch("/rest/v1/jwt", {
+                method: "POST"
+            })
+            .then(d => d.json())
+            .then((token) => {
+                cookie.set("jwt", token, {path: "", secure: true, sameSite: "strict"});
+                showMap(token);
+            })
+                
         } else {
             $("#login").show()
         }
@@ -61,6 +75,7 @@ requirejs(['jquery', 'cookie', 'flexdatalist'], function ($, cookie) {
 
     $("#logoutButton").click(() => {
         cookie.remove("jwt", { path: "" });
+        cookie.remove("okta-hosted-login-session-store");
         window.location.reload();
     });
 });

@@ -33,6 +33,17 @@ require (
 )
 
 require (
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d // indirect
+	github.com/gorilla/securecookie v1.1.1 // indirect
+	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.0 // indirect
+	github.com/lestrrat-go/httpcc v1.0.0 // indirect
+	github.com/lestrrat-go/iter v1.0.1 // indirect
+	github.com/lestrrat-go/jwx v1.2.18 // indirect
+	github.com/lestrrat-go/option v1.0.0 // indirect
+)
+
+require (
 	cloud.google.com/go/compute v1.6.1 // indirect
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
@@ -71,6 +82,7 @@ require (
 	github.com/gophercloud/gophercloud v0.25.0 // indirect
 	github.com/gophercloud/utils v0.0.0-20220307143606-8e7800759d16 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
+	github.com/gorilla/sessions v1.2.1
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grafov/bcast v0.0.0-20190217190352-1447f067e08d // indirect
 	github.com/hanwen/go-fuse/v2 v2.1.0 // indirect
@@ -96,6 +108,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/okta/okta-jwt-verifier-golang v1.3.1
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
@@ -112,12 +125,13 @@ require (
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/smartystreets/assertions v1.13.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/thanhpk/randstr v1.0.4
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect
 	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
-	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb // indirect
+	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
 	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect

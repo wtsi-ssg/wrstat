@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Grace <mg38@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -309,9 +311,22 @@ func jwtStoragePath() (string, error) {
 	return filepath.Join(dir, jwtBasename), nil
 }
 
-// login requests the currently logged-in user's password, and tries to use it
-// to log in to the server. Returns the JWT on success.
-func login(url, cert string) (string, error) {
+// userGetsOktaLoginCode gives the user a URL to visit to log in using Okta,
+// which will give them back a code to paste here to authenticate.
+func userGetsOktaLoginCode(url, cert string) (string, error) {
+	cliPrint("Login at this URL, and then copy and paste the given code back here: https://%s%s\n",
+		url, server.EndpointOIDCCLILogin)
+	cliPrint("Auth Code:")
+
+	var authCode string
+
+	fmt.Scanln(&authCode)
+
+	return server.LoginWithOKTA(url, cert, authCode)
+}
+
+// traditionalPasswordLogin prompts the user for a password to log them in.
+func traditionalPasswordLogin(url, cert string) (string, error) {
 	user, err := user.Current()
 	if err != nil {
 		die("couldn't get user: %s", err)
@@ -327,6 +342,29 @@ func login(url, cert string) (string, error) {
 	cliPrint("\n")
 
 	return server.Login(url, cert, user.Username, string(passwordB))
+}
+
+// login will prompt the user to select a login method (either Okta or password).
+// It will (through either method) return the JWT for the user.
+func login(url, cert string) (string, error) {
+	cliPrint(`Select one of the following options:
+	
+1) Okta Login (recommended)
+2) LDAP Login
+:`)
+
+	var selectedOption string
+
+	fmt.Scanln(&selectedOption)
+
+	switch selectedOption {
+	case "1":
+		return userGetsOktaLoginCode(url, cert)
+	case "2":
+		return traditionalPasswordLogin(url, cert)
+	}
+
+	return login(url, cert)
 }
 
 // storeJWT writes the given token string to a private file in user's home dir.
