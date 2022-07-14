@@ -202,7 +202,7 @@ func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
 		return nil, err
 	}
 
-	username, err := getUsername(data)
+	username, err := getUsernameFromProfileData(data)
 	if err != nil {
 		return nil, err
 	}
@@ -218,6 +218,19 @@ func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
 	}, nil
 }
 
+// getUsernameFromProfileData returns the username that it has extracted from
+// the map of data given to us from Okta. For example, development Okta returns
+// the email, so we just split the email and take the first part. This should be
+// changed if needed based on the data given to us by Okta.
+func getUsernameFromProfileData(data map[string]string) (string, error) {
+	email, ok := data["email"]
+	if !ok {
+		return "", ErrEmailNotPresent
+	}
+
+	return strings.Split(email, "@")[0], nil
+}
+
 // authenticator is a function property for jwt.GinJWTMiddleware. It creates a
 // *User based on the auth method used (oauth through cookie, or plain username
 // and password). That in turn gets passed to authPayload().
@@ -228,19 +241,6 @@ func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 	}
 
 	return s.oidcAuth(c)
-}
-
-// getUsername returns the username that it has extracted from the map of data
-// given to us from Okta. For example, development Okta returns the email, so we
-// just split the email and take the first part. This should be changed if
-// needed based on the data given to us by Okta.
-func getUsername(data map[string]string) (string, error) {
-	email, ok := data["email"]
-	if !ok {
-		return "", ErrEmailNotPresent
-	}
-
-	return strings.Split(email, "@")[0], nil
 }
 
 // tokenResponder returns token as a simple JSON string.
