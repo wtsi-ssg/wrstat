@@ -43,6 +43,63 @@ var sudoLMayRunRegexp = regexp.MustCompile(`\(\s*(\S+)\s*\)\s*ALL`)
 
 const sudoLMayRunRegexpMatches = 2
 
+// User is what we store in our JWTs.
+type User struct {
+	Username string
+	UIDs     []string
+}
+
+// GIDs returns the unix group IDs that our UIDs belong to (unsorted, with no
+// duplicates).
+func (u *User) GIDs() ([]string, error) {
+	if u.UIDs == nil {
+		return nil, nil
+	}
+
+	gidMap := make(map[string]bool)
+
+	for _, uid := range u.UIDs {
+		theseGids, err := getGIDsForUID(uid)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, gid := range theseGids {
+			gidMap[gid] = true
+		}
+	}
+
+	gids := make([]string, len(gidMap))
+	i := 0
+
+	for gid := range gidMap {
+		gids[i] = gid
+		i++
+	}
+
+	return gids, nil
+}
+
+// getGIDsForUID returns the group IDs that the given UID belongs to.
+func getGIDsForUID(uid string) ([]string, error) {
+	u, err := user.LookupId(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	return u.GroupIds()
+}
+
+// userNameToUID converts user name to UID.
+func userNameToUID(name string) (string, error) {
+	u, err := user.Lookup(name)
+	if err != nil {
+		return "", err
+	}
+
+	return u.Uid, nil
+}
+
 // GetUsersUIDs returns the uid for the given username, and also the uids of any
 // other users the user can sudo as. If the user can sudo as root, returns nil.
 func GetUsersUIDs(username string) ([]string, error) {
@@ -148,20 +205,4 @@ func getUIDFromSudoLOutput(line string) string {
 	}
 
 	return u.Uid
-}
-
-var whiteListGIDs = map[string]struct{}{ // nolint:golint,gochecknoglobals // could this be in a config file
-	"1313":  {},
-	"1818":  {},
-	"15306": {},
-	"1662":  {},
-	"15394": {},
-}
-
-// WhiteLister is currently hard-coded to say that membership of certain
-// gids means users should be treated like root.
-func WhiteLister(gid string) bool {
-	_, ok := whiteListGIDs[gid]
-
-	return ok
 }

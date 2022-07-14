@@ -203,16 +203,6 @@ func (s *Server) userIDsFromNames(users string) ([]string, error) {
 	return ids, nil
 }
 
-// userNameToUID converts user name to UID.
-func userNameToUID(name string) (string, error) {
-	u, err := user.Lookup(name)
-	if err != nil {
-		return "", err
-	}
-
-	return u.Uid, nil
-}
-
 // makeTreeFilter creates a filter from string args.
 func makeTreeFilter(gids, uids []string, types string) (*dgut.Filter, error) {
 	filter := makeTreeGroupFilter(gids)

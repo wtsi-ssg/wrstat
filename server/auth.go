@@ -30,7 +30,6 @@ package server
 import (
 	"errors"
 	"net/http"
-	"os/user"
 	"strings"
 	"time"
 
@@ -51,53 +50,6 @@ const (
 	ErrBadJWTClaim     = Error("JWT had bad claims")
 	ErrEmailNotPresent = Error("field `email` not present")
 )
-
-// User is what we store in our JWTs.
-type User struct {
-	Username string
-	UIDs     []string
-}
-
-// GIDs returns the unix group IDs that our UIDs belong to (unsorted, with no
-// duplicates).
-func (u *User) GIDs() ([]string, error) {
-	if u.UIDs == nil {
-		return nil, nil
-	}
-
-	gidMap := make(map[string]bool)
-
-	for _, uid := range u.UIDs {
-		theseGids, err := getGIDsForUID(uid)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, gid := range theseGids {
-			gidMap[gid] = true
-		}
-	}
-
-	gids := make([]string, len(gidMap))
-	i := 0
-
-	for gid := range gidMap {
-		gids[i] = gid
-		i++
-	}
-
-	return gids, nil
-}
-
-// getGIDsForUID returns the group IDs that the given UID belongs to.
-func getGIDsForUID(uid string) ([]string, error) {
-	u, err := user.LookupId(uid)
-	if err != nil {
-		return nil, err
-	}
-
-	return u.GroupIds()
-}
 
 // EnableAuth adds the /rest/v1/jwt POST and GET endpoints to the REST API.
 //
@@ -242,8 +194,8 @@ func (s *Server) basicAuth(c *gin.Context) (*User, error) {
 	}, nil
 }
 
-// oidcAuth takes the HTTP request, gets the user from it and returns
-// a `*User` object.
+// oidcAuth takes the HTTP request, gets the user from it and returns a `*User`
+// object.
 func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
 	data, err := s.getProfileData(c.Request)
 	if err != nil {
@@ -266,9 +218,9 @@ func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
 	}, nil
 }
 
-// authenticator is a function property for jwt.GinJWTMiddleware. It creates
-// a *User based on the auth method used (oauth through cookie, or plain
-// username and password). That in turn gets passed to authPayload().
+// authenticator is a function property for jwt.GinJWTMiddleware. It creates a
+// *User based on the auth method used (oauth through cookie, or plain username
+// and password). That in turn gets passed to authPayload().
 func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 	_, err := c.Request.Cookie(oktaCookieName)
 	if errors.Is(err, http.ErrNoCookie) {
@@ -278,10 +230,10 @@ func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 	return s.oidcAuth(c)
 }
 
-// getUsername returns the username that it has extracted from the map of
-// data given to us from Okta. For example, development Okta returns the email,
-// so we just split the email and take the first part. This should be changed
-// if needed based on the data given to us by Okta.
+// getUsername returns the username that it has extracted from the map of data
+// given to us from Okta. For example, development Okta returns the email, so we
+// just split the email and take the first part. This should be changed if
+// needed based on the data given to us by Okta.
 func getUsername(data map[string]string) (string, error) {
 	email, ok := data["email"]
 	if !ok {
