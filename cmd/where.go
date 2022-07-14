@@ -311,6 +311,29 @@ func jwtStoragePath() (string, error) {
 	return filepath.Join(dir, jwtBasename), nil
 }
 
+// login will prompt the user to select a login method (either Okta or password).
+// It will (through either method) return the JWT for the user.
+func login(url, cert string) (string, error) {
+	cliPrint(`Select one of the following options:
+	
+1) Okta Login (recommended)
+2) LDAP Login
+:`)
+
+	var selectedOption string
+
+	fmt.Scanln(&selectedOption)
+
+	switch selectedOption {
+	case "1":
+		return userGetsOktaLoginCode(url, cert)
+	case "2":
+		return traditionalPasswordLogin(url, cert)
+	}
+
+	return login(url, cert)
+}
+
 // userGetsOktaLoginCode gives the user a URL to visit to log in using Okta,
 // which will give them back a code to paste here to authenticate.
 func userGetsOktaLoginCode(url, cert string) (string, error) {
@@ -342,29 +365,6 @@ func traditionalPasswordLogin(url, cert string) (string, error) {
 	cliPrint("\n")
 
 	return server.Login(url, cert, user.Username, string(passwordB))
-}
-
-// login will prompt the user to select a login method (either Okta or password).
-// It will (through either method) return the JWT for the user.
-func login(url, cert string) (string, error) {
-	cliPrint(`Select one of the following options:
-	
-1) Okta Login (recommended)
-2) LDAP Login
-:`)
-
-	var selectedOption string
-
-	fmt.Scanln(&selectedOption)
-
-	switch selectedOption {
-	case "1":
-		return userGetsOktaLoginCode(url, cert)
-	case "2":
-		return traditionalPasswordLogin(url, cert)
-	}
-
-	return login(url, cert)
 }
 
 // storeJWT writes the given token string to a private file in user's home dir.

@@ -142,7 +142,7 @@ dgut.dbs.old directory containing the previous run's database files.
 			die(msg)
 		}
 
-		s.WhiteListGroups(server.WhiteLister)
+		s.WhiteListGroups(whiteLister)
 
 		info("opening databases, please wait...")
 		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
@@ -271,6 +271,22 @@ func checkLDAPPassword(username, password string) error {
 	}
 
 	return l.Bind(fmt.Sprintf(serverLDAPBindDN, username), password)
+}
+
+var whiteListGIDs = map[string]struct{}{
+	"1313":  {},
+	"1818":  {},
+	"15306": {},
+	"1662":  {},
+	"15394": {},
+}
+
+// whiteLister is currently hard-coded to say that membership of certain gids
+// means users should be treated like root.
+func whiteLister(gid string) bool {
+	_, ok := whiteListGIDs[gid]
+
+	return ok
 }
 
 // dgutDBPaths returns the dgut db directories that 'wrstat tidy' creates in the
