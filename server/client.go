@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Grace <mg38@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -55,6 +57,27 @@ func Login(url, cert, username, password string) (string, error) {
 		"password": password,
 	}).
 		Post(EndPointJWT)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return "", ErrNoAuth
+	}
+
+	return jsonStringBodyToString(resp.Body()), nil
+}
+
+// LoginWithOKTA sends a request to the server containing the token as a
+// cookie, so it will be able to return back the JWT for the user.
+func LoginWithOKTA(url, cert, token string) (string, error) {
+	r := newClientRequest(url, cert)
+
+	resp, err := r.SetCookie(&http.Cookie{
+		Name:  oktaCookieName,
+		Value: token,
+	}).Post(EndPointJWT)
+
 	if err != nil {
 		return "", err
 	}

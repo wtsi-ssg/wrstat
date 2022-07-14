@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Grace <mg38@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -26,6 +28,7 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"os/user"
 	"strings"
@@ -41,11 +44,12 @@ type login struct {
 }
 
 const (
-	tokenDuration    = time.Hour * 24 * 5
-	userKey          = "user"
-	claimKeyUsername = "Username"
-	claimKeyUIDs     = "UIDs"
-	ErrBadJWTClaim   = Error("JWT had bad claims")
+	tokenDuration      = time.Hour * 24 * 5
+	userKey            = "user"
+	claimKeyUsername   = "Username"
+	claimKeyUIDs       = "UIDs"
+	ErrBadJWTClaim     = Error("JWT had bad claims")
+	ErrEmailNotPresent = Error("field `email` not present")
 )
 
 // User is what we store in our JWTs.
@@ -214,10 +218,10 @@ func retrieveClaimString(claims jwt.MapClaims, claim string) (string, error) {
 	return str, nil
 }
 
-// authenticator is a function property for jwt.GinJWTMiddleware. It gets the
-// username and password from the query, passes them to our authCB, and creates
-// a *User on success. That in turn gets passed to authPayload().
-func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
+// basicAuth takes a web request and extracts the username and password from it
+// and then passes it to the server's auth callback so it can validate the login
+// and return a *User.
+func (s *Server) basicAuth(c *gin.Context) (*User, error) {
 	var loginVals login
 	if err := c.ShouldBind(&loginVals); err != nil {
 		return nil, jwt.ErrMissingLoginValues
@@ -236,6 +240,55 @@ func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
 		Username: username,
 		UIDs:     uids,
 	}, nil
+}
+
+// oidcAuth takes the HTTP request, gets the user from it and returns
+// a `*User` object.
+func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
+	data, err := s.getProfileData(c.Request)
+	if err != nil {
+		return nil, err
+	}
+
+	username, err := getUsername(data)
+	if err != nil {
+		return nil, err
+	}
+
+	uids, err := GetUsersUIDs(username)
+	if err != nil {
+		return nil, err
+	}
+
+	return &User{
+		Username: username,
+		UIDs:     uids,
+	}, nil
+}
+
+// authenticator is a function property for jwt.GinJWTMiddleware. It creates
+// a *User based on the auth method used (oauth through cookie, or plain
+// username and password). That in turn gets passed to authPayload().
+func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
+	_, err := c.Request.Cookie(oktaCookieName)
+	if errors.Is(err, http.ErrNoCookie) {
+		return s.basicAuth(c)
+	}
+
+	return s.oidcAuth(c)
+}
+
+// getUsername returns the username that it has extracted from the map of
+// data given to us from Okta. For example, development Okta returns the email,
+// so we just split the email and take the first part. This should be changed
+// if needed based on the data given to us by Okta.
+func getUsername(data map[string]string) (string, error) {
+	email, ok := data["email"]
+	if !ok {
+		return "", ErrEmailNotPresent
+	}
+
+	return strings.Split(email, "@")[0], nil
 }
 
 // tokenResponder returns token as a simple JSON string.
