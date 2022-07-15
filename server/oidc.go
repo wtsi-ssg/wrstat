@@ -96,16 +96,17 @@ func (p oAuthParameters) toOauthEnv(callbackURL, clientRedirect string) *oauthEn
 
 // AddOIDCRoutes creates the OAuth environments for both the web app and the CLI
 // and adds the login and callback endpoints, along with an endpoint to get an
-// auth code for the CLI.
-func (s *Server) AddOIDCRoutes(issuer, clientID, clientSecret string) {
+// auth code for the CLI. Addr should be the same domain:port as later supplied
+// to Start().
+func (s *Server) AddOIDCRoutes(addr, issuer, clientID, clientSecret string) {
 	params := oAuthParameters{
 		issuer:       issuer,
 		clientID:     clientID,
 		clientSecret: clientSecret,
 	}
 
-	s.webOAuth = params.toOauthEnv(s.Address+EndpointAuthCallback, "/")
-	s.cliOAuth = params.toOauthEnv(s.Address+EndpointAuthCLICallback, EndpointCLIAuthCode)
+	s.webOAuth = params.toOauthEnv(ClientProtocol+addr+EndpointAuthCallback, "/")
+	s.cliOAuth = params.toOauthEnv(ClientProtocol+addr+EndpointAuthCLICallback, EndpointCLIAuthCode)
 
 	s.router.GET(EndpointAuthCallback, s.webOAuth.HandleOIDCCallback)
 	s.router.GET(EndpointOIDCLogin, s.webOAuth.HandleOIDCLogin)
@@ -305,13 +306,13 @@ func (p oAuthParameters) verifyToken(t string) (*verifier.Jwt, error) {
 	return result, nil
 }
 
-// getProfileData takes a HTTP request (containing things like the cookie) and
-// will get user information in a map from Okta. See:
+// extractEmailFromOktaSession takes a HTTP request (containing things like the
+// cookie) and will get user's email from Okta. See:
 // https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
-func (s *Server) getProfileData(r *http.Request) (map[string]string, error) {
+func (s *Server) extractEmailFromOktaSession(r *http.Request) (string, error) {
 	session, err := s.webOAuth.sessionStore.Get(r, oktaCookieName)
 	if err != nil || session.Values[oauth2AccessTokenKey] == nil || session.Values[oauth2AccessTokenKey] == "" {
-		return nil, nil //nolint:nilerr,nilnil
+		return "", nil //nolint:nilerr
 	}
 
 	ctx, cnlFunc := context.WithTimeout(context.Background(), time.Minute)
@@ -319,37 +320,41 @@ func (s *Server) getProfileData(r *http.Request) (map[string]string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", s.webOAuth.params.issuer+"/v1/userinfo", nil)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	token, ok := session.Values[oauth2AccessTokenKey].(string)
 	if !ok {
-		return nil, nil //nolint:nilnil
+		return "", nil
 	}
 
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Add("Accept", "application/json")
 
-	return doJSONRequestForStringMap(req)
+	return extractEmailFromOktaUserClaims(req)
 }
 
-// doJSONRequestForStringMap does the given request, interpreting the body as
-// JSON of a string map, and returns it.
-func doJSONRequestForStringMap(r *http.Request) (map[string]string, error) {
-	m := make(map[string]string)
+// OktaUser is used to json.Unmarshal Okta user claims.
+type OktaUser struct {
+	Email string `json:"email"`
+}
 
+// extractEmailFromOktaUserClaims does the given request, interpreting the body
+// as JSON, and extracts the email claim.
+func extractEmailFromOktaUserClaims(r *http.Request) (string, error) {
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
-		return m, err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return m, err
+		return "", err
 	}
 
-	err = json.Unmarshal(body, &m)
+	ou := &OktaUser{}
+	err = json.Unmarshal(body, ou)
 
-	return m, err
+	return ou.Email, err
 }
