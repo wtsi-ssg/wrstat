@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022 Genome Research Ltd.
  *
- * Author: Michael Grace <mg38@sanger.ac.uk>
+ * Authors:
+ *	- Michael Grace <mg38@sanger.ac.uk>
+ *	- Sendu Bala <sb10@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
