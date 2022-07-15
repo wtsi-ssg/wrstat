@@ -32,6 +32,7 @@ import (
 	"io"
 	"log/syslog"
 	"os"
+	"os/user"
 	"path/filepath"
 	"time"
 
@@ -244,21 +245,21 @@ func (w *log15Writer) Write(p []byte) (n int, err error) {
 }
 
 // authenticate verifies the user's password against LDAP, and if correct
-// returns true alog with all the uids they can sudo as.
-func authenticate(username, password string) (bool, []string) {
+// returns true alog with all the user's UID.
+func authenticate(username, password string) (bool, string) {
 	err := checkLDAPPassword(username, password)
 	if err != nil {
-		return false, nil
+		return false, ""
 	}
 
-	uids, err := server.GetUsersUIDs(username)
+	uid, err := getUsersUID(username)
 	if err != nil {
-		warn(fmt.Sprintf("failed to get UIDs for %s: %s", username, err))
+		warn(fmt.Sprintf("failed to get UID for %s: %s", username, err))
 
-		return false, nil
+		return false, ""
 	}
 
-	return true, uids
+	return true, uid
 }
 
 // checkLDAPPassword checks with LDAP if the given password is valid for the
@@ -272,7 +273,19 @@ func checkLDAPPassword(username, password string) error {
 	return l.Bind(fmt.Sprintf(serverLDAPBindDN, username), password)
 }
 
+// getUsersUID returns the uid for the given username.
+func getUsersUID(username string) (string, error) {
+	u, err := user.Lookup(username)
+	if err != nil {
+		return "", err
+	}
+
+	return u.Uid, nil
+}
+
 var whiteListGIDs = map[string]struct{}{
+	"0":     {},
+	"1105":  {},
 	"1313":  {},
 	"1818":  {},
 	"15306": {},
