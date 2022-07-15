@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"io"
 	"log/syslog"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -70,6 +71,10 @@ The server authenticates users using LDAP. You must provide the FQDN for your
 LDAP server, eg. --ldap_server ldap.example.com, and the bind DN that you would
 supply to eg. 'ldapwhoami -D' to test user credentials, replacing the username
 part with '%s', eg. --ldap_dn 'uid=%s,ou=people,dc=example,dc=com'.
+
+It can also authenticate using Okta. Specify all of --okta_issuer, --okta_id and
+--okta_secret or env vars OKTA_OAUTH2_ISSUER, OKTA_OAUTH2_CLIENT_ID and
+OKTA_OAUTH2_CLIENT_SECRET to enable this.
 
 The server will log all messages (of any severity) to syslog at the INFO level,
 except for non-graceful stops of the server, which are sent at the CRIT level or
@@ -112,25 +117,6 @@ dgut.dbs.old directory containing the previous run's database files.
 			die("you must supply --ldap_dn")
 		}
 
-		oktaCLIFlagCounter := 0
-		if oktaOAuthIssuer != "" {
-			oktaCLIFlagCounter++
-		}
-
-		if oktaOAuthClientID != "" {
-			oktaCLIFlagCounter++
-		}
-
-		if oktaOAuthClientSecret != "" {
-			oktaCLIFlagCounter++
-		}
-
-		if oktaCLIFlagCounter != 0 && oktaCLIFlagCounter != 3 {
-			// if part of the Okta info is specified, it all needs to
-			// be specified
-			die("to use Okta login, you must specify --okta_issuer, --okta_id and --okta_secret")
-		}
-
 		logWriter := setServerLogger(serverLogPath)
 
 		s := server.New(logWriter)
@@ -141,6 +127,8 @@ dgut.dbs.old directory containing the previous run's database files.
 			msg := fmt.Sprintf("failed to enable authentication: %s", err)
 			die(msg)
 		}
+
+		enableOktaLogin(s)
 
 		s.WhiteListGroups(whiteLister)
 
@@ -164,8 +152,6 @@ dgut.dbs.old directory containing the previous run's database files.
 			msg := fmt.Sprintf("failed to add tree page: %s", err)
 			die(msg)
 		}
-
-		s.AddOIDCRoutes(oktaOAuthIssuer, oktaOAuthClientID, oktaOAuthClientSecret)
 
 		defer s.Stop()
 
@@ -195,18 +181,48 @@ func init() {
 		"fqdn of your ldap server")
 	serverCmd.Flags().StringVarP(&serverLDAPBindDN, "ldap_dn", "l", "",
 		"ldap bind dn, with username replaced with %s")
-	serverCmd.Flags().StringVarP(&oktaOAuthIssuer, "okta_issuer", "", "",
+	serverCmd.Flags().StringVar(&oktaOAuthIssuer, "okta_issuer", os.Getenv("OKTA_OAUTH2_ISSUER"),
 		"URL for Okta Oauth")
-	serverCmd.Flags().StringVarP(&oktaOAuthClientID, "okta_id", "", "",
+	serverCmd.Flags().StringVar(&oktaOAuthClientID, "okta_id", os.Getenv("OKTA_OAUTH2_CLIENT_ID"),
 		"Okta Client ID")
-	serverCmd.Flags().StringVarP(&oktaOAuthClientSecret, "okta_secret", "", "",
-		"Okta Client Secret")
+	serverCmd.Flags().StringVar(&oktaOAuthClientSecret, "okta_secret", "",
+		"Okta Client Secret (default $OKTA_OAUTH2_CLIENT_SECRET)")
 	serverCmd.Flags().StringVar(&serverLogPath, "logfile", "",
 		"log to this file instead of syslog")
 
 	serverCmd.SetHelpFunc(func(command *cobra.Command, strings []string) {
 		hideGlobalFlags(serverCmd, command, strings)
 	})
+}
+
+// enableOktaLogin adds okta endpoints to enable okta login, if the necessary
+// args or env vars have been supplied. Dies if only partial info is given.
+func enableOktaLogin(s *server.Server) {
+	oktaCLIFlagCounter := 0
+	if oktaOAuthIssuer != "" {
+		oktaCLIFlagCounter++
+	}
+
+	if oktaOAuthClientID != "" {
+		oktaCLIFlagCounter++
+	}
+
+	if oktaOAuthClientSecret == "" {
+		oktaOAuthClientSecret = os.Getenv("OKTA_OAUTH2_CLIENT_SECRET")
+	}
+
+	if oktaOAuthClientSecret != "" {
+		oktaCLIFlagCounter++
+	}
+
+	if oktaCLIFlagCounter != 0 && oktaCLIFlagCounter != 3 {
+		die("to use Okta login, you must specify all info; see --help")
+	}
+
+	if oktaCLIFlagCounter == 3 {
+		info("okta enabled")
+		s.AddOIDCRoutes(oktaOAuthIssuer, oktaOAuthClientID, oktaOAuthClientSecret)
+	}
 }
 
 // setServerLogger makes our appLogger log to the given path if non-blank,
