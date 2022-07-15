@@ -103,12 +103,8 @@ const (
 )
 
 // AuthCallback is a function that returns true if the given password is valid
-// for the given username. It also returns the user's UID and any other UIDs
-// this user can sudo as.
-//
-// As a special case, if the user can sudo as root, it should just return a nil
-// slice for the UIDs.
-type AuthCallback func(username, password string) (bool, []string)
+// for the given username. It also returns the user's UID.
+type AuthCallback func(username, password string) (bool, string)
 
 // Server is used to start a web server that provides a REST API to the dgut
 // package's database, and a website that displays the information nicely.

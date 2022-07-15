@@ -105,7 +105,7 @@ func TestIDsToWanted(t *testing.T) {
 func TestServer(t *testing.T) {
 	username, uid, gids := getUserAndGroups(t)
 	exampleGIDs := getExampleGIDs(gids)
-	exampleUser := &User{Username: "user", UIDs: []string{uid, "2"}}
+	exampleUser := &User{Username: "user", UID: uid}
 
 	Convey("hasError tells you about errors", t, func() {
 		So(hasError(nil, nil), ShouldBeFalse)
@@ -171,7 +171,7 @@ func TestServer(t *testing.T) {
 		Convey("userGIDs fails with bad UIDs", func() {
 			u := &User{
 				Username: username,
-				UIDs:     []string{"-1"},
+				UID:      "-1",
 			}
 
 			_, err := s.userGIDs(u)
@@ -197,15 +197,15 @@ func TestServer(t *testing.T) {
 			So(resp.StatusCode(), ShouldEqual, http.StatusNotFound)
 
 			Convey("The jwt endpoint works after enabling it", func() {
-				err = s.EnableAuth("/foo", "/bar", func(u, p string) (bool, []string) {
-					return false, nil
+				err = s.EnableAuth("/foo", "/bar", func(u, p string) (bool, string) {
+					return false, ""
 				})
 				So(err, ShouldNotBeNil)
 
-				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, []string) {
+				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, string) {
 					ok := p == "pass"
 
-					return ok, []string{uid, "2"}
+					return ok, uid
 				})
 				So(err, ShouldBeNil)
 
@@ -327,8 +327,8 @@ func TestServer(t *testing.T) {
 				So(user, ShouldResemble, exampleUser)
 				So(gu, ShouldResemble, exampleUser)
 
-				s.authCB = func(u, p string) (bool, []string) {
-					return true, []string{"-1"}
+				s.authCB = func(u, p string) (bool, string) {
+					return true, "-1"
 				}
 
 				tokenBadUID, errl := Login(addr, certPath, "user", "pass")
@@ -352,7 +352,7 @@ func TestServer(t *testing.T) {
 				So(len(claims), ShouldEqual, 2)
 				So(claims, ShouldResemble, jwt.MapClaims{
 					claimKeyUsername: "user",
-					claimKeyUIDs:     uid + ",2",
+					claimKeyUID:      uid,
 				})
 			})
 
@@ -743,8 +743,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		})
 
 		Convey("Root can see everything", func() {
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
-				return true, nil
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, string) {
+				return true, ""
 			})
 			So(err, ShouldBeNil)
 
@@ -778,8 +778,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		})
 
 		Convey("Normal users have access restricted only by group", func() {
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
-				return true, []string{uid}
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, string) {
+				return true, uid
 			})
 			So(err, ShouldBeNil)
 
@@ -812,8 +812,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			var logWriter strings.Builder
 			s := New(&logWriter)
 
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, []string) {
-				return true, nil
+			err = s.EnableAuth(cert, key, func(username, password string) (bool, string) {
+				return true, ""
 			})
 			So(err, ShouldBeNil)
 
@@ -978,7 +978,7 @@ func makeTestToken(keyPath string, start, end time.Time, withUserClaims bool) (s
 
 	if withUserClaims {
 		claims[claimKeyUsername] = "root"
-		claims[claimKeyUIDs] = ""
+		claims[claimKeyUID] = ""
 	}
 
 	claims["orig_iat"] = start.Unix()

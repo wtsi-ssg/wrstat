@@ -46,7 +46,7 @@ const (
 	tokenDuration      = time.Hour * 24 * 5
 	userKey            = "user"
 	claimKeyUsername   = "Username"
-	claimKeyUIDs       = "UIDs"
+	claimKeyUID        = "UID"
 	ErrBadJWTClaim     = Error("JWT had bad claims")
 	ErrEmailNotPresent = Error("field `email` not present")
 )
@@ -120,7 +120,7 @@ func authPayLoad(data interface{}) jwt.MapClaims {
 	if v, ok := data.(*User); ok {
 		return jwt.MapClaims{
 			claimKeyUsername: v.Username,
-			claimKeyUIDs:     strings.Join(v.UIDs, ","),
+			claimKeyUID:      v.UID,
 		}
 	}
 
@@ -134,7 +134,7 @@ func authIdentityHandler(c *gin.Context) interface{} {
 	claims := jwt.ExtractClaims(c)
 
 	username, err1 := retrieveClaimString(claims, claimKeyUsername)
-	uids, err2 := retrieveClaimString(claims, claimKeyUIDs)
+	uid, err2 := retrieveClaimString(claims, claimKeyUID)
 
 	if username == "" || hasError(err1, err2) {
 		return nil
@@ -142,19 +142,8 @@ func authIdentityHandler(c *gin.Context) interface{} {
 
 	return &User{
 		Username: username,
-		UIDs:     splitCommaSeparatedString(uids),
+		UID:      uid,
 	}
-}
-
-// hasError tells you if any of the given errors is not nil.
-func hasError(errs ...error) bool {
-	for _, err := range errs {
-		if err != nil {
-			return true
-		}
-	}
-
-	return false
 }
 
 // retrieveClaimString finds and converts to a string the given claim in amongst
@@ -174,6 +163,29 @@ func retrieveClaimString(claims jwt.MapClaims, claim string) (string, error) {
 	return str, nil
 }
 
+// hasError tells you if any of the given errors is not nil.
+func hasError(errs ...error) bool {
+	for _, err := range errs {
+		if err != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+// authenticator is a function property for jwt.GinJWTMiddleware. It creates a
+// *User based on the auth method used (oauth through cookie, or plain username
+// and password). That in turn gets passed to authPayload().
+func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
+	_, err := c.Request.Cookie(oktaCookieName)
+	if errors.Is(err, http.ErrNoCookie) {
+		return s.basicAuth(c)
+	}
+
+	return s.oidcAuth(c)
+}
+
 // basicAuth takes a web request and extracts the username and password from it
 // and then passes it to the server's auth callback so it can validate the login
 // and return a *User.
@@ -186,7 +198,7 @@ func (s *Server) basicAuth(c *gin.Context) (*User, error) {
 	username := loginVals.Username
 	password := loginVals.Password
 
-	ok, uids := s.authCB(username, password)
+	ok, uid := s.authCB(username, password)
 
 	if !ok {
 		return nil, jwt.ErrFailedAuthentication
@@ -194,7 +206,7 @@ func (s *Server) basicAuth(c *gin.Context) (*User, error) {
 
 	return &User{
 		Username: username,
-		UIDs:     uids,
+		UID:      uid,
 	}, nil
 }
 
@@ -208,32 +220,20 @@ func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
 
 	username := getUsernameFromEmail(email)
 
-	uids, err := GetUsersUIDs(username)
+	uid, err := userNameToUID(username)
 	if err != nil {
 		return nil, err
 	}
 
 	return &User{
 		Username: username,
-		UIDs:     uids,
+		UID:      uid,
 	}, nil
 }
 
 // getUsernameFromEmail returns the part before '@' in an email address.
 func getUsernameFromEmail(email string) string {
 	return strings.Split(email, "@")[0]
-}
-
-// authenticator is a function property for jwt.GinJWTMiddleware. It creates a
-// *User based on the auth method used (oauth through cookie, or plain username
-// and password). That in turn gets passed to authPayload().
-func (s *Server) authenticator(c *gin.Context) (interface{}, error) {
-	_, err := c.Request.Cookie(oktaCookieName)
-	if errors.Is(err, http.ErrNoCookie) {
-		return s.basicAuth(c)
-	}
-
-	return s.oidcAuth(c)
 }
 
 // tokenResponder returns token as a simple JSON string.
@@ -262,9 +262,8 @@ func (s *Server) getUser(c *gin.Context) *User {
 // *User.GIDs(), but caches the result against username, and returns cached
 // results if possible.
 //
-// As a special case, if user.UIDs is nil (indicating the user can sudo as
-// root), or if one of the groups is white-listed per WhiteListGroups(), returns
-// a nil slice also.
+// As a special case, if one of the groups is white-listed per
+// WhiteListGroups(), returns a nil slice.
 func (s *Server) userGIDs(u *User) ([]string, error) {
 	if gids, found := s.userToGIDs[u.Username]; found {
 		return gids, nil
