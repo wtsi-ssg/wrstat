@@ -59,6 +59,10 @@ const (
 // returned (as a JSON string) in the response that contains Username and UIDs
 // (comma separated strings).
 //
+// Alternatively you can POST with a an oktaCookieName cookie with a value of
+// the okta auth code from the auth-code endpoint. If the code is valid,
+// likewise returns a JWT.
+//
 // Queries to endpoints that need authorisation should include the JWT in the
 // authorization header as a bearer token. Those endpoints can be implemented
 // by extracting the *User information out of the JWT using getUser().
@@ -197,15 +201,12 @@ func (s *Server) basicAuth(c *gin.Context) (*User, error) {
 // oidcAuth takes the HTTP request, gets the user from it and returns a `*User`
 // object.
 func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
-	data, err := s.getProfileData(c.Request)
+	email, err := s.extractEmailFromOktaSession(c.Request)
 	if err != nil {
 		return nil, err
 	}
 
-	username, err := getUsernameFromProfileData(data)
-	if err != nil {
-		return nil, err
-	}
+	username := getUsernameFromEmail(email)
 
 	uids, err := GetUsersUIDs(username)
 	if err != nil {
@@ -218,17 +219,9 @@ func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
 	}, nil
 }
 
-// getUsernameFromProfileData returns the username that it has extracted from
-// the map of data given to us from Okta. For example, development Okta returns
-// the email, so we just split the email and take the first part. This should be
-// changed if needed based on the data given to us by Okta.
-func getUsernameFromProfileData(data map[string]string) (string, error) {
-	email, ok := data["email"]
-	if !ok {
-		return "", ErrEmailNotPresent
-	}
-
-	return strings.Split(email, "@")[0], nil
+// getUsernameFromEmail returns the part before '@' in an email address.
+func getUsernameFromEmail(email string) string {
+	return strings.Split(email, "@")[0]
 }
 
 // authenticator is a function property for jwt.GinJWTMiddleware. It creates a

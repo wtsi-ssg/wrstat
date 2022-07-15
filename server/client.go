@@ -68,10 +68,11 @@ func Login(url, cert, username, password string) (string, error) {
 	return jsonStringBodyToString(resp.Body()), nil
 }
 
-// LoginWithOKTA sends a request to the server containing the token as a
-// cookie, so it will be able to return back the JWT for the user.
-func LoginWithOKTA(url, cert, token string) (string, error) {
-	r := newClientRequest(url, cert)
+// LoginWithOKTA sends a request to the server containing the token as a cookie,
+// so it will be able to return the JWT for the user. Provide an addr that is
+// just the domain:port that was used to Start() the server.
+func LoginWithOKTA(addr, cert, token string) (string, error) {
+	r := newClientRequest(addr, cert)
 
 	resp, err := r.SetCookie(&http.Cookie{
 		Name:  oktaCookieName,
@@ -98,9 +99,8 @@ func newClientRequest(url, cert string) *resty.Request {
 	return client.R()
 }
 
-// newRestyClient creates a Resty client that will trust the certificate at
-// the given path. cert can be blank to only trust the normal installed cert
-// chain.
+// newRestyClient creates a Resty client that will trust the certificate at the
+// given path. cert can be blank to only trust the normal installed cert chain.
 func newRestyClient(url, cert string) *resty.Client {
 	client := resty.New()
 
