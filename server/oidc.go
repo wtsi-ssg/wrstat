@@ -5,6 +5,9 @@
  *	- Michael Grace <mg38@sanger.ac.uk>
  *	- Sendu Bala <sb10@sanger.ac.uk>
  *
+ * Based on code from:
+ * https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -138,8 +141,7 @@ type oauthEnv struct {
 }
 
 // HandleOIDCCallback is the handler function for any callback in OAuth. It will
-// eventually redirect the user to the clientRedirect in the oauthEnv. See:
-// https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
+// eventually redirect the user to the clientRedirect in the oauthEnv.
 func (o *oauthEnv) HandleOIDCCallback(c *gin.Context) {
 	session := o.getSession(c)
 	if session == nil {
@@ -245,49 +247,57 @@ func (o *oauthEnv) saveSession(c *gin.Context, session *sessions.Session) bool {
 }
 
 // HandleOIDCLogin handles redirecting the user to the Okta login, as well as
-// providing it challenge codes. See:
-// https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
-func (o *oauthEnv) HandleOIDCLogin(c *gin.Context) { //nolint:funlen
-	c.Header("Cache-Control", "no-cache") // see https://github.com/okta/samples-golang/issues/20
+// providing it challenge codes.
+func (o *oauthEnv) HandleOIDCLogin(c *gin.Context) {
+	c.Header("Cache-Control", "no-cache")
 
 	session := o.getSession(c)
 	if session == nil {
 		return
 	}
 
-	// generate a random state parameter for CSRF security
-	oauthState := randstr.Hex(csrfStateLength)
+	oauthState := randomOuathState(session)
+	codeChallenge, worked := createOauthCodeChallenge(c, session)
 
-	// create the PKCE code verifier and code challenge
-	oauthCodeVerifier, err := oauthUtils.GenerateCodeVerifierWithLength(pkceCodeVerifierLength)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err) //nolint:errcheck
-
-		return
-	}
-
-	// get sha256 hash of the code verifier
-	oauthCodeChallenge := oauthCodeVerifier.CodeChallengeS256()
-
-	session.Values[oauth2StateKeyCookie] = oauthState
-	session.Values[oauth2AuthVerifierKey] = oauthCodeVerifier.String()
-
-	if !o.saveSession(c, session) {
+	if !worked || !o.saveSession(c, session) {
 		return
 	}
 
 	redirectURI := o.AuthCodeURL(
 		oauthState,
-		oauth2.SetAuthURLParam(oauth2AuthChallengeKey, oauthCodeChallenge),
+		oauth2.SetAuthURLParam(oauth2AuthChallengeKey, codeChallenge),
 		oauth2.SetAuthURLParam(oauth2AuthChallengeMethodKey, oauth2AuthChallengeMethod),
 	)
 
 	c.Redirect(http.StatusFound, redirectURI)
 }
 
+// randomOuathState returns a random string for CSRF security. It also stores it
+// in the given session as a cookie.
+func randomOuathState(session *sessions.Session) string {
+	state := randstr.Hex(csrfStateLength)
+	session.Values[oauth2StateKeyCookie] = state
+
+	return state
+}
+
+// createOauthCodeChallenge creates a PKCE code verifer and stores stores it in
+// the given session as a cookie. Returns a sha256 code challenge from the
+// verifier. On failure, aborts and returns false.
+func createOauthCodeChallenge(c *gin.Context, session *sessions.Session) (string, bool) {
+	verifier, err := oauthUtils.GenerateCodeVerifierWithLength(pkceCodeVerifierLength)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err) //nolint:errcheck
+
+		return "", false
+	}
+
+	session.Values[oauth2AuthVerifierKey] = verifier.String()
+
+	return verifier.CodeChallengeS256(), true
+}
+
 // verifyToken passes the token and the oAuthParameters through a JWT verifier.
-// See:
-// https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
 func (p oAuthParameters) verifyToken(t string) (*verifier.Jwt, error) {
 	jv := verifier.JwtVerifier{
 		Issuer:           p.issuer,
@@ -307,8 +317,7 @@ func (p oAuthParameters) verifyToken(t string) (*verifier.Jwt, error) {
 }
 
 // extractEmailFromOktaSession takes a HTTP request (containing things like the
-// cookie) and will get user's email from Okta. See:
-// https://developer.okta.com/docs/guides/sign-into-web-app-redirect/go/main/
+// cookie) and will get user's email from Okta.
 func (s *Server) extractEmailFromOktaSession(r *http.Request) (string, error) {
 	session, err := s.webOAuth.sessionStore.Get(r, oktaCookieName)
 	if err != nil || session.Values[oauth2AccessTokenKey] == nil || session.Values[oauth2AccessTokenKey] == "" {
