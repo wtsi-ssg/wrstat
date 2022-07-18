@@ -28,6 +28,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
+// oidc implements the authorization-code-flow-with-pkce described at
+// https://developer.okta.com/docs/concepts/oauth-openid/ , using the redirect
+// model.
+
 package server
 
 import (
