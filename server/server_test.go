@@ -946,6 +946,62 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 	})
 }
 
+func TestServerOktaLogin(t *testing.T) {
+	issuer := os.Getenv("OKTA_OAUTH2_ISSUER")
+	clientID := os.Getenv("OKTA_OAUTH2_CLIENT_ID")
+	secret := os.Getenv("OKTA_OAUTH2_CLIENT_SECRET")
+	addr := os.Getenv("OKTA_WRSTAT_ADDR")
+	certPath := os.Getenv("OKTA_WRSTAT_CERT")
+	keyPath := os.Getenv("OKTA_WRSTAT_KEY")
+
+	if hasBlankValue(issuer, clientID, secret, addr, certPath, keyPath) {
+		SkipConvey("Can't do Okta tests without the OKTA_* env vars set", t, func() {})
+
+		return
+	}
+
+	Convey("Given a started Server with auth enabled", t, func() {
+		logWriter := newStringLogger()
+		s := New(logWriter)
+
+		_, err := LoginWithOKTA(addr, certPath, "foo")
+		So(err, ShouldNotBeNil)
+
+		dfunc := startTestServerUsingAddress(addr, s, certPath, keyPath)
+		defer dfunc()
+
+		err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, string) {
+			return false, ""
+		})
+		So(err, ShouldBeNil)
+
+		Convey("You can't LoginWithOkta without first getting a code", func() {
+			_, err = LoginWithOKTA(addr, certPath, "foo")
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("After AddOIDCRoutes you can access the login-cli endpoint", func() {
+			s.AddOIDCRoutes(addr, issuer, clientID, secret)
+			r := newClientRequest(addr, "")
+
+			resp, errp := r.Get(EndpointOIDCCLILogin)
+			So(errp, ShouldBeNil)
+			So(resp.String(), ShouldContainSubstring, `ok12static.oktacdn.com`)
+		})
+	})
+}
+
+// hasBlankValue returns true if any of the given values is "".
+func hasBlankValue(vals ...string) bool {
+	for _, val := range vals {
+		if val == "" {
+			return true
+		}
+	}
+
+	return false
+}
+
 // createTestCert creates a self-signed cert and key, returning their paths.
 func createTestCert(t *testing.T) (string, string, error) {
 	t.Helper()
@@ -1266,13 +1322,25 @@ func runSliceMatrixTest(t *testing.T, matrix []string, s *Server) {
 // startTestServer starts the given server using the given cert and key paths
 // and returns the address and a func you should defer to stop the server.
 func startTestServer(s *Server, certPath, keyPath string) (string, func()) {
+	addr := getTestServerAddress()
+	dfunc := startTestServerUsingAddress(addr, s, certPath, keyPath)
+
+	return addr, dfunc
+}
+
+// getTestServerAddress determines a free port and returns localhost:port.
+func getTestServerAddress() string {
 	checker, err := port.NewChecker("localhost")
 	So(err, ShouldBeNil)
 	port, _, err := checker.AvailableRange(2)
 	So(err, ShouldBeNil)
 
-	addr := fmt.Sprintf("localhost:%d", port)
+	return fmt.Sprintf("localhost:%d", port)
+}
 
+// startTestServerUsingAddress does what startTestServer, but using the given
+// address.
+func startTestServerUsingAddress(addr string, s *Server, certPath, keyPath string) func() {
 	var g errgroup.Group
 
 	g.Go(func() error {
@@ -1281,10 +1349,10 @@ func startTestServer(s *Server, certPath, keyPath string) (string, func()) {
 
 	<-time.After(100 * time.Millisecond)
 
-	return addr, func() {
+	return func() {
 		s.Stop()
 
-		err = g.Wait()
+		err := g.Wait()
 		So(err, ShouldBeNil)
 	}
 }
