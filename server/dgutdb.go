@@ -26,6 +26,7 @@
 package server
 
 import (
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -146,9 +147,22 @@ func (s *Server) reloadDGUTDBs(dir, suffix string) {
 // findNewDgutPaths finds the latest subdirectory of dir that has the given
 // suffix, then sets our dgutPaths to the result's children.
 func (s *Server) findNewDgutPaths(dir, suffix string) error {
-	fis, err := ioutil.ReadDir(dir)
+	paths, err := FindLatestDgutDirs(dir, suffix)
 	if err != nil {
 		return err
+	}
+
+	s.dgutPaths = paths
+
+	return nil
+}
+
+// FindLatestDgutDirs finds the latest subdirectory of dir that has the given
+// suffix, then returns that result's child directories.
+func FindLatestDgutDirs(dir, suffix string) ([]string, error) {
+	fis, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
 	}
 
 	sort.Slice(fis, func(i, j int) bool {
@@ -157,36 +171,33 @@ func (s *Server) findNewDgutPaths(dir, suffix string) error {
 
 	for _, fi := range fis {
 		if strings.HasSuffix(fi.Name(), "."+suffix) {
-			return s.setNewDgutPaths(filepath.Join(dir, fi.Name()))
+			return getChildDirectories(filepath.Join(dir, fi.Name()))
 		}
 	}
 
-	return ErrNoDgutDBDirFound
+	return nil, ErrNoDgutDBDirFound
 }
 
-// setNewDgutPaths sets our dgutPaths to the directory contents of the given
-// dir.
-func (s *Server) setNewDgutPaths(dir string) error {
+// getChildDirectories returns the child directories of the given dir.
+func getChildDirectories(dir string) ([]string, error) {
 	des, err := os.ReadDir(dir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var paths []string
 
 	for _, de := range des {
-		if de.IsDir() {
+		if de.IsDir() || de.Type()&fs.ModeSymlink != 0 {
 			paths = append(paths, filepath.Join(dir, de.Name()))
 		}
 	}
 
 	if len(paths) == 0 {
-		return ErrNoDgutDBDirFound
+		return nil, ErrNoDgutDBDirFound
 	}
 
-	s.dgutPaths = paths
-
-	return nil
+	return paths, nil
 }
 
 // deleteDirs deletes the given directories. Logs any errors.

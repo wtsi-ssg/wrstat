@@ -30,12 +30,10 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"log/syslog"
 	"os"
 	"os/user"
 	"path/filepath"
-	"strings"
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
@@ -125,8 +123,7 @@ dgut.dbs.old directory containing the previous run's database files.
 
 		err := s.EnableAuth(serverCert, serverKey, authenticate)
 		if err != nil {
-			msg := fmt.Sprintf("failed to enable authentication: %s", err)
-			die(msg)
+			die("failed to enable authentication: %s", err)
 		}
 
 		enableOktaLogin(s, serverBind)
@@ -134,24 +131,26 @@ dgut.dbs.old directory containing the previous run's database files.
 		s.WhiteListGroups(whiteLister)
 
 		info("opening databases, please wait...")
-		err = s.LoadDGUTDBs(dgutDBPaths(args[0])...)
+		dbPaths, err := server.FindLatestDgutDirs(args[0], dgutDBsSuffix)
 		if err != nil {
-			msg := fmt.Sprintf("failed to load database: %s", err)
-			die(msg)
+			die("failed to find database paths: %s", err)
+		}
+
+		err = s.LoadDGUTDBs(dbPaths...)
+		if err != nil {
+			die("failed to load database: %s", err)
 		}
 
 		sentinel := filepath.Join(args[0], dgutDBsSentinelBasename)
 
 		err = s.EnableDGUTDBReloading(sentinel, args[0], dgutDBsSuffix)
 		if err != nil {
-			msg := fmt.Sprintf("failed to set up database reloading: %s", err)
-			die(msg)
+			die("failed to set up database reloading: %s", err)
 		}
 
 		err = s.AddTreePage()
 		if err != nil {
-			msg := fmt.Sprintf("failed to add tree page: %s", err)
-			die(msg)
+			die("failed to add tree page: %s", err)
 		}
 
 		defer s.Stop()
@@ -160,8 +159,7 @@ dgut.dbs.old directory containing the previous run's database files.
 
 		err = s.Start(serverBind, serverCert, serverKey)
 		if err != nil {
-			msg := fmt.Sprintf("non-graceful stop: %s", err)
-			die(msg)
+			die("non-graceful stop: %s", err)
 		}
 	},
 }
@@ -301,55 +299,6 @@ func whiteLister(gid string) bool {
 	_, ok := whiteListGIDs[gid]
 
 	return ok
-}
-
-// dgutDBPaths returns the latest set of dgut db directories that 'wrstat tidy'
-// creates in the given output directory.
-func dgutDBPaths(dir string) []string {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		die("failed to read %s: %s", dir, err)
-	}
-
-	latestDir := getLatestDirWithSuffix(entries, dgutDBsSuffix)
-
-	if latestDir == "" {
-		die("failed to find dgut database dir inside %s", dir)
-	}
-
-	paths, err := filepath.Glob(fmt.Sprintf("%s/%s/*", dir, latestDir))
-	if err != nil || len(paths) == 0 {
-		die("failed to find dgut database directories based on [%s/%s/*] (err: %s)", dir, latestDir, err)
-	}
-
-	return paths
-}
-
-// getLatestDirWithSuffix goes through the given DirEntries (eg. from
-// os.ReadDir) and returns the name of the most recent entry with the given
-// suffix.
-func getLatestDirWithSuffix(entries []fs.DirEntry, suffix string) string {
-	var latestT time.Time
-
-	var latestDir string
-
-	for _, entry := range entries {
-		if !entry.IsDir() || !strings.HasSuffix(entry.Name(), suffix) {
-			continue
-		}
-
-		info, err := entry.Info()
-		if err != nil {
-			die("failed to get info about %s: %s", entry.Name(), err)
-		}
-
-		if info.ModTime().After(latestT) {
-			latestT = info.ModTime()
-			latestDir = entry.Name()
-		}
-	}
-
-	return latestDir
 }
 
 // sayStarted logs to console that the server stated. It does this a second
