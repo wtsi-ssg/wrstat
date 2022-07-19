@@ -100,7 +100,7 @@ It might produce:
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
 /path/b/20210617.c35m8359bnc8ni7dgphg.basedirs
-/path/b/dgut.dbs
+/path/b/20210617.c35m8359bnc8ni7dgphg.dgut.dbs
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -111,10 +111,9 @@ step.
 Finally, the unique subdirectory of --working_directory that was created is
 deleted.
 
-Note that in your --final_output directory, if a directory called dgut.dbs
-exists, it will be moved aside and replaced with new data. If you have a wrstat
-server using the database files inside, it should automatically start using the
-new data and delete the old.`,
+Note that in your --final_output directory, if a *.dgut.dbs directory already
+exists, and you have a wrstat server using the database files inside, the server
+will automatically start using the new data and delete the old.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		checkMultiArgs(args)
 		err := doMultiScheduling(args)
