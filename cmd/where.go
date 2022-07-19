@@ -95,7 +95,7 @@ You can filter what files should be considered and reported on:
           comma-separated users.
 --types:  only consider files that are one of these comma-separated file types,
           from this set of allowed values: cram,bam,index,compressed,
-		  uncompressed,checkpoint,other,temp
+		  uncompressed,checkpoint,other,temporary
 
 To avoid producing too much output, the --minimum option can be used to not
 display directories that have less than that number of MBs of data nested
@@ -166,7 +166,8 @@ func init() {
 	whereCmd.Flags().StringVarP(&whereUsers, "users", "u", "",
 		"comma separated list of usernames to filter on")
 	whereCmd.Flags().StringVarP(&whereTypes, "types", "t", "",
-		"comma separated list of types (amongst cram,bam,index,compressed,uncompressed,checkpoint,other,temp) to filter on")
+		"comma separated list of types (amongst cram,bam,index,compressed,uncompressed,"+
+			"checkpoint,other,temporary) to filter on")
 	whereCmd.Flags().IntVarP(&whereMinimum, "minimum", "m", defaultMinMB,
 		"minimum size (in MB) of files nested under a directory for it to be reported on")
 	whereCmd.Flags().StringVarP(&whereCert, "cert", "c", "",
