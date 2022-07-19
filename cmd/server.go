@@ -30,10 +30,12 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"log/syslog"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	ldap "github.com/go-ldap/ldap/v3"
@@ -245,7 +247,7 @@ func (w *log15Writer) Write(p []byte) (n int, err error) {
 }
 
 // authenticate verifies the user's password against LDAP, and if correct
-// returns true alog with all the user's UID.
+// returns true along with all the user's UID.
 func authenticate(username, password string) (bool, string) {
 	err := checkLDAPPassword(username, password)
 	if err != nil {
@@ -301,15 +303,53 @@ func whiteLister(gid string) bool {
 	return ok
 }
 
-// dgutDBPaths returns the dgut db directories that 'wrstat tidy' creates in the
-// given output directory.
+// dgutDBPaths returns the latest set of dgut db directories that 'wrstat tidy'
+// creates in the given output directory.
 func dgutDBPaths(dir string) []string {
-	paths, err := filepath.Glob(fmt.Sprintf("%s/*.%s/*", dir, dgutDBsSuffix))
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		die("failed to read %s: %s", dir, err)
+	}
+
+	latestDir := getLatestDirWithSuffix(entries, dgutDBsSuffix)
+
+	if latestDir == "" {
+		die("failed to find dgut database dir inside %s", dir)
+	}
+
+	paths, err := filepath.Glob(fmt.Sprintf("%s/%s/*", dir, latestDir))
 	if err != nil || len(paths) == 0 {
-		die("failed to find dgut database directories based on [%s/*.%s/*] (err: %s)", dir, dgutDBsSuffix, err)
+		die("failed to find dgut database directories based on [%s/%s/*] (err: %s)", dir, latestDir, err)
 	}
 
 	return paths
+}
+
+// getLatestDirWithSuffix goes through the given DirEntries (eg. from
+// os.ReadDir) and returns the name of the most recent entry with the given
+// suffix.
+func getLatestDirWithSuffix(entries []fs.DirEntry, suffix string) string {
+	var latestT time.Time
+
+	var latestDir string
+
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasSuffix(entry.Name(), suffix) {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			die("failed to get info about %s: %s", entry.Name(), err)
+		}
+
+		if info.ModTime().After(latestT) {
+			latestT = info.ModTime()
+			latestDir = entry.Name()
+		}
+	}
+
+	return latestDir
 }
 
 // sayStarted logs to console that the server stated. It does this a second
