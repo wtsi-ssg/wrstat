@@ -8,14 +8,13 @@
 </head>
 
 <body>
-	<div id="login">
-		<form action="/login">
+	<div id="login" style="display: none;">
+		<!-- <form action="/login">
 			<button id="login-button" type="submit" class="form-control"">Login with OKTA</button>
 		</form>
 
 		<hr>
-		or use LDAP
-
+		or use LDAP -->
 		<form action="/" id="loginForm">
 			<input type="text" placeholder="Username" name="username" class="form-control">
 			<br />
@@ -23,7 +22,7 @@
 			<br />
 			<input type="submit" value="Login" class="form-control">
 		</form>
-		
+
 		<div id="loginFailure"></div>
 	</div>
 
