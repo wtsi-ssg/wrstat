@@ -17,10 +17,6 @@ requirejs.config({
     }
 });
 
-const getUsernameFromJWT = (token) => {
-    return JSON.parse(atob(token.split('.')[1])).Username;
-};
-
 requirejs(['jquery', 'cookie', 'flexdatalist'], function ($, cookie) {
     function showMap(jwt) {
         $("#login").hide()
@@ -38,19 +34,18 @@ requirejs(['jquery', 'cookie', 'flexdatalist'], function ($, cookie) {
         if (jwt && jwt.length !== 0) {
             showMap(jwt)
             return
-        } 
+        }
 
         let oidc = cookie.get("okta-hosted-login-session-store");
         if (oidc && oidc.length !== 0) {
             fetch("/rest/v1/jwt", {
                 method: "POST"
             })
-            .then(d => d.json())
-            .then((token) => {
-                cookie.set("jwt", token, {path: "", secure: true, sameSite: "strict"});
-                showMap(token);
-            })
-                
+                .then(d => d.json())
+                .then((token) => {
+                    cookie.set("jwt", token, { path: "", secure: true, sameSite: "strict" });
+                    showMap(token);
+                })
         } else {
             $("#login").show()
         }
@@ -73,9 +68,21 @@ requirejs(['jquery', 'cookie', 'flexdatalist'], function ($, cookie) {
         });
     });
 
-    $("#logoutButton").click(() => {
+    function getUsernameFromJWT(token) {
+        if (!token) {
+            logout()
+        }
+
+        return JSON.parse(atob(token.split('.')[1])).Username;
+    }
+
+    function logout() {
         cookie.remove("jwt", { path: "" });
         cookie.remove("okta-hosted-login-session-store");
         window.location.reload();
+    }
+
+    $("#logoutButton").click(() => {
+        logout()
     });
 });

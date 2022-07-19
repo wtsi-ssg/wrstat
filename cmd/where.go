@@ -314,24 +314,24 @@ func jwtStoragePath() (string, error) {
 // login will prompt the user to select a login method (either Okta or password).
 // It will (through either method) return the JWT for the user.
 func login(url, cert string) (string, error) {
-	cliPrint(`Select one of the following options:
-	
-1) Okta Login (recommended)
-2) LDAP Login
-:`)
+	// 	cliPrint(`Select one of the following options:
 
-	var selectedOption string
+	// 1) Okta Login (recommended)
+	// 2) LDAP Login
+	// :`)
 
-	fmt.Scanln(&selectedOption)
+	// 	var selectedOption string
 
-	switch selectedOption {
-	case "1":
-		return userGetsOktaLoginCode(url, cert)
-	case "2":
-		return traditionalPasswordLogin(url, cert)
-	}
+	// 	fmt.Scanln(&selectedOption)
 
-	return login(url, cert)
+	// 	switch selectedOption {
+	// 	case "1":
+	// 		return userGetsOktaLoginCode(url, cert)
+	// 	case "2":
+	return traditionalPasswordLogin(url, cert)
+	// }
+
+	// return login(url, cert)
 }
 
 // userGetsOktaLoginCode gives the user a URL to visit to log in using Okta,
