@@ -59,10 +59,10 @@ var serverCmd = &cobra.Command{
 	Short: "Start the web server",
 	Long: `Start the web server.
 
-Starting the web server brings up a web interface and REST API that can use the
-dgut.dbs directory inside the given 'wrstat multi' output directory to answer
-questions about where data is on the disks. (Provide your 'wrstat multi -f'
-argument as an unamed argument to this command.)
+Starting the web server brings up a web interface and REST API that will use the
+latest *.dgut.dbs directory inside the given 'wrstat multi' output directory to
+answer questions about where data is on the disks. (Provide your
+'wrstat multi -f' argument as an unamed argument to this command.)
 
 Your --bind address should include the port, and for it to work with your
 --cert, you probably need to specify it as fqdn:port.
@@ -90,7 +90,7 @@ ctrl-z; bg. Or better yet, use the daemonize program to daemonize this.
 It will monitor a file called ".dgut.dbs.updated" in the given directory and
 attempt to reload the databases when the file is updated by another run of
 'wrstat multi' with the same output directory. After reloading, will delete the
-dgut.dbs.old directory containing the previous run's database files.
+previous run's database files.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {

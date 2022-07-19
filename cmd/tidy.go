@@ -58,7 +58,7 @@ This is called by 'wrstat multi' after the main work has completed. It moves
 final output files from the supplied unique working directory to the
 --final_output directory, then deletes the working direcory.
 
-multi creates a unique ("multi unique") directory , in which it creates
+multi creates a unique ("multi unique") directory, in which it creates
 directories named after the basename of the directory of interest
 ("interest basename"), in which it creates another unique directory ("interest
 unique"), in which it creates the output files.
@@ -75,12 +75,8 @@ The base.dirs file directly inside the given "multi unique" directory is named:
 [date]_[multi unique].basedirs
 
 It also moves the combine.dgut.db directories to inside a directory named:
-dgut.dbs
+[date]_[multi unique].dgut.dbs
 (making them sequentially numbered sub-directories)
-Note that in your --final_output directory, if a directory called dgut.dbs
-exists, it will be moved aside to dgut.dbs.old and replaced with new data. If
-you have a wrstat server using the database files inside, it will reload the
-databases then delete the dgut.dbs.old directory.
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -88,9 +84,7 @@ user,group,other read & write permissions as the --final_output directory.
 Once all output files have been moved, the "multi unique" directory is deleted.
 
 It is safe to call this multiple times if it was, for example, killed half way
-through; it won't clobber final outputs already moved. (With the exception of
-failing during the final step of creating a new dgut.dbs folder, having moved
-one aside; you'll have to delete dgut.dbs.old if it exists before retrying.)`,
+through; it won't clobber final outputs already moved.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if tidyDir == "" {
 			die("--final_output is required")
