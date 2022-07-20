@@ -101,7 +101,7 @@ func TestWatch(t *testing.T) {
 			So(ok, ShouldBeFalse)
 
 			latest := w.Mtime()
-			So(latest.IsZero(), ShouldBeFalse)
+			So(latest.After(before), ShouldBeTrue)
 
 			Convey("Changing the file's mtime calls cb after some time", func() {
 				<-time.After(2 * pollFrequency)
