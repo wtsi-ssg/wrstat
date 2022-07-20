@@ -32,9 +32,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/wtsi-ssg/wrstat/dgut"
+	"github.com/wtsi-ssg/wrstat/watch"
 )
 
 const ErrNoDgutDBDirFound = Error("dgut database directory not found")
@@ -72,48 +73,40 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 // 2. find the latest sub-directory in the given directory with the given suffix
 // 3. set the dgut.db directory paths to children of 2) and load those
 // 4. delete the old dgut.db directory paths to save space
+// 5. update the server's data-creation date to the mtime of the watchPath file
+//
+// It will also do 5) immediately on calling this method.
 //
 // It will only return an error if trying to watch watchPath immediately fails.
 // Other errors (eg. reloading or deleting files) will be logged.
-func (s *Server) EnableDGUTDBReloading(watchPath, dir, suffix string) error {
-	watcher, err := fsnotify.NewWatcher()
+func (s *Server) EnableDGUTDBReloading(watchPath, dir, suffix string, pollFrequency time.Duration) error {
+	s.treeMutex.Lock()
+	defer s.treeMutex.Unlock()
+
+	cb := func(mtime time.Time) {
+		s.reloadDGUTDBs(dir, suffix, mtime)
+	}
+
+	watcher, err := watch.New(watchPath, cb, pollFrequency)
 	if err != nil {
 		return err
 	}
 
+	s.dataTimeStamp = watcher.Mtime()
+
 	s.dgutWatcher = watcher
 
-	go s.reactToWatcher(watcher, dir, suffix)
-
-	err = watcher.Add(watchPath)
-	if err != nil {
-		watcher.Close()
-	}
-
-	return err
-}
-
-// reactToWatcher loops on watcher events and calls reloadDGUTDBs() in response.
-// Call this in a goroutine.
-func (s *Server) reactToWatcher(watcher *fsnotify.Watcher, dir, suffix string) {
-	for {
-		_, ok := <-watcher.Events
-		if !ok {
-			return
-		}
-
-		s.reloadDGUTDBs(dir, suffix)
-	}
+	return nil
 }
 
 // reloadDGUTDBs closes database files previously loaded during LoadDGUTDBs(),
 // looks for the latest subdirectory of the given directory that has the given
 // suffix, and loads the children of that as our new dgutPaths.
 //
-// On success, deletes the previous dgutPaths.
+// On success, deletes the previous dgutPaths and updates our dataTimestamp.
 //
 // Logs any errors.
-func (s *Server) reloadDGUTDBs(dir, suffix string) {
+func (s *Server) reloadDGUTDBs(dir, suffix string, mtime time.Time) {
 	s.treeMutex.Lock()
 	defer s.treeMutex.Unlock()
 
@@ -142,6 +135,8 @@ func (s *Server) reloadDGUTDBs(dir, suffix string) {
 	s.logger.Printf("server ready again after reloading dgut dbs")
 
 	s.deleteDirs(oldPaths)
+
+	s.dataTimeStamp = mtime
 }
 
 // findNewDgutPaths finds the latest subdirectory of dir that has the given

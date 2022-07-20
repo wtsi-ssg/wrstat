@@ -38,10 +38,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/secure"
 	"github.com/gin-gonic/gin"
 	"github.com/wtsi-ssg/wrstat/dgut"
+	"github.com/wtsi-ssg/wrstat/watch"
 	"gopkg.in/tylerb/graceful.v1"
 )
 
@@ -121,7 +121,8 @@ type Server struct {
 	gidToNameCache map[uint32]string
 	userToGIDs     map[string][]string
 	dgutPaths      []string
-	dgutWatcher    *fsnotify.Watcher
+	dgutWatcher    *watch.Watcher
+	dataTimeStamp  time.Time
 	logger         *log.Logger
 	webOAuth       *oauthEnv
 	cliOAuth       *oauthEnv
@@ -220,7 +221,7 @@ func (s *Server) Stop() {
 	defer s.treeMutex.Unlock()
 
 	if s.dgutWatcher != nil {
-		s.dgutWatcher.Close()
+		s.dgutWatcher.Stop()
 		s.dgutWatcher = nil
 	}
 

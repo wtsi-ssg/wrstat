@@ -78,6 +78,11 @@ It also moves the combine.dgut.db directories to inside a directory named:
 [date]_[multi unique].dgut.dbs
 (making them sequentially numbered sub-directories)
 
+Finally, it creates or touches a file named '.dgut.dbs.updated' in the
+--final_output directory, giving it an mtime matching the oldest mtime of the
+walk log files. 'wrstat server' will use this file to reload its database and
+update its knowledge of when the data was captured.
+
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
@@ -296,7 +301,8 @@ func moveBaseDirsFile(sourceDir, destDir string, destDirInfo fs.FileInfo, date s
 // date, and adjusts ownership and permissions to match the destDir.
 //
 // It also touches a file that 'wrstat server' monitors to know when to reload
-// its database files.
+// its database files. It gives that file an mtime corresponding to the oldest
+// mtime of the walk log files.
 func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
 	sources, errg := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, combineDGUTOutputFileBasename))
 	if errg != nil {
@@ -326,7 +332,7 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date str
 		return err
 	}
 
-	return touchDBUpdatedFile(destDir, destDirInfo)
+	return touchDBUpdatedFile(sourceDir, destDir, destDirInfo)
 }
 
 // makeDBsDir makes a uniquely named directory featuring the given date to hold
@@ -361,18 +367,24 @@ func matchPermsInsideDir(dir string, desired fs.FileInfo) error {
 
 // touchDBUpdatedFile touches a file that the server monitors so that it knows
 // to try and reload the databases. Matches the permissions of the touched file
-// to the given permissions.
-func touchDBUpdatedFile(destDir string, desired fs.FileInfo) error {
+// to the given permissions. Gives the file an mtime corresponding to the oldest
+// mtime of walk log files.
+func touchDBUpdatedFile(sourceDir, destDir string, desired fs.FileInfo) error {
 	sentinel := filepath.Join(destDir, dgutDBsSentinelBasename)
 
-	_, err := os.Stat(sentinel)
-	if os.IsNotExist(err) {
-		err = createFile(sentinel)
-	} else {
-		err = touchFile(sentinel)
+	oldest, err := getOldestMtimeOfWalkFiles(sourceDir)
+	if err != nil {
+		return err
 	}
 
-	if err != nil {
+	_, err = os.Stat(sentinel)
+	if os.IsNotExist(err) {
+		if err = createFile(sentinel); err != nil {
+			return err
+		}
+	}
+
+	if err = touchFile(sentinel, oldest); err != nil {
 		return err
 	}
 
@@ -391,9 +403,31 @@ func createFile(path string) error {
 	return nil
 }
 
-// touchFile updates the a&mtime of the given path.
-func touchFile(path string) error {
-	now := time.Now().Local()
+// touchFile updates the a&mtime of the given path to the given time.
+func touchFile(path string, t time.Time) error {
+	return os.Chtimes(path, t.Local(), t.Local())
+}
 
-	return os.Chtimes(path, now, now)
+// getOldestMtimeOfWalkFiles looks in sourceDir for walk log files and returns
+// their oldest mtime.
+func getOldestMtimeOfWalkFiles(dir string) (time.Time, error) {
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*/*/*%s", dir, statLogOutputFileSuffix))
+	if err != nil || len(paths) == 0 {
+		die("failed to find walk log files based on [%s/*/*/*%s] (err: %s)", dir, statLogOutputFileSuffix, err)
+	}
+
+	oldestT := time.Now()
+
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			return time.Time{}, err
+		}
+
+		if info.ModTime().Before(oldestT) {
+			oldestT = info.ModTime()
+		}
+	}
+
+	return oldestT, nil
 }
