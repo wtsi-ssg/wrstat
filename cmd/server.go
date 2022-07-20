@@ -42,6 +42,8 @@ import (
 	"github.com/wtsi-ssg/wrstat/server"
 )
 
+const sentinelPollFrequencty = 1 * time.Minute
+
 // options for this cmd.
 var serverLogPath string
 var serverBind string
@@ -90,7 +92,8 @@ ctrl-z; bg. Or better yet, use the daemonize program to daemonize this.
 It will monitor a file called ".dgut.dbs.updated" in the given directory and
 attempt to reload the databases when the file is updated by another run of
 'wrstat multi' with the same output directory. After reloading, will delete the
-previous run's database files.
+previous run's database files. It will use the mtime of the file as the data
+creation time in reports.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
@@ -143,7 +146,7 @@ previous run's database files.
 
 		sentinel := filepath.Join(args[0], dgutDBsSentinelBasename)
 
-		err = s.EnableDGUTDBReloading(sentinel, args[0], dgutDBsSuffix)
+		err = s.EnableDGUTDBReloading(sentinel, args[0], dgutDBsSuffix, sentinelPollFrequencty)
 		if err != nil {
 			die("failed to set up database reloading: %s", err)
 		}

@@ -106,6 +106,7 @@ func TestServer(t *testing.T) {
 	username, uid, gids := getUserAndGroups(t)
 	exampleGIDs := getExampleGIDs(gids)
 	exampleUser := &User{Username: "user", UID: uid}
+	sentinelPollFrequency := 10 * time.Millisecond
 
 	Convey("hasError tells you about errors", t, func() {
 		So(hasError(nil, nil), ShouldBeFalse)
@@ -543,7 +544,7 @@ func TestServer(t *testing.T) {
 
 						sentinel := path + ".sentinel"
 
-						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix)
+						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix, sentinelPollFrequency)
 						So(err, ShouldNotBeNil)
 
 						file, err := os.Create(sentinel)
@@ -551,11 +552,13 @@ func TestServer(t *testing.T) {
 						err = file.Close()
 						So(err, ShouldBeNil)
 
-						err = s.dgutWatcher.Close()
+						So(s.dataTimeStamp.IsZero(), ShouldBeTrue)
+
+						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix, sentinelPollFrequency)
 						So(err, ShouldBeNil)
 
-						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix)
-						So(err, ShouldBeNil)
+						So(s.dataTimeStamp.IsZero(), ShouldBeFalse)
+						previous := s.dataTimeStamp
 
 						response, err = queryWhere(s, "")
 						So(err, ShouldBeNil)
@@ -571,6 +574,8 @@ func TestServer(t *testing.T) {
 						So(err, ShouldBeNil)
 
 						waitForFileToBeDeleted(t, path)
+
+						So(s.dataTimeStamp.After(previous), ShouldBeTrue)
 
 						_, err = os.Stat(path)
 						So(err, ShouldNotBeNil)
@@ -606,7 +611,7 @@ func TestServer(t *testing.T) {
 						So(err, ShouldBeNil)
 
 						testReloadFail := func(dir, message string) {
-							err = s.EnableDGUTDBReloading(sentinel, dir, testSuffix)
+							err = s.EnableDGUTDBReloading(sentinel, dir, testSuffix, sentinelPollFrequency)
 							So(err, ShouldBeNil)
 
 							now := time.Now().Local()
@@ -673,8 +678,6 @@ func TestServer(t *testing.T) {
 
 							testReloadFail(grandparentDir, "invalid argument")
 						})
-
-						tryTestingInotifyFails(path, sentinel)
 					})
 				})
 			})
@@ -1354,56 +1357,6 @@ func startTestServerUsingAddress(addr string, s *Server, certPath, keyPath strin
 
 		err := g.Wait()
 		So(err, ShouldBeNil)
-	}
-}
-
-// tryTestingInotifyFails sees if we have a low max_user_watches and then tries
-// to use them all to force an error in our watching code.
-func tryTestingInotifyFails(db, sentinel string) {
-	if hasManyMaxUserWatches() {
-		return
-	}
-
-	servers := make([]*Server, 9999)
-	grandparentDir := filepath.Dir(filepath.Dir(db))
-
-	defer closeDGUTWatchers(servers)
-
-	failed := false
-
-	for i := range servers {
-		var logWriter strings.Builder
-		s := New(&logWriter)
-		servers[i] = s
-
-		if err := s.LoadDGUTDBs(db); err != nil {
-			So(err, ShouldBeNil)
-		}
-
-		if err := s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix); err != nil {
-			failed = true
-
-			break
-		}
-	}
-
-	So(failed, ShouldBeTrue)
-}
-
-// hasManyMaxUserWatches checks if max_user_watches is more than 9999.
-func hasManyMaxUserWatches() bool {
-	cmd := exec.Command("bash", "-c", "sysctl fs.inotify | grep max_user_watches | awk '{ print $NF }'")
-	out, err := cmd.CombinedOutput()
-
-	return err != nil || len(string(out)) > 5
-}
-
-// closeDGUTWatchers closes all the dgutWatchers in the given servers.
-func closeDGUTWatchers(servers []*Server) {
-	for _, s := range servers {
-		if s != nil && s.dgutWatcher != nil {
-			s.dgutWatcher.Close()
-		}
 	}
 }
 
