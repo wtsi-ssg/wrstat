@@ -118,6 +118,7 @@ func TestWatch(t *testing.T) {
 
 				Convey("Stop() ends the polling", func() {
 					w.Stop()
+					tracker.report(latest)
 
 					touchTestFile(path)
 					<-time.After(2 * pollFrequency)
