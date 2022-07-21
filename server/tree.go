@@ -35,6 +35,10 @@ import (
 	"github.com/wtsi-ssg/wrstat/dgut"
 )
 
+// javascriptToJSONFormat is the date format emitted by javascript's Date's
+// toJSON method. It conforms to ISO 8601 and is like RFC3339 and in UTC.
+const javascriptToJSONFormat = "2006-01-02T15:04:05.999Z"
+
 // AddTreePage adds the /tree static web page to the server, along with the
 // /rest/v1/auth/tree endpoint. It only works if EnableAuth() has been called
 // first.
@@ -74,7 +78,9 @@ func getStaticFS() fs.FS {
 }
 
 // TreeElement holds tree.DirInfo type information in a form suited to passing
-// to the treemap web interface.
+// to the treemap web interface. It also includes the server's dataTimeStamp so
+// interfaces can report on how long ago the data forming the tree was
+// captured.
 type TreeElement struct {
 	Name        string         `json:"name"`
 	Path        string         `json:"path"`
@@ -85,6 +91,7 @@ type TreeElement struct {
 	FileTypes   []string       `json:"filetypes"`
 	HasChildren bool           `json:"has_children"`
 	Children    []*TreeElement `json:"children,omitempty"`
+	TimeStamp   string         `json:"timestamp"`
 }
 
 // getTree responds with the data needed by the tree web interface. LoadDGUTDB()
@@ -143,5 +150,12 @@ func (s *Server) ddsToTreeElement(dds *dgut.DirSummary) *TreeElement {
 		Users:     s.uidsToUsernames(dds.UIDs),
 		Groups:    s.gidsToNames(dds.GIDs),
 		FileTypes: s.ftsToNames(dds.FTs),
+		TimeStamp: s.dataTimeStampToJavascriptDate(),
 	}
+}
+
+// dataTimeStampToJavascriptDate returns our dataTimeStamp in javascript Date's
+// toJSON format.
+func (s *Server) dataTimeStampToJavascriptDate() string {
+	return s.dataTimeStamp.UTC().Format(javascriptToJSONFormat)
 }
