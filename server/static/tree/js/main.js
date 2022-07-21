@@ -5,7 +5,8 @@ require.config({
         lodash: "lodash.min",
         jquery: "jquery-3.6.0.min",
         cookie: "js.cookie.min",
-        flexdatalist: "jquery.flexdatalist.min"
+        flexdatalist: "jquery.flexdatalist.min",
+        timeago: "jquery.timeago"
     }
 });
 
@@ -14,10 +15,13 @@ requirejs.config({
         'flexdatalist': {
             deps: ['jquery']
         },
+        'timeago': {
+            deps: ['jquery']
+        },
     }
 });
 
-requirejs(['jquery', 'cookie', 'flexdatalist'], function ($, cookie) {
+requirejs(['jquery', 'cookie', 'flexdatalist', 'timeago'], function ($, cookie) {
     function showMap(jwt) {
         $("#login").hide()
         $("#body").show()

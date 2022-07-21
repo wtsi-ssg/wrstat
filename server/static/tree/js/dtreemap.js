@@ -413,6 +413,11 @@ define(["d3", "cookie"], function (d3, cookie) {
             .property("selected", function (d) { return d === filters.get(id) });
     }
 
+    function setTimestamp(data) {
+        $('#timestamp').attr('datetime', data.timestamp)
+        $('#timestamp').timeago();
+    }
+
     getData("/", function (data) {
         initialize(data);
         setValues(data);
@@ -421,5 +426,6 @@ define(["d3", "cookie"], function (d3, cookie) {
         updateDetails(data);
         setFilterOptions(data);
         storeFilters(data);
+        setTimestamp(data);
     });
 });

@@ -51,15 +51,6 @@ body {
   margin-bottom: 10px;
 }
 
-#error {
-  font-size: 16px;
-  color: red;
-}
-
-#login_info {
-  margin-top: auto;
-}
-
 #header {
   margin-top: 2px;
   margin-bottom: 0.25em;
@@ -67,6 +58,15 @@ body {
   font-size: 36px;
   font-weight: 300;
   text-shadow: 0 1px 0 #fff;
+}
+
+#error {
+  font-size: 16px;
+  color: red;
+}
+
+#sidebar_bottom {
+  margin-top: auto;
 }
 
 #details {
