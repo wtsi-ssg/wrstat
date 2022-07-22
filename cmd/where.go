@@ -440,7 +440,7 @@ func columns(ds *server.DirSummary) []string {
 		cols = append(cols, strings.Join(ds.Users, ","), strings.Join(ds.Groups, ","))
 	}
 
-	return append(cols, fmt.Sprintf("%d", ds.Count), humanize.Bytes(ds.Size))
+	return append(cols, fmt.Sprintf("%d", ds.Count), humanize.IBytes(ds.Size))
 }
 
 // printSkipped prints the given number of results were skipped.
