@@ -60,15 +60,16 @@ type Filter struct {
 // PassesFilter checks to see if this GUT has a GID in the filter's GIDs
 // (considered true if GIDs is nil), and has a UID in the filter's UIDs
 // (considered true if UIDs is nil), and has an FT in the filter's FTs
-// (considered true if FTs is nil, unless FT is DGUTFileTypeTemp, in which case
-// will return false, unless FTs == []{DGUTFileTypeTemp}).
-func (g *GUT) PassesFilter(filter *Filter) bool {
+// (considered true if FTs is nil). The second bool returned will match the
+// first unless FT is DGUTFileTypeTemp, in which case it will be false, unless
+// the filter FTs == []{DGUTFileTypeTemp}).
+func (g *GUT) PassesFilter(filter *Filter) (bool, bool) {
 	if !g.passesGIDFilter(filter) {
-		return false
+		return false, false
 	}
 
 	if !g.passesUIDFilter(filter) {
-		return false
+		return false, false
 	}
 
 	return g.passesFTFilter(filter)
@@ -109,20 +110,21 @@ func (g *GUT) passesUIDFilter(filter *Filter) bool {
 // passesFTFilter tells you if our FT is in the filter's FTs. Also returns true
 // if filter or filter.FTs in nil.
 //
-// However, if our FT is DGUTFileTypeTemp, then always returns false, unless the
-// filter's FTs only hold DGUTFileTypeTemp.
-func (g *GUT) passesFTFilter(filter *Filter) bool {
+// The second return bool will match the first, unless our FT is
+// DGUTFileTypeTemp, in which case it will always be false, unless the filter's
+// FTs only hold DGUTFileTypeTemp.
+func (g *GUT) passesFTFilter(filter *Filter) (bool, bool) {
 	if filter == nil || filter.FTs == nil {
-		return g.FT != summary.DGUTFileTypeTemp
+		return true, g.FT != summary.DGUTFileTypeTemp
 	}
 
 	for _, ft := range filter.FTs {
 		if ft == g.FT {
-			return !g.amTempAndNotFilteredJustForTemp(filter)
+			return true, !g.amTempAndNotFilteredJustForTemp(filter)
 		}
 	}
 
-	return false
+	return false, false
 }
 
 // amTempAndNotFilteredJustForTemp tells you if our FT is DGUTFileTypeTemp and
@@ -147,7 +149,9 @@ type GUTs []*GUT
 //
 // Note that FT 7 is "temporary" files, and because a file can be both temporary
 // and another type, if your Filter's FTs slice doesn't contain just
-// DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored.
+// DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored. (But
+// the FTs list will still indicate if you had temp files that passed other
+// filters.)
 func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32, []summary.DirGUTFileType) {
 	var count, size uint64
 
@@ -156,7 +160,13 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32, []sum
 	uniqueFTs := make(map[summary.DirGUTFileType]bool)
 
 	for _, gut := range g {
-		if !gut.PassesFilter(filter) {
+		passes, passesDisallowingTemp := gut.PassesFilter(filter)
+
+		if passes {
+			uniqueFTs[gut.FT] = true
+		}
+
+		if !passesDisallowingTemp {
 			continue
 		}
 
@@ -165,7 +175,6 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32, []sum
 
 		uniqueUIDs[gut.UID] = true
 		uniqueGIDs[gut.GID] = true
-		uniqueFTs[gut.FT] = true
 	}
 
 	return count, size, idMapToSlice(uniqueUIDs), idMapToSlice(uniqueGIDs), ftMapToSlice(uniqueFTs)

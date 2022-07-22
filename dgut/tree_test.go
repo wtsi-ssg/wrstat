@@ -49,7 +49,7 @@ func TestTree(t *testing.T) {
 
 		expectedUIDs := []uint32{101, 102}
 		expectedGIDs := []uint32{1, 2}
-		expectedFTs := []summary.DirGUTFileType{0, 1}
+		expectedFTs := []summary.DirGUTFileType{0, 1, 7}
 		expectedUIDsOne := []uint32{101}
 		expectedGIDsOne := []uint32{1}
 		expectedFTsZero := []summary.DirGUTFileType{0}
@@ -87,7 +87,7 @@ func TestTree(t *testing.T) {
 			di, err = tree.DirInfo("/a/b/e/h/tmp", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current:  &DirSummary{"/a/b/e/h/tmp", 1, 5, expectedUIDsOne, expectedGIDsOne, expectedFTsOne},
+				Current:  &DirSummary{"/a/b/e/h/tmp", 1, 5, expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{1, 7}},
 				Children: nil,
 			})
 
