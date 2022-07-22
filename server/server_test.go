@@ -458,46 +458,70 @@ func TestServer(t *testing.T) {
 						expectedGroupsA := []string{groupA}
 						expectedGroupsB := []string{groupB}
 						expectedFTs := expectedNonRoot[0].FileTypes
-						expectedBams := []string{"bam"}
+						expectedBams := []string{"bam", "temporary"}
 						expectedCrams := []string{"cram"}
 
-						matrix := map[string][]*DirSummary{
-							"?groups=" + groups[0] + "," + groups[1]: expectedNonRoot,
-							"?groups=" + groups[0]: {
+						expectedNoTemp := make([]*DirSummary, len(expected))
+						for i, ds := range expected {
+							nt := &DirSummary{
+								Dir:    ds.Dir,
+								Count:  ds.Count,
+								Size:   ds.Size,
+								Users:  ds.Users,
+								Groups: ds.Groups,
+							}
+
+							if len(ds.FileTypes) == 1 {
+								nt.FileTypes = ds.FileTypes
+							} else {
+								fts := make([]string, len(ds.FileTypes)-1)
+								for j := range fts {
+									fts[j] = ds.FileTypes[j]
+								}
+								nt.FileTypes = fts
+							}
+
+							expectedNoTemp[i] = nt
+						}
+
+						matrix := []*matrixElement{
+							{"?groups=" + groups[0] + "," + groups[1], expectedNonRoot},
+							{"?groups=" + groups[0], []*DirSummary{
 								{Dir: "/a/b", Count: 9, Size: 80, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedFTs},
 								{Dir: "/a/b/d", Count: 7, Size: 70, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedCrams},
 								{Dir: "/a/b/d/g", Count: 6, Size: 60, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedCrams},
 								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
 								{Dir: "/a/b/d/f", Count: 1, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedCrams},
 								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
-							},
-							"?users=root," + username: expected,
-							"?users=root": {
+							}},
+							{"?users=root," + username, expected},
+							{"?users=root", []*DirSummary{
 								{Dir: "/a", Count: 10, Size: 46, Users: expectedRoot, Groups: expectedGroupsRoot, FileTypes: expectedCrams},
 								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
 								{Dir: "/a/c/d", Count: 5, Size: 5, Users: expectedRoot, Groups: expectedGroupsB, FileTypes: expectedCrams},
-							},
-							"?groups=" + groups[0] + "&users=root": {
+							}},
+							{"?groups=" + groups[0] + "&users=root", []*DirSummary{
 								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
-							},
-							"?types=cram,bam": expected,
-							"?types=bam": {
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
-							},
-							"?groups=" + groups[0] + "&users=root&types=cram,bam": {
+							}},
+							{"?types=cram,bam", expectedNoTemp},
+							{"?types=bam", []*DirSummary{
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: []string{"bam"}},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser,
+									Groups: expectedGroupsA, FileTypes: []string{"bam"}},
+							}},
+							{"?groups=" + groups[0] + "&users=root&types=cram,bam", []*DirSummary{
 								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
-							},
-							"?groups=" + groups[0] + "&users=root&types=bam": {
+							}},
+							{"?groups=" + groups[0] + "&users=root&types=bam", []*DirSummary{
 								{Dir: "/", Count: 0, Size: 0, Users: []string{}, Groups: []string{}, FileTypes: []string{}},
-							},
-							"?splits=0": {
+							}},
+							{"?splits=0", []*DirSummary{
 								{Dir: "/a", Count: 15, Size: 86, Users: expectedUsers, Groups: expectedGroupsRoot, FileTypes: expectedFTs},
-							},
-							"?dir=/a/b/e/h": {
+							}},
+							{"?dir=/a/b/e/h", []*DirSummary{
 								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
 								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
-							},
+							}},
 						}
 
 						runMapMatrixTest(t, matrix, s)
@@ -552,13 +576,17 @@ func TestServer(t *testing.T) {
 						err = file.Close()
 						So(err, ShouldBeNil)
 
+						s.treeMutex.RLock()
 						So(s.dataTimeStamp.IsZero(), ShouldBeTrue)
+						s.treeMutex.RUnlock()
 
 						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix, sentinelPollFrequency)
 						So(err, ShouldBeNil)
 
+						s.treeMutex.RLock()
 						So(s.dataTimeStamp.IsZero(), ShouldBeFalse)
 						previous := s.dataTimeStamp
+						s.treeMutex.RUnlock()
 
 						response, err = queryWhere(s, "")
 						So(err, ShouldBeNil)
@@ -575,7 +603,9 @@ func TestServer(t *testing.T) {
 
 						waitForFileToBeDeleted(t, path)
 
+						s.treeMutex.RLock()
 						So(s.dataTimeStamp.After(previous), ShouldBeTrue)
+						s.treeMutex.RUnlock()
 
 						_, err = os.Stat(path)
 						So(err, ShouldNotBeNil)
@@ -858,7 +888,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				groups := gidsToGroups(t, gids[0], gids[1], "0")
 				sort.Strings(groups)
 
-				expectedFTs := []string{"bam", "cram"}
+				expectedFTs := []string{"bam", "cram", "temporary"}
 
 				tm := *resp.Result().(*TreeElement) //nolint:forcetypeassert
 				So(tm, ShouldResemble, TreeElement{
@@ -1300,18 +1330,25 @@ func adjustedExpectations(expected []*DirSummary, groupA, groupB string) ([]*Dir
 	return expectedNonRoot, expectedGroupsRoot
 }
 
+type matrixElement struct {
+	filter string
+	dss    []*DirSummary
+}
+
 // runMapMatrixTest tests queries against expected results on the Server.
-func runMapMatrixTest(t *testing.T, matrix map[string][]*DirSummary, s *Server) {
+func runMapMatrixTest(t *testing.T, matrix []*matrixElement, s *Server) {
 	t.Helper()
 
-	for filter, exp := range matrix {
-		response, err := queryWhere(s, filter)
+	for i, m := range matrix {
+		t.Logf("matrix test %d", i)
+
+		response, err := queryWhere(s, m.filter)
 		So(err, ShouldBeNil)
 		So(response.Code, ShouldEqual, http.StatusOK)
 
 		result, err := decodeWhereResult(response)
 		So(err, ShouldBeNil)
-		So(result, ShouldResemble, exp)
+		So(result, ShouldResemble, m.dss)
 	}
 }
 

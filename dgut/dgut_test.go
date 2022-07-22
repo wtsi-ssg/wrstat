@@ -76,39 +76,64 @@ func TestDGUT(t *testing.T) {
 
 	Convey("You can see if a GUT passes a filter", t, func() {
 		filter := &Filter{}
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeTrue)
-		So(expectedRootGUTs[2].PassesFilter(filter), ShouldBeFalse)
+		a, b := expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
+
+		a, b = expectedRootGUTs[2].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeFalse)
 
 		filter.GIDs = []uint32{3, 4, 5}
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeFalse)
+		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeFalse)
+		So(b, ShouldBeFalse)
 
 		filter.GIDs = []uint32{3, 2, 1}
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeTrue)
+		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
 
 		filter.UIDs = []uint32{103}
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeFalse)
+		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeFalse)
+		So(b, ShouldBeFalse)
 
 		filter.UIDs = []uint32{103, 102, 101}
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeTrue)
+		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTFileType{7}
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeFalse)
-		So(expectedRootGUTs[2].PassesFilter(filter), ShouldBeTrue)
+		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeFalse)
+		So(b, ShouldBeFalse)
+		a, b = expectedRootGUTs[2].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTFileType{7, 0}
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeTrue)
-		So(expectedRootGUTs[2].PassesFilter(filter), ShouldBeFalse)
+		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
+		a, b = expectedRootGUTs[2].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeFalse)
 
 		filter.UIDs = nil
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeTrue)
+		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
 
 		filter.GIDs = nil
-		So(expectedRootGUTs[0].PassesFilter(filter), ShouldBeTrue)
+		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
 	})
 
 	expectedUIDs := []uint32{101, 102}
 	expectedGIDs := []uint32{1, 2}
-	expectedFTs := []summary.DirGUTFileType{0, 1}
+	expectedFTs := []summary.DirGUTFileType{0, 1, 7}
 
 	Convey("GUTs can sum the count and size and provide UIDs, GIDs and FTs of their GUT elements", t, func() {
 		c, s, u, g, t := expectedRootGUTs.Summary(nil)
