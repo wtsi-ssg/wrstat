@@ -432,6 +432,8 @@ func TestServer(t *testing.T) {
 
 				expectedNonRoot, expectedGroupsRoot := adjustedExpectations(expected, groupA, groupB)
 
+				expectedNoTemp := removeTempFromDSs(expected)
+
 				tree.Close()
 
 				Convey("You can get results after calling LoadDGUTDB", func() {
@@ -460,29 +462,6 @@ func TestServer(t *testing.T) {
 						expectedFTs := expectedNonRoot[0].FileTypes
 						expectedBams := []string{"bam", "temporary"}
 						expectedCrams := []string{"cram"}
-
-						expectedNoTemp := make([]*DirSummary, len(expected))
-						for i, ds := range expected {
-							nt := &DirSummary{
-								Dir:    ds.Dir,
-								Count:  ds.Count,
-								Size:   ds.Size,
-								Users:  ds.Users,
-								Groups: ds.Groups,
-							}
-
-							if len(ds.FileTypes) == 1 {
-								nt.FileTypes = ds.FileTypes
-							} else {
-								fts := make([]string, len(ds.FileTypes)-1)
-								for j := range fts {
-									fts[j] = ds.FileTypes[j]
-								}
-								nt.FileTypes = fts
-							}
-
-							expectedNoTemp[i] = nt
-						}
 
 						matrix := []*matrixElement{
 							{"?groups=" + groups[0] + "," + groups[1], expectedNonRoot},
@@ -1328,6 +1307,36 @@ func adjustedExpectations(expected []*DirSummary, groupA, groupB string) ([]*Dir
 	}
 
 	return expectedNonRoot, expectedGroupsRoot
+}
+
+// removeTempFromDSs clones the given DirSummary slice and returns the clone,
+// but altering it so that it has no temporary file types in each DirSummary.
+func removeTempFromDSs(expected []*DirSummary) []*DirSummary {
+	expectedNoTemp := make([]*DirSummary, len(expected))
+
+	for i, ds := range expected {
+		nt := &DirSummary{
+			Dir:    ds.Dir,
+			Count:  ds.Count,
+			Size:   ds.Size,
+			Users:  ds.Users,
+			Groups: ds.Groups,
+		}
+
+		if len(ds.FileTypes) == 1 {
+			nt.FileTypes = ds.FileTypes
+		} else {
+			fts := make([]string, len(ds.FileTypes)-1)
+			for j := range fts {
+				fts[j] = ds.FileTypes[j]
+			}
+			nt.FileTypes = fts
+		}
+
+		expectedNoTemp[i] = nt
+	}
+
+	return expectedNoTemp
 }
 
 type matrixElement struct {
