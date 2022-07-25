@@ -29,19 +29,21 @@ import (
 	"fmt"
 	"os/user"
 	"sort"
+	"time"
 
 	"github.com/wtsi-ssg/wrstat/dgut"
 	"github.com/wtsi-ssg/wrstat/summary"
 )
 
-// DirSummary holds nested file count and size information on a directory. It
-// also holds which users and groups own files nested under the directory, and
-// their file types. It differs from dgut.DirSummary in having string names for
-// users, groups and types, instead of ids.
+// DirSummary holds nested file count, size and atime information on a
+// directory. It also holds which users and groups own files nested under the
+// directory, and their file types. It differs from dgut.DirSummary in having
+// string names for users, groups and types, instead of ids.
 type DirSummary struct {
 	Dir       string
 	Count     uint64
 	Size      uint64
+	Atime     time.Time
 	Users     []string
 	Groups    []string
 	FileTypes []string
@@ -67,6 +69,7 @@ func (s *Server) dgutDStoSummary(dds *dgut.DirSummary) *DirSummary {
 		Dir:       dds.Dir,
 		Count:     dds.Count,
 		Size:      dds.Size,
+		Atime:     dds.Atime,
 		Users:     s.uidsToUsernames(dds.UIDs),
 		Groups:    s.gidsToNames(dds.GIDs),
 		FileTypes: s.ftsToNames(dds.FTs),

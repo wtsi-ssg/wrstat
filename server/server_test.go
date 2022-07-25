@@ -462,44 +462,61 @@ func TestServer(t *testing.T) {
 						expectedFTs := expectedNonRoot[0].FileTypes
 						expectedBams := []string{"bam", "temporary"}
 						expectedCrams := []string{"cram"}
+						expectedAtime := time.Unix(50, 0)
 
 						matrix := []*matrixElement{
 							{"?groups=" + groups[0] + "," + groups[1], expectedNonRoot},
 							{"?groups=" + groups[0], []*DirSummary{
-								{Dir: "/a/b", Count: 9, Size: 80, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedFTs},
-								{Dir: "/a/b/d", Count: 7, Size: 70, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedCrams},
-								{Dir: "/a/b/d/g", Count: 6, Size: 60, Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedCrams},
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
-								{Dir: "/a/b/d/f", Count: 1, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedCrams},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
+								{Dir: "/a/b", Count: 9, Size: 80, Atime: expectedAtime,
+									Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedFTs},
+								{Dir: "/a/b/d", Count: 7, Size: 70, Atime: expectedAtime,
+									Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/d/g", Count: 6, Size: 60, Atime: expectedAtime,
+									Users: expectedUsers, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Atime: expectedAtime,
+									Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
+								{Dir: "/a/b/d/f", Count: 1, Size: 10, Atime: time.Unix(75, 0),
+									Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Atime: expectedAtime,
+									Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
 							}},
 							{"?users=root," + username, expected},
 							{"?users=root", []*DirSummary{
-								{Dir: "/a", Count: 10, Size: 46, Users: expectedRoot, Groups: expectedGroupsRoot, FileTypes: expectedCrams},
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
-								{Dir: "/a/c/d", Count: 5, Size: 5, Users: expectedRoot, Groups: expectedGroupsB, FileTypes: expectedCrams},
+								{Dir: "/a", Count: 10, Size: 46, Atime: expectedAtime,
+									Users: expectedRoot, Groups: expectedGroupsRoot, FileTypes: expectedCrams},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Atime: expectedAtime,
+									Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/c/d", Count: 5, Size: 5, Atime: expectedAtime,
+									Users: expectedRoot, Groups: expectedGroupsB, FileTypes: expectedCrams},
 							}},
 							{"?groups=" + groups[0] + "&users=root", []*DirSummary{
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Atime: expectedAtime,
+									Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
 							}},
 							{"?types=cram,bam", expectedNoTemp},
 							{"?types=bam", []*DirSummary{
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: []string{"bam"}},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser,
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Atime: expectedAtime,
+									Users: expectedUser, Groups: expectedGroupsA, FileTypes: []string{"bam"}},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Atime: expectedAtime, Users: expectedUser,
 									Groups: expectedGroupsA, FileTypes: []string{"bam"}},
 							}},
 							{"?groups=" + groups[0] + "&users=root&types=cram,bam", []*DirSummary{
-								{Dir: "/a/b/d/g", Count: 4, Size: 40, Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/d/g", Count: 4, Size: 40, Atime: expectedAtime,
+									Users: expectedRoot, Groups: expectedGroupsA, FileTypes: expectedCrams},
 							}},
 							{"?groups=" + groups[0] + "&users=root&types=bam", []*DirSummary{
-								{Dir: "/", Count: 0, Size: 0, Users: []string{}, Groups: []string{}, FileTypes: []string{}},
+								{Dir: "/", Count: 0, Size: 0, Atime: time.Unix(0, 0),
+									Users: []string{}, Groups: []string{}, FileTypes: []string{}},
 							}},
 							{"?splits=0", []*DirSummary{
-								{Dir: "/a", Count: 15, Size: 86, Users: expectedUsers, Groups: expectedGroupsRoot, FileTypes: expectedFTs},
+								{Dir: "/a", Count: 15, Size: 86, Atime: expectedAtime,
+									Users: expectedUsers, Groups: expectedGroupsRoot, FileTypes: expectedFTs},
 							}},
 							{"?dir=/a/b/e/h", []*DirSummary{
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
-								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Atime: expectedAtime,
+									Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
+								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Atime: expectedAtime,
+									Users: expectedUser, Groups: expectedGroupsA, FileTypes: expectedBams},
 							}},
 						}
 
@@ -868,6 +885,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				sort.Strings(groups)
 
 				expectedFTs := []string{"bam", "cram", "temporary"}
+				expectedAtime := "1970-01-01T00:00:50Z"
 
 				tm := *resp.Result().(*TreeElement) //nolint:forcetypeassert
 				So(tm, ShouldResemble, TreeElement{
@@ -875,6 +893,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					Path:        "/",
 					Count:       15,
 					Size:        86,
+					Atime:       expectedAtime,
 					Users:       users,
 					Groups:      groups,
 					FileTypes:   expectedFTs,
@@ -886,6 +905,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 							Path:        "/a",
 							Count:       15,
 							Size:        86,
+							Atime:       expectedAtime,
 							Users:       users,
 							Groups:      groups,
 							FileTypes:   expectedFTs,
@@ -914,6 +934,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					Path:        "/",
 					Count:       9,
 					Size:        80,
+					Atime:       expectedAtime,
 					Users:       users,
 					Groups:      []string{g.Name},
 					FileTypes:   expectedFTs,
@@ -925,6 +946,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 							Path:        "/a",
 							Count:       9,
 							Size:        80,
+							Atime:       expectedAtime,
 							Users:       users,
 							Groups:      []string{g.Name},
 							FileTypes:   expectedFTs,
@@ -1153,35 +1175,35 @@ func createExampleDgutDir(t *testing.T) (string, error) {
 // exampleDGUTData is some example DGUT data that uses the given uid and gids,
 // along with root's uid.
 func exampleDGUTData(uid, gidA, gidB string) string {
-	data := `/	x	z	0	3	30
-/	x	z	1	2	10
-/	x	z	7	1	5
-/	x	0	0	4	40
-/	y	0	0	5	5
-/	0	0	0	1	1
-/a	x	z	0	3	30
-/a	x	z	1	2	10
-/a	x	z	7	1	5
-/a	x	0	0	4	40
-/a	y	0	0	5	5
-/a	0	0	0	1	1
-/a/b	x	z	0	3	30
-/a/b	x	z	1	2	10
-/a/b	x	z	7	1	5
-/a/b	x	0	0	4	40
-/a/b/d	x	z	0	3	30
-/a/b/d	x	0	0	4	40
-/a/b/d/f	x	z	0	1	10
-/a/b/d/g	x	z	0	2	20
-/a/b/d/g	x	0	0	4	40
-/a/b/e	x	z	1	2	10
-/a/b/e	x	z	7	1	5
-/a/b/e/h	x	z	1	2	10
-/a/b/e/h	x	z	7	1	5
-/a/b/e/h/tmp	x	z	1	1	5
-/a/b/e/h/tmp	x	z	7	1	5
-/a/c	y	0	0	5	5
-/a/c/d	y	0	0	5	5
+	data := `/	x	z	0	3	30	50
+/	x	z	1	2	10	50
+/	x	z	7	1	5	50
+/	x	0	0	4	40	50
+/	y	0	0	5	5	50
+/	0	0	0	1	1	50
+/a	x	z	0	3	30	50
+/a	x	z	1	2	10	50
+/a	x	z	7	1	5	50
+/a	x	0	0	4	40	50
+/a	y	0	0	5	5	50
+/a	0	0	0	1	1	50
+/a/b	x	z	0	3	30	50
+/a/b	x	z	1	2	10	50
+/a/b	x	z	7	1	5	50
+/a/b	x	0	0	4	40	50
+/a/b/d	x	z	0	3	30	50
+/a/b/d	x	0	0	4	40	50
+/a/b/d/f	x	z	0	1	10	75
+/a/b/d/g	x	z	0	2	20	50
+/a/b/d/g	x	0	0	4	40	50
+/a/b/e	x	z	1	2	10	50
+/a/b/e	x	z	7	1	5	50
+/a/b/e/h	x	z	1	2	10	50
+/a/b/e/h	x	z	7	1	5	50
+/a/b/e/h/tmp	x	z	1	1	5	50
+/a/b/e/h/tmp	x	z	7	1	5	50
+/a/c	y	0	0	5	5	50
+/a/c/d	y	0	0	5	5	50
 `
 
 	data = strings.ReplaceAll(data, "x", gidA)
@@ -1297,6 +1319,7 @@ func adjustedExpectations(expected []*DirSummary, groupA, groupB string) ([]*Dir
 				Dir:       "/a",
 				Count:     14,
 				Size:      85,
+				Atime:     time.Unix(50, 0),
 				Users:     ds.Users,
 				Groups:    groups,
 				FileTypes: ds.FileTypes,
@@ -1319,6 +1342,7 @@ func removeTempFromDSs(expected []*DirSummary) []*DirSummary {
 			Dir:    ds.Dir,
 			Count:  ds.Count,
 			Size:   ds.Size,
+			Atime:  ds.Atime,
 			Users:  ds.Users,
 			Groups: ds.Groups,
 		}

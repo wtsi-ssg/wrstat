@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/wtsi-ssg/wrstat/dgut"
@@ -86,6 +87,7 @@ type TreeElement struct {
 	Path        string         `json:"path"`
 	Count       uint64         `json:"count"`
 	Size        uint64         `json:"size"`
+	Atime       string         `json:"atime"`
 	Users       []string       `json:"users"`
 	Groups      []string       `json:"groups"`
 	FileTypes   []string       `json:"filetypes"`
@@ -147,15 +149,16 @@ func (s *Server) ddsToTreeElement(dds *dgut.DirSummary) *TreeElement {
 		Path:      dds.Dir,
 		Count:     dds.Count,
 		Size:      dds.Size,
+		Atime:     timeToJavascriptDate(dds.Atime),
 		Users:     s.uidsToUsernames(dds.UIDs),
 		Groups:    s.gidsToNames(dds.GIDs),
 		FileTypes: s.ftsToNames(dds.FTs),
-		TimeStamp: s.dataTimeStampToJavascriptDate(),
+		TimeStamp: timeToJavascriptDate(s.dataTimeStamp),
 	}
 }
 
-// dataTimeStampToJavascriptDate returns our dataTimeStamp in javascript Date's
-// toJSON format.
-func (s *Server) dataTimeStampToJavascriptDate() string {
-	return s.dataTimeStamp.UTC().Format(javascriptToJSONFormat)
+// timeToJavascriptDate returns the given time in javascript Date's toJSON
+// format.
+func timeToJavascriptDate(t time.Time) string {
+	return t.UTC().Format(javascriptToJSONFormat)
 }
