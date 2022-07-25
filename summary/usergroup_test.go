@@ -161,6 +161,7 @@ type mockInfo struct {
 	gid   uint32
 	size  int64
 	isDir bool
+	atime int64
 }
 
 func newMockInfo(uid, gid uint32, size int64, dir bool) *mockInfo {
@@ -170,6 +171,13 @@ func newMockInfo(uid, gid uint32, size int64, dir bool) *mockInfo {
 		size:  size,
 		isDir: dir,
 	}
+}
+
+func newMockInfoWithAtime(uid, gid uint32, size int64, dir bool, atime int64) *mockInfo {
+	mi := newMockInfo(uid, gid, size, dir)
+	mi.atime = atime
+
+	return mi
 }
 
 func (m *mockInfo) Name() string { return "" }
@@ -186,8 +194,9 @@ func (m *mockInfo) IsDir() bool { return m.isDir }
 
 func (m *mockInfo) Sys() interface{} {
 	return &syscall.Stat_t{
-		Uid: m.uid,
-		Gid: m.gid,
+		Uid:  m.uid,
+		Gid:  m.gid,
+		Atim: syscall.Timespec{Sec: m.atime},
 	}
 }
 

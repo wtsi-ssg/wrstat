@@ -89,9 +89,9 @@ func (store dirStore) sort() ([]string, []*summary) {
 	return sortSummaryStore(store)
 }
 
-// sortSummaryStore returns a slice of our summary values, sorted by the store's
+// sortSummaryStore returns a slice of the store's values, sorted by the store's
 // keys which are also returned.
-func sortSummaryStore(store map[string]*summary) ([]string, []*summary) {
+func sortSummaryStore[T any](store map[string]*T) ([]string, []*T) {
 	keys := make([]string, len(store))
 	i := 0
 
@@ -102,7 +102,7 @@ func sortSummaryStore(store map[string]*summary) ([]string, []*summary) {
 
 	sort.Strings(keys)
 
-	s := make([]*summary, len(store))
+	s := make([]*T, len(store))
 
 	for i, k := range keys {
 		s[i] = store[k]
