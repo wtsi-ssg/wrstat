@@ -36,6 +36,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/dustin/go-humanize" //nolint:misspell
 	"github.com/olekukonko/tablewriter"
@@ -48,6 +49,7 @@ const (
 	bytesPerK                 = 1024
 	defaultSplits             = 2
 	defaultMinMB              = 50
+	hoursePerDay              = 24
 	jwtBasename               = ".wrstat.jwt"
 	privatePerms  os.FileMode = 0600
 )
@@ -76,7 +78,9 @@ argument), and the --dir you wish to know about (defaults to the root
 directory).
 
 This tool will show where data really lies: the deepest directory that has all
-filter-passing files nested under it.
+filter-passing files nested under it. It reports the count of files nested each
+directory, the total size of all those files, and the oldest age of those files
+(in days since last access).
 
 With a --splits value of 0, returns just a single directory.
 With a --splits value of 1, it also returns the results that --splits 0 on each
@@ -101,12 +105,12 @@ To avoid producing too much output, the --minimum option can be used to not
 display directories that have less than that number of MBs of data nested
 inside. Defaults to 50MB.
 
-You can change the sort --order from the default of by 'size', to by 'count' or
-'dir'.
+You can change the sort --order from the default of by 'size', to by 'count',
+'age' or 'dir'.
 
 --minimum and --sort are ignored, however, if you choose --json output, which
 will just give you all the filtered results. In the JSON output, the Size is in
-bytes.
+bytes and instead of "age" you get "Atime".
 
 --show_ug adds columns for the users and groups that own files nested under each
 directory.
@@ -173,7 +177,7 @@ func init() {
 	whereCmd.Flags().StringVarP(&whereCert, "cert", "c", "",
 		"path to the server's certificate to force trust in it")
 	whereCmd.Flags().StringVarP(&whereOrder, "order", "o", "size",
-		"sort order of results; size, count or dir")
+		"sort order of results; size, count, age or dir")
 	whereCmd.Flags().BoolVar(&whereShowUG, "show_ug", false,
 		"output USERS and GROUPS columns")
 	whereCmd.Flags().BoolVarP(&whereJSON, "json", "j", false,
@@ -386,6 +390,10 @@ func orderDSs(dss []*server.DirSummary, order string) {
 		sort.Slice(dss, func(i, j int) bool {
 			return dss[i].Count > dss[j].Count
 		})
+	case "age":
+		sort.Slice(dss, func(i, j int) bool {
+			return dss[i].Atime.Before(dss[j].Atime)
+		})
 	case "dir":
 		sort.Slice(dss, func(i, j int) bool {
 			return dss[i].Dir < dss[j].Dir
@@ -424,9 +432,9 @@ func prepareWhereTable() *tablewriter.Table {
 	table := tablewriter.NewWriter(os.Stdout)
 
 	if whereShowUG {
-		table.SetHeader([]string{"Directory", "Users", "Groups", "Count", "Size"})
+		table.SetHeader([]string{"Directory", "Users", "Groups", "Count", "Size", "Age"})
 	} else {
-		table.SetHeader([]string{"Directory", "Count", "Size"})
+		table.SetHeader([]string{"Directory", "Count", "Size", "Age"})
 	}
 
 	return table
@@ -440,7 +448,15 @@ func columns(ds *server.DirSummary) []string {
 		cols = append(cols, strings.Join(ds.Users, ","), strings.Join(ds.Groups, ","))
 	}
 
-	return append(cols, fmt.Sprintf("%d", ds.Count), humanize.IBytes(ds.Size))
+	return append(cols,
+		fmt.Sprintf("%d", ds.Count),
+		humanize.IBytes(ds.Size),
+		fmt.Sprintf("%d", timeToDaysAgo(ds.Atime)))
+}
+
+// timeToDaysAgo returns the given time converted to number of days ago.
+func timeToDaysAgo(t time.Time) int {
+	return int(time.Since(t).Hours() / hoursePerDay)
 }
 
 // printSkipped prints the given number of results were skipped.
