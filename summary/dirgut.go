@@ -80,25 +80,25 @@ func FileTypeStringToDirGUTFileType(ft string) (DirGUTFileType, error) {
 	return dgft, nil
 }
 
-// gutStore is a sortable map with gid,uid,filetype as keys and summaries as
-// values.
-type gutStore map[string]*summary
+// gutStore is a sortable map with gid,uid,filetype as keys and summaryWithAtime
+// as values.
+type gutStore map[string]*summaryWithAtime
 
 // add will auto-vivify a summary for the given key (which should have been
-// generated with statToGUTKey()) and call add(size) on it.
-func (store gutStore) add(key string, size int64) {
+// generated with statToGUTKey()) and call add(size, atime) on it.
+func (store gutStore) add(key string, size int64, atime int64) {
 	s, ok := store[key]
 	if !ok {
-		s = &summary{}
+		s = &summaryWithAtime{}
 		store[key] = s
 	}
 
-	s.add(size)
+	s.add(size, atime)
 }
 
-// sort returns a slice of our summary values, sorted by our dgut keys which are
-// also returned.
-func (store gutStore) sort() ([]string, []*summary) {
+// sort returns a slice of our summaryWithAtime values, sorted by our dgut keys
+// which are also returned.
+func (store gutStore) sort() ([]string, []*summaryWithAtime) {
 	return sortSummaryStore(store)
 }
 
@@ -224,9 +224,11 @@ func isTemp(path string) bool {
 }
 
 // Add is a github.com/wtsi-ssg/wrstat/stat Operation. It will break path in to
-// its directories and add the file size and increment the file count to each,
-// summed for the info's group, user and filetype. If path is a directory, it is
-// ignored.
+// its directories and add the file size, increment the file count to each,
+// summed for the info's group, user and filetype. It will also record the
+// oldest file access time for each directory.
+//
+// If path is a directory, it is ignored.
 //
 // NB: the "temporary" filetype is an extra filetype on top of the other normal
 // filetypes, so if you sum all the filetypes to get information about a a given
@@ -243,7 +245,7 @@ func (d *DirGroupUserType) Add(path string, info fs.FileInfo) error {
 		return errNotUnix
 	}
 
-	d.addForEachDir(path, d.statToGUTKeys(stat, path), info.Size())
+	d.addForEachDir(path, d.statToGUTKeys(stat, path), info.Size(), stat.Atim.Sec)
 
 	return nil
 }
@@ -288,12 +290,12 @@ func (d *DirGroupUserType) pathToTypes(path string) []DirGUTFileType {
 
 // addForEachDir breaks path into each directory, gets a gutStore for each and
 // adds a file of the given size to them under the given gutKeys.
-func (d *DirGroupUserType) addForEachDir(path string, gutKeys []string, size int64) {
+func (d *DirGroupUserType) addForEachDir(path string, gutKeys []string, size int64, atime int64) {
 	cb := func(dir string) {
 		gStore := d.store.getGUTStore(dir)
 
 		for _, gutKey := range gutKeys {
-			gStore.add(gutKey, size)
+			gStore.add(gutKey, size, atime)
 		}
 	}
 
@@ -303,7 +305,10 @@ func (d *DirGroupUserType) addForEachDir(path string, gutKeys []string, size int
 // Output will write summary information for all the paths previously added. The
 // format is (tab separated):
 //
-// directory gid uid filetype filecount filesize
+// directory gid uid filetype filecount filesize atime
+//
+// Where atime is oldest access time in seconds since Unix epoch of any file
+// nested within directory.
 //
 // directory, gid, uid and filetype are sorted. The sort on the columns is not
 // numeric, but alphabetical. So gid 10 will come before gid 2.
@@ -328,7 +333,7 @@ func (d *DirGroupUserType) Output(output *os.File) error {
 
 		for j, dgut := range dguts {
 			s := summaries[j]
-			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n", dir, dgut, s.count, s.size))
+			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\n", dir, dgut, s.count, s.size, s.atime))
 
 			if errw != nil {
 				return errw
