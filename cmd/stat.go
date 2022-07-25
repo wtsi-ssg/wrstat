@@ -104,7 +104,7 @@ joe	lemur	/disk1/dir1/dir1a	3	30
 joe	lemur	/disk1/dir2	1	10
 
 Likewise, it produces a similar file that also shows nested numbers, with these
-6 tab separated columns, with a ".dgut" suffix:
+7 tab separated columns, with a ".dgut" suffix:
 
 1. directory
 2. gid
@@ -113,6 +113,7 @@ Likewise, it produces a similar file that also shows nested numbers, with these
 	         6=other,7=temporary)
 5. number of files nested under 1 belonging to 2 and 3 and having filetype in 4.
 6. total file size in bytes of the files in 5.
+7. the oldest access time of the files in 5, in seconds since Unix epoch.
 
 (Note that files can be both "temporary" and one of the other types, so ignore
 lines where column 4 is 7 if summing up columns 5 and 6 for a given 1+2+3 for an
