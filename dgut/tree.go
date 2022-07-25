@@ -27,6 +27,7 @@ package dgut
 
 import (
 	"sort"
+	"time"
 
 	"github.com/wtsi-ssg/wrstat/summary"
 )
@@ -49,13 +50,14 @@ func NewTree(paths ...string) (*Tree, error) {
 	return &Tree{db: db}, nil
 }
 
-// DirSummary holds nested file count and size information on a directory. It
-// also holds which users and groups own files nested under the directory, and
-// what the file types are.
+// DirSummary holds nested file count, size and atime information on a
+// directory. It also holds which users and groups own files nested under the
+// directory, and what the file types are.
 type DirSummary struct {
 	Dir   string
 	Count uint64
 	Size  uint64
+	Atime time.Time
 	UIDs  []uint32
 	GIDs  []uint32
 	FTs   []summary.DirGUTFileType
@@ -136,11 +138,11 @@ func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 	return false
 }
 
-// getSummaryInfo accesses the database to retrieve the count and size info
-// for a given directory and filter, along with the UIDs and GIDs that own those
-// files, the file types of those files.
+// getSummaryInfo accesses the database to retrieve the count, size and atime
+// info for a given directory and filter, along with the UIDs and GIDs that own
+// those files, the file types of those files.
 func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
-	c, s, u, g, fts, err := t.db.DirInfo(dir, filter)
+	c, s, a, u, g, fts, err := t.db.DirInfo(dir, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -149,6 +151,7 @@ func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
 		Dir:   dir,
 		Count: c,
 		Size:  s,
+		Atime: time.Unix(a, 0),
 		UIDs:  u,
 		GIDs:  g,
 		FTs:   fts,

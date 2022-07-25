@@ -28,6 +28,7 @@ package dgut
 import (
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/summary"
@@ -54,47 +55,50 @@ func TestTree(t *testing.T) {
 		expectedGIDsOne := []uint32{1}
 		expectedFTsZero := []summary.DirGUTFileType{0}
 		expectedFTsOne := []summary.DirGUTFileType{1}
+		expectedAtime := time.Unix(50, 0)
+		expectedAtimeG := time.Unix(60, 0)
 
 		Convey("You can query the Tree for DirInfo", func() {
 			di, err := tree.DirInfo("/", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/", 14, 85, expectedUIDs, expectedGIDs, expectedFTs},
+				Current: &DirSummary{"/", 14, 85, expectedAtime, expectedUIDs, expectedGIDs, expectedFTs},
 				Children: []*DirSummary{
-					{"/a", 14, 85, expectedUIDs, expectedGIDs, expectedFTs},
+					{"/a", 14, 85, expectedAtime, expectedUIDs, expectedGIDs, expectedFTs},
 				},
 			})
 
 			di, err = tree.DirInfo("/a", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a", 14, 85, expectedUIDs, expectedGIDs, expectedFTs},
+				Current: &DirSummary{"/a", 14, 85, expectedAtime, expectedUIDs, expectedGIDs, expectedFTs},
 				Children: []*DirSummary{
-					{"/a/b", 9, 80, expectedUIDs, expectedGIDsOne, expectedFTs},
-					{"/a/c", 5, 5, []uint32{102}, []uint32{2}, expectedFTsZero},
+					{"/a/b", 9, 80, expectedAtime, expectedUIDs, expectedGIDsOne, expectedFTs},
+					{"/a/c", 5, 5, time.Unix(90, 0), []uint32{102}, []uint32{2}, expectedFTsZero},
 				},
 			})
 
 			di, err = tree.DirInfo("/a", &Filter{FTs: []summary.DirGUTFileType{1}})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a", 2, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsOne},
+				Current: &DirSummary{"/a", 2, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsOne},
 				Children: []*DirSummary{
-					{"/a/b", 2, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsOne},
+					{"/a/b", 2, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsOne},
 				},
 			})
 
 			di, err = tree.DirInfo("/a/b/e/h/tmp", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current:  &DirSummary{"/a/b/e/h/tmp", 1, 5, expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{1, 7}},
+				Current: &DirSummary{"/a/b/e/h/tmp", 1, 5, time.Unix(75, 0),
+					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{1, 7}},
 				Children: nil,
 			})
 
 			di, err = tree.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{3}})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current:  &DirSummary{"/", 0, 0, []uint32{}, []uint32{}, []summary.DirGUTFileType{}},
+				Current:  &DirSummary{"/", 0, 0, time.Unix(0, 0), []uint32{}, []uint32{}, []summary.DirGUTFileType{}},
 				Children: nil,
 			})
 		})
@@ -119,36 +123,36 @@ func TestTree(t *testing.T) {
 			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 0)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, 0)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b", 5, 40, expectedUIDsOne, expectedGIDsOne, expectedFTs},
+				{"/a/b", 5, 40, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTs},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 1)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/g", 2, 20, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
 			})
 
 			dcss.SortByDir()
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/g", 2, 20, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 2)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/g", 2, 20, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
 			})
 
 			_, err = tree.Where("/foo", nil, 1)
@@ -161,8 +165,8 @@ func TestTree(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d/f", 1, 10, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/g", 2, 20, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
 			})
 
 			_, err = tree.FileLocations("/foo", nil)
@@ -173,7 +177,7 @@ func TestTree(t *testing.T) {
 			_, err := tree.DirInfo("/foo", nil)
 			So(err, ShouldNotBeNil)
 
-			di := &DirInfo{Current: &DirSummary{"/", 14, 85, expectedUIDs, expectedGIDs, expectedFTs}}
+			di := &DirInfo{Current: &DirSummary{"/", 14, 85, expectedAtime, expectedUIDs, expectedGIDs, expectedFTs}}
 			err = tree.addChildInfo(di, []string{"/foo"}, nil)
 			So(err, ShouldNotBeNil)
 		})
@@ -186,21 +190,21 @@ func TestTree(t *testing.T) {
 	Convey("You can make a Tree from multiple dgut databases and query it", t, func() {
 		paths1 := testMakeDBPaths(t)
 		db := NewDB(paths1[0])
-		data := strings.NewReader("/\t1\t11\t1\t1\t1\n" +
-			"/a\t1\t11\t1\t1\t1\n" +
-			"/a/b\t1\t11\t1\t1\t1\n" +
-			"/a/b/c\t1\t11\t1\t1\t1\n" +
-			"/a/b/c/d\t1\t11\t1\t1\t1\n")
+		data := strings.NewReader("/\t1\t11\t1\t1\t1\t20\n" +
+			"/a\t1\t11\t1\t1\t1\t20\n" +
+			"/a/b\t1\t11\t1\t1\t1\t20\n" +
+			"/a/b/c\t1\t11\t1\t1\t1\t20\n" +
+			"/a/b/c/d\t1\t11\t1\t1\t1\t20\n")
 		err := db.Store(data, 20)
 		So(err, ShouldBeNil)
 
 		paths2 := testMakeDBPaths(t)
 		db = NewDB(paths2[0])
-		data = strings.NewReader("/\t1\t11\t1\t1\t1\n" +
-			"/a\t1\t11\t1\t1\t1\n" +
-			"/a/b\t1\t11\t1\t1\t1\n" +
-			"/a/b/c\t1\t11\t1\t1\t1\n" +
-			"/a/b/c/e\t1\t11\t1\t1\t1\n")
+		data = strings.NewReader("/\t1\t11\t1\t1\t1\t15\n" +
+			"/a\t1\t11\t1\t1\t1\t15\n" +
+			"/a/b\t1\t11\t1\t1\t1\t15\n" +
+			"/a/b/c\t1\t11\t1\t1\t1\t15\n" +
+			"/a/b/c/e\t1\t11\t1\t1\t1\t15\n")
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 
@@ -208,18 +212,20 @@ func TestTree(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(tree, ShouldNotBeNil)
 
+		expectedAtime := time.Unix(15, 0)
+
 		dcss, err := tree.Where("/", nil, 0)
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
+			{"/a/b/c", 2, 2, expectedAtime, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
 		})
 
 		dcss, err = tree.Where("/", nil, 1)
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
-			{"/a/b/c/d", 1, 1, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
-			{"/a/b/c/e", 1, 1, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
+			{"/a/b/c", 2, 2, expectedAtime, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
+			{"/a/b/c/d", 1, 1, time.Unix(20, 0), []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
+			{"/a/b/c/e", 1, 1, expectedAtime, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
 		})
 	})
 }
