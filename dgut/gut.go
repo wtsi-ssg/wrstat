@@ -29,6 +29,7 @@ import (
 	"sort"
 
 	"github.com/wtsi-ssg/wrstat/summary"
+	"golang.org/x/exp/constraints"
 )
 
 // GUT handles group,user,type,count,size information.
@@ -38,6 +39,7 @@ type GUT struct {
 	FT    summary.DirGUTFileType
 	Count uint64
 	Size  uint64
+	Atime int64 // seconds since Unix epoch
 }
 
 // Filter can be applied to a GUT to see if it has one of the specified GIDs,
@@ -138,8 +140,8 @@ func (g *GUT) amTempAndNotFilteredJustForTemp(filter *Filter) bool {
 type GUTs []*GUT
 
 // Summary sums the count and size of all our GUT elements and returns the
-// results, along with lists of the unique UIDs, GIDs and FTs in our GUT
-// elements.
+// results, along with the oldest atime (in seconds since Unix epoch) and lists
+// of the unique UIDs, GIDs and FTs in our GUT elements.
 //
 // Provide a Filter to ignore GUT elements that do not match one of the
 // specified GIDs, one of the UIDs, and one of the FTs. If one of those
@@ -152,8 +154,10 @@ type GUTs []*GUT
 // DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored. (But
 // the FTs list will still indicate if you had temp files that passed other
 // filters.)
-func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32, []summary.DirGUTFileType) {
+func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, []uint32, []uint32, []summary.DirGUTFileType) {
 	var count, size uint64
+
+	var atime int64
 
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
@@ -170,42 +174,39 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, []uint32, []uint32, []sum
 			continue
 		}
 
-		count += gut.Count
-		size += gut.Size
-
-		uniqueUIDs[gut.UID] = true
-		uniqueGIDs[gut.GID] = true
+		addGUTToSummary(gut, &count, &size, &atime, uniqueUIDs, uniqueGIDs)
 	}
 
-	return count, size, idMapToSlice(uniqueUIDs), idMapToSlice(uniqueGIDs), ftMapToSlice(uniqueFTs)
+	return count, size, atime,
+		boolMapToSortedKeys(uniqueUIDs),
+		boolMapToSortedKeys(uniqueGIDs),
+		boolMapToSortedKeys(uniqueFTs)
 }
 
-// idMapToSlice returns a sorted slice of the given keys.
-func idMapToSlice(m map[uint32]bool) []uint32 {
-	ids := make([]uint32, len(m))
+// addGUTToSummary alters the incoming arg summary values based on the gut.
+func addGUTToSummary(gut *GUT, count, size *uint64, atime *int64, uniqueUIDs, uniqueGIDs map[uint32]bool) {
+	*count += gut.Count
+	*size += gut.Size
+
+	if *atime == 0 || gut.Atime < *atime {
+		*atime = gut.Atime
+	}
+
+	uniqueUIDs[gut.UID] = true
+	uniqueGIDs[gut.GID] = true
+}
+
+// boolMapToSortedKeys returns a sorted slice of the given keys.
+func boolMapToSortedKeys[T constraints.Ordered](m map[T]bool) []T {
+	keys := make([]T, len(m))
 	i := 0
 
-	for id := range m {
-		ids[i] = id
+	for key := range m {
+		keys[i] = key
 		i++
 	}
 
-	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 
-	return ids
-}
-
-// ftMapToSlice returns a sorted slice of the given FTs.
-func ftMapToSlice(m map[summary.DirGUTFileType]bool) []summary.DirGUTFileType {
-	fts := make([]summary.DirGUTFileType, len(m))
-	i := 0
-
-	for ft := range m {
-		fts[i] = ft
-		i++
-	}
-
-	sort.Slice(fts, func(i, j int) bool { return fts[i] < fts[j] })
-
-	return fts
+	return keys
 }

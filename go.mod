@@ -25,6 +25,7 @@ require (
 	github.com/ugorji/go/codec v1.2.7
 	github.com/wtsi-ssg/wr v0.5.5
 	go.etcd.io/bbolt v1.3.6
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	gopkg.in/tylerb/graceful.v1 v1.2.15
