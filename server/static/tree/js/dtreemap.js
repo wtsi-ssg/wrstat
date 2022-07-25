@@ -378,6 +378,7 @@ define(["d3", "cookie"], function (d3, cookie) {
         d3.select('#details_path').text(node.path);
         d3.select('#details_size').text(bytesHuman(node.size));
         d3.select('#details_count').text(countHuman(node.count));
+        d3.select('#details_atime').text(node.atime);
         d3.select('#details_groups').text(commaSep(node.groups));
         d3.select('#details_users').text(commaSep(node.users));
         d3.select('#details_filetypes').text(commaSep(node.filetypes));
