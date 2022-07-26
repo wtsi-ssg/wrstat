@@ -27,9 +27,7 @@ requirejs(['jquery', 'cookie', 'flexdatalist', 'timeago'], function ($, cookie) 
         $("#body").show()
         $("#username").text(getUsernameFromJWT(jwt));
 
-        require(["dtreemap"], function () {
-            console.log("treemap module loaded");
-        });
+        require(["dtreemap"], function () { });
     }
 
     $(document).ready(function () {
