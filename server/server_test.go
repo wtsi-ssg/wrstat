@@ -606,6 +606,10 @@ func TestServer(t *testing.T) {
 						_, err = os.Stat(path)
 						So(err, ShouldNotBeNil)
 
+						parent := filepath.Dir(path)
+						_, err = os.Stat(parent)
+						So(err, ShouldBeNil)
+
 						response, err = queryWhere(s, "")
 						So(err, ShouldBeNil)
 						So(response.Code, ShouldEqual, http.StatusOK)
