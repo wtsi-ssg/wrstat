@@ -69,14 +69,19 @@ body {
   margin-top: auto;
 }
 
-#details {
+#under {
   position: absolute;
   top: 520px;
   left: 10px;
-  width: 945px;
+  width: 960px;
   text-align: left;
   white-space: nowrap;
   font: 12px sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+#details {
   background: #ddd;
   border: solid 1px #aaa;
   border-radius: 8px;
@@ -100,6 +105,26 @@ body {
 #details_filetypes {
   max-width: 870px;
   overflow: auto;
+}
+
+#key {
+  margin-top: 15px;
+  padding: 0;
+}
+
+#key table tr td {
+  padding: 5px;
+}
+
+.key_caption {
+  padding-bottom: 5px;
+  text-align: left;
+}
+
+.key_highlight {
+  background-color: #007DC1;
+  padding: 5px;
+  border-radius: 8px;
 }
 
 form,
@@ -131,8 +156,7 @@ rect.parent,
 }
 
 .children rect.parent {
-  fill: #bbb;
-  fill-opacity: .5;
+  fill-opacity: .75;
 }
 
 .children:hover rect.child {
@@ -140,7 +164,6 @@ rect.parent,
 }
 
 .childless rect.parent {
-  fill: #ddd;
   fill-opacity: 0.5;
 }
 
@@ -156,6 +179,54 @@ text,
 
 #details:hover {
   user-select: text;
+}
+
+/*!
+ * box colours from https://colorbrewer2.org/#type=diverging&scheme=RdYlGn&n=9
+ */
+.age_2years {
+  background-color: rgba(215, 48, 39, 0.75);
+  fill: #d73027;
+}
+
+.age_1year {
+  background-color: rgba(244, 109, 67, 0.75);
+  fill: #f46d43;
+}
+
+.age_10months {
+  background-color: rgba(253, 174, 97, 0.75);
+  fill: #fdae61;
+}
+
+.age_8months {
+  background-color: rgba(254, 224, 139, 0.75);
+  fill: #fee08b;
+}
+
+.age_6months {
+  background-color: rgba(255, 255, 191, 0.75);
+  fill: #ffffbf;
+}
+
+.age_4months {
+  background-color: rgba(217, 239, 139, 0.75);
+  fill: #d9ef8b;
+}
+
+.age_2months {
+  background-color: rgba(166, 217, 106, 0.75);
+  fill: #a6d96a;
+}
+
+.age_1month {
+  background-color: rgba(102, 189, 99, 0.75);
+  fill: #66bd63;
+}
+
+.age_1week {
+  background-color: rgba(26, 152, 80, 0.75);
+  fill: #1a9850;
 }
 
 /*!

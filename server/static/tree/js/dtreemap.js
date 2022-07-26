@@ -5,8 +5,6 @@ require.config({
 })
 
 define(["d3", "cookie"], function (d3, cookie) {
-    console.log("dtreemap using d3 v" + d3.version);
-
     var current;
     let allNodes = new Map();
 
@@ -82,6 +80,36 @@ define(["d3", "cookie"], function (d3, cookie) {
         }
     }
 
+    function atimeToColorClass(node) {
+        var atime = new Date(node.atime);
+        var now = new Date();
+        var days = Math.round((now - atime) / (1000 * 60 * 60 * 24));
+
+        var c = "parent "
+
+        if (days >= 365 * 2) {
+            c += "age_2years"
+        } else if (days >= 365) {
+            c += "age_1year"
+        } else if (days >= 304) {
+            c += "age_10months"
+        } else if (days >= 243) {
+            c += "age_8months"
+        } else if (days >= 182) {
+            c += "age_6months"
+        } else if (days >= 122) {
+            c += "age_4months"
+        } else if (days >= 61) {
+            c += "age_2months"
+        } else if (days >= 30) {
+            c += "age_1month"
+        } else {
+            c += "age_1week"
+        }
+
+        return c
+    }
+
     // Compute the treemap layout recursively such that each group of siblings
     // uses the same size (1×1) rather than the dimensions of the parent cell.
     // This optimizes the layout for the current zoom state. Note that a wrapper
@@ -141,7 +169,7 @@ define(["d3", "cookie"], function (d3, cookie) {
             .call(rect);
 
         g.append("rect")
-            .classed("parent", true)
+            .attr("class", function (d) { return atimeToColorClass(d) }) // also sets parent class
             .call(rect);
 
         var titlesvg = g.append("svg")
