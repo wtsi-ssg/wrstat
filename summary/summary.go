@@ -47,14 +47,9 @@ type summaryWithAtime struct {
 }
 
 // add will increment our count and add the given size to our size. It also
-// stores the given atime if it is older than our current one. It ignores atimes
-// of 0 (eg. supply atime 0 when adding a directory, to ignore dir atimes).
+// stores the given atime if it is older than our current one.
 func (s *summaryWithAtime) add(size int64, atime int64) {
 	s.summary.add(size)
-
-	if atime == 0 {
-		return
-	}
 
 	if s.atime == 0 || atime < s.atime {
 		s.atime = atime
