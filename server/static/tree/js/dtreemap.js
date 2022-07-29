@@ -197,14 +197,9 @@ define(["d3", "cookie"], function (d3, cookie) {
         });
 
         d3.select("#filterButton").on('click', function () {
+            // console.log('getting fresh filtered data for ', data.path);
             getData(current.path, function (data) {
-                current.size = data.size;
-                current.count = data.count;
-                current.groups = data.groups;
-                current.users = data.users;
-                current.filetypes = data.filetypes;
-                current.children = data.children;
-                current.has_children = data.has_children;
+                cloneProperties(data, current)
                 setValues(current);
                 storeFilters(current);
                 transition(current);
@@ -270,19 +265,21 @@ define(["d3", "cookie"], function (d3, cookie) {
             }
 
             if (d.children && d.filters == getFilters()) {
+                // console.log('using old data for ', d.path);
                 do_transition(d)
+                updateDetails(d);
+                setFilterOptions(d);
             } else {
                 // console.log('getting fresh data for ', d.path);
                 getData(d.path, function (data) {
-                    d.children = data.children;
+                    cloneProperties(data, d);
                     setValues(d);
                     storeFilters(d);
-                    do_transition(d)
+                    do_transition(d);
+                    updateDetails(d);
+                    setFilterOptions(d);
                 });
             }
-
-            updateDetails(d);
-            setFilterOptions(d);
         }
 
         return g;
@@ -359,6 +356,17 @@ define(["d3", "cookie"], function (d3, cookie) {
     }
 
     var areaBasedOnSize = true
+
+    function cloneProperties(a, b) {
+        b.size = a.size;
+        b.count = a.count;
+        b.atime = a.atime;
+        b.groups = a.groups;
+        b.users = a.users;
+        b.filetypes = a.filetypes;
+        b.children = a.children;
+        b.has_children = a.has_children;
+    }
 
     function setValues(d) {
         if (areaBasedOnSize) {
