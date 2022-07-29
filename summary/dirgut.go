@@ -32,6 +32,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 )
 
 // DirGUTFileType is one of the special file types that the
@@ -228,7 +229,13 @@ func isTemp(path string) bool {
 // summed for the info's group, user and filetype. It will also record the
 // oldest file access time for each directory.
 //
-// If path is a directory, its access time is ignored.
+// If path is a directory, its access time is treated as now, so that when
+// interested in files that haven't been accessed in a long time, directories
+// that haven't been manually visted in a longer time don't hide the "real"
+// results.
+//
+// "Access" times are actually considered to be the greatest of atime, mtime and
+// ctime.
 //
 // NB: the "temporary" filetype is an extra filetype on top of the other normal
 // filetypes, so if you sum all the filetypes to get information about a a given
@@ -241,14 +248,30 @@ func (d *DirGroupUserType) Add(path string, info fs.FileInfo) error {
 		return errNotUnix
 	}
 
-	atime := stat.Atim.Sec
+	var atime int64
+
 	if info.IsDir() {
-		atime = 0
+		atime = time.Now().Unix()
+	} else {
+		atime = maxInt(stat.Ctim.Sec, stat.Mtim.Sec, stat.Atim.Sec)
 	}
 
 	d.addForEachDir(path, d.statToGUTKeys(stat, path), info.Size(), atime)
 
 	return nil
+}
+
+// maxInt returns the greatest of the inputs.
+func maxInt(ints ...int64) int64 {
+	var max int64
+
+	for _, i := range ints {
+		if i > max {
+			max = i
+		}
+	}
+
+	return max
 }
 
 // statToGUTKey extracts gid and uid from the stat, determines the filetype

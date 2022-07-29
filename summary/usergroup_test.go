@@ -162,6 +162,8 @@ type mockInfo struct {
 	size  int64
 	isDir bool
 	atime int64
+	mtime int64
+	ctime int64
 }
 
 func newMockInfo(uid, gid uint32, size int64, dir bool) *mockInfo {
@@ -197,6 +199,8 @@ func (m *mockInfo) Sys() interface{} {
 		Uid:  m.uid,
 		Gid:  m.gid,
 		Atim: syscall.Timespec{Sec: m.atime},
+		Mtim: syscall.Timespec{Sec: m.mtime},
+		Ctim: syscall.Timespec{Sec: m.ctime},
 	}
 }
 

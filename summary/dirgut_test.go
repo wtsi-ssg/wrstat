@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -214,9 +215,19 @@ func TestDirGUT(t *testing.T) {
 			So(err, ShouldBeNil)
 			err = dgut.Add("/a/b/c/7.cram", newMockInfoWithAtime(10, 2, 2, false, 250))
 			So(err, ShouldBeNil)
-			err = dgut.Add("/a/b/c/d/9.cram", newMockInfoWithAtime(10, 2, 2, false, 200))
+
+			mi := newMockInfoWithAtime(10, 2, 2, false, 199)
+			mi.mtime = 200
+			err = dgut.Add("/a/b/c/d/9.cram", mi)
 			So(err, ShouldBeNil)
-			err = dgut.Add("/a/b/c/8.cram", newMockInfoWithAtime(2, 10, 2, false, 300))
+
+			mi = newMockInfoWithAtime(2, 10, 2, false, 300)
+			mi.ctime = 301
+			err = dgut.Add("/a/b/c/8.cram", mi)
+			So(err, ShouldBeNil)
+
+			before := time.Now().Unix()
+			err = dgut.Add("/a/b/c/d", newMockInfoWithAtime(10, 2, 4096, true, 50))
 			So(err, ShouldBeNil)
 
 			So(dgut.store["/a/b/c"], ShouldNotBeNil)
@@ -233,7 +244,20 @@ func TestDirGUT(t *testing.T) {
 			So(dgut.store["/a/b/c"]["3\t2\t7"], ShouldBeNil)
 			So(dgut.store["/a/b/c"]["2\t10\t0"], ShouldResemble, &summaryWithAtime{summary{2, 4}, 200})
 			So(dgut.store["/a/b/c/d"]["2\t10\t0"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 200})
-			So(dgut.store["/a/b/c"]["10\t2\t0"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 300})
+			So(dgut.store["/a/b/c"]["10\t2\t0"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 301})
+
+			swa := dgut.store["/a/b"]["2\t10\t6"]
+			if swa.atime >= before {
+				swa.atime = 18
+			}
+			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18})
+
+			swa = dgut.store["/a/b/c"]["2\t10\t6"]
+			if swa.atime >= before {
+				swa.atime = 18
+			}
+			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18})
+			So(dgut.store["/a/b/c/d"]["2\t10\t6"], ShouldBeNil)
 
 			So(dgut.store["/a/b"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0})
 			So(dgut.store["/a/b"]["2\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
