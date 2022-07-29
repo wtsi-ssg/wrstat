@@ -88,7 +88,7 @@ func (p oAuthParameters) toOauthEnv(callbackURL, clientRedirect string) *oauthEn
 			RedirectURL:  callbackURL,
 			ClientID:     p.clientID,
 			ClientSecret: p.clientSecret,
-			Scopes:       []string{"openid", "profile", "email"},
+			Scopes:       []string{"openid", "email"},
 			Endpoint: oauth2.Endpoint{
 				AuthURL:   p.issuer + "/v1/authorize",
 				TokenURL:  p.issuer + "/v1/token",
