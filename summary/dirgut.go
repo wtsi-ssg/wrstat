@@ -228,7 +228,7 @@ func isTemp(path string) bool {
 // summed for the info's group, user and filetype. It will also record the
 // oldest file access time for each directory.
 //
-// If path is a directory, it is ignored.
+// If path is a directory, its access time is ignored.
 //
 // NB: the "temporary" filetype is an extra filetype on top of the other normal
 // filetypes, so if you sum all the filetypes to get information about a a given
@@ -236,16 +236,17 @@ func isTemp(path string) bool {
 // "temporary" when it's the only type you're considering, or you'll count some
 // files twice.
 func (d *DirGroupUserType) Add(path string, info fs.FileInfo) error {
-	if info.IsDir() {
-		return nil
-	}
-
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok {
 		return errNotUnix
 	}
 
-	d.addForEachDir(path, d.statToGUTKeys(stat, path), info.Size(), stat.Atim.Sec)
+	atime := stat.Atim.Sec
+	if info.IsDir() {
+		atime = 0
+	}
+
+	d.addForEachDir(path, d.statToGUTKeys(stat, path), info.Size(), atime)
 
 	return nil
 }
