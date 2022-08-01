@@ -28,15 +28,12 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"log/syslog"
 	"os"
-	"os/user"
 	"path/filepath"
 	"time"
 
-	ldap "github.com/go-ldap/ldap/v3"
 	"github.com/inconshreveable/log15"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/server"
@@ -49,8 +46,6 @@ var serverLogPath string
 var serverBind string
 var serverCert string
 var serverKey string
-var serverLDAPFQDN string
-var serverLDAPBindDN string
 var oktaOAuthIssuer string
 var oktaOAuthClientID string
 var oktaOAuthClientSecret string
@@ -69,13 +64,8 @@ answer questions about where data is on the disks. (Provide your
 Your --bind address should include the port, and for it to work with your
 --cert, you probably need to specify it as fqdn:port.
 
-The server authenticates users using LDAP. You must provide the FQDN for your
-LDAP server, eg. --ldap_server ldap.example.com, and the bind DN that you would
-supply to eg. 'ldapwhoami -D' to test user credentials, replacing the username
-part with '%s', eg. --ldap_dn 'uid=%s,ou=people,dc=example,dc=com'.
-
-It also authenticates using Okta. You must specify all of --okta_issuer,
---okta_id and --okta_secret or env vars OKTA_OAUTH2_ISSUER,
+The server authenticates users using Okta. You must specify all of
+--okta_issuer, --okta_id and --okta_secret or env vars OKTA_OAUTH2_ISSUER,
 OKTA_OAUTH2_CLIENT_ID and OKTA_OAUTH2_CLIENT_SECRET.
 
 The server will log all messages (of any severity) to syslog at the INFO level,
@@ -112,24 +102,18 @@ creation time in reports.
 			die("you must supply --key")
 		}
 
-		if serverLDAPFQDN == "" {
-			die("you must supply --ldap_server")
-		}
-
-		if serverLDAPBindDN == "" {
-			die("you must supply --ldap_dn")
-		}
+		checkOAuthArgs()
 
 		logWriter := setServerLogger(serverLogPath)
 
 		s := server.New(logWriter)
 
-		err := s.EnableAuth(serverCert, serverKey, authenticate)
+		err := s.EnableAuth(serverCert, serverKey, authenticateDeny)
 		if err != nil {
 			die("failed to enable authentication: %s", err)
 		}
 
-		enableOktaLogin(s, serverBind)
+		s.AddOIDCRoutes(serverBind, oktaOAuthIssuer, oktaOAuthClientID, oktaOAuthClientSecret)
 
 		s.WhiteListGroups(whiteLister)
 
@@ -177,10 +161,6 @@ func init() {
 		"path to certificate file")
 	serverCmd.Flags().StringVarP(&serverKey, "key", "k", "",
 		"path to key file")
-	serverCmd.Flags().StringVarP(&serverLDAPFQDN, "ldap_server", "s", "",
-		"fqdn of your ldap server")
-	serverCmd.Flags().StringVarP(&serverLDAPBindDN, "ldap_dn", "l", "",
-		"ldap bind dn, with username replaced with %s")
 	serverCmd.Flags().StringVar(&oktaOAuthIssuer, "okta_issuer", os.Getenv("OKTA_OAUTH2_ISSUER"),
 		"URL for Okta Oauth")
 	serverCmd.Flags().StringVar(&oktaOAuthClientID, "okta_id", os.Getenv("OKTA_OAUTH2_CLIENT_ID"),
@@ -195,12 +175,8 @@ func init() {
 	})
 }
 
-// enableOktaLogin adds okta endpoints to enable okta login, ensuring the
-// necessary args or env vars have been supplied. Dies if not.
-//
-// You must also supply the server domain:port which will be used in the Okta
-// callback URLs.
-func enableOktaLogin(s *server.Server, addr string) {
+// checkOAuthArgs ensures we have the necessary args/ env vars for Okta auth.
+func checkOAuthArgs() {
 	if oktaOAuthClientSecret == "" {
 		oktaOAuthClientSecret = os.Getenv("OKTA_OAUTH2_CLIENT_SECRET")
 	}
@@ -208,8 +184,6 @@ func enableOktaLogin(s *server.Server, addr string) {
 	if oktaOAuthIssuer == "" || oktaOAuthClientID == "" || oktaOAuthClientSecret == "" {
 		die("you must specify all info needed for Okta logins; see --help")
 	}
-
-	s.AddOIDCRoutes(addr, oktaOAuthIssuer, oktaOAuthClientID, oktaOAuthClientSecret)
 }
 
 // setServerLogger makes our appLogger log to the given path if non-blank,
@@ -247,43 +221,10 @@ func (w *log15Writer) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// authenticate verifies the user's password against LDAP, and if correct
-// returns true along with all the user's UID.
-func authenticate(username, password string) (bool, string) {
-	err := checkLDAPPassword(username, password)
-	if err != nil {
-		return false, ""
-	}
-
-	uid, err := getUsersUID(username)
-	if err != nil {
-		warn(fmt.Sprintf("failed to get UID for %s: %s", username, err))
-
-		return false, ""
-	}
-
-	return true, uid
-}
-
-// checkLDAPPassword checks with LDAP if the given password is valid for the
-// given username. Returns nil if valid, error otherwise.
-func checkLDAPPassword(username, password string) error {
-	l, err := ldap.DialURL(fmt.Sprintf("ldaps://%s:636", serverLDAPFQDN))
-	if err != nil {
-		return err
-	}
-
-	return l.Bind(fmt.Sprintf(serverLDAPBindDN, username), password)
-}
-
-// getUsersUID returns the uid for the given username.
-func getUsersUID(username string) (string, error) {
-	u, err := user.Lookup(username)
-	if err != nil {
-		return "", err
-	}
-
-	return u.Uid, nil
+// authenticateDeny always returns false, since we don't do basic auth, but Okta
+// instead.
+func authenticateDeny(_, _ string) (bool, string) {
+	return false, ""
 }
 
 var whiteListGIDs = map[string]struct{}{

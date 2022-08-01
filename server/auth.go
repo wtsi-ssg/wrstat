@@ -54,18 +54,18 @@ const (
 // EnableAuth adds the /rest/v1/jwt POST and GET endpoints to the REST API.
 //
 // The /rest/v1/jwt POST endpoint requires the username and password parameters
-// in a form or as JSON.
-// It passes these to the given auth callback, and if it returns true, a JWT is
-// returned (as a JSON string) in the response that contains Username and UIDs
-// (comma separated strings).
+// in a form or as JSON. It passes these to the given auth callback, and if it
+// returns true, a JWT is returned (as a JSON string) in the response that
+// contains Username and UIDs (comma separated strings).
 //
-// Alternatively you can POST with a an oktaCookieName cookie with a value of
-// the okta auth code from the auth-code endpoint. If the code is valid,
-// likewise returns a JWT.
+// Alternatively, you can POST with an oktaCookieName cookie with a value of the
+// okta auth code from the auth-code endpoint. If the code is valid, likewise
+// returns a JWT. You'll also need to call AddOIDCRoutes() for this scheme to
+// work.
 //
 // Queries to endpoints that need authorisation should include the JWT in the
-// authorization header as a bearer token. Those endpoints can be implemented
-// by extracting the *User information out of the JWT using getUser().
+// authorization header as a bearer token. Those endpoints can be implemented by
+// extracting the *User information out of the JWT using getUser().
 //
 // JWTs are signed and verified using the given cert and key files.
 //

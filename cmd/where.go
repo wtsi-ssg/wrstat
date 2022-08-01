@@ -31,18 +31,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/dustin/go-humanize" //nolint:misspell
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/server"
-	"golang.org/x/term"
 )
 
 const (
@@ -119,10 +116,9 @@ If the wrstat server is using an untrusted certificate, the path to its
 certificate can be provided with --cert, or the WRSTAT_SERVER_CERT environment
 variable, to force trust in it.
 
-On first usage, you will be asked to provide your (LDAP) password to
-authenticate with the server. The server will find out what unix groups you are
-allowed to know about, and a JWT with this information will be stored in your
-home directory at ~/.wrstat.jwt.
+On first usage, you will be asked to login via Okta to authenticate with the
+server. A JWT with your verified username will be stored in your home directory
+at ~/.wrstat.jwt.
 
 When you run this, you will effectively have a hardcoded --groups filter
 corresponding to your permissions, though you can restrict it further to a
@@ -130,9 +126,9 @@ subset of the groups you are allowed to see. (You will by default see
 information about files created by all users that are group owned by the groups
 you belong to, but can also filter on --users as well if desired.)
 
-With the JWT in place, you won't have to provide your password again, until it
-expires. Expiry time is 5 days, but the JWT is automatically refreshed every
-time you use this, with refreshes possible up to 5 days after expiry.
+With the JWT in place, you won't have to login again, until it expires. Expiry
+time is 5 days, but the JWT is automatically refreshed every time you use this,
+with refreshes possible up to 5 days after expiry.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		setCLIFormat()
@@ -316,32 +312,9 @@ func jwtStoragePath() (string, error) {
 	return filepath.Join(dir, jwtBasename), nil
 }
 
-// login will prompt the user to select a login method (either Okta or password).
-// It will (through either method) return the JWT for the user.
-func login(url, cert string) (string, error) {
-	// 	cliPrint(`Select one of the following options:
-
-	// 1) Okta Login (recommended)
-	// 2) LDAP Login
-	// :`)
-
-	// 	var selectedOption string
-
-	// 	fmt.Scanln(&selectedOption)
-
-	// 	switch selectedOption {
-	// 	case "1":
-	// 		return userGetsOktaLoginCode(url, cert)
-	// 	case "2":
-	return traditionalPasswordLogin(url, cert)
-	// }
-
-	// return login(url, cert)
-}
-
-// userGetsOktaLoginCode gives the user a URL to visit to log in using Okta,
+// login gives the user a URL to visit to log in using Okta,
 // which will give them back a code to paste here to authenticate.
-func userGetsOktaLoginCode(url, cert string) (string, error) {
+func login(url, cert string) (string, error) {
 	cliPrint("Login at this URL, and then copy and paste the given code back here: https://%s%s\n",
 		url, server.EndpointOIDCCLILogin)
 	cliPrint("Auth Code:")
@@ -351,25 +324,6 @@ func userGetsOktaLoginCode(url, cert string) (string, error) {
 	fmt.Scanln(&authCode)
 
 	return server.LoginWithOKTA(url, cert, authCode)
-}
-
-// traditionalPasswordLogin prompts the user for a password to log them in.
-func traditionalPasswordLogin(url, cert string) (string, error) {
-	user, err := user.Current()
-	if err != nil {
-		die("couldn't get user: %s", err)
-	}
-
-	cliPrint("Password: ")
-
-	passwordB, err := term.ReadPassword(syscall.Stdin)
-	if err != nil {
-		die("couldn't read password: %s", err)
-	}
-
-	cliPrint("\n")
-
-	return server.Login(url, cert, user.Username, string(passwordB))
 }
 
 // storeJWT writes the given token string to a private file in user's home dir.
