@@ -38,6 +38,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -63,6 +64,10 @@ const (
 	oauth2AuthChallengeMethodKey = "code_challenge_method"
 	oauth2AuthChallengeMethod    = "S256"
 	oauth2JWTClaimKey            = "aud"
+	oidcWellKnownURL             = "/.well-known/openid-configuration"
+	oidcAuthKey                  = "authorization_endpoint"
+	oidcTokenKey                 = "token_endpoint"
+	oidcUserKey                  = "userinfo_endpoint"
 	csrfStateLength              = 16
 	pkceCodeVerifierLength       = 50
 
@@ -71,18 +76,25 @@ const (
 	ErrOIDCUnavailableCode = Error("the code was not returned or is not accessible")
 	ErrOIDCMissingToken    = Error("id token missing from OAuth2 token")
 	ErrJSONValueNotString  = Error("non-string value in JSON field")
+	ErrOIDCBadMeta         = Error("issuer meta information not found")
 )
 
 // oAuthParameters are used during AddOIDCRoutes() to create oauthEnv.
 type oAuthParameters struct {
-	issuer       string
-	clientID     string
-	clientSecret string
+	issuer           string
+	userinfoEndpoint string
+	clientID         string
+	clientSecret     string
+	logger           *log.Logger
 }
 
 // toOauthEnv returns an oauthEnv with the appropriate values based on defaults,
 // the paramenters in ourselves and the given callack and redirect URLs.
 func (p oAuthParameters) toOauthEnv(callbackURL, clientRedirect string) *oauthEnv {
+	authURL, tokenURL, userURL := p.determineURLs()
+
+	p.userinfoEndpoint = userURL
+
 	return &oauthEnv{
 		Config: oauth2.Config{
 			RedirectURL:  callbackURL,
@@ -90,15 +102,83 @@ func (p oAuthParameters) toOauthEnv(callbackURL, clientRedirect string) *oauthEn
 			ClientSecret: p.clientSecret,
 			Scopes:       []string{"openid", "email"},
 			Endpoint: oauth2.Endpoint{
-				AuthURL:   p.issuer + "/v1/authorize",
-				TokenURL:  p.issuer + "/v1/token",
+				AuthURL:   authURL,
+				TokenURL:  tokenURL,
 				AuthStyle: oauth2.AuthStyleInParams,
 			},
 		},
 		params:         p,
 		sessionStore:   sessions.NewCookieStore([]byte(oktaCookieName)),
 		clientRedirect: clientRedirect,
+		logger:         p.logger,
 	}
+}
+
+// determineURLs returns the authorize, token and userinfo urls based on our
+// issuer. If issuer/.well-known/openid-configuration doesn't exist or can't be
+// parsed, assumes some standard urls.
+func (p oAuthParameters) determineURLs() (string, string, string) {
+	authURL, tokenURL, userURL, err := getURLsFromWellKnown(p.issuer)
+	if err != nil {
+		return p.issuer + "/v1/authorize", p.issuer + "/v1/token", p.issuer + "/v1/userinfo"
+	}
+
+	return authURL, tokenURL, userURL
+}
+
+// getURLsFromWellKnown gets the auth, token and userinfo URLs from the well
+// known URL at the given issuer url.
+func getURLsFromWellKnown(issuer string) (string, string, string, error) {
+	meta, err := fetchOIDCMetaData(issuer + oidcWellKnownURL)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	authURL, err := extractStringFromOIDCMeta(meta, oidcAuthKey)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	tokenURL, err := extractStringFromOIDCMeta(meta, oidcTokenKey)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	userURL, err := extractStringFromOIDCMeta(meta, oidcUserKey)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return authURL, tokenURL, userURL, nil
+}
+
+// fetchOIDCMetaData tries to fetch the given url and decode it as a json map.
+func fetchOIDCMetaData(url string) (map[string]interface{}, error) {
+	resp, err := http.Get(url) //nolint:gosec
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	metadata := make(map[string]interface{})
+	err = json.NewDecoder(resp.Body).Decode(&metadata)
+
+	return metadata, err
+}
+
+// extractStringFromOIDCMeta extracts the given key from the given map.
+func extractStringFromOIDCMeta(meta map[string]interface{}, key string) (string, error) {
+	val, found := meta[key]
+	if !found {
+		return "", ErrOIDCBadMeta
+	}
+
+	str, ok := val.(string)
+	if !ok {
+		return "", ErrOIDCBadMeta
+	}
+
+	return str, nil
 }
 
 // AddOIDCRoutes creates the OAuth environments for both the web app and the CLI
@@ -110,6 +190,7 @@ func (s *Server) AddOIDCRoutes(addr, issuer, clientID, clientSecret string) {
 		issuer:       issuer,
 		clientID:     clientID,
 		clientSecret: clientSecret,
+		logger:       s.logger,
 	}
 
 	s.webOAuth = params.toOauthEnv(ClientProtocol+addr+EndpointAuthCallback, "/")
@@ -142,6 +223,7 @@ type oauthEnv struct {
 	params         oAuthParameters
 	sessionStore   *sessions.CookieStore
 	clientRedirect string
+	logger         *log.Logger
 }
 
 // HandleOIDCCallback is the handler function for any callback in OAuth. It will
@@ -230,6 +312,7 @@ func (o *oauthEnv) getAccessToken(c *gin.Context, session *sessions.Session) str
 
 	_, err = o.params.verifyToken(rawIDToken)
 	if err != nil {
+		o.logger.Printf("raw id token: %s", rawIDToken)
 		c.AbortWithError(http.StatusForbidden, err) //nolint:errcheck
 
 		return ""
@@ -325,13 +408,13 @@ func (p oAuthParameters) verifyToken(t string) (*verifier.Jwt, error) {
 func (s *Server) extractEmailFromOktaSession(r *http.Request) (string, error) {
 	session, err := s.webOAuth.sessionStore.Get(r, oktaCookieName)
 	if err != nil || session.Values[oauth2AccessTokenKey] == nil || session.Values[oauth2AccessTokenKey] == "" {
-		return "", nil //nolint:nilerr
+		return "", nil
 	}
 
 	ctx, cnlFunc := context.WithTimeout(context.Background(), time.Minute)
 	defer cnlFunc()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", s.webOAuth.params.issuer+"/v1/userinfo", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", s.webOAuth.params.userinfoEndpoint, nil)
 	if err != nil {
 		return "", err
 	}
@@ -344,7 +427,7 @@ func (s *Server) extractEmailFromOktaSession(r *http.Request) (string, error) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Add("Accept", "application/json")
 
-	return extractEmailFromOktaUserClaims(req)
+	return s.extractEmailFromOktaUserClaims(req)
 }
 
 // OktaUser is used to json.Unmarshal Okta user claims.
@@ -354,7 +437,7 @@ type OktaUser struct {
 
 // extractEmailFromOktaUserClaims does the given request, interpreting the body
 // as JSON, and extracts the email claim.
-func extractEmailFromOktaUserClaims(r *http.Request) (string, error) {
+func (s *Server) extractEmailFromOktaUserClaims(r *http.Request) (string, error) {
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
 		return "", err
