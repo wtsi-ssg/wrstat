@@ -18,10 +18,13 @@ body {
 #login-button {
   background-color: #007DC1;
   color: white;
+}
+
+button {
   cursor: pointer;
 }
 
-#login-button:hover {
+button:hover {
   cursor: pointer;
 }
 
