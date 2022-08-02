@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2021-2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -39,6 +39,7 @@ import (
 
 	"github.com/klauspost/pgzip"
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/dgut"
 )
 
 const bytesInMB = 1000000
@@ -46,11 +47,15 @@ const pgzipWriterBlocksMultiplier = 2
 const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
 const combineGroupOutputFileBasename = "combine.bygroup"
+const combineDGUTOutputFileBasename = "combine.dgut.db"
 const combineLogOutputFileBasename = "combine.log.gz"
 const numSummaryColumns = 2
+const numSummaryColumnsDGUT = 3
 const groupSumCols = 2
 const userGroupSumCols = 3
 const intBase = 10
+const dgutSumCols = 4
+const dgutStoreBatchSize = 100000
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
@@ -67,6 +72,9 @@ compressed and placed at the root of the output directory in a file called
 'combine.byusergroup.gz'.
 
 The same applies to the *.log files, being called 'combine.log.gz'.
+
+The *.dugt files will be turned in to databases in a directory
+'combine.dgut.db'.
 
 The *.bygroup files are merged but not compressed and called 'combine.bygroup'.
 
@@ -100,6 +108,12 @@ you supplied 'wrstat walk'.`,
 		go func() {
 			defer wg.Done()
 			mergeGroupFiles(sourceDir)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mergeDGUTFilesToDB(sourceDir)
 		}()
 
 		wg.Add(1)
@@ -319,7 +333,7 @@ func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
 func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
 	zw, closeOutput := compressOutput(output)
 
-	if err := mergeUserGroupStreamToOutput(data, zw); err != nil {
+	if err := mergeSummaryLines(data, userGroupSumCols, numSummaryColumns, sumCountAndSize, zw); err != nil {
 		return err
 	}
 
@@ -328,25 +342,19 @@ func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) e
 	return nil
 }
 
-// mergeUserGroupStreamToOutput merges pre-sorted (pre-merged) usergroup data
-// (eg. from a `sort -m` of .byusergroup files), summing consecutive lines with
-// the first 3 columns, and outputting the results.
-func mergeUserGroupStreamToOutput(data io.ReadCloser, output io.Writer) error {
-	return mergeSummaryLines(data, userGroupSumCols, output)
-}
-
 // mergeSummaryLines merges pre-sorted (pre-merged) summary data (eg. from a
 // `sort -m` of .by* files), summing consecutive lines that have the same values
 // in the first matchColumns columns, and outputting the results.
-func mergeSummaryLines(data io.ReadCloser, matchColumns int, output io.Writer) error {
+func mergeSummaryLines(data io.ReadCloser, matchColumns, summaryColumns int,
+	mslm matchingSummaryLineMerger, output io.Writer) error {
 	scanner := bufio.NewScanner(data)
-	previous := make([]string, matchColumns+numSummaryColumns)
+	previous := make([]string, matchColumns+summaryColumns)
 
 	for scanner.Scan() {
 		current := strings.Split(scanner.Text(), "\t")
 
 		if summaryLinesMatch(matchColumns, previous, current) {
-			mergeMatchingSummaryLines(previous, current)
+			mslm(summaryColumns, previous, current)
 
 			continue
 		}
@@ -377,16 +385,35 @@ func summaryLinesMatch(matchColumns int, a, b []string) bool {
 	return true
 }
 
-// mergeMatchingSummaryLines will sum the second to last element of a and b and
-// store the result in a[penultimate], and likewise for the last element in
-// a[last]. This corresponds to summing the file count and size columns of 2
-// lines in a by* file.
-func mergeMatchingSummaryLines(a, b []string) {
-	last := len(a) - 1
+// matchingSummaryLineMerger is a func used by mergeSummaryLines() to handle
+// summary columns when match columns match. a is the previous columns, b is the
+// current. a should have its summary columns altered to merge information from
+// b. Cols is the number of summary columns (the columns that contain info to
+// eg. sum).
+type matchingSummaryLineMerger func(cols int, a, b []string)
+
+// sumCountAndSize is a matchingSummaryLineMerger that, given cols 2,  will sum
+// the second to last element of a and b and store the result in a[penultimate],
+// and likewise for the last element in a[last]. This corresponds to summing the
+// file count and size columns of 2 lines in a by* file.
+func sumCountAndSize(cols int, a, b []string) {
+	last := len(a) - (cols - 1)
 	penultimate := last - 1
 
 	a[penultimate] = addNumberStrings(a[penultimate], b[penultimate])
 	a[last] = addNumberStrings(a[last], b[last])
+}
+
+// sumCountAndSizeAndKeepOldestAtime needs cols 3, and is like sumCountAndSize,
+// but keeps the oldest atime (smallest number) found in the last column.
+func sumCountAndSizeAndKeepOldestAtime(cols int, a, b []string) {
+	sumCountAndSize(cols, a, b)
+
+	last := len(a) - 1
+
+	if atoi(b[last]) < atoi(a[last]) {
+		a[last] = b[last]
+	}
 }
 
 // addNumberStrings treats a and b as ints, adds them together, and returns the
@@ -435,13 +462,80 @@ func mergeGroups(inputs []string, output *os.File) error {
 
 // mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
 // (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
-// the first 2 columns, and outputting the results.
+// the same first 2 columns, and outputting the results.
 func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
-	if err := mergeSummaryLines(data, groupSumCols, output); err != nil {
+	if err := mergeSummaryLines(data, groupSumCols, numSummaryColumns, sumCountAndSize, output); err != nil {
 		return err
 	}
 
 	return output.Close()
+}
+
+// mergeDGUTFilesToDB finds and merges the dgut files and then stores the
+// information in a database.
+func mergeDGUTFilesToDB(sourceDir string) {
+	paths := findDGUTFilePaths(sourceDir)
+	outputDir := createCombineDGUTOutputDir(sourceDir)
+
+	err := mergeDGUTAndStoreInDB(paths, outputDir)
+	if err != nil {
+		die("failed to merge the dgut files: %s", err)
+	}
+}
+
+// findDGUTFilePaths returns files in the given dir named with a '.dgut' suffix.
+func findDGUTFilePaths(dir string) []string {
+	return findFilePathsInDir(dir, statDGUTSummaryOutputFileSuffix)
+}
+
+// createCombineDGUTOutputDir creates a dgut output dir in the given dir.
+// Returns the path to the created directory. If it already existed, will delete
+// it first, since we can't store to a pre-existing db.
+func createCombineDGUTOutputDir(dir string) string {
+	path := filepath.Join(dir, combineDGUTOutputFileBasename)
+
+	os.RemoveAll(path)
+
+	err := os.MkdirAll(path, userOnlyPerm)
+	if err != nil {
+		die("failed to create output dir: %s", err)
+	}
+
+	return path
+}
+
+// mergeDGUTAndStoreInDB merges pre-sorted dgut data, summing consecutive lines
+// with the same first 4 columns, and outputs the results to an embedded
+// database.
+func mergeDGUTAndStoreInDB(inputs []string, outputDir string) error {
+	sortMergeOutput, cleanup, err := mergeSortedFiles(inputs)
+	if err != nil {
+		return err
+	}
+
+	db := dgut.NewDB(outputDir)
+	reader, writer := io.Pipe()
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- db.Store(reader, dgutStoreBatchSize)
+	}()
+
+	if err = mergeSummaryLines(sortMergeOutput, dgutSumCols,
+		numSummaryColumnsDGUT, sumCountAndSizeAndKeepOldestAtime, writer); err != nil {
+		return err
+	}
+
+	if err = writer.Close(); err != nil {
+		return err
+	}
+
+	err = <-errCh
+	if err != nil {
+		return err
+	}
+
+	return cleanup()
 }
 
 // mergeAndCompressLogFiles finds and merges the log files and compresses the
@@ -471,9 +565,8 @@ func mergeLogAndCompress(inputs []string, output *os.File) error {
 	return mergeFilesAndStreamToOutput(inputs, output, mergeLogStreamToCompressedFile)
 }
 
-// mergeLogStreamToCompressedFile merges pre-sorted (pre-merged) log data (eg.
-// from a `sort -m` of .byusergroup files), outputting the results to a file,
-// compressed.
+// mergeLogStreamToCompressedFile combines log data, outputting the results to a
+// file, compressed.
 func mergeLogStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
 	zw, closeOutput := compressOutput(output)
 
