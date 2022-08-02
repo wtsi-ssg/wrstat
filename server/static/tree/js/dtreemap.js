@@ -48,6 +48,32 @@ define(["d3", "cookie"], function (d3, cookie) {
         .attr("y", 6 - margin.top)
         .attr("dy", ".75em");
 
+    let hash = window.location.hash.substring(1);
+    let hasher = new URL('https://hasher.com')
+    hasher.search = hash
+
+    function getURLParam(name) {
+        return hasher.searchParams.get(name)
+    }
+
+    function setURLParams() {
+        hasher.searchParams.set('path', current.path);
+
+        groups = d3.select('#groups_list').property('value');
+        hasher.searchParams.set('groups', groups);
+
+        users = d3.select('#users_list').property('value');
+        hasher.searchParams.set('users', users);
+
+        fts = d3.select('#ft_list').property('value');
+        hasher.searchParams.set('fts', fts);
+
+        area = d3.select('input[name="area"]:checked').property("value");
+        hasher.searchParams.set('area', area);
+
+        window.location.hash = hasher.searchParams;
+    }
+
     function initialize(root) {
         root.x = root.y = 0;
         root.dx = width;
@@ -70,6 +96,17 @@ define(["d3", "cookie"], function (d3, cookie) {
         filterIDs.forEach(id => str += id + ':' + filters.get(id) + ';');
         return str;
     }
+
+    var updateFilters = function ($target) {
+        $target.each(function () {
+            filters.set($(this).attr('id'), $(this).val());
+        });
+    };
+
+    $filter_inputs
+        .on('change:flexdatalist', function (e, set) {
+            updateFilters($(this));
+        });
 
     function storeFilters(node) {
         currentFilters = getFilters();
@@ -202,20 +239,10 @@ define(["d3", "cookie"], function (d3, cookie) {
                 cloneProperties(data, current)
                 setValues(current);
                 storeFilters(current);
+                setURLParams();
                 transition(current);
             });
         });
-
-        var updateFilters = function ($target) {
-            $target.each(function () {
-                filters.set($(this).attr('id'), $(this).val());
-            });
-        };
-
-        $filter_inputs
-            .on('change:flexdatalist', function (e, set) {
-                updateFilters($(this));
-            });
 
         function mouseover(g) {
             showDetails(g)
@@ -268,7 +295,8 @@ define(["d3", "cookie"], function (d3, cookie) {
                 // console.log('using old data for ', d.path);
                 do_transition(d)
                 updateDetails(d);
-                setFilterOptions(d);
+                setAllFilterOptions(d);
+                setURLParams();
             } else {
                 // console.log('getting fresh data for ', d.path);
                 getData(d.path, function (data) {
@@ -277,17 +305,13 @@ define(["d3", "cookie"], function (d3, cookie) {
                     storeFilters(d);
                     do_transition(d);
                     updateDetails(d);
-                    setFilterOptions(d);
+                    setAllFilterOptions(d);
+                    setURLParams();
                 });
             }
         }
 
         return g;
-    }
-
-    function text(text) {
-        text.attr("x", function (d) { return x(d.x) + 6; })
-            .attr("y", function (d) { return y(d.y) + 6; });
     }
 
     function rect(rect) {
@@ -334,6 +358,8 @@ define(["d3", "cookie"], function (d3, cookie) {
             if (r.status === 401) {
                 cookie.remove("jwt", { path: "" });
                 window.location.reload();
+            } else if (r.status === 400) {
+                throw ("bad query")
             } else {
                 return r.json()
             }
@@ -347,7 +373,6 @@ define(["d3", "cookie"], function (d3, cookie) {
             else {
                 d3.select("#error").text("error: no results")
             }
-
         }).catch(e => {
             d3.select("#spinner").style("display", "none");
             d3.select("#error").text("error: " + e)
@@ -429,13 +454,13 @@ define(["d3", "cookie"], function (d3, cookie) {
         showCurrentDetails();
     }
 
-    function setFilterOptions(data) {
-        setFilter('#groups_list', data.groups);
-        setFilter('#users_list', data.users);
-        setFilter('#ft_list', data.filetypes);
+    function setAllFilterOptions(data) {
+        setFilterOptions('#groups_list', data.groups);
+        setFilterOptions('#users_list', data.users);
+        setFilterOptions('#ft_list', data.filetypes);
     }
 
-    function setFilter(id, elements) {
+    function setFilterOptions(id, elements) {
         var select = d3.select(id);
 
         select
@@ -455,13 +480,63 @@ define(["d3", "cookie"], function (d3, cookie) {
         $('#timestamp').timeago();
     }
 
-    getData("/", function (data) {
+    let path = "/";
+    let groups;
+    let users;
+    let fts;
+
+    function setPageDefaultsFromHash() {
+        path = getURLParam('path')
+        if (!path || !path.startsWith("/")) {
+            path = "/"
+        }
+
+        groups = getURLParam('groups')
+        if (groups) {
+            d3.select('#groups_list').property('value', groups);
+        }
+
+        users = getURLParam('users')
+        if (users) {
+            d3.select('#users_list').property('value', users);
+        }
+
+        fts = getURLParam('fts')
+        if (fts) {
+            d3.select('#ft_list').property('value', fts);
+        }
+
+        let area = getURLParam('area')
+        if (area) {
+            $("#" + area).prop("checked", true);
+            areaBasedOnSize = area == "size"
+        }
+
+        return path
+    }
+
+    setPageDefaultsFromHash()
+
+    getData(path, function (data) {
         initialize(data);
         setValues(data);
         layout(data);
         display(data);
         updateDetails(data);
-        setFilterOptions(data);
+        setAllFilterOptions(data);
+
+        if (groups) {
+            $('#groups_list').val(groups)
+        }
+
+        if (users) {
+            $('#users_list').val(users)
+        }
+
+        if (fts) {
+            $('#ft_list').val(fts)
+        }
+
         storeFilters(data);
         setTimestamp(data);
     });
