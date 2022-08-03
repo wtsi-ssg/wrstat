@@ -8,7 +8,7 @@ define(["d3", "cookie"], function (d3, cookie) {
     var current;
     let allNodes = new Map();
 
-    var margin = { top: 20, right: 0, bottom: 0, left: 0 },
+    var margin = { top: 22, right: 0, bottom: 0, left: 0 },
         width = 960,
         height = 500 - margin.top - margin.bottom,
         transitioning;
@@ -44,8 +44,9 @@ define(["d3", "cookie"], function (d3, cookie) {
         .attr("height", margin.top);
 
     grandparent.append("text")
-        .attr("x", 6)
+        .attr("x", width - 6)
         .attr("y", 6 - margin.top)
+        .attr("text-anchor", "end")
         .attr("dy", ".75em");
 
     let hash = window.location.hash.substring(1);
@@ -170,16 +171,17 @@ define(["d3", "cookie"], function (d3, cookie) {
     }
 
     function display(d) {
-        grandparent
+        let gt = grandparent
             .datum(d.parent)
             .on("click", transition)
-            .select("text")
-            .text(d.path);
+            .select("text");
 
         if (d.path == "/") {
             grandparent.style("cursor", "default")
+            gt.text('')
         } else {
             grandparent.style("cursor", "pointer")
+            gt.text('↵')
         }
 
         var g1 = svg.insert("g", ".grandparent")
@@ -253,6 +255,13 @@ define(["d3", "cookie"], function (d3, cookie) {
         }
 
         function transition(d) {
+            if (!d && current.path !== "/") {
+                parent = current.path.substring(0, current.path.lastIndexOf('/'));
+                current.path = parent;
+                setURLParams();
+                window.location.reload(false);
+            }
+
             if (transitioning || !d) return;
             transitioning = true;
 
@@ -297,6 +306,7 @@ define(["d3", "cookie"], function (d3, cookie) {
                 updateDetails(d);
                 setAllFilterOptions(d);
                 setURLParams();
+                createBreadcrumbs(d.path);
             } else {
                 // console.log('getting fresh data for ', d.path);
                 getData(d.path, function (data) {
@@ -369,6 +379,7 @@ define(["d3", "cookie"], function (d3, cookie) {
                 d3.select("#error").text("")
                 allNodes.set(d.path, d);
                 loadFunction(d);
+                createBreadcrumbs(d.path);
             }
             else {
                 d3.select("#error").text("error: no results")
@@ -515,7 +526,45 @@ define(["d3", "cookie"], function (d3, cookie) {
         return path
     }
 
-    setPageDefaultsFromHash()
+    setPageDefaultsFromHash();
+
+    function createBreadcrumbs(path) {
+        $("#breadcrumbs").empty();
+
+        if (path === "/") {
+            $("#breadcrumbs").append('<span></span><button class="dead">/</button>');
+            return;
+        }
+
+        let dirs = path.split("/");
+        dirs[0] = "/";
+        let sep = "";
+        let max = dirs.length - 1;
+
+        for (var i = 0; i <= max; i++) {
+            let dir = dirs[i];
+
+            if (i > 1) {
+                sep = "/"
+            }
+
+            $("#breadcrumbs").append('<span>' + sep + '</span>');
+
+            if (i < max) {
+                let this_id = 'crumb' + i;
+                $("#breadcrumbs").append('<button id="' + this_id + '">' + dir + '</button>');
+
+                let this_path = "/" + dirs.slice(1, i + 1).join("/");
+                $('#' + this_id).click(function () {
+                    current.path = this_path;
+                    setURLParams();
+                    window.location.reload(false);
+                });
+            } else {
+                $("#breadcrumbs").append('<span>' + dir + '</span>');
+            }
+        }
+    }
 
     getData(path, function (data) {
         initialize(data);

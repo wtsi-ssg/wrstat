@@ -34,6 +34,37 @@ button:hover {
   background: #ddd;
 }
 
+#breadcrumbs {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  height: 18px;
+  padding: 2px;
+}
+
+#breadcrumbs button {
+  padding: 1px;
+  height: 18px;
+  font-size: 12px;
+  user-select: none;
+}
+
+#breadcrumbs span {
+  padding: 1px;
+  font-size: 12px;
+  user-select: none;
+}
+
+.dead {
+  border: 2px solid orange;
+  background-color: orange;
+  cursor: default;
+}
+
+.dead:hover {
+  cursor: default;
+}
+
 #sidebar {
   z-index: 1;
   font-weight: 300;

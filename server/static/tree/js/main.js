@@ -84,6 +84,11 @@ requirejs(['jquery', 'cookie', 'flexdatalist', 'timeago'], function ($, cookie) 
         window.location.reload();
     }
 
+    $("#resetButton").click(() => {
+        window.location.hash = '';
+        window.location.reload(false);
+    });
+
     $("#logoutButton").click(() => {
         logout()
     });
