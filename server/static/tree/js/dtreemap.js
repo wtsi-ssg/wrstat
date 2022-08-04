@@ -135,8 +135,8 @@ define(["d3", "cookie"], function (d3, cookie) {
             c += "age_8months"
         } else if (days >= 182) {
             c += "age_6months"
-        } else if (days >= 122) {
-            c += "age_4months"
+        } else if (days >= 91) {
+            c += "age_3months"
         } else if (days >= 61) {
             c += "age_2months"
         } else if (days >= 30) {
