@@ -60,17 +60,19 @@ define(["d3", "cookie"], function (d3, cookie) {
     function setURLParams() {
         hasher.searchParams.set('path', current.path);
 
-        groups = d3.select('#groups_list').property('value');
+        let groups = d3.select('#groups_list').property('value');
         hasher.searchParams.set('groups', groups);
 
-        users = d3.select('#users_list').property('value');
+        let users = d3.select('#users_list').property('value');
         hasher.searchParams.set('users', users);
 
-        fts = d3.select('#ft_list').property('value');
+        let fts = d3.select('#ft_list').property('value');
         hasher.searchParams.set('fts', fts);
 
-        area = d3.select('input[name="area"]:checked').property("value");
+        let area = d3.select('input[name="area"]:checked').property("value");
         hasher.searchParams.set('area', area);
+
+        hasher.searchParams.set('age', age_filter);
 
         window.location.hash = hasher.searchParams;
     }
@@ -92,9 +94,12 @@ define(["d3", "cookie"], function (d3, cookie) {
     var filterIDs = ['groups_list', 'users_list', 'ft_list'];
     let filters = new Map();
 
+    let age_filter = ""
+
     function getFilters() {
         str = "";
         filterIDs.forEach(id => str += id + ':' + filters.get(id) + ';');
+        str += "age:" + age_filter;
         return str;
     }
 
@@ -118,12 +123,15 @@ define(["d3", "cookie"], function (d3, cookie) {
         }
     }
 
-    function atimeToColorClass(node) {
-        var atime = new Date(node.atime);
-        var now = new Date();
-        var days = Math.round((now - atime) / (1000 * 60 * 60 * 24));
+    function atimeToDays(node) {
+        let atime = new Date(node.atime);
+        let now = new Date();
+        return Math.round((now - atime) / (1000 * 60 * 60 * 24));
+    }
 
-        var c = "parent "
+    function atimeToColorClass(node) {
+        let days = atimeToDays(node);
+        let c = "parent "
 
         if (days >= 365 * 2) {
             c += "age_2years"
@@ -146,6 +154,11 @@ define(["d3", "cookie"], function (d3, cookie) {
         }
 
         return c
+    }
+
+    function atimePassesAgeFilter(node) {
+        let days = atimeToDays(node);
+        return days >= age_filter
     }
 
     // Compute the treemap layout recursively such that each group of siblings
@@ -236,6 +249,8 @@ define(["d3", "cookie"], function (d3, cookie) {
         });
 
         d3.select("#filterButton").on('click', function () {
+            age_filter = $("#age_filter").val();
+
             // console.log('getting fresh filtered data for ', data.path);
             getData(current.path, function (data) {
                 cloneProperties(data, current)
@@ -378,6 +393,7 @@ define(["d3", "cookie"], function (d3, cookie) {
             if (d.count > 0) {
                 d3.select("#error").text("")
                 allNodes.set(d.path, d);
+                filterYoungChildren(d);
                 loadFunction(d);
                 createBreadcrumbs(d.path);
             }
@@ -389,6 +405,14 @@ define(["d3", "cookie"], function (d3, cookie) {
             d3.select("#error").text("error: " + e)
         })
 
+    }
+
+    function filterYoungChildren(node) {
+        if (!node.children || age_filter < 30) {
+            return;
+        }
+
+        node.children = node.children.filter(child => atimePassesAgeFilter(child))
     }
 
     var areaBasedOnSize = true
@@ -521,6 +545,11 @@ define(["d3", "cookie"], function (d3, cookie) {
         if (area) {
             $("#" + area).prop("checked", true);
             areaBasedOnSize = area == "size"
+        }
+
+        age_filter = getURLParam('age')
+        if (age_filter) {
+            $("#age_filter").val(age_filter);
         }
 
         return path
