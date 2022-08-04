@@ -9,7 +9,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gin-contrib/secure v0.0.1
 	github.com/gin-gonic/gin v1.8.1
-	github.com/go-ldap/ldap/v3 v3.4.3
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/hashicorp/go-multierror v1.1.1
@@ -27,18 +26,14 @@ require (
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
-	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035
 	gopkg.in/tylerb/graceful.v1 v1.2.15
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require github.com/fsnotify/fsnotify v1.5.4 // indirect
-
 require (
 	cloud.google.com/go/compute v1.7.0 // indirect
-	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5 // indirect
+	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
-	github.com/Azure/go-ntlmssp v0.0.0-20211209120228-48547f28849e // indirect
 	github.com/BurntSushi/toml v1.2.0 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/VertebrateResequencing/muxfys/v4 v4.0.3 // indirect
@@ -54,9 +49,9 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/docker/spdystream v0.2.0 // indirect
 	github.com/fanatic/go-infoblox v0.0.0-20190709161059-e25f3820238c // indirect
+	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/go-ini/ini v1.66.6 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
@@ -132,6 +127,7 @@ require (
 	golang.org/x/net v0.0.0-20220728030405-41545e8bf201 // indirect
 	golang.org/x/oauth2 v0.0.0-20220722155238-128564f6959c
 	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
+	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
