@@ -44,9 +44,16 @@ button:hover {
 
 #breadcrumbs button {
   padding: 1px;
+  padding-bottom: 2px;
   height: 18px;
   font-size: 12px;
   user-select: none;
+}
+
+_::-webkit-full-page-media,
+_:future,
+:root #breadcrumbs button {
+  margin-top: 1px;
 }
 
 #breadcrumbs span {
@@ -59,6 +66,13 @@ button:hover {
   border: 2px solid orange;
   background-color: orange;
   cursor: default;
+}
+
+_::-webkit-full-page-media,
+_:future,
+:root .dead {
+  border: 0;
+  border-left: 2px solid orange;
 }
 
 .dead:hover {
