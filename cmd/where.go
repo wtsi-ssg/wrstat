@@ -36,6 +36,7 @@ import (
 	"strings"
 	"time"
 
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/dustin/go-humanize" //nolint:misspell
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -43,9 +44,8 @@ import (
 )
 
 const (
-	bytesPerK                 = 1024
 	defaultSplits             = 2
-	defaultMinMB              = 50
+	defaultSize               = "50M"
 	hoursePerDay              = 24
 	jwtBasename               = ".wrstat.jwt"
 	privatePerms  os.FileMode = 0600
@@ -57,7 +57,8 @@ var whereSplits int
 var whereGroups string
 var whereUsers string
 var whereTypes string
-var whereMinimum int
+var whereSize string
+var whereAge int
 var whereCert string
 var whereJSON bool
 var whereOrder string
@@ -98,16 +99,18 @@ You can filter what files should be considered and reported on:
           from this set of allowed values: cram,bam,index,compressed,
 		  uncompressed,checkpoint,other,temporary
 
-To avoid producing too much output, the --minimum option can be used to not
-display directories that have less than that number of MBs of data nested
-inside. Defaults to 50MB.
+To avoid producing too much output, the --size option (specify your own units,
+eg. 50M for 50 megabytes) can be used to not display directories that have less
+than that size of data nested inside. Defaults to 50M. Likewise, you can use
+--age (in days) to only show directories where a file nested inside hasn't been
+accessed for at least that long.
 
 You can change the sort --order from the default of by 'size', to by 'count',
 'age' or 'dir'.
 
---minimum and --sort are ignored, however, if you choose --json output, which
-will just give you all the filtered results. In the JSON output, the Size is in
-bytes and instead of "age" you get "Atime".
+--size, --age and --sort are ignored, however, if you choose --json output,
+which will just give you all the filtered results. In the JSON output, the Size
+is in bytes and instead of "age" you get "Atime".
 
 --show_ug adds columns for the users and groups that own files nested under each
 directory.
@@ -143,10 +146,15 @@ with refreshes possible up to 5 days after expiry.
 			die("you must supply a --dir you wish to query")
 		}
 
-		minSizeBytes := whereMinMBToBytes(whereMinimum)
+		minSizeBytes, err := bytefmt.ToBytes(whereSize)
+		if err != nil {
+			die("bad --size: %s", err)
+		}
 
-		err := where(url, whereCert, whereQueryDir, whereGroups, whereUsers, whereTypes,
-			fmt.Sprintf("%d", whereSplits), whereOrder, minSizeBytes, whereJSON)
+		minAtime := time.Now().Add(-(time.Duration(whereAge*hoursePerDay) * time.Hour))
+
+		err = where(url, whereCert, whereQueryDir, whereGroups, whereUsers, whereTypes,
+			fmt.Sprintf("%d", whereSplits), whereOrder, minSizeBytes, minAtime, whereJSON)
 		if err != nil {
 			die(err.Error())
 		}
@@ -168,8 +176,10 @@ func init() {
 	whereCmd.Flags().StringVarP(&whereTypes, "types", "t", "",
 		"comma separated list of types (amongst cram,bam,index,compressed,uncompressed,"+
 			"checkpoint,other,temporary) to filter on")
-	whereCmd.Flags().IntVarP(&whereMinimum, "minimum", "m", defaultMinMB,
-		"minimum size (in MB) of files nested under a directory for it to be reported on")
+	whereCmd.Flags().StringVar(&whereSize, "size", defaultSize,
+		"minimum size (specify the unit) of files nested under a directory for it to be reported on")
+	whereCmd.Flags().IntVar(&whereAge, "age", 0,
+		"minimum age (in days) of the oldest file nested under a directory for it to be reported on")
 	whereCmd.Flags().StringVarP(&whereCert, "cert", "c", "",
 		"path to the server's certificate to force trust in it")
 	whereCmd.Flags().StringVarP(&whereOrder, "order", "o", "size",
@@ -202,14 +212,10 @@ func getServerURL(args []string) string {
 	return url
 }
 
-// whereMinMBToBytes converts a number of MB to a number of bytes.
-func whereMinMBToBytes(mbs int) uint64 {
-	return uint64(mbs * bytesPerK * bytesPerK)
-}
-
 // where does the main job of querying the server to answer where the data is on
 // disk.
-func where(url, cert, dir, groups, users, types, splits, order string, minSizeBytes uint64, json bool) error {
+func where(url, cert, dir, groups, users, types, splits, order string,
+	minSizeBytes uint64, minAtime time.Time, json bool) error {
 	token, err := getJWT(url, cert)
 	if err != nil {
 		return err
@@ -228,7 +234,7 @@ func where(url, cert, dir, groups, users, types, splits, order string, minSizeBy
 
 	orderDSs(dss, order)
 
-	printWhereDataIs(dss, minSizeBytes)
+	printWhereDataIs(dss, minSizeBytes, minAtime)
 
 	return nil
 }
@@ -356,7 +362,7 @@ func orderDSs(dss []*server.DirSummary, order string) {
 }
 
 // printWhereDataIs formats query results and prints it to STDOUT.
-func printWhereDataIs(dss []*server.DirSummary, minSizeBytes uint64) {
+func printWhereDataIs(dss []*server.DirSummary, minSizeBytes uint64, minAtime time.Time) {
 	if len(dss) == 0 || (len(dss) == 1 && dss[0].Count == 0) {
 		warn("no results")
 
@@ -367,7 +373,7 @@ func printWhereDataIs(dss []*server.DirSummary, minSizeBytes uint64) {
 	skipped := 0
 
 	for _, ds := range dss {
-		if ds.Size < minSizeBytes {
+		if skipDS(ds, minSizeBytes, minAtime) {
 			skipped++
 
 			continue
@@ -392,6 +398,12 @@ func prepareWhereTable() *tablewriter.Table {
 	}
 
 	return table
+}
+
+// skipDS returns true if the ds has a size smaller than the given minSizeByes,
+// or an Atime after the given minAtime.
+func skipDS(ds *server.DirSummary, minSizeBytes uint64, minAtime time.Time) bool {
+	return ds.Size < minSizeBytes || ds.Atime.After(minAtime)
 }
 
 // columns returns the column data to display in the table for a given row.
@@ -419,5 +431,5 @@ func printSkipped(n int) {
 		return
 	}
 
-	warn(fmt.Sprintf("(%d results not displayed as smaller than --minimum)", n))
+	warn(fmt.Sprintf("(%d results not displayed as smaller than --size or younger than --age)", n))
 }
