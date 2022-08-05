@@ -152,9 +152,9 @@ func (w *Walker) Walk(dir string, cb ErrorCallback) error {
 // addDir adds the given dir to our channel for processDirs() to pick up.
 func (w *Walker) addDir(dir string) {
 	w.mu.RLock()
-	if w.err != nil || w.ended {
-		w.mu.RUnlock()
+	defer w.mu.RUnlock()
 
+	if w.err != nil || w.ended {
 		return
 	}
 
@@ -163,8 +163,6 @@ func (w *Walker) addDir(dir string) {
 	go func() {
 		w.dirsCh <- dir
 	}()
-
-	w.mu.RUnlock()
 }
 
 // processDirs pulls from our dirsCh and calls processDir on each.
