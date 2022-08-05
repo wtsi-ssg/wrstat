@@ -159,7 +159,10 @@ func (w *Walker) addDir(dir string) {
 	}
 
 	w.active.Add(1)
-	w.dirsCh <- dir
+
+	go func() {
+		w.dirsCh <- dir
+	}()
 
 	w.mu.RUnlock()
 }
