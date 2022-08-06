@@ -67,8 +67,9 @@ user that can sudo without a password when running wrstat, and supply the --sudo
 option to this command.
 
 For each entry recursively within the directory of interest, their paths are
-written to output files in the given output directory. The number of files is
-such that they will each contain about --inodes_per_stat entries.
+quickly retrieved (without doing any expensive stat calls) and written to output
+files in the given output directory. The number of files is such that they will
+each contain about --inodes_per_stat entries.
 
 For each output file, a 'wrstat stat' job is then added to wr's queue with the
 given dependency group. For the meaning of the --ch option which is passed
@@ -79,10 +80,9 @@ through to stat, see 'wrstat stat -h'.
 'wr status -i wrstat-stat -z -o s' to get information on how long everything or
 particular subsets of jobs took.)
 
-NB: when this exits, that does not mean all stats have necessarily been
-retrieved. You should wait until all jobs in the given dependency group have
-completed (eg. by adding your own job that depends on that group, such as a
-'wrstat combine' call).`,
+NB: when this exits, that does not mean stats have been retrieved. You should
+wait until all jobs in the given dependency group have completed (eg. by adding
+your own job that depends on that group, such as a 'wrstat combine' call).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		desiredDir := checkArgs(outputDir, depGroup, args)
 
