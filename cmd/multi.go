@@ -39,6 +39,7 @@ import (
 
 const (
 	walkTime    = 19 * time.Hour
+	walkRAM     = 16000
 	combineTime = 40 * time.Minute
 	combineRAM  = 150
 	basedirTime = 15 * time.Minute
@@ -214,6 +215,7 @@ func reqs() (*jqs.Requirements, *jqs.Requirements) {
 	req := scheduler.DefaultRequirements()
 	reqWalk := req.Clone()
 	reqWalk.Time = walkTime
+	reqWalk.RAM = walkRAM
 	reqCombine := req.Clone()
 	reqCombine.Time = combineTime
 	reqCombine.RAM = combineRAM
