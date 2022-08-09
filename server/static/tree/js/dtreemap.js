@@ -94,7 +94,7 @@ define(["d3", "cookie"], function (d3, cookie) {
     var filterIDs = ['groups_list', 'users_list', 'ft_list'];
     let filters = new Map();
 
-    let age_filter = ""
+    let age_filter = "0"
 
     function getFilters() {
         str = "";
@@ -523,34 +523,35 @@ define(["d3", "cookie"], function (d3, cookie) {
     function setPageDefaultsFromHash() {
         path = getURLParam('path')
         if (!path || !path.startsWith("/")) {
-            path = "/"
+            path = "/";
         }
 
-        groups = getURLParam('groups')
+        groups = getURLParam('groups');
         if (groups) {
             d3.select('#groups_list').property('value', groups);
         }
 
-        users = getURLParam('users')
+        users = getURLParam('users');
         if (users) {
             d3.select('#users_list').property('value', users);
         }
 
-        fts = getURLParam('fts')
+        fts = getURLParam('fts');
         if (fts) {
             d3.select('#ft_list').property('value', fts);
         }
 
-        let area = getURLParam('area')
+        let area = getURLParam('area');
         if (area) {
             $("#" + area).prop("checked", true);
             areaBasedOnSize = area == "size"
         }
 
-        age_filter = getURLParam('age')
-        if (age_filter) {
-            $("#age_filter").val(age_filter);
+        age_filter = getURLParam('age');
+        if (age_filter == null) {
+            age_filter = "0";
         }
+        $("#age_filter").val(age_filter);
 
         return path
     }
