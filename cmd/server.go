@@ -46,6 +46,7 @@ var serverLogPath string
 var serverBind string
 var serverCert string
 var serverKey string
+var oktaURL string
 var oktaOAuthIssuer string
 var oktaOAuthClientID string
 var oktaOAuthClientSecret string
@@ -66,7 +67,9 @@ Your --bind address should include the port, and for it to work with your
 
 The server authenticates users using Okta. You must specify all of
 --okta_issuer, --okta_id and --okta_secret or env vars OKTA_OAUTH2_ISSUER,
-OKTA_OAUTH2_CLIENT_ID and OKTA_OAUTH2_CLIENT_SECRET.
+OKTA_OAUTH2_CLIENT_ID and OKTA_OAUTH2_CLIENT_SECRET. You must also specify
+--okta_url if that is different to --bind (eg. the service is bound to localhost
+and will be behind a proxy accessed at a different domain).
 
 The server will log all messages (of any severity) to syslog at the INFO level,
 except for non-graceful stops of the server, which are sent at the CRIT level or
@@ -113,7 +116,11 @@ creation time in reports.
 			die("failed to enable authentication: %s", err)
 		}
 
-		s.AddOIDCRoutes(serverBind, oktaOAuthIssuer, oktaOAuthClientID, oktaOAuthClientSecret)
+		if oktaURL == "" {
+			oktaURL = serverBind
+		}
+
+		s.AddOIDCRoutes(oktaURL, oktaOAuthIssuer, oktaOAuthClientID, oktaOAuthClientSecret)
 
 		s.WhiteListGroups(whiteLister)
 
@@ -161,6 +168,8 @@ func init() {
 		"path to certificate file")
 	serverCmd.Flags().StringVarP(&serverKey, "key", "k", "",
 		"path to key file")
+	serverCmd.Flags().StringVar(&oktaURL, "okta_url", "",
+		"Okta application URL, eg host:port (defaults to --bind)")
 	serverCmd.Flags().StringVar(&oktaOAuthIssuer, "okta_issuer", os.Getenv("OKTA_OAUTH2_ISSUER"),
 		"URL for Okta Oauth")
 	serverCmd.Flags().StringVar(&oktaOAuthClientID, "okta_id", os.Getenv("OKTA_OAUTH2_CLIENT_ID"),

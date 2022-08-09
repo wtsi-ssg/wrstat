@@ -23,9 +23,22 @@ requirejs.config({
 
 requirejs(['jquery', 'cookie', 'flexdatalist', 'timeago'], function ($, cookie) {
     function showMap(jwt) {
+        let user = "";
+
+        try {
+            user = getUsernameFromJWT(jwt);
+        }
+        catch {
+            logout();
+        }
+
+        if (!user) {
+            logout();
+        }
+
         $("#login").hide()
         $("#body").show()
-        $("#username").text(getUsernameFromJWT(jwt));
+        $("#username").text(user);
 
         require(["dtreemap"], function () { });
     }
