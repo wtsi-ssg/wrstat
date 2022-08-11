@@ -285,10 +285,10 @@ func (d *DB) storeBatch() {
 
 	var errm *multierror.Error
 
-	err := d.storeChildren()
+	err := d.writeSet.children.Update(d.storeChildren)
 	errm = multierror.Append(errm, err)
 
-	err = d.storeDGUTs()
+	err = d.writeSet.dguts.Update(d.storeDGUTs)
 	errm = multierror.Append(errm, err)
 
 	err = errm.ErrorOrNil()
@@ -298,21 +298,13 @@ func (d *DB) storeBatch() {
 }
 
 // storeChildren stores the Dirs of the current DGUT batch in the db.
-func (d *DB) storeChildren() error {
-	return d.writeSet.children.Update(d.storeChildrenInTx)
-}
+func (d *DB) storeChildren(txn *bolt.Tx) error {
+	b := txn.Bucket([]byte(childBucket))
 
-// storeChildrenInTx stores the current writeBatch directories in the given
-// transaction.
-func (d *DB) storeChildrenInTx(tx *bolt.Tx) error {
-	b := tx.Bucket([]byte(childBucket))
+	parentToChildren := d.calculateChildrenOfParents(b)
 
-	for _, dgut := range d.writeBatch {
-		if dgut == nil {
-			return nil
-		}
-
-		if err := d.storeChildInDB(b, dgut.Dir); err != nil {
+	for parent, children := range parentToChildren {
+		if err := b.Put([]byte(parent), d.encodeChildren(children)); err != nil {
 			return err
 		}
 	}
@@ -320,23 +312,44 @@ func (d *DB) storeChildrenInTx(tx *bolt.Tx) error {
 	return nil
 }
 
-// storeChildInDB stores the given child directory in the database against its
-// parent directory, adding to any existing children. Duplicate children should
-// not be added.
-//
-// The root directory / is ignored since it is not a child and has no parent.
-func (d *DB) storeChildInDB(b *bolt.Bucket, child string) error {
+// calculateChildrenOfParents works out what the children of every parent
+// directory of every dgut.Dir is in the current writeBatch. Returns a map
+// of parent keys and children slice value.
+func (d *DB) calculateChildrenOfParents(b *bolt.Bucket) map[string][]string {
+	parentToChildren := make(map[string][]string)
+
+	for _, dgut := range d.writeBatch {
+		if dgut == nil {
+			continue
+		}
+
+		d.storeChildrenOfParentInMap(b, dgut.Dir, parentToChildren)
+	}
+
+	return parentToChildren
+}
+
+// storeChildrenOfParentInMap gets current children of child's parent in the db
+// and stores them in the store map, then once stored in the map, appends this
+// child to the parent's children.
+func (d *DB) storeChildrenOfParentInMap(b *bolt.Bucket, child string, store map[string][]string) {
 	if child == "/" {
-		return nil
+		return
 	}
 
 	parent := filepath.Dir(child)
 
-	children := d.getChildrenFromDB(b, parent)
+	var children []string
+
+	if storedChildren, stored := store[parent]; stored {
+		children = storedChildren
+	} else {
+		children = d.getChildrenFromDB(b, parent)
+	}
 
 	children = append(children, child)
 
-	return b.Put([]byte(parent), d.encodeChildren(children))
+	store[parent] = children
 }
 
 // getChildrenFromDB retrieves the child directory values associated with the
@@ -374,12 +387,7 @@ func (d *DB) encodeChildren(dirs []string) []byte {
 }
 
 // storeDGUTs stores the current batch of DGUTs in the db.
-func (d *DB) storeDGUTs() error {
-	return d.writeSet.dguts.Update(d.storeDGUTsInTx)
-}
-
-// storeDGUTsInTx stores the current writeBatch DGUTs in the given transaction.
-func (d *DB) storeDGUTsInTx(tx *bolt.Tx) error {
+func (d *DB) storeDGUTs(tx *bolt.Tx) error {
 	b := tx.Bucket([]byte(gutBucket))
 
 	for _, dgut := range d.writeBatch {

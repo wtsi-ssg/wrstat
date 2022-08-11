@@ -445,10 +445,10 @@ func TestDGUT(t *testing.T) {
 				Convey("the put fails", func() {
 					db.writeBatch = expected
 
-					err = db.writeSet.children.View(db.storeChildrenInTx)
+					err = db.writeSet.children.View(db.storeChildren)
 					So(err, ShouldNotBeNil)
 
-					err = db.writeSet.dguts.View(db.storeDGUTsInTx)
+					err = db.writeSet.dguts.View(db.storeDGUTs)
 					So(err, ShouldNotBeNil)
 				})
 			})
