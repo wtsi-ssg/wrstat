@@ -41,7 +41,7 @@ const (
 	walkTime    = 19 * time.Hour
 	walkRAM     = 16000
 	combineTime = 40 * time.Minute
-	combineRAM  = 150
+	combineRAM  = 16000
 	basedirTime = 15 * time.Minute
 	basedirRAM  = 42000
 )
