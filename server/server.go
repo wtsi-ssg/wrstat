@@ -94,12 +94,13 @@ const (
 
 	ErrNeedsAuth = Error("authentication must be enabled")
 
-	defaultDir    = "/"
-	defaultSplits = "2"
-	stopTimeout   = 10 * time.Second
-	devEnvKey     = "WRSTAT_SERVER_DEV"
-	devEnvVal     = "1"
-	unknown       = "#unknown"
+	defaultDir        = "/"
+	defaultSplits     = "2"
+	stopTimeout       = 10 * time.Second
+	devEnvKey         = "WRSTAT_SERVER_DEV"
+	devEnvVal         = "1"
+	unknown           = "#unknown"
+	readHeaderTimeout = 20 * time.Second
 )
 
 // AuthCallback is a function that returns true if the given password is valid
@@ -185,8 +186,9 @@ func (s *Server) Start(addr, certFile, keyFile string) error {
 		Timeout: stopTimeout,
 
 		Server: &http.Server{
-			Addr:    addr,
-			Handler: s.router,
+			Addr:              addr,
+			Handler:           s.router,
+			ReadHeaderTimeout: readHeaderTimeout,
 		},
 	}
 
