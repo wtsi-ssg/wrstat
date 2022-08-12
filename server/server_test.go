@@ -26,10 +26,8 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -450,8 +448,7 @@ func TestServer(t *testing.T) {
 
 					result, err := decodeWhereResult(response)
 					So(err, ShouldBeNil)
-					err = debugMatches(result, expected)
-					So(err, ShouldBeNil)
+					So(reflect.DeepEqual(result, expected), ShouldBeTrue)
 					So(result, ShouldResemble, expected)
 
 					Convey("And you can filter results", func() {
@@ -1479,44 +1476,4 @@ func waitForFileToBeDeleted(t *testing.T, path string) {
 	}()
 
 	<-wait
-}
-
-func debugMatches(x, c interface{}) error {
-	// Make sure the types match.
-	ct := reflect.TypeOf(c)
-	xt := reflect.TypeOf(x)
-
-	if ct != xt {
-		return fmt.Errorf("which is of type %v", ct)
-	}
-
-	// Special case: handle byte slices more efficiently.
-	cValue := reflect.ValueOf(c)
-	xValue := reflect.ValueOf(x)
-
-	var byteSliceType reflect.Type = reflect.TypeOf([]byte{})
-
-	if ct == byteSliceType && !cValue.IsNil() && !xValue.IsNil() {
-		xBytes := x.([]byte)
-		cBytes := c.([]byte)
-
-		if bytes.Equal(cBytes, xBytes) {
-			return nil
-		}
-
-		return errors.New("bytes err")
-	}
-
-	// Defer to the reflect package.
-	if reflect.DeepEqual(x, c) {
-		return nil
-	}
-
-	// Special case: if the comparison failed because c is the nil slice, given
-	// an indication of this (since its value is printed as "[]").
-	if cValue.Kind() == reflect.Slice && cValue.IsNil() {
-		return errors.New("which is nil")
-	}
-
-	return errors.New("not DeepEqual")
 }
