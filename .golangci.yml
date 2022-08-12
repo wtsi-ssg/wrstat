@@ -116,7 +116,6 @@ linters:
     - goimports
     - gomnd
     - gosec
-    - ifshort
     - importas
     - lll
     - maintidx
@@ -156,6 +155,7 @@ linters:
   #   - gomodguard
   #   - goprintffuncname
   #   - grouper
+  #   - ifshort
   #   - interfacer
   #   - ireturn
   #   - paralleltest
