@@ -48,7 +48,7 @@ type Watcher struct {
 	previous      time.Time
 	stop          chan bool
 	stopped       bool
-	mu            sync.RWMutex
+	sync.RWMutex
 }
 
 // New returns a new Watcher that will call your cb with path's mtime whenever
@@ -113,8 +113,8 @@ func (w *Watcher) startWatching() {
 // the last time this method was called. Errors in trying to get the mtime are
 // ignored, in the hopes a future attempt will succeed.
 func (w *Watcher) callCBIfMtimeChanged() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	w.Lock()
+	defer w.Unlock()
 
 	mtime, err := getFileMtime(w.path)
 	if err != nil || mtime == w.previous {
@@ -129,16 +129,16 @@ func (w *Watcher) callCBIfMtimeChanged() {
 // Mtime returns the latest mtime of our path, captured during New() or the last
 // time we polled.
 func (w *Watcher) Mtime() time.Time {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
+	w.RLock()
+	defer w.RUnlock()
 
 	return w.previous
 }
 
 // Stop will stop watching our path for changes.
 func (w *Watcher) Stop() {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	w.Lock()
+	defer w.Unlock()
 
 	if w.stopped {
 		return
