@@ -47,6 +47,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
 	gjwt "github.com/golang-jwt/jwt/v4"
+	"github.com/maxatome/go-testdeep/td"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wr/network/port"
 	"github.com/wtsi-ssg/wrstat/dgut"
@@ -448,6 +449,7 @@ func TestServer(t *testing.T) {
 
 					result, err := decodeWhereResult(response)
 					So(err, ShouldBeNil)
+					So(td.Cmp(t, result, expected), ShouldBeTrue)
 					So(reflect.DeepEqual(result, expected), ShouldBeTrue)
 					So(result, ShouldResemble, expected)
 
