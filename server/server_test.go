@@ -29,7 +29,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -1082,7 +1081,7 @@ func makeTestToken(keyPath string, start, end time.Time, withUserClaims bool) (s
 	claims["orig_iat"] = start.Unix()
 	claims["exp"] = end.Unix()
 
-	keyData, err := ioutil.ReadFile(keyPath)
+	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
 		return "", err
 	}

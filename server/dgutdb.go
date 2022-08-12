@@ -27,7 +27,6 @@ package server
 
 import (
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -156,22 +155,33 @@ func (s *Server) findNewDgutPaths(dir, suffix string) error {
 // FindLatestDgutDirs finds the latest subdirectory of dir that has the given
 // suffix, then returns that result's child directories.
 func FindLatestDgutDirs(dir, suffix string) ([]string, error) {
-	fis, err := ioutil.ReadDir(dir)
+	des, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	sort.Slice(fis, func(i, j int) bool {
-		return fis[i].ModTime().After(fis[j].ModTime())
+	sort.Slice(des, func(i, j int) bool {
+		return dirEntryModTime(des[i]).After(dirEntryModTime(des[i]))
 	})
 
-	for _, fi := range fis {
-		if strings.HasSuffix(fi.Name(), "."+suffix) {
-			return getChildDirectories(filepath.Join(dir, fi.Name()))
+	for _, de := range des {
+		if strings.HasSuffix(de.Name(), "."+suffix) {
+			return getChildDirectories(filepath.Join(dir, de.Name()))
 		}
 	}
 
 	return nil, ErrNoDgutDBDirFound
+}
+
+// dirEntryModTime returns the ModTime of the given DirEntry, treating errors as
+// time 0.
+func dirEntryModTime(de os.DirEntry) time.Time {
+	info, err := de.Info()
+	if err != nil {
+		return time.Time{}
+	}
+
+	return info.ModTime()
 }
 
 // getChildDirectories returns the child directories of the given dir.
