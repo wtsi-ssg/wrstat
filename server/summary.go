@@ -65,11 +65,14 @@ func (s *Server) dcssToSummaries(dcss dgut.DCSs) []*DirSummary {
 // dgutDStoSummary converts the given dgut.DirSummary to one of our DirSummary,
 // basically just converting the *IDs to names.
 func (s *Server) dgutDStoSummary(dds *dgut.DirSummary) *DirSummary {
+	atime := dds.Atime
+	atime.Location()
+
 	return &DirSummary{
 		Dir:       dds.Dir,
 		Count:     dds.Count,
 		Size:      dds.Size,
-		Atime:     dds.Atime,
+		Atime:     dds.Atime.Local(),
 		Users:     s.uidsToUsernames(dds.UIDs),
 		Groups:    s.gidsToNames(dds.GIDs),
 		FileTypes: s.ftsToNames(dds.FTs),
