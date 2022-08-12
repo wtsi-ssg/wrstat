@@ -1005,8 +1005,9 @@ func TestServerOktaLogin(t *testing.T) {
 		logWriter := newStringLogger()
 		s := New(logWriter)
 
-		_, err := LoginWithOKTA(addr, certPath, "foo")
+		jwt, err := LoginWithOKTA(addr, certPath, "foo")
 		So(err, ShouldNotBeNil)
+		So(jwt, ShouldBeBlank)
 
 		dfunc := startTestServerUsingAddress(addr, s, certPath, keyPath)
 		defer dfunc()
