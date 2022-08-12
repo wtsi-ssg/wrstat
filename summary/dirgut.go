@@ -339,14 +339,14 @@ func (d *DirGroupUserType) addForEachDir(path string, gutKeys []string, size int
 //
 // filetype is one of our filetype ints:
 //
-//   0 = cram
-//   1 = bam
-//   2 = index
-//   3 = compressed
-//   4 = uncompressed
-//   5 = checkpoint
-//   6 = other
-//   7 = temp
+//	0 = cram
+//	1 = bam
+//	2 = index
+//	3 = compressed
+//	4 = uncompressed
+//	5 = checkpoint
+//	6 = other
+//	7 = temp
 //
 // Returns an error on failure to write. output is closed on completion.
 func (d *DirGroupUserType) Output(output *os.File) error {

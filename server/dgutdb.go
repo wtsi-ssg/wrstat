@@ -69,12 +69,12 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 }
 
 // EnableDGUTDBReloading will wait for changes to the file at watchPath, then:
-// 1. close any previously loaded dgut database files
-// 2. find the latest sub-directory in the given directory with the given suffix
-// 3. set the dgut.db directory paths to children of 2) and load those
-// 4. delete the old dgut.db directory paths to save space, and their parent
-//    dir if now empty
-// 5. update the server's data-creation date to the mtime of the watchPath file
+//  1. close any previously loaded dgut database files
+//  2. find the latest sub-directory in the given directory with the given suffix
+//  3. set the dgut.db directory paths to children of 2) and load those
+//  4. delete the old dgut.db directory paths to save space, and their parent
+//     dir if now empty
+//  5. update the server's data-creation date to the mtime of the watchPath file
 //
 // It will also do 5) immediately on calling this method.
 //
