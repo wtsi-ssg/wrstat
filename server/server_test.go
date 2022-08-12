@@ -1151,6 +1151,10 @@ func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, erro
 	var result []*DirSummary
 	err := json.NewDecoder(response.Body).Decode(&result)
 
+	for _, ds := range result {
+		ds.Atime.Local()
+	}
+
 	return result, err
 }
 
