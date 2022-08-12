@@ -4,13 +4,13 @@ go 1.18
 
 require (
 	github.com/VertebrateResequencing/wr v0.32.0
-	github.com/adhocore/gronx v0.2.6
+	github.com/adhocore/gronx v0.2.7
 	github.com/appleboy/gin-jwt/v2 v2.8.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gin-contrib/secure v0.0.1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/golang-jwt/jwt/v4 v4.4.1
+	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v0.0.0-20201112154412-8562bdadbbac
 	github.com/karrick/godirwalk v1.17.0
@@ -31,7 +31,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute v1.7.0 // indirect
+	cloud.google.com/go/compute v1.8.0 // indirect
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v1.2.0 // indirect
@@ -41,7 +41,7 @@ require (
 	github.com/alexflint/go-filemutex v1.2.0 // indirect
 	github.com/creasty/defaults v1.6.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v20.10.17+incompatible // indirect
@@ -52,13 +52,13 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-ini/ini v1.66.6 // indirect
+	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
-	github.com/goccy/go-json v0.9.7 // indirect
+	github.com/goccy/go-json v0.9.10 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.0.0 // indirect
@@ -78,7 +78,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef // indirect
 	github.com/imdario/mergo v0.3.13 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jinzhu/configor v1.2.1 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -88,16 +88,16 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
-	github.com/lestrrat-go/blackmagic v1.0.0 // indirect
-	github.com/lestrrat-go/httpcc v1.0.0 // indirect
-	github.com/lestrrat-go/iter v1.0.1 // indirect
-	github.com/lestrrat-go/jwx v1.2.18 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
+	github.com/lestrrat-go/httpcc v1.0.1 // indirect
+	github.com/lestrrat-go/iter v1.0.2 // indirect
+	github.com/lestrrat-go/jwx v1.2.25 // indirect
 	github.com/lestrrat-go/option v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.32 // indirect
+	github.com/minio/minio-go/v7 v7.0.34 // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -111,7 +111,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.5 // indirect
 	github.com/ricochet2200/go-disk-usage/du v0.0.0-20210707232629-ac9918953285 // indirect
-	github.com/rivo/uniseg v0.3.1 // indirect
+	github.com/rivo/uniseg v0.3.4 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/sb10/l15h v0.0.0-20170510122137-64c488bf8e22 // indirect
 	github.com/sb10/waitgroup v0.0.0-20200305124406-7ed665007efa // indirect
@@ -124,16 +124,16 @@ require (
 	github.com/tklauser/numcpus v0.5.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
-	golang.org/x/net v0.0.0-20220728030405-41545e8bf201 // indirect
-	golang.org/x/oauth2 v0.0.0-20220722155238-128564f6959c
-	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
+	golang.org/x/net v0.0.0-20220811182439-13a9a731de15 // indirect
+	golang.org/x/oauth2 v0.0.0-20220808172628-8227340efae7
+	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/ini.v1 v1.66.6 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
 	k8s.io/api v0.24.3 // indirect
 	k8s.io/apimachinery v0.24.3 // indirect
