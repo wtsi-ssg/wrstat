@@ -35,7 +35,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,7 +46,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-resty/resty/v2"
 	gjwt "github.com/golang-jwt/jwt/v4"
-	"github.com/maxatome/go-testdeep/td"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wr/network/port"
 	"github.com/wtsi-ssg/wrstat/dgut"
@@ -449,11 +447,6 @@ func TestServer(t *testing.T) {
 
 					result, err := decodeWhereResult(response)
 					So(err, ShouldBeNil)
-					t.Logf("atimes: %s vs %s\n", result[0].Atime.Location(), expected[0].Atime.Location())
-					So(result[0].Atime, ShouldNotBeNil)
-					So(expected[0].Atime, ShouldNotBeNil)
-					So(td.Cmp(t, result, expected), ShouldBeTrue)
-					So(reflect.DeepEqual(result, expected), ShouldBeTrue)
 					So(result, ShouldResemble, expected)
 
 					Convey("And you can filter results", func() {

@@ -30,8 +30,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require github.com/maxatome/go-testdeep v1.12.0
-
 require (
 	cloud.google.com/go/compute v1.8.0 // indirect
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
