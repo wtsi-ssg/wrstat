@@ -449,6 +449,9 @@ func TestServer(t *testing.T) {
 
 					result, err := decodeWhereResult(response)
 					So(err, ShouldBeNil)
+					t.Logf("atimes: %s vs %s\n", result[0].Atime, expected[0].Atime)
+					So(result[0].Atime, ShouldNotBeNil)
+					So(expected[0].Atime, ShouldNotBeNil)
 					So(td.Cmp(t, result, expected), ShouldBeTrue)
 					So(reflect.DeepEqual(result, expected), ShouldBeTrue)
 					So(result, ShouldResemble, expected)
