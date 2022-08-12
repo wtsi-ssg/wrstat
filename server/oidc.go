@@ -70,6 +70,7 @@ const (
 	oidcUserKey                  = "userinfo_endpoint"
 	csrfStateLength              = 16
 	pkceCodeVerifierLength       = 50
+	metadataFetchTimeout         = 20 * time.Second
 
 	ErrCouldNotVerifyToken = Error("token could not be verified")
 	ErrOIDCUnexpectedState = Error("the state was not as expected")
@@ -154,10 +155,19 @@ func getURLsFromWellKnown(issuer string) (string, string, string, error) {
 
 // fetchOIDCMetaData tries to fetch the given url and decode it as a json map.
 func fetchOIDCMetaData(url string) (map[string]interface{}, error) {
-	resp, err := http.Get(url) //nolint:gosec
+	ctx, ctxCancel := context.WithTimeout(context.Background(), metadataFetchTimeout)
+	defer ctxCancel()
+
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	resp, err := http.DefaultClient.Do(r)
+	if err != nil {
+		return nil, err
+	}
+
 	defer resp.Body.Close()
 
 	metadata := make(map[string]interface{})
