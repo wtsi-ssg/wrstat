@@ -1152,7 +1152,7 @@ func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, erro
 	err := json.NewDecoder(response.Body).Decode(&result)
 
 	for _, ds := range result {
-		ds.Atime.Local()
+		ds.Atime = ds.Atime.Local()
 	}
 
 	return result, err
