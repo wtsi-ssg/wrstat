@@ -408,7 +408,7 @@ func (p oAuthParameters) verifyToken(t string) (*verifier.Jwt, error) {
 func (s *Server) extractEmailFromOktaSession(r *http.Request) (string, error) {
 	session, err := s.webOAuth.sessionStore.Get(r, oktaCookieName)
 	if err != nil || session.Values[oauth2AccessTokenKey] == nil || session.Values[oauth2AccessTokenKey] == "" {
-		return "", nil
+		return "", err
 	}
 
 	ctx, cnlFunc := context.WithTimeout(context.Background(), time.Minute)
