@@ -161,7 +161,7 @@ func FindLatestDgutDirs(dir, suffix string) ([]string, error) {
 	}
 
 	sort.Slice(des, func(i, j int) bool {
-		return dirEntryModTime(des[i]).After(dirEntryModTime(des[i]))
+		return dirEntryModTime(des[i]).After(dirEntryModTime(des[j]))
 	})
 
 	for _, de := range des {
