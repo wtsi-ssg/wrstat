@@ -996,12 +996,16 @@ func TestServerOktaLogin(t *testing.T) {
 	addr := os.Getenv("OKTA_WRSTAT_ADDR")
 	certPath := os.Getenv("OKTA_WRSTAT_CERT")
 	keyPath := os.Getenv("OKTA_WRSTAT_KEY")
+	username := os.Getenv("OKTA_USERNAME")
+	password := os.Getenv("OKTA_PASSWORD")
 
-	if hasBlankValue(issuer, clientID, secret, addr, certPath, keyPath) {
+	if hasBlankValue(issuer, clientID, secret, addr, certPath, keyPath, username, password) {
 		SkipConvey("Can't do Okta tests without the OKTA_* env vars set", t, func() {})
 
 		return
 	}
+
+	oktaDomain := strings.TrimSuffix(issuer, "oauth2/default")
 
 	Convey("Given a started Server with auth enabled", t, func() {
 		logWriter := newStringLogger()
@@ -1024,15 +1028,102 @@ func TestServerOktaLogin(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 
-		Convey("After AddOIDCRoutes you can access the login-cli endpoint", func() {
+		Convey("After AddOIDCRoutes you can access the login-cli endpoint and LoginWithOKTA to get a JWT", func() {
 			s.AddOIDCRoutes(addr, issuer, clientID, secret)
 			r := newClientRequest(addr, "")
 
 			resp, errp := r.Get(EndpointOIDCCLILogin)
 			So(errp, ShouldBeNil)
-			So(resp.String(), ShouldContainSubstring, `ok12static.oktacdn.com`)
+			content := resp.String()
+			So(content, ShouldContainSubstring, `ok12static.oktacdn.com`)
+			So(content, ShouldContainSubstring, `redirect_uri&#x3d;https&#x25;3A&#x25;2F&#x25;2F`)
+			So(content, ShouldContainSubstring, `callback-cli`)
+
+			var oauthState, codeChallenge string
+
+			handleOIDCTest := func(c *gin.Context) {
+				c.Header("Cache-Control", "no-cache")
+
+				o := s.cliOAuth
+
+				session := o.getSession(c)
+				if session == nil {
+					return
+				}
+
+				oauthState = session.Values[oauth2StateKeyCookie].(string) //nolint:errcheck,forcetypeassert
+				codeChallenge = o.ccs256
+			}
+
+			s.router.GET("/login-test", handleOIDCTest)
+
+			moa := &ManualOktaAuthn{}
+
+			rOkta := resty.New()
+			resp, errp = rOkta.R().
+				SetHeader("Content-Type", "application/json").
+				SetBody(map[string]interface{}{"username": username, "password": password}).
+				SetResult(moa).
+				Post(oktaDomain + "api/v1/authn")
+			So(errp, ShouldBeNil)
+			So(resp.String(), ShouldContainSubstring, `"status":"SUCCESS"`)
+
+			sessionToken := moa.SessionToken
+			So(sessionToken, ShouldNotBeBlank)
+
+			_, errp = r.Get("/login-test")
+			So(errp, ShouldBeNil)
+			So(oauthState, ShouldNotBeBlank)
+			So(codeChallenge, ShouldNotBeBlank)
+
+			resp, errp = rOkta.R().
+				SetQueryParams(map[string]string{
+					"client_id":                  clientID,
+					"response_type":              oauth2AuthCodeKey,
+					"response_mode":              "query",
+					"scope":                      "openid email",
+					"redirect_uri":               ClientProtocol + addr + EndpointAuthCLICallback,
+					"state":                      oauthState,
+					"sessionToken":               sessionToken,
+					oauth2AuthChallengeKey:       codeChallenge,
+					oauth2AuthChallengeMethodKey: oauth2AuthChallengeMethod,
+				}).
+				SetHeader("Accept", "application/json").
+				Get(s.cliOAuth.Endpoint.AuthURL)
+			So(errp, ShouldBeNil)
+
+			redirectURL := resp.RawResponse.Request.URL
+			So(redirectURL.String(), ShouldContainSubstring, `callback-cli?code=`)
+
+			resp, errp = r.Get(redirectURL.String())
+			So(errp, ShouldBeNil)
+
+			code := resp.String()
+			So(code, ShouldNotBeBlank)
+
+			jwt, errp := LoginWithOKTA(addr, "", code)
+			So(errp, ShouldBeNil)
+			So(jwt, ShouldNotBeBlank)
+		})
+
+		Convey("After AddOIDCRoutes you can access the login endpoint", func() {
+			s.AddOIDCRoutes(addr, issuer, clientID, secret)
+			r := newClientRequest(addr, "")
+
+			resp, errp := r.Get(EndpointOIDCLogin)
+			So(errp, ShouldBeNil)
+			content := resp.String()
+			So(content, ShouldContainSubstring, `ok12static.oktacdn.com`)
+			So(content, ShouldContainSubstring, `redirect_uri&#x3d;https&#x25;3A&#x25;2F&#x25;2F`)
+			So(content, ShouldNotContainSubstring, `callback-cli`)
+			So(content, ShouldContainSubstring, `callback`)
 		})
 	})
+}
+
+// ManualOktaAuthn is for testing purposes only.
+type ManualOktaAuthn struct {
+	SessionToken string `json:"sessionToken" binding:"required"`
 }
 
 // hasBlankValue returns true if any of the given values is "".

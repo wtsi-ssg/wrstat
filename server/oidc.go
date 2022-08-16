@@ -233,6 +233,7 @@ type oauthEnv struct {
 	params         oAuthParameters
 	sessionStore   *sessions.CookieStore
 	clientRedirect string
+	ccs256         string // for testing purposes
 	logger         *log.Logger
 }
 
@@ -355,6 +356,7 @@ func (o *oauthEnv) HandleOIDCLogin(c *gin.Context) {
 
 	oauthState := randomOuathState(session)
 	codeChallenge, worked := createOauthCodeChallenge(c, session)
+	o.ccs256 = codeChallenge
 
 	if !worked || !o.saveSession(c, session) {
 		return
