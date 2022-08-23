@@ -29,6 +29,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -709,6 +710,11 @@ func TestServer(t *testing.T) {
 
 							testReloadFail(grandparentDir, "invalid argument")
 						})
+
+						Convey("when there's an issue with getting dir mtime, it is ignored", func() {
+							t := dirEntryModTime(&mockDirEntry{})
+							So(t.IsZero(), ShouldBeTrue)
+						})
 					})
 				})
 			})
@@ -1039,58 +1045,7 @@ func TestServerOktaLogin(t *testing.T) {
 			So(content, ShouldContainSubstring, `redirect_uri&#x3d;https&#x25;3A&#x25;2F&#x25;2F`)
 			So(content, ShouldContainSubstring, `callback-cli`)
 
-			var oauthState, codeChallenge string
-
-			handleOIDCTest := func(c *gin.Context) {
-				c.Header("Cache-Control", "no-cache")
-
-				o := s.cliOAuth
-
-				session := o.getSession(c)
-				if session == nil {
-					return
-				}
-
-				oauthState = session.Values[oauth2StateKeyCookie].(string) //nolint:errcheck,forcetypeassert
-				codeChallenge = o.ccs256
-			}
-
-			s.router.GET("/login-test", handleOIDCTest)
-
-			moa := &ManualOktaAuthn{}
-
-			rOkta := resty.New()
-			resp, errp = rOkta.R().
-				SetHeader("Content-Type", "application/json").
-				SetBody(map[string]interface{}{"username": username, "password": password}).
-				SetResult(moa).
-				Post(oktaDomain + "api/v1/authn")
-			So(errp, ShouldBeNil)
-			So(resp.String(), ShouldContainSubstring, `"status":"SUCCESS"`)
-
-			sessionToken := moa.SessionToken
-			So(sessionToken, ShouldNotBeBlank)
-
-			_, errp = r.Get("/login-test")
-			So(errp, ShouldBeNil)
-			So(oauthState, ShouldNotBeBlank)
-			So(codeChallenge, ShouldNotBeBlank)
-
-			resp, errp = rOkta.R().
-				SetQueryParams(map[string]string{
-					"client_id":                  clientID,
-					"response_type":              oauth2AuthCodeKey,
-					"response_mode":              "query",
-					"scope":                      "openid email",
-					"redirect_uri":               ClientProtocol + addr + EndpointAuthCLICallback,
-					"state":                      oauthState,
-					"sessionToken":               sessionToken,
-					oauth2AuthChallengeKey:       codeChallenge,
-					oauth2AuthChallengeMethodKey: oauth2AuthChallengeMethod,
-				}).
-				SetHeader("Accept", "application/json").
-				Get(s.cliOAuth.Endpoint.AuthURL)
-			So(errp, ShouldBeNil)
+			resp = authnLogin(s, r, oktaDomain, username, password, addr, clientID)
 
 			redirectURL := resp.RawResponse.Request.URL
 			So(redirectURL.String(), ShouldContainSubstring, `callback-cli?code=`)
@@ -1104,6 +1059,8 @@ func TestServerOktaLogin(t *testing.T) {
 			jwt, errp := LoginWithOKTA(addr, "", code)
 			So(errp, ShouldBeNil)
 			So(jwt, ShouldNotBeBlank)
+
+			So(checkJWTWorks(t, s, addr, certPath, jwt), ShouldBeTrue)
 		})
 
 		Convey("After AddOIDCRoutes you can access the login endpoint", func() {
@@ -1569,4 +1526,105 @@ func waitForFileToBeDeleted(t *testing.T, path string) {
 	}()
 
 	<-wait
+}
+
+// authnLogin is used to login with username and password via the authn endpoint
+// on the given oktaDomain, since we can't use the browser form during this
+// test. Also provide a resty.Request from newClientRequest(server_address).
+// Returns a resty.Response from trying to authenticate in a similar way as the
+// browser would do after submitting the username/password form.
+func authnLogin(s *Server, r *resty.Request, oktaDomain, username, password, addr, clientID string) *resty.Response {
+	var oauthState, codeChallenge string
+
+	handleOIDCTest := func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache")
+
+		o := s.cliOAuth
+
+		session := o.getSession(c)
+		if session == nil {
+			return
+		}
+
+		oauthState = session.Values[oauth2StateKeyCookie].(string) //nolint:errcheck,forcetypeassert
+		codeChallenge = o.ccs256
+	}
+
+	s.router.GET("/login-test", handleOIDCTest)
+
+	moa := &ManualOktaAuthn{}
+
+	rOkta := resty.New()
+	resp, err := rOkta.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(map[string]interface{}{"username": username, "password": password}).
+		SetResult(moa).
+		Post(oktaDomain + "api/v1/authn")
+	So(err, ShouldBeNil)
+	So(resp.String(), ShouldContainSubstring, `"status":"SUCCESS"`)
+
+	sessionToken := moa.SessionToken
+	So(sessionToken, ShouldNotBeBlank)
+
+	_, err = r.Get("/login-test")
+	So(err, ShouldBeNil)
+	So(oauthState, ShouldNotBeBlank)
+	So(codeChallenge, ShouldNotBeBlank)
+
+	resp, err = rOkta.R().
+		SetQueryParams(map[string]string{
+			"client_id":                  clientID,
+			"response_type":              oauth2AuthCodeKey,
+			"response_mode":              "query",
+			"scope":                      "openid email",
+			"redirect_uri":               ClientProtocol + addr + EndpointAuthCLICallback,
+			"state":                      oauthState,
+			"sessionToken":               sessionToken,
+			oauth2AuthChallengeKey:       codeChallenge,
+			oauth2AuthChallengeMethodKey: oauth2AuthChallengeMethod,
+		}).
+		SetHeader("Accept", "application/json").
+		Get(s.cliOAuth.Endpoint.AuthURL)
+	So(err, ShouldBeNil)
+
+	return resp
+}
+
+// checkJWTWorks calls LoadDGUTDBs on the given server, then sees if we can
+// GetWhereDataIs using the given jwt. Returns true if it all worked, or if we
+// can't do this test due to not belonging to at least 2 unix groups.
+func checkJWTWorks(t *testing.T, s *Server, addr, certPath, jwt string) bool {
+	t.Helper()
+
+	_, uid, gids := getUserAndGroups(t)
+	if len(gids) < 2 {
+		return true
+	}
+
+	path, err := createExampleDB(t, uid, gids[0], gids[1])
+	So(err, ShouldBeNil)
+	err = s.LoadDGUTDBs(path)
+	So(err, ShouldBeNil)
+
+	_, _, err = GetWhereDataIs(addr, certPath, jwt, "/", "", "", "", "0")
+
+	return err == nil
+}
+
+type mockDirEntry struct{}
+
+func (m *mockDirEntry) Name() string {
+	return ""
+}
+
+func (m *mockDirEntry) IsDir() bool {
+	return false
+}
+
+func (m *mockDirEntry) Type() fs.FileMode {
+	return fs.ModeDir
+}
+
+func (m *mockDirEntry) Info() (fs.FileInfo, error) {
+	return nil, fs.ErrNotExist
 }

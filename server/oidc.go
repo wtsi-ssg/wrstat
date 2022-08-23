@@ -80,6 +80,27 @@ const (
 	ErrOIDCBadMeta         = Error("issuer meta information not found")
 )
 
+// oidcAuth takes the HTTP request, gets the user from it and returns a `*User`
+// object.
+func (s *Server) oidcAuth(c *gin.Context) (*User, error) {
+	email, err := s.extractEmailFromOktaSession(c.Request)
+	if err != nil {
+		return nil, err
+	}
+
+	username := getUsernameFromEmail(email)
+
+	uid, err := userNameToUID(username)
+	if err != nil {
+		return nil, err
+	}
+
+	return &User{
+		Username: username,
+		UID:      uid,
+	}, nil
+}
+
 // oAuthParameters are used during AddOIDCRoutes() to create oauthEnv.
 type oAuthParameters struct {
 	issuer           string
