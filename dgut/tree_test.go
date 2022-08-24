@@ -35,6 +35,8 @@ import (
 )
 
 func TestTree(t *testing.T) {
+	expectedFTsBam := []summary.DirGUTFileType{summary.DGUTFileTypeBam}
+
 	Convey("You can make a Tree from a dgut database", t, func() {
 		paths := testMakeDBPaths(t)
 		tree, errc := NewTree(paths[0])
@@ -50,11 +52,10 @@ func TestTree(t *testing.T) {
 
 		expectedUIDs := []uint32{101, 102}
 		expectedGIDs := []uint32{1, 2}
-		expectedFTs := []summary.DirGUTFileType{0, 1, 7}
+		expectedFTs := []summary.DirGUTFileType{summary.DGUTFileTypeTemp, summary.DGUTFileTypeBam, summary.DGUTFileTypeCram}
 		expectedUIDsOne := []uint32{101}
 		expectedGIDsOne := []uint32{1}
-		expectedFTsZero := []summary.DirGUTFileType{0}
-		expectedFTsOne := []summary.DirGUTFileType{1}
+		expectedFTsCram := []summary.DirGUTFileType{summary.DGUTFileTypeCram}
 		expectedAtime := time.Unix(50, 0)
 		expectedAtimeG := time.Unix(60, 0)
 
@@ -74,16 +75,16 @@ func TestTree(t *testing.T) {
 				Current: &DirSummary{"/a", 14, 85, expectedAtime, expectedUIDs, expectedGIDs, expectedFTs},
 				Children: []*DirSummary{
 					{"/a/b", 9, 80, expectedAtime, expectedUIDs, expectedGIDsOne, expectedFTs},
-					{"/a/c", 5, 5, time.Unix(90, 0), []uint32{102}, []uint32{2}, expectedFTsZero},
+					{"/a/c", 5, 5, time.Unix(90, 0), []uint32{102}, []uint32{2}, expectedFTsCram},
 				},
 			})
 
-			di, err = tree.DirInfo("/a", &Filter{FTs: []summary.DirGUTFileType{1}})
+			di, err = tree.DirInfo("/a", &Filter{FTs: expectedFTsBam})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a", 2, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsOne},
+				Current: &DirSummary{"/a", 2, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsBam},
 				Children: []*DirSummary{
-					{"/a/b", 2, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsOne},
+					{"/a/b", 2, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsBam},
 				},
 			})
 
@@ -91,11 +92,11 @@ func TestTree(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
 				Current: &DirSummary{"/a/b/e/h/tmp", 1, 5, time.Unix(75, 0),
-					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{1, 7}},
+					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{summary.DGUTFileTypeTemp, summary.DGUTFileTypeBam}},
 				Children: nil,
 			})
 
-			di, err = tree.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{3}})
+			di, err = tree.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeCompressed}})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
 				Current:  &DirSummary{"/", 0, 0, time.Unix(0, 0), []uint32{}, []uint32{}, []summary.DirGUTFileType{}},
@@ -120,10 +121,10 @@ func TestTree(t *testing.T) {
 		})
 
 		Convey("You can find Where() in the Tree files are", func() {
-			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 0)
+			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, 0)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, 0)
@@ -132,27 +133,27 @@ func TestTree(t *testing.T) {
 				{"/a/b", 5, 40, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTs},
 			})
 
-			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 1)
+			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, 1)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
 			})
 
 			dcss.SortByDir()
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
 			})
 
-			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}}, 2)
+			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, 2)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
 			})
 
 			_, err = tree.Where("/foo", nil, 1)
@@ -161,12 +162,12 @@ func TestTree(t *testing.T) {
 
 		Convey("You can get the FileLocations()", func() {
 			dcss, err := tree.FileLocations("/",
-				&Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: []summary.DirGUTFileType{0}})
+				&Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram})
 			So(err, ShouldBeNil)
 
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsZero},
+				{"/a/b/d/f", 1, 10, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
 			})
 
 			_, err = tree.FileLocations("/foo", nil)
@@ -190,21 +191,21 @@ func TestTree(t *testing.T) {
 	Convey("You can make a Tree from multiple dgut databases and query it", t, func() {
 		paths1 := testMakeDBPaths(t)
 		db := NewDB(paths1[0])
-		data := strings.NewReader("/\t1\t11\t1\t1\t1\t20\n" +
-			"/a\t1\t11\t1\t1\t1\t20\n" +
-			"/a/b\t1\t11\t1\t1\t1\t20\n" +
-			"/a/b/c\t1\t11\t1\t1\t1\t20\n" +
-			"/a/b/c/d\t1\t11\t1\t1\t1\t20\n")
+		data := strings.NewReader("/\t1\t11\t6\t1\t1\t20\n" +
+			"/a\t1\t11\t6\t1\t1\t20\n" +
+			"/a/b\t1\t11\t6\t1\t1\t20\n" +
+			"/a/b/c\t1\t11\t6\t1\t1\t20\n" +
+			"/a/b/c/d\t1\t11\t6\t1\t1\t20\n")
 		err := db.Store(data, 20)
 		So(err, ShouldBeNil)
 
 		paths2 := testMakeDBPaths(t)
 		db = NewDB(paths2[0])
-		data = strings.NewReader("/\t1\t11\t1\t1\t1\t15\n" +
-			"/a\t1\t11\t1\t1\t1\t15\n" +
-			"/a/b\t1\t11\t1\t1\t1\t15\n" +
-			"/a/b/c\t1\t11\t1\t1\t1\t15\n" +
-			"/a/b/c/e\t1\t11\t1\t1\t1\t15\n")
+		data = strings.NewReader("/\t1\t11\t6\t1\t1\t15\n" +
+			"/a\t1\t11\t6\t1\t1\t15\n" +
+			"/a/b\t1\t11\t6\t1\t1\t15\n" +
+			"/a/b/c\t1\t11\t6\t1\t1\t15\n" +
+			"/a/b/c/e\t1\t11\t6\t1\t1\t15\n")
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 
@@ -217,15 +218,15 @@ func TestTree(t *testing.T) {
 		dcss, err := tree.Where("/", nil, 0)
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2, expectedAtime, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
+			{"/a/b/c", 2, 2, expectedAtime, []uint32{11}, []uint32{1}, expectedFTsBam},
 		})
 
 		dcss, err = tree.Where("/", nil, 1)
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2, expectedAtime, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
-			{"/a/b/c/d", 1, 1, time.Unix(20, 0), []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
-			{"/a/b/c/e", 1, 1, expectedAtime, []uint32{11}, []uint32{1}, []summary.DirGUTFileType{1}},
+			{"/a/b/c", 2, 2, expectedAtime, []uint32{11}, []uint32{1}, expectedFTsBam},
+			{"/a/b/c/d", 1, 1, time.Unix(20, 0), []uint32{11}, []uint32{1}, expectedFTsBam},
+			{"/a/b/c/e", 1, 1, expectedAtime, []uint32{11}, []uint32{1}, expectedFTsBam},
 		})
 	})
 }

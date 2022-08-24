@@ -109,14 +109,29 @@ Likewise, it produces a similar file that also shows nested numbers, with these
 1. directory
 2. gid
 3. uid
-4. filetype (0=cram,1=bam,2=index,3=compressed,4=uncompressed,5=checkpoint,
-	         6=other,7=temporary)
+4. filetype - an int with the following meaning: 
+     0 = other (not any of the others below)
+     1 = temp (.tmp | temp suffix, or .tmp. | .temp. | tmp. | temp. prefix, or
+               a directory in its path is named "tmp" or "temp")
+     2 = vcf
+     3 = vcf.gz
+     4 = bcf
+     5 = sam
+     6 = bam
+     7 = cram
+     8 = fasta (.fa | .fasta suffix)
+     9 = fastq (.fq | .fastq suffix)
+    10 = fastq.gz (.fq.gz | .fastq.gz suffix)
+    11 = ped/bed (.ped | .map | .bed | .bim | .fam suffix)
+    12 = compresed (.bzip2 | .gz | .tgz | .zip | .xz | .bgz suffix)
+    13 = text (.csv | .tsv | .txt | .text | .md | .dat | readme suffix)
+    14 = log (.log | .out | .o | .err | .e | .err | .oe suffix)
 5. number of files nested under 1 belonging to 2 and 3 and having filetype in 4.
 6. total file size in bytes of the files in 5.
 7. the oldest access time of the files in 5, in seconds since Unix epoch.
 
-(Note that files can be both "temporary" and one of the other types, so ignore
-lines where column 4 is 7 if summing up columns 5 and 6 for a given 1+2+3 for an
+(Note that files can be both "temp" and one of the other types, so ignore lines
+where column 4 is 1 if summing up columns 5 and 6 for a given 1+2+3 for an
 "all filetypes" query.)
 
 It also summarises file count and size information by grouping on group+user,
