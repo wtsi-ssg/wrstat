@@ -149,8 +149,8 @@ type GUTs []*GUT
 //
 // Provide nil to do no filtering.
 //
-// Note that FT 7 is "temporary" files, and because a file can be both temporary
-// and another type, if your Filter's FTs slice doesn't contain just
+// Note that FT 1 is "temp" files, and because a file can be both temporary and
+// another type, if your Filter's FTs slice doesn't contain just
 // DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored. (But
 // the FTs list will still indicate if you had temp files that passed other
 // filters.)
