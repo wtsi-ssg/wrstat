@@ -88,8 +88,9 @@ func uidToName(uid uint32, cache map[uint32]string) string {
 // groupToUserStore is a sortable map of gid to userToSummaryStore.
 type groupToUserStore map[uint32]userToSummaryStore
 
-// getGroupToUserStore auto-vivifies a groupToUser for the given gid and returns it.
-func (store groupToUserStore) getGroupToUserStore(gid uint32) userToSummaryStore {
+// getUserToSummaryStore auto-vivifies a userToSummaryStore for the given gid
+// and returns it.
+func (store groupToUserStore) getUserToSummaryStore(gid uint32) userToSummaryStore {
 	uStore, ok := store[gid]
 	if !ok {
 		uStore = make(userToSummaryStore)
@@ -153,7 +154,7 @@ func (g *GroupUser) Add(path string, info fs.FileInfo) error {
 		return errNotUnix
 	}
 
-	g.store.getGroupToUserStore(stat.Gid).add(stat.Uid, info.Size())
+	g.store.getUserToSummaryStore(stat.Gid).add(stat.Uid, info.Size())
 
 	return nil
 }

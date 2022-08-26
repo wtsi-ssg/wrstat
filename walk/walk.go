@@ -2,6 +2,7 @@
  * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Partially based on github.com/MichaelTJones/walk
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -24,12 +25,11 @@
  ******************************************************************************/
 
 // package walk is used to quickly walk a filesystem to just see what paths
-// there are on it.
+// there are on it. It does 0 stat calls.
 
 package walk
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,6 +39,8 @@ import (
 )
 
 const userOnlyPerm = 0700
+const walkers = 16
+const dirsChSize = 1024
 
 // WriteError is an error received when trying to write discovered paths to
 // disk.
@@ -57,8 +59,13 @@ type Walker struct {
 	files    []*os.File
 	filesI   int
 	filesMax int
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	mus      []sync.Mutex
+	dirsCh   chan string
+	active   sync.WaitGroup
+	err      error
+	errCB    ErrorCallback
+	ended    bool
 }
 
 // New creates a new Walker that can Walk() a filesystem and write all the
@@ -119,26 +126,98 @@ type ErrorCallback func(path string, err error)
 // will mean the path isn't output, but the walk will continue and this method
 // won't return an error.
 func (w *Walker) Walk(dir string, cb ErrorCallback) error {
-	subDirs, otherEntries, ok := w.getImmediateChildren(dir, cb)
-	if !ok {
-		return nil
+	dir = filepath.Clean(dir)
+
+	w.errCB = cb
+	w.dirsCh = make(chan string, dirsChSize)
+
+	defer func() {
+		w.mu.Lock()
+		w.ended = true
+		w.mu.Unlock()
+		close(w.dirsCh)
+	}()
+
+	w.addDir(dir)
+
+	for i := 0; i < walkers; i++ {
+		go w.processDirs()
 	}
 
-	if err := w.writeEntries(append(otherEntries, dir), cb); err != nil {
-		return err
-	}
+	w.active.Wait()
 
-	return w.walkSubDirs(subDirs, cb)
+	return w.err
 }
 
-// getImmediateChildren finds the immediate children of the given directory
-// and returns any entries that are subdirectories, then any other entries. Like
-// walkDir(), any failure to read is passed to the given callback, but we don't
-// return an error (just nil results and false).
-func (w *Walker) getImmediateChildren(dir string, cb ErrorCallback) ([]string, []string, bool) {
-	children, err := godirwalk.ReadDirents(dir, nil)
+// addDir adds the given dir to our channel for processDirs() to pick up.
+func (w *Walker) addDir(dir string) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	if w.err != nil || w.ended {
+		return
+	}
+
+	w.active.Add(1)
+
+	go func() {
+		w.dirsCh <- dir
+	}()
+}
+
+// processDirs pulls from our dirsCh and calls processDir on each.
+func (w *Walker) processDirs() {
+	buffer := make([]byte, os.Getpagesize())
+
+	for dir := range w.dirsCh {
+		w.processDir(dir, buffer)
+	}
+}
+
+// processDir gets the contents of the given directory, outputs paths to our
+// output files, and adds directories to our dirsCh. The buffer is used to speed
+// up reading directory contents.
+func (w *Walker) processDir(dir string, buffer []byte) {
+	defer func() {
+		w.active.Done()
+	}()
+
+	if w.terminated() {
+		return
+	}
+
+	subDirs, otherEntries, ok := w.getImmediateChildren(dir, buffer)
+	if !ok {
+		return
+	}
+
+	if err := w.writeEntries(append(otherEntries, dir)); err != nil {
+		w.terminate(err)
+
+		return
+	}
+
+	for _, subDir := range subDirs {
+		w.addDir(subDir)
+	}
+}
+
+// terminated returns true if one of our go routines has called terminate().
+func (w *Walker) terminated() bool {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	return w.err != nil
+}
+
+// getImmediateChildren finds the immediate children of the given directory and
+// returns any entries that are subdirectories, then any other entries. Any
+// failure to read is passed to our errCB, but we don't return an error (just
+// nil results and false).
+func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]string, []string, bool) {
+	children, err := godirwalk.ReadDirents(dir, buffer)
 	if err != nil {
-		cb(dir, err)
+		w.errCB(dir, err)
 
 		return nil, nil, false
 	}
@@ -159,10 +238,10 @@ func (w *Walker) getImmediateChildren(dir string, cb ErrorCallback) ([]string, [
 }
 
 // writeEntries writes the given paths to our output files.
-func (w *Walker) writeEntries(paths []string, cb ErrorCallback) error {
+func (w *Walker) writeEntries(paths []string) error {
 	for _, path := range paths {
 		if err := w.writePath(path); err != nil {
-			cb(path, err)
+			w.errCB(path, err)
 
 			return err
 		}
@@ -195,55 +274,15 @@ func (w *Walker) writePath(path string) error {
 	return err
 }
 
-// walkSubDirs calls walkDir() on each given subDir concurrently.
-func (w *Walker) walkSubDirs(subDirs []string, cb ErrorCallback) error {
-	var wg sync.WaitGroup
+// terminate will store the err on self on the first call to terminate, and
+// cause subsequent terminated() calls to return true.
+func (w *Walker) terminate(err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	errCh := make(chan error, len(subDirs))
-
-	for _, dir := range subDirs {
-		wg.Add(1)
-
-		go func(thisDir string) {
-			defer wg.Done()
-
-			werr := w.walkDir(thisDir, cb)
-			errCh <- werr
-		}(dir)
+	if w.err == nil {
+		w.err = err
 	}
-
-	wg.Wait()
-
-	for range subDirs {
-		if err := <-errCh; err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// walkDir walks the given directory, writing the paths to entries found to our
-// output files. Ends the walk if we fail to write to an output file, skips
-// entries we can't read. All errors are supplied to the given error callback.
-func (w *Walker) walkDir(dir string, cb ErrorCallback) error {
-	var writeError *WriteError
-
-	return godirwalk.Walk(dir, &godirwalk.Options{
-		Callback: func(path string, de *godirwalk.Dirent) error {
-			return w.writePath(path)
-		},
-		ErrorCallback: func(path string, err error) godirwalk.ErrorAction {
-			cb(path, err)
-
-			if errors.As(err, &writeError) {
-				return godirwalk.Halt
-			}
-
-			return godirwalk.SkipNode
-		},
-		Unsorted: true,
-	})
 }
 
 // Close should be called after Walk()ing to close all the output files.

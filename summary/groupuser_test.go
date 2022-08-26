@@ -27,7 +27,6 @@ package summary
 
 import (
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
@@ -90,8 +89,7 @@ func TestGroupUser(t *testing.T) {
 
 					So(output, ShouldContainSubstring, g.Name+"\t"+os.Getenv("USER")+"\t3\t60\n")
 
-					err = exec.Command("sort", "-C", outPath).Run()
-					So(err, ShouldBeNil)
+					So(checkFileIsSorted(outPath), ShouldBeTrue)
 				})
 
 				Convey("Output handles bad uids", func() {

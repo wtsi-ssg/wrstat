@@ -39,8 +39,11 @@ import (
 
 const (
 	walkTime    = 19 * time.Hour
+	walkRAM     = 16000
 	combineTime = 40 * time.Minute
-	combineRAM  = 150
+	combineRAM  = 800
+	basedirTime = 15 * time.Minute
+	basedirRAM  = 42000
 )
 
 // options for this cmd.
@@ -48,6 +51,7 @@ var workDir string
 var finalDir string
 var multiInodes int
 var multiCh string
+var forcedQueue string
 
 // multiCmd represents the multi command.
 var multiCmd = &cobra.Command{
@@ -78,9 +82,9 @@ unique directory created for all of them.
 particular subsets of jobs took.)
 
 Once everything has completed, the final output files are moved to the given
---final_output directory, with a name that includes the date this command was
-started, the basename of the directory operated on, a unique string per
-directory of interest, and a unique string for this call of multi:
+--final_output directory by 'wrstat tidy', with a name that includes the date
+this command was started, the basename of the directory operated on, a unique
+string per directory of interest, and a unique string for this call of multi:
 [year][month][day]_[directory_basename]/[interest unique].[unique].[type]
 eg. for 'wrstat multi -i foo -w /path/a -f /path/b /mnt/foo /mnt/bar /home/bar'
 It might produce: 
@@ -96,35 +100,27 @@ It might produce:
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617.c35m8359bnc8ni7dgphg.basedirs
+/path/b/20210617.c35m8359bnc8ni7dgphg.dgut.dbs
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
+The base.*.dirs file gets made by calling 'wrstat basedirs' after the 'combine'
+step.
+
 Finally, the unique subdirectory of --working_directory that was created is
-deleted.`,
+deleted.
+
+Note that in your --final_output directory, if a *.dgut.dbs directory already
+exists, and you have a wrstat server using the database files inside, the server
+will automatically start using the new data and delete the old.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if workDir == "" {
-			die("--working_directory is required")
-		}
-		if finalDir == "" {
-			die("--final_output is required")
-		}
-		if len(args) == 0 {
-			die("at least 1 directory of interest must be supplied")
-		}
-
-		s, d := newScheduler(workDir)
-		defer d()
-
-		unique := scheduler.UniqueString()
-		outputRoot := filepath.Join(workDir, unique)
-		err := os.MkdirAll(outputRoot, userOnlyPerm)
+		checkMultiArgs(args)
+		err := doMultiScheduling(args)
 		if err != nil {
-			die("failed to create working dir: %s", err)
+			die("%s", err)
 		}
-
-		scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, s)
-		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	},
 }
 
@@ -137,19 +133,59 @@ func init() {
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
+	multiCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
+}
+
+// checkMultiArgs ensures we have the required args for the multi sub-command.
+func checkMultiArgs(args []string) {
+	if workDir == "" {
+		die("--working_directory is required")
+	}
+
+	if finalDir == "" {
+		die("--final_output is required")
+	}
+
+	if len(args) == 0 {
+		die("at least 1 directory of interest must be supplied")
+	}
+}
+
+// doMultiScheduling does the main work of the multi sub-command.
+func doMultiScheduling(args []string) error {
+	s, d := newScheduler(workDir, forcedQueue)
+	defer d()
+
+	unique := scheduler.UniqueString()
+	outputRoot := filepath.Join(workDir, unique)
+
+	err := os.MkdirAll(outputRoot, userOnlyPerm)
+	if err != nil {
+		return err
+	}
+
+	scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, forcedQueue, s)
+	scheduleBasedirsJob(outputRoot, unique, s)
+	scheduleTidyJob(outputRoot, finalDir, unique, s)
+
+	return nil
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	n int, yamlPath string, s *scheduler.Scheduler) {
+	n int, yamlPath, queue string, s *scheduler.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
 	cmd := fmt.Sprintf("%s walk -n %d ", s.Executable(), n)
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
+	}
+
+	if queue != "" {
+		cmd += fmt.Sprintf("--queue %s ", queue)
 	}
 
 	if sudo {
@@ -179,6 +215,7 @@ func reqs() (*jqs.Requirements, *jqs.Requirements) {
 	req := scheduler.DefaultRequirements()
 	reqWalk := req.Clone()
 	reqWalk.Time = walkTime
+	reqWalk.RAM = walkRAM
 	reqCombine := req.Clone()
 	reqCombine.Time = combineTime
 	reqCombine.RAM = combineRAM
@@ -198,12 +235,33 @@ func combineRepGrp(dir, unique string) string {
 	return repGrp("combine", dir, unique)
 }
 
+// scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
+// from the combined dgut.dbs folders.
+func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
+	job := s.NewJob(fmt.Sprintf("%s basedir %s", s.Executable(), outputRoot),
+		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
+
+	addJobsToQueue(s, []*jobqueue.Job{job})
+}
+
+// basedirReqs returns Requirements suitable for basedir jobs. The RAM
+// requirement is currently set so high due to a bad LSF&cgroups interaction
+// that means LSF counts the mmap of the database files as the job's memory
+// usage.
+func basedirReqs() *jqs.Requirements {
+	req := scheduler.DefaultRequirements()
+	req.Time = basedirTime
+	req.RAM = basedirRAM
+
+	return req
+}
+
 // scheduleTidyJob adds a job to wr's queue that for each working directory
 // subdir moves the output to the final location and then deletes the working
 // directory.
 func scheduleTidyJob(outputRoot, finalDir, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s tidy -f %s -d %s %s", s.Executable(), finalDir, dateStamp(), outputRoot),
-		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique, nil)
+		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique+".basedir", scheduler.DefaultRequirements())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }

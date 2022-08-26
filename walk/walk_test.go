@@ -133,9 +133,11 @@ func TestWalk(t *testing.T) {
 			werr := walkErrors[0].(*WriteError) //nolint:errcheck,errorlint,forcetypeassert
 			So(werr.Unwrap(), ShouldEqual, werr.Err)
 
-			err = w.walkSubDirs([]string{walkDir}, cb)
-			So(err, ShouldNotBeNil)
-			So(len(walkErrors), ShouldEqual, 2)
+			w.active.Add(1)
+			w.processDir(walkDir, nil)
+			So(len(walkErrors), ShouldEqual, 1)
+
+			w.addDir(walkDir)
 		})
 
 		Convey("Read errors during a walk are reported and the path skipped", func() {
@@ -151,10 +153,6 @@ func TestWalk(t *testing.T) {
 			outPath := filepath.Join(outDir, "walk.1")
 			_, err = os.ReadFile(outPath)
 			So(err, ShouldBeNil)
-
-			err = w.walkSubDirs([]string{"/root"}, cb)
-			So(err, ShouldBeNil)
-			So(len(walkErrors), ShouldEqual, 2)
 		})
 	})
 

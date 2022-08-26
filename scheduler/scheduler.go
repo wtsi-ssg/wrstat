@@ -53,17 +53,19 @@ const reqDisk = 1
 // Scheduler can be used to schedule commands to be executed by adding them to
 // wr's queue.
 type Scheduler struct {
-	cwd  string
-	exe  string
-	jq   *jobqueue.Client
-	sudo bool
+	cwd   string
+	exe   string
+	jq    *jobqueue.Client
+	sudo  bool
+	queue string
 }
 
 // New returns a Scheduler that is connected to wr manager using the given
 // deployment, timeout and logger. If sudo is true, NewJob() will prefix 'sudo'
 // to commands. Added jobs will have the given cwd, which matters. If cwd is
-// blank, the current working dir is used.
-func New(deployment, cwd string, timeout time.Duration, logger log15.Logger,
+// blank, the current working dir is used. If queue is not blank, that queue
+// will be used during NewJob().
+func New(deployment, cwd, queue string, timeout time.Duration, logger log15.Logger,
 	sudo bool) (*Scheduler, error) {
 	cwd, err := pickCWD(cwd)
 	if err != nil {
@@ -79,10 +81,11 @@ func New(deployment, cwd string, timeout time.Duration, logger log15.Logger,
 	exe, err := os.Executable()
 
 	return &Scheduler{
-		cwd:  cwd,
-		exe:  exe,
-		jq:   jq,
-		sudo: sudo,
+		cwd:   cwd,
+		exe:   exe,
+		queue: queue,
+		jq:    jq,
+		sudo:  sudo,
 	}, err
 }
 
@@ -126,13 +129,15 @@ func DefaultRequirements() *jqs.Requirements {
 // Dependencies.
 //
 // If req is supplied, sets the job override to 1. Otherwise, req will default
-// to a minimal set of requirments, and override will be 0.
+// to a minimal set of requirments, and override will be 0. If this Scheduler
+// had been made with a queue override, the requirements will be altered to add
+// that queue.
 func (s *Scheduler) NewJob(cmd, repGroup, reqGroup, depGroup, dep string, req *jqs.Requirements) *jobqueue.Job {
 	if s.sudo {
 		cmd = "sudo " + cmd
 	}
 
-	req, override := determineOverrideAndReq(req)
+	req, override := s.determineOverrideAndReq(req)
 
 	return &jobqueue.Job{
 		Cmd:          cmd,
@@ -172,12 +177,22 @@ func createDependencies(dep string) jobqueue.Dependencies {
 
 // determineOverrideAndReq returns the given req and an override of 1 if req is
 // not nil, otherwise returns a default req and override of 0.
-func determineOverrideAndReq(req *jqs.Requirements) (*jqs.Requirements, uint8) {
+func (s *Scheduler) determineOverrideAndReq(req *jqs.Requirements) (*jqs.Requirements, uint8) {
 	override := 1
 
 	if req == nil {
 		req = DefaultRequirements()
 		override = 0
+	}
+
+	if s.queue != "" {
+		other := req.Other
+		if other == nil {
+			other = make(map[string]string)
+		}
+
+		other["scheduler_queue"] = s.queue
+		req.Other = other
 	}
 
 	return req, uint8(override)
