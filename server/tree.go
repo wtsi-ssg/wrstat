@@ -81,9 +81,19 @@ func getStaticFS() fs.FS {
 // AddGroupAreas takes a map of area keys and group slice values. Clients will
 // then receive this map on TreeElements in the "areas" field.
 //
-// Call this only once, and it will only have an impact with AddTreePage().
+// If EnableAuth() has been called, also creates the /auth/group-areas endpoint
+// that returns the given value.
 func (s *Server) AddGroupAreas(areas map[string][]string) {
 	s.areas = areas
+
+	if s.authGroup != nil {
+		s.authGroup.GET(groupAreasPaths, s.getGroupAreas)
+	}
+}
+
+// getGroupAreas serves up our areas hash as JSON.
+func (s *Server) getGroupAreas(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, s.areas)
 }
 
 // TreeElement holds tree.DirInfo type information in a form suited to passing
