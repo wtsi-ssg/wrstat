@@ -127,6 +127,7 @@ type Server struct {
 	logger         *log.Logger
 	webOAuth       *oauthEnv
 	cliOAuth       *oauthEnv
+	areas          map[string][]string
 }
 
 // New creates a Server which can serve a REST API and website.
