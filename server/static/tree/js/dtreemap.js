@@ -475,7 +475,7 @@ define(["d3", "cookie"], function (d3, cookie) {
 
         list.forEach(function (ft) {
             let c = ft;
-            c = c.replace(/[-/]/, "");
+            c = c.replace(/[./]/, "");
             dfns.push("<dfn class='ft-" + c + "'>" + ft + "</dfn>");
         });
 
