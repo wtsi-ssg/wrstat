@@ -40,18 +40,25 @@ func (s *summary) add(size int64) {
 	s.size += size
 }
 
-// summaryWithAtime is like summary, but also holds the oldest atime add()ed.
+// summaryWithAtime is like summary, but also holds the oldest atime and
+// newest mtime add()ed.
 type summaryWithAtime struct {
 	summary
 	atime int64 // seconds since Unix epoch
+	mtime int64 // seconds since Unix epoch
 }
 
 // add will increment our count and add the given size to our size. It also
-// stores the given atime if it is older than our current one.
-func (s *summaryWithAtime) add(size int64, atime int64) {
+// stores the given atime if it is older than our current one, and the given
+// mtime if it is newer than our current one.
+func (s *summaryWithAtime) add(size int64, atime int64, mtime int64) {
 	s.summary.add(size)
 
 	if s.atime == 0 || atime < s.atime {
 		s.atime = atime
+	}
+
+	if s.mtime == 0 || mtime > s.mtime {
+		s.mtime = mtime
 	}
 }

@@ -40,6 +40,7 @@ type GUT struct {
 	Count uint64
 	Size  uint64
 	Atime int64 // seconds since Unix epoch
+	Mtime int64 // seconds since Unix epoch
 }
 
 // Filter can be applied to a GUT to see if it has one of the specified GIDs,
@@ -140,8 +141,8 @@ func (g *GUT) amTempAndNotFilteredJustForTemp(filter *Filter) bool {
 type GUTs []*GUT
 
 // Summary sums the count and size of all our GUT elements and returns the
-// results, along with the oldest atime (in seconds since Unix epoch) and lists
-// of the unique UIDs, GIDs and FTs in our GUT elements.
+// results, along with the oldest atime and newset mtime (in seconds since Unix
+// epoch) and lists of the unique UIDs, GIDs and FTs in our GUT elements.
 //
 // Provide a Filter to ignore GUT elements that do not match one of the
 // specified GIDs, one of the UIDs, and one of the FTs. If one of those
@@ -154,10 +155,10 @@ type GUTs []*GUT
 // DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored. (But
 // the FTs list will still indicate if you had temp files that passed other
 // filters.)
-func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, []uint32, []uint32, []summary.DirGUTFileType) {
+func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, int64, []uint32, []uint32, []summary.DirGUTFileType) {
 	var count, size uint64
 
-	var atime int64
+	var atime, mtime int64
 
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
@@ -174,22 +175,27 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, []uint32, []uint32
 			continue
 		}
 
-		addGUTToSummary(gut, &count, &size, &atime, uniqueUIDs, uniqueGIDs)
+		addGUTToSummary(gut, &count, &size, &atime, &mtime, uniqueUIDs, uniqueGIDs)
 	}
 
-	return count, size, atime,
+	return count, size, atime, mtime,
 		boolMapToSortedKeys(uniqueUIDs),
 		boolMapToSortedKeys(uniqueGIDs),
 		boolMapToSortedKeys(uniqueFTs)
 }
 
 // addGUTToSummary alters the incoming arg summary values based on the gut.
-func addGUTToSummary(gut *GUT, count, size *uint64, atime *int64, uniqueUIDs, uniqueGIDs map[uint32]bool) {
+func addGUTToSummary(gut *GUT, count, size *uint64, atime *int64, mtime *int64,
+	uniqueUIDs, uniqueGIDs map[uint32]bool) {
 	*count += gut.Count
 	*size += gut.Size
 
 	if *atime == 0 || gut.Atime < *atime {
 		*atime = gut.Atime
+	}
+
+	if *mtime == 0 || gut.Mtime > *mtime {
+		*mtime = gut.Mtime
 	}
 
 	uniqueUIDs[gut.UID] = true

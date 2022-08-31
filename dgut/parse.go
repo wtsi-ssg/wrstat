@@ -43,8 +43,8 @@ const ErrInvalidFormat = Error("the provided data was not in dgut format")
 const ErrBlankLine = Error("the provided line had no information")
 
 const (
-	gutDataCols    = 7
-	gutDataIntCols = 6
+	gutDataCols    = 8
+	gutDataIntCols = 7
 )
 
 type dgutParserCallBack func(*DGUT)
@@ -124,10 +124,11 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 		Count: ints[3],
 		Size:  ints[4],
 		Atime: int64(ints[5]),
+		Mtime: int64(ints[6]),
 	}, nil
 }
 
-// splitDGUTLine trims the \n from line and splits it in to 7 columns.
+// splitDGUTLine trims the \n from line and splits it in to 8 columns.
 func splitDGUTLine(line string) ([]string, error) {
 	line = strings.TrimSuffix(line, "\n")
 
@@ -140,7 +141,7 @@ func splitDGUTLine(line string) ([]string, error) {
 }
 
 // gutLinePartsToInts takes the output of splitDGUTLine() and returns the last
-// 6 columns as ints.
+// 7 columns as ints.
 func gutLinePartsToInts(parts []string) ([]uint64, error) {
 	ints := make([]uint64, gutDataIntCols)
 
@@ -158,16 +159,10 @@ func gutLinePartsToInts(parts []string) ([]uint64, error) {
 		return nil, ErrInvalidFormat
 	}
 
-	if ints[3], err = strconv.ParseUint(parts[4], 10, 64); err != nil {
-		return nil, ErrInvalidFormat
-	}
-
-	if ints[4], err = strconv.ParseUint(parts[5], 10, 64); err != nil {
-		return nil, ErrInvalidFormat
-	}
-
-	if ints[5], err = strconv.ParseUint(parts[6], 10, 64); err != nil {
-		return nil, ErrInvalidFormat
+	for i := 3; i < 7; i++ {
+		if ints[i], err = strconv.ParseUint(parts[i+1], 10, 64); err != nil {
+			return nil, ErrInvalidFormat
+		}
 	}
 
 	return ints, nil

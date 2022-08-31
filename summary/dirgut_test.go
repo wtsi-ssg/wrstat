@@ -307,12 +307,15 @@ func TestDirGUT(t *testing.T) {
 
 		Convey("You can add file info to it which accumulates the info", func() {
 			addTestData(dgut, cuid)
+
 			err = dgut.Add("/a/b/c/3.bam", newMockInfoWithAtime(2, 2, 3, false, 100))
 			So(err, ShouldBeNil)
-			err = dgut.Add("/a/b/c/7.cram", newMockInfoWithAtime(10, 2, 2, false, 250))
+			mi := newMockInfoWithAtime(10, 2, 2, false, 250)
+			mi.mtime = 250
+			err = dgut.Add("/a/b/c/7.cram", mi)
 			So(err, ShouldBeNil)
 
-			mi := newMockInfoWithAtime(10, 2, 2, false, 199)
+			mi = newMockInfoWithAtime(10, 2, 2, false, 199)
 			mi.mtime = 200
 			err = dgut.Add("/a/b/c/d/9.cram", mi)
 			So(err, ShouldBeNil)
@@ -333,42 +336,42 @@ func TestDirGUT(t *testing.T) {
 			So(dgut.store[""], ShouldBeNil)
 
 			cuidKey := fmt.Sprintf("2\t%d\t13", cuid)
-			So(dgut.store["/a/b/c"][cuidKey], ShouldResemble, &summaryWithAtime{summary{2, 30}, 0})
-			So(dgut.store["/a/b/c"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
-			So(dgut.store["/a/b/c"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
-			So(dgut.store["/a/b/c"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
+			So(dgut.store["/a/b/c"][cuidKey], ShouldResemble, &summaryWithAtime{summary{2, 30}, 0, 0})
+			So(dgut.store["/a/b/c"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0, 0})
+			So(dgut.store["/a/b/c"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100, 0})
+			So(dgut.store["/a/b/c"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0, 0})
 			So(dgut.store["/a/b/c"]["3\t2\t1"], ShouldBeNil)
-			So(dgut.store["/a/b/c"]["2\t10\t7"], ShouldResemble, &summaryWithAtime{summary{2, 4}, 200})
-			So(dgut.store["/a/b/c/d"]["2\t10\t7"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 200})
-			So(dgut.store["/a/b/c"]["10\t2\t7"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 301})
+			So(dgut.store["/a/b/c"]["2\t10\t7"], ShouldResemble, &summaryWithAtime{summary{2, 4}, 200, 250})
+			So(dgut.store["/a/b/c/d"]["2\t10\t7"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 200, 200})
+			So(dgut.store["/a/b/c"]["10\t2\t7"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 301, 0})
 
 			swa := dgut.store["/a/b"]["2\t10\t0"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
-			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18})
+			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18, 0})
 
 			swa = dgut.store["/a/b/c"]["2\t10\t0"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
-			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18})
+			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18, 0})
 			So(dgut.store["/a/b/c/d"]["2\t10\t0"], ShouldBeNil)
 
-			So(dgut.store["/a/b"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0})
-			So(dgut.store["/a/b"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
-			So(dgut.store["/a/b"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
-			So(dgut.store["/a/b"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
+			So(dgut.store["/a/b"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0, 0})
+			So(dgut.store["/a/b"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0, 0})
+			So(dgut.store["/a/b"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100, 0})
+			So(dgut.store["/a/b"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0, 0})
 
-			So(dgut.store["/a"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0})
-			So(dgut.store["/a"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
-			So(dgut.store["/a"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
-			So(dgut.store["/a"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
+			So(dgut.store["/a"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0, 0})
+			So(dgut.store["/a"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0, 0})
+			So(dgut.store["/a"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100, 0})
+			So(dgut.store["/a"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0, 0})
 
-			So(dgut.store["/"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0})
-			So(dgut.store["/"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
-			So(dgut.store["/"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
-			So(dgut.store["/"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
+			So(dgut.store["/"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0, 0})
+			So(dgut.store["/"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0, 0})
+			So(dgut.store["/"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100, 0})
+			So(dgut.store["/"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0, 0})
 
 			Convey("And then given an output file", func() {
 				dir := t.TempDir()
@@ -386,12 +389,12 @@ func TestDirGUT(t *testing.T) {
 					So(errr, ShouldBeNil)
 					output := string(o)
 
-					So(output, ShouldContainSubstring, "/a/b/c/d\t2\t10\t7\t1\t2\t200\n")
-					So(output, ShouldContainSubstring, "/a/b/c\t"+cuidKey+"\t2\t30\t0\n")
-					So(output, ShouldContainSubstring, "/a/b\t"+cuidKey+"\t3\t60\t0\n")
-					So(output, ShouldContainSubstring, "/a/b\t2\t2\t13\t1\t5\t0\n")
-					So(output, ShouldContainSubstring, "/a/b\t2\t2\t6\t1\t3\t100\n")
-					So(output, ShouldContainSubstring, "/\t3\t2\t13\t1\t6\t0\n")
+					So(output, ShouldContainSubstring, "/a/b/c/d\t2\t10\t7\t1\t2\t200\t200\n")
+					So(output, ShouldContainSubstring, "/a/b/c\t"+cuidKey+"\t2\t30\t0\t0\n")
+					So(output, ShouldContainSubstring, "/a/b\t"+cuidKey+"\t3\t60\t0\t0\n")
+					So(output, ShouldContainSubstring, "/a/b\t2\t2\t13\t1\t5\t0\t0\n")
+					So(output, ShouldContainSubstring, "/a/b\t2\t2\t6\t1\t3\t100\t0\n")
+					So(output, ShouldContainSubstring, "/\t3\t2\t13\t1\t6\t0\t0\n")
 
 					So(checkFileIsSorted(outPath), ShouldBeTrue)
 				})

@@ -843,35 +843,35 @@ func createExampleDgutDir(t *testing.T) (string, error) {
 // exampleDGUTData is some example DGUT data that uses the given uid and gids,
 // along with root's uid.
 func exampleDGUTData(uid, gidA, gidB string) string {
-	data := `/	x	z	7	3	30	50
-/	x	z	6	2	10	50
-/	x	z	1	1	5	50
-/	x	0	7	4	40	50
-/	y	0	7	5	5	50
-/	0	0	7	1	1	50
-/a	x	z	7	3	30	50
-/a	x	z	6	2	10	50
-/a	x	z	1	1	5	50
-/a	x	0	7	4	40	50
-/a	y	0	7	5	5	50
-/a	0	0	7	1	1	50
-/a/b	x	z	7	3	30	50
-/a/b	x	z	6	2	10	50
-/a/b	x	z	1	1	5	50
-/a/b	x	0	7	4	40	50
-/a/b/d	x	z	7	3	30	50
-/a/b/d	x	0	7	4	40	50
-/a/b/d/f	x	z	7	1	10	75
-/a/b/d/g	x	z	7	2	20	50
-/a/b/d/g	x	0	7	4	40	50
-/a/b/e	x	z	6	2	10	50
-/a/b/e	x	z	1	1	5	50
-/a/b/e/h	x	z	6	2	10	50
-/a/b/e/h	x	z	1	1	5	50
-/a/b/e/h/tmp	x	z	6	1	5	50
-/a/b/e/h/tmp	x	z	1	1	5	50
-/a/c	y	0	7	5	5	50
-/a/c/d	y	0	7	5	5	50
+	data := `/	x	z	7	3	30	50	60
+/	x	z	6	2	10	50	75
+/	x	z	1	1	5	50	80
+/	x	0	7	4	40	50	75
+/	y	0	7	5	5	50	90
+/	0	0	7	1	1	50	50
+/a	x	z	7	3	30	50	60
+/a	x	z	6	2	10	50	75
+/a	x	z	1	1	5	50	80
+/a	x	0	7	4	40	50	75
+/a	y	0	7	5	5	50	90
+/a	0	0	7	1	1	50	50
+/a/b	x	z	7	3	30	50	60
+/a/b	x	z	6	2	10	50	75
+/a/b	x	z	1	1	5	50	80
+/a/b	x	0	7	4	40	50	75
+/a/b/d	x	z	7	3	30	50	60
+/a/b/d	x	0	7	4	40	50	75
+/a/b/d/f	x	z	7	1	10	75	50
+/a/b/d/g	x	z	7	2	20	50	60
+/a/b/d/g	x	0	7	4	40	50	75
+/a/b/e	x	z	6	2	10	50	75
+/a/b/e	x	z	1	1	5	50	80
+/a/b/e/h	x	z	6	2	10	50	75
+/a/b/e/h	x	z	1	1	5	50	80
+/a/b/e/h/tmp	x	z	6	1	5	50	75
+/a/b/e/h/tmp	x	z	1	1	5	50	80
+/a/c	y	0	7	5	5	50	90
+/a/c/d	y	0	7	5	5	50	90
 `
 
 	data = strings.ReplaceAll(data, "x", gidA)
