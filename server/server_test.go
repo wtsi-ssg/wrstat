@@ -45,6 +45,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	gas "github.com/wtsi-hgi/go-authserver"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/internal"
 )
 
 const dirPerms = 0755
@@ -58,7 +59,7 @@ func TestIDsToWanted(t *testing.T) {
 }
 
 func TestServer(t *testing.T) {
-	username, uid, gids := getUserAndGroups(t)
+	username, uid, gids := internal.GetUserAndGroups(t)
 	exampleGIDs := getExampleGIDs(gids)
 	sentinelPollFrequency := 10 * time.Millisecond
 
@@ -179,7 +180,7 @@ func TestServer(t *testing.T) {
 			logWriter.Reset()
 
 			Convey("And given a dgut database", func() {
-				path, err := createExampleDB(t, uid, gids[0], gids[1])
+				path, err := internal.CreateExampleDB(t, uid, gids[0], gids[1])
 				So(err, ShouldBeNil)
 				groupA := gidToGroup(t, gids[0])
 				groupB := gidToGroup(t, gids[1])
@@ -304,12 +305,12 @@ func TestServer(t *testing.T) {
 					})
 
 					Convey("And you can auto-reload a new database", func() {
-						pathNew, errc := createExampleDB(t, uid, gids[1], gids[0])
+						pathNew, errc := internal.CreateExampleDB(t, uid, gids[1], gids[0])
 						So(errc, ShouldBeNil)
 
 						grandparentDir := filepath.Dir(filepath.Dir(path))
-						newerPath := filepath.Join(grandparentDir, "newer."+exampleDgutDirParentSuffix, "0")
-						err = os.MkdirAll(filepath.Dir(newerPath), dirPerms)
+						newerPath := filepath.Join(grandparentDir, "newer."+internal.ExampleDgutDirParentSuffix, "0")
+						err = os.MkdirAll(filepath.Dir(newerPath), internal.DirPerms)
 						So(err, ShouldBeNil)
 						err = os.Rename(pathNew, newerPath)
 						So(err, ShouldBeNil)
@@ -326,7 +327,8 @@ func TestServer(t *testing.T) {
 
 						sentinel := path + ".sentinel"
 
-						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix, sentinelPollFrequency)
+						err = s.EnableDGUTDBReloading(sentinel, grandparentDir,
+							internal.ExampleDgutDirParentSuffix, sentinelPollFrequency)
 						So(err, ShouldNotBeNil)
 
 						file, err := os.Create(sentinel)
@@ -338,7 +340,8 @@ func TestServer(t *testing.T) {
 						So(s.dataTimeStamp.IsZero(), ShouldBeTrue)
 						s.treeMutex.RUnlock()
 
-						err = s.EnableDGUTDBReloading(sentinel, grandparentDir, exampleDgutDirParentSuffix, sentinelPollFrequency)
+						err = s.EnableDGUTDBReloading(sentinel, grandparentDir,
+							internal.ExampleDgutDirParentSuffix, sentinelPollFrequency)
 						So(err, ShouldBeNil)
 
 						s.treeMutex.RLock()
@@ -425,7 +428,7 @@ func TestServer(t *testing.T) {
 
 						makeTestPath := func() string {
 							tpath := filepath.Join(grandparentDir, "new."+testSuffix)
-							err = os.MkdirAll(tpath, dirPerms)
+							err = os.MkdirAll(tpath, internal.DirPerms)
 							So(err, ShouldBeNil)
 
 							return tpath
@@ -458,7 +461,7 @@ func TestServer(t *testing.T) {
 							tpath := makeTestPath()
 
 							dbPath := filepath.Join(tpath, "0")
-							err = os.Mkdir(dbPath, dirPerms)
+							err = os.Mkdir(dbPath, internal.DirPerms)
 							So(err, ShouldBeNil)
 
 							testReloadFail(grandparentDir, "database doesn't exist")
@@ -519,7 +522,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 
-		path, err := createExampleDB(t, uid, gids[0], gids[1])
+		path, err := internal.CreateExampleDB(t, uid, gids[0], gids[1])
 		So(err, ShouldBeNil)
 
 		Convey("You can't get where data is or add the tree page without auth", func() {
@@ -807,78 +810,6 @@ func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, erro
 	}
 
 	return result, err
-}
-
-// createExampleDB creates a temporary dgut.db from some example data that uses
-// the given uid and gids, and returns the path to the database directory.
-func createExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
-	t.Helper()
-
-	dir, err := createExampleDgutDir(t)
-	if err != nil {
-		return dir, err
-	}
-
-	dgutData := exampleDGUTData(uid, gidA, gidB)
-	data := strings.NewReader(dgutData)
-	db := dgut.NewDB(dir)
-
-	err = db.Store(data, 20)
-
-	return dir, err
-}
-
-// createExampleDgutDir creates a temp directory structure to hold dgut db files
-// in the same way that 'wrstat tidy' organises them.
-func createExampleDgutDir(t *testing.T) (string, error) {
-	t.Helper()
-
-	tdir := t.TempDir()
-	dir := filepath.Join(tdir, "orig."+exampleDgutDirParentSuffix, "0")
-	err := os.MkdirAll(dir, dirPerms)
-
-	return dir, err
-}
-
-// exampleDGUTData is some example DGUT data that uses the given uid and gids,
-// along with root's uid.
-func exampleDGUTData(uid, gidA, gidB string) string {
-	data := `/	x	z	7	3	30	50	60
-/	x	z	6	2	10	50	75
-/	x	z	1	1	5	50	80
-/	x	0	7	4	40	50	75
-/	y	0	7	5	5	50	90
-/	0	0	7	1	1	50	50
-/a	x	z	7	3	30	50	60
-/a	x	z	6	2	10	50	75
-/a	x	z	1	1	5	50	80
-/a	x	0	7	4	40	50	75
-/a	y	0	7	5	5	50	90
-/a	0	0	7	1	1	50	50
-/a/b	x	z	7	3	30	50	60
-/a/b	x	z	6	2	10	50	75
-/a/b	x	z	1	1	5	50	80
-/a/b	x	0	7	4	40	50	75
-/a/b/d	x	z	7	3	30	50	60
-/a/b/d	x	0	7	4	40	50	75
-/a/b/d/f	x	z	7	1	10	75	50
-/a/b/d/g	x	z	7	2	20	50	60
-/a/b/d/g	x	0	7	4	40	50	75
-/a/b/e	x	z	6	2	10	50	75
-/a/b/e	x	z	1	1	5	50	80
-/a/b/e/h	x	z	6	2	10	50	75
-/a/b/e/h	x	z	1	1	5	50	80
-/a/b/e/h/tmp	x	z	6	1	5	50	75
-/a/b/e/h/tmp	x	z	1	1	5	50	80
-/a/c	y	0	7	5	5	50	90
-/a/c/d	y	0	7	5	5	50	90
-`
-
-	data = strings.ReplaceAll(data, "x", gidA)
-	data = strings.ReplaceAll(data, "y", gidB)
-	data = strings.ReplaceAll(data, "z", uid)
-
-	return data
 }
 
 // testRestrictedGroups does tests for s.restrictedGroups() if user running the

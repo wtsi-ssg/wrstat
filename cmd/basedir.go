@@ -27,15 +27,13 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	"github.com/wtsi-ssg/wrstat/v4/neaten"
 )
 
 const (
@@ -46,42 +44,61 @@ const (
 	basedirMinDirsMDTExtra = 1
 )
 
+// options for this cmd.
+var quotaPath string
 var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
 var basedirHumgenRegexp = regexp.MustCompile(`\/lustre\/scratch\d\d\d\/(humgen|hgi|tol|pam|opentargets)`)
 
 // basedirCmd represents the basedir command.
 var basedirCmd = &cobra.Command{
 	Use:   "basedir",
-	Short: "Calculate base directories for every unix group.",
-	Long: `Calculate base directories for every unix group.
+	Short: "Create a database that summarises disk usage by unix group and base directory.",
+	Long: `Create a database that summarises disk usage by unix group and base directory.
 
 Provide the unique subdirectory of your 'wrstat multi -w' directory as an unamed
-argument to this command.
+argument to this command. You must also provide a csv file of group,disk,quota
+via the --quota option (where the quota is the maximum disk usage allowed for
+that group on that disk in bytes).
 
 This is called by 'wrstat multi' after the combine step has completed. It does
 some 'wrstat where'-type calls for every unix group to come up with hopefully
-meaningful and useful "base directories" for every group.
+meaningful and useful "base directories" for every group and ever user.
 
 Unlike the real 'wrstat where', this is not restricted by authorization and
 directly accesses the database files to see all data.
 
-A base directory is a directory where all a group's data lies nested within.
+A base directory is a directory where all a group/user's data lies nested
+within.
 
-Since a group could have files in multiple mount points mounted at /, the true
-base directory would likely always be '/', which wouldn't be useful. Instead,
-a 'wrstat where' split of 4 is used, and only paths consisting of at least 4
-sub directories are returned. Paths that are subdirectories of other results are
-ignored. As a special case, if a path contains 'mdt[n]' as a directory, where n
-is a number, then 5 sub directories are required.
+Since a group/user could have files in multiple mount points mounted at /, the
+true base directory would likely always be '/', which wouldn't be useful.
+Instead, a 'wrstat where' split of 4 is used, and only paths consisting of at
+least 4 sub directories are returned. Paths that are subdirectories of other
+results are ignored. As a special case, if a path contains 'mdt[n]' as a
+directory, where n is a number, then 5 sub directories are required.
 
-The output file format is 2 tab separated columns with the following contents:
-1. Unix group ID.
-2. Absolute path of base directory.
+Disk usage summaries are stored in database files keyed on the group/user and
+base directories. The summaries include quota information for groups, taking
+that information from the given --quota file. Eg. if the csv has the line:
+foo,/mount/a,1024
+Then the summary of group foo's data in a base directory /mount/a/groups/foo
+would say the quota for that location was 1KB.
 
-The output file has the name 'base.dirs' in the given directory.`,
+The output directory has the name 'basedir.db' in the given directory. If it
+already exists with database files inside, those database files are updated with
+the latest summary information.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			die("you must supply the path to your unique subdir of your 'wrstat multi -w' working directory")
+		}
+
+		if quotaPath == "" {
+			die("you must supply --quota")
+		}
+
+		quotas, err := basedirs.ParseQuotas(quotaPath)
+		if err != nil {
+			die("failed to parse quota information: %s", err)
 		}
 
 		t := time.Now()
@@ -91,24 +108,34 @@ The output file has the name 'base.dirs' in the given directory.`,
 		}
 		info("opening databases took %s", time.Since(t))
 
-		t = time.Now()
-		gids, err := getAllGIDsInTree(tree)
+		dbDir := filepath.Join(args[0], basedirBasename)
+
+		bd, err := basedirs.New(dbDir, tree, quotas)
 		if err != nil {
-			die("failed to get all unix groups: %s", err)
+			die("failed to prepare base directory database: %s", err)
 		}
-		info("getting GIDs took %s", time.Since(t))
 
 		t = time.Now()
-		err = calculateBaseDirs(tree, filepath.Join(args[0], basedirBasename), gids)
+		err = bd.SummariseGroups()
 		if err != nil {
-			die("failed to create base.dirs: %s", err)
+			die("failed to summarise group base directories: %s", err)
 		}
-		info("calculating base dirs took %s", time.Since(t))
+		info("summarising group base dirs took %s", time.Since(t))
+
+		t = time.Now()
+		err = bd.SummariseUsers()
+		if err != nil {
+			die("failed to summarise user base directories: %s", err)
+		}
+		info("summarising user base dirs took %s", time.Since(t))
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(basedirCmd)
+
+	// flags specific to this sub-command
+	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "group,disk,quota csv file")
 }
 
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
@@ -120,109 +147,7 @@ func dgutDBCombinePaths(dir string) []string {
 			dir, combineDGUTOutputFileBasename, err)
 	}
 
+	info("%+v", paths)
+
 	return paths
-}
-
-// getAllGIDsInTree gets all the unix group IDs that own files in the given file
-// tree.
-func getAllGIDsInTree(tree *dgut.Tree) ([]uint32, error) {
-	di, err := tree.DirInfo("/", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return di.Current.GIDs, nil
-}
-
-// calculateBaseDirs does the main work of this command.
-func calculateBaseDirs(tree *dgut.Tree, outPath string, gids []uint32) error {
-	outFile, err := os.Create(outPath)
-	if err != nil {
-		return err
-	}
-
-	for _, gid := range gids {
-		baseDirs, errc := calculateBaseDirsOfGID(tree, gid)
-		if errc != nil {
-			return errc
-		}
-
-		if errw := writeBaseDirsOfGID(outFile, gid, baseDirs); errw != nil {
-			return errw
-		}
-	}
-
-	if err = outFile.Close(); err != nil {
-		return err
-	}
-
-	destDirInfo, err := os.Stat(filepath.Dir(outPath))
-	if err != nil {
-		return err
-	}
-
-	return neaten.CorrectPerms(outPath, destDirInfo)
-}
-
-// calculateBaseDirsOfGID uses the tree to work out what the base directories of
-// the given GID are. We manipulate Where() results instead of using
-// FileLocations(), because empirically that is too noisy.
-func calculateBaseDirsOfGID(tree *dgut.Tree, gid uint32) ([]string, error) {
-	dcss, err := tree.Where("/", &dgut.Filter{GIDs: []uint32{gid}}, basedirSplits)
-	if err != nil {
-		return nil, err
-	}
-
-	dcss.SortByDir()
-
-	var dirs []string //nolint:prealloc
-
-	var previous string
-
-	for _, ds := range dcss {
-		if notEnoughDirs(ds.Dir) || childOfPreviousResult(ds.Dir, previous) {
-			continue
-		}
-
-		dirs = append(dirs, ds.Dir)
-		previous = ds.Dir
-	}
-
-	return dirs, nil
-}
-
-// notEnoughDirs returns true if the given path has fewer than 4 directories.
-// If path has an mdt directory in it, then it becomes 5 directories.
-func notEnoughDirs(path string) bool {
-	numDirs := strings.Count(path, "/")
-
-	min := basedirMinDirs
-
-	if basedirHumgenRegexp.MatchString(path) {
-		min = basedirMinDirsHumgen
-	}
-
-	if basedirMDTRegexp.MatchString(path) {
-		min += basedirMinDirsMDTExtra
-	}
-
-	return numDirs < min
-}
-
-// childOfPreviousResult returns true if previous is not blank, and dir starts
-// with it.
-func childOfPreviousResult(dir, previous string) bool {
-	return previous != "" && strings.HasPrefix(dir, previous)
-}
-
-// writeBaseDirsOfGID writes entries to the output file for the given gid and
-// its base directories.
-func writeBaseDirsOfGID(outFile *os.File, gid uint32, dirs []string) error {
-	for _, dir := range dirs {
-		if _, err := outFile.WriteString(fmt.Sprintf("%d\t%s\n", gid, dir)); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
