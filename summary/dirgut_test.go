@@ -39,50 +39,86 @@ import (
 
 func TestDirGUTFileType(t *testing.T) {
 	Convey("DGUTFileType* consts are ints that can be stringified", t, func() {
-		So(DirGUTFileType(0).String(), ShouldEqual, "cram")
-		So(DGUTFileTypeCram.String(), ShouldEqual, "cram")
-		So(DGUTFileTypeBam.String(), ShouldEqual, "bam")
-		So(DGUTFileTypeIndex.String(), ShouldEqual, "index")
-		So(DGUTFileTypeCompressed.String(), ShouldEqual, "compressed")
-		So(DGUTFileTypeUncompressed.String(), ShouldEqual, "uncompressed")
-		So(DGUTFileTypeCheckpoint.String(), ShouldEqual, "checkpoint")
+		So(DirGUTFileType(0).String(), ShouldEqual, "other")
 		So(DGUTFileTypeOther.String(), ShouldEqual, "other")
-		So(DGUTFileTypeTemp.String(), ShouldEqual, "temporary")
-		So(int(DGUTFileTypeTemp), ShouldEqual, 7)
+		So(DGUTFileTypeTemp.String(), ShouldEqual, "temp")
+		So(DGUTFileTypeVCF.String(), ShouldEqual, "vcf")
+		So(DGUTFileTypeVCFGz.String(), ShouldEqual, "vcf.gz")
+		So(DGUTFileTypeBCF.String(), ShouldEqual, "bcf")
+		So(DGUTFileTypeSam.String(), ShouldEqual, "sam")
+		So(DGUTFileTypeBam.String(), ShouldEqual, "bam")
+		So(DGUTFileTypeCram.String(), ShouldEqual, "cram")
+		So(DGUTFileTypeFasta.String(), ShouldEqual, "fasta")
+		So(DGUTFileTypeFastq.String(), ShouldEqual, "fastq")
+		So(DGUTFileTypeFastqGz.String(), ShouldEqual, "fastq.gz")
+		So(DGUTFileTypePedBed.String(), ShouldEqual, "ped/bed")
+		So(DGUTFileTypeCompressed.String(), ShouldEqual, "compressed")
+		So(DGUTFileTypeText.String(), ShouldEqual, "text")
+		So(DGUTFileTypeLog.String(), ShouldEqual, "log")
+
+		So(int(DGUTFileTypeTemp), ShouldEqual, 1)
 	})
 
 	Convey("You can go from a string to a DGUTFileType", t, func() {
-		ft, err := FileTypeStringToDirGUTFileType("cram")
+		ft, err := FileTypeStringToDirGUTFileType("other")
 		So(err, ShouldBeNil)
-		So(ft, ShouldEqual, DGUTFileTypeCram)
+		So(ft, ShouldEqual, DGUTFileTypeOther)
+
+		ft, err = FileTypeStringToDirGUTFileType("temp")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeTemp)
+
+		ft, err = FileTypeStringToDirGUTFileType("vcf")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeVCF)
+
+		ft, err = FileTypeStringToDirGUTFileType("vcf.gz")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeVCFGz)
+
+		ft, err = FileTypeStringToDirGUTFileType("bcf")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeBCF)
+
+		ft, err = FileTypeStringToDirGUTFileType("sam")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeSam)
 
 		ft, err = FileTypeStringToDirGUTFileType("bam")
 		So(err, ShouldBeNil)
 		So(ft, ShouldEqual, DGUTFileTypeBam)
 
-		ft, err = FileTypeStringToDirGUTFileType("index")
+		ft, err = FileTypeStringToDirGUTFileType("cram")
 		So(err, ShouldBeNil)
-		So(ft, ShouldEqual, DGUTFileTypeIndex)
+		So(ft, ShouldEqual, DGUTFileTypeCram)
+
+		ft, err = FileTypeStringToDirGUTFileType("fasta")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeFasta)
+
+		ft, err = FileTypeStringToDirGUTFileType("fastq")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeFastq)
+
+		ft, err = FileTypeStringToDirGUTFileType("fastq.gz")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypeFastqGz)
+
+		ft, err = FileTypeStringToDirGUTFileType("ped/bed")
+		So(err, ShouldBeNil)
+		So(ft, ShouldEqual, DGUTFileTypePedBed)
 
 		ft, err = FileTypeStringToDirGUTFileType("compressed")
 		So(err, ShouldBeNil)
 		So(ft, ShouldEqual, DGUTFileTypeCompressed)
 
-		ft, err = FileTypeStringToDirGUTFileType("uncompressed")
+		ft, err = FileTypeStringToDirGUTFileType("text")
 		So(err, ShouldBeNil)
-		So(ft, ShouldEqual, DGUTFileTypeUncompressed)
+		So(ft, ShouldEqual, DGUTFileTypeText)
 
-		ft, err = FileTypeStringToDirGUTFileType("checkpoint")
+		ft, err = FileTypeStringToDirGUTFileType("log")
 		So(err, ShouldBeNil)
-		So(ft, ShouldEqual, DGUTFileTypeCheckpoint)
-
-		ft, err = FileTypeStringToDirGUTFileType("other")
-		So(err, ShouldBeNil)
-		So(ft, ShouldEqual, DGUTFileTypeOther)
-
-		ft, err = FileTypeStringToDirGUTFileType("temporary")
-		So(err, ShouldBeNil)
-		So(ft, ShouldEqual, DGUTFileTypeTemp)
+		So(ft, ShouldEqual, DGUTFileTypeLog)
 
 		ft, err = FileTypeStringToDirGUTFileType("foo")
 		So(err, ShouldNotBeNil)
@@ -90,27 +126,89 @@ func TestDirGUTFileType(t *testing.T) {
 		So(ft, ShouldEqual, DGUTFileTypeOther)
 	})
 
-	Convey("isCram lets you know if a path is a cram file", t, func() {
-		So(isCram("/foo/bar.cram"), ShouldBeTrue)
-		So(isCram("/foo/bar.CRAM"), ShouldBeTrue)
-		So(isCram("/foo/bar.bam"), ShouldBeFalse)
+	Convey("isTemp lets you know if a path is a temporary file", t, func() {
+		So(isTemp("/foo/.tmp.cram"), ShouldBeTrue)
+		So(isTemp("/foo/tmp.cram"), ShouldBeTrue)
+		So(isTemp("/foo/xtmp.cram"), ShouldBeFalse)
+		So(isTemp("/foo/tmpx.cram"), ShouldBeFalse)
+
+		So(isTemp("/foo/.temp.cram"), ShouldBeTrue)
+		So(isTemp("/foo/temp.cram"), ShouldBeTrue)
+		So(isTemp("/foo/xtemp.cram"), ShouldBeFalse)
+		So(isTemp("/foo/tempx.cram"), ShouldBeFalse)
+
+		So(isTemp("/foo/a.cram.tmp"), ShouldBeTrue)
+		So(isTemp("/foo/xtmp"), ShouldBeFalse)
+		So(isTemp("/foo/a.cram.temp"), ShouldBeTrue)
+		So(isTemp("/foo/xtemp"), ShouldBeFalse)
+
+		So(isTemp("/foo/tmp/bar.cram"), ShouldBeTrue)
+		So(isTemp("/foo/temp/bar.cram"), ShouldBeTrue)
+		So(isTemp("/foo/TEMP/bar.cram"), ShouldBeTrue)
+		So(isTemp("/foo/bar.cram"), ShouldBeFalse)
+	})
+
+	Convey("isVCF lets you know if a path is a vcf file", t, func() {
+		So(isVCF("/foo/bar.vcf"), ShouldBeTrue)
+		So(isVCF("/foo/bar.VCF"), ShouldBeTrue)
+		So(isVCF("/foo/vcf.bar"), ShouldBeFalse)
+		So(isVCF("/foo/bar.fcv"), ShouldBeFalse)
+	})
+
+	Convey("isVCFGz lets you know if a path is a vcf.gz file", t, func() {
+		So(isVCFGz("/foo/bar.vcf.gz"), ShouldBeTrue)
+		So(isVCFGz("/foo/vcf.gz.bar"), ShouldBeFalse)
+		So(isVCFGz("/foo/bar.vcf"), ShouldBeFalse)
+	})
+
+	Convey("isBCF lets you know if a path is a bcf file", t, func() {
+		So(isBCF("/foo/bar.bcf"), ShouldBeTrue)
+		So(isBCF("/foo/bcf.bar"), ShouldBeFalse)
+		So(isBCF("/foo/bar.vcf"), ShouldBeFalse)
+	})
+
+	Convey("isSam lets you know if a path is a sam file", t, func() {
+		So(isSam("/foo/bar.sam"), ShouldBeTrue)
+		So(isSam("/foo/bar.bam"), ShouldBeFalse)
 	})
 
 	Convey("isBam lets you know if a path is a bam file", t, func() {
-		So(isBam("/foo/bar.cram"), ShouldBeFalse)
 		So(isBam("/foo/bar.bam"), ShouldBeTrue)
-		So(isBam("/foo/bar.BAM"), ShouldBeTrue)
+		So(isBam("/foo/bar.sam"), ShouldBeFalse)
 	})
 
-	Convey("isIndex lets you know if a path is an index file", t, func() {
-		So(isIndex("/foo/bar.cram"), ShouldBeFalse)
-		So(isIndex("/foo/bar.cram.crai"), ShouldBeTrue)
-		So(isIndex("/foo/bar.bai"), ShouldBeTrue)
-		So(isIndex("/foo/bar.sai"), ShouldBeTrue)
-		So(isIndex("/foo/bar.fai"), ShouldBeTrue)
-		So(isIndex("/foo/bar.csi"), ShouldBeTrue)
-		So(isIndex("/foo/bar.cSi"), ShouldBeTrue)
-		So(isIndex("/foo/bar.yai"), ShouldBeFalse)
+	Convey("isCram lets you know if a path is a cram file", t, func() {
+		So(isCram("/foo/bar.cram"), ShouldBeTrue)
+		So(isCram("/foo/bar.bam"), ShouldBeFalse)
+	})
+
+	Convey("isFasta lets you know if a path is a fasta file", t, func() {
+		So(isFasta("/foo/bar.fasta"), ShouldBeTrue)
+		So(isFasta("/foo/bar.fa"), ShouldBeTrue)
+		So(isFasta("/foo/bar.fastq"), ShouldBeFalse)
+	})
+
+	Convey("isFastq lets you know if a path is a fastq file", t, func() {
+		So(isFastq("/foo/bar.fastq"), ShouldBeTrue)
+		So(isFastq("/foo/bar.fq"), ShouldBeTrue)
+		So(isFastq("/foo/bar.fasta"), ShouldBeFalse)
+		So(isFastq("/foo/bar.fastq.gz"), ShouldBeFalse)
+	})
+
+	Convey("isFastqGz lets you know if a path is a fastq.gz file", t, func() {
+		So(isFastqGz("/foo/bar.fastq.gz"), ShouldBeTrue)
+		So(isFastqGz("/foo/bar.fq.gz"), ShouldBeTrue)
+		So(isFastqGz("/foo/bar.fastq"), ShouldBeFalse)
+		So(isFastqGz("/foo/bar.fq"), ShouldBeFalse)
+	})
+
+	Convey("isPedBed lets you know if a path is a ped/bed related file", t, func() {
+		So(isPedBed("/foo/bar.ped"), ShouldBeTrue)
+		So(isPedBed("/foo/bar.map"), ShouldBeTrue)
+		So(isPedBed("/foo/bar.bed"), ShouldBeTrue)
+		So(isPedBed("/foo/bar.bim"), ShouldBeTrue)
+		So(isPedBed("/foo/bar.fam"), ShouldBeTrue)
+		So(isPedBed("/foo/bar.asd"), ShouldBeFalse)
 	})
 
 	Convey("isCompressed lets you know if a path is a compressed file", t, func() {
@@ -120,62 +218,60 @@ func TestDirGUTFileType(t *testing.T) {
 		So(isCompressed("/foo/bar.zip"), ShouldBeTrue)
 		So(isCompressed("/foo/bar.xz"), ShouldBeTrue)
 		So(isCompressed("/foo/bar.bgz"), ShouldBeTrue)
-		So(isCompressed("/foo/bar.bcf"), ShouldBeTrue)
-		So(isCompressed("/foo/bar.bcF"), ShouldBeTrue)
+		So(isCompressed("/foo/bar.bcf"), ShouldBeFalse)
 		So(isCompressed("/foo/bar.asd"), ShouldBeFalse)
+		So(isCompressed("/foo/bar.vcf.gz"), ShouldBeFalse)
+		So(isCompressed("/foo/bar.fastq.gz"), ShouldBeFalse)
 	})
 
-	Convey("isUncompressed lets you know if a path is an uncompressed file", t, func() {
-		So(isUncompressed("/foo/bar.sam"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.fasta"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.fastq"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.fa"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.fq"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.vcf"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.csv"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.tsv"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.txt"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.text"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.README"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.o"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.e"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.oe"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.dat"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.Dat"), ShouldBeTrue)
-		So(isUncompressed("/foo/bar.asd"), ShouldBeFalse)
+	Convey("isText lets you know if a path is a text file", t, func() {
+		So(isText("/foo/bar.csv"), ShouldBeTrue)
+		So(isText("/foo/bar.tsv"), ShouldBeTrue)
+		So(isText("/foo/bar.txt"), ShouldBeTrue)
+		So(isText("/foo/bar.text"), ShouldBeTrue)
+		So(isText("/foo/bar.md"), ShouldBeTrue)
+		So(isText("/foo/bar.dat"), ShouldBeTrue)
+		So(isText("/foo/bar.README"), ShouldBeTrue)
+		So(isText("/foo/READme"), ShouldBeTrue)
+		So(isText("/foo/bar.sam"), ShouldBeFalse)
+		So(isText("/foo/bar.out"), ShouldBeFalse)
+		So(isText("/foo/bar.asd"), ShouldBeFalse)
 	})
 
-	Convey("isCheckpoint lets you know if a path is a checkpoint file", t, func() {
-		So(isCheckpoint("/foo/bar.cram"), ShouldBeFalse)
-		So(isCheckpoint("/foo/bar.jobstate.context"), ShouldBeTrue)
-		So(isCheckpoint("/foo/bar.jobstate.coNtext"), ShouldBeTrue)
-	})
-
-	Convey("isTemp lets you know if a path is a temporary file", t, func() {
-		So(isTemp("/foo/.tmp.cram"), ShouldBeTrue)
-		So(isTemp("/foo/tmp.cram"), ShouldBeFalse)
-		So(isTemp("/foo/tmp/bar.cram"), ShouldBeTrue)
-		So(isTemp("/foo/a.cram.temp"), ShouldBeTrue)
-		So(isTemp("/foo/attempt.cram"), ShouldBeFalse)
-		So(isTemp("/foo/temp/bar.cram"), ShouldBeTrue)
-		So(isTemp("/foo/TEMP/bar.cram"), ShouldBeTrue)
-		So(isTemp("/foo/bar.cram"), ShouldBeFalse)
+	Convey("isLog lets you know if a path is a log file", t, func() {
+		So(isLog("/foo/bar.log"), ShouldBeTrue)
+		So(isLog("/foo/bar.o"), ShouldBeTrue)
+		So(isLog("/foo/bar.out"), ShouldBeTrue)
+		So(isLog("/foo/bar.e"), ShouldBeTrue)
+		So(isLog("/foo/bar.err"), ShouldBeTrue)
+		So(isLog("/foo/bar.oe"), ShouldBeTrue)
+		So(isLog("/foo/bar.txt"), ShouldBeFalse)
+		So(isLog("/foo/bar.asd"), ShouldBeFalse)
 	})
 
 	Convey("DirGroupUserType.pathToTypes lets you know the filetypes of a path", t, func() {
 		d := NewByDirGroupUserType()
 
-		So(d.pathToTypes("/foo/bar.cram"), ShouldResemble, []DirGUTFileType{DGUTFileTypeCram})
+		So(d.pathToTypes("/foo/bar.asd"), ShouldResemble, []DirGUTFileType{DGUTFileTypeOther})
+		So(pathToTypesMap(d, "/foo/.tmp.asd"), ShouldResemble, map[DirGUTFileType]bool{
+			DGUTFileTypeOther: true, DGUTFileTypeTemp: true})
+
+		So(d.pathToTypes("/foo/bar.vcf"), ShouldResemble, []DirGUTFileType{DGUTFileTypeVCF})
+		So(d.pathToTypes("/foo/bar.vcf.gz"), ShouldResemble, []DirGUTFileType{DGUTFileTypeVCFGz})
+		So(d.pathToTypes("/foo/bar.bcf"), ShouldResemble, []DirGUTFileType{DGUTFileTypeBCF})
+
+		So(d.pathToTypes("/foo/bar.sam"), ShouldResemble, []DirGUTFileType{DGUTFileTypeSam})
+		So(d.pathToTypes("/foo/bar.bam"), ShouldResemble, []DirGUTFileType{DGUTFileTypeBam})
 		So(pathToTypesMap(d, "/foo/.tmp.cram"), ShouldResemble, map[DirGUTFileType]bool{
 			DGUTFileTypeCram: true, DGUTFileTypeTemp: true})
-		So(d.pathToTypes("/foo/bar.bam"), ShouldResemble, []DirGUTFileType{DGUTFileTypeBam})
-		So(d.pathToTypes("/foo/bar.crai"), ShouldResemble, []DirGUTFileType{DGUTFileTypeIndex})
+
+		So(d.pathToTypes("/foo/bar.fa"), ShouldResemble, []DirGUTFileType{DGUTFileTypeFasta})
+		So(d.pathToTypes("/foo/bar.fq"), ShouldResemble, []DirGUTFileType{DGUTFileTypeFastq})
+		So(d.pathToTypes("/foo/bar.fq.gz"), ShouldResemble, []DirGUTFileType{DGUTFileTypeFastqGz})
+
 		So(d.pathToTypes("/foo/bar.bzip2"), ShouldResemble, []DirGUTFileType{DGUTFileTypeCompressed})
-		So(d.pathToTypes("/foo/bar.sam"), ShouldResemble, []DirGUTFileType{DGUTFileTypeUncompressed})
-		So(d.pathToTypes("/foo/bar.jobstate.context"), ShouldResemble, []DirGUTFileType{DGUTFileTypeCheckpoint})
-		So(d.pathToTypes("/foo/bar.sdf"), ShouldResemble, []DirGUTFileType{DGUTFileTypeOther})
-		So(pathToTypesMap(d, "/foo/.tmp.sdf"), ShouldResemble, map[DirGUTFileType]bool{
-			DGUTFileTypeOther: true, DGUTFileTypeTemp: true})
+		So(d.pathToTypes("/foo/bar.csv"), ShouldResemble, []DirGUTFileType{DGUTFileTypeText})
+		So(d.pathToTypes("/foo/bar.o"), ShouldResemble, []DirGUTFileType{DGUTFileTypeLog})
 	})
 }
 
@@ -236,43 +332,43 @@ func TestDirGUT(t *testing.T) {
 			So(dgut.store["/"], ShouldNotBeNil)
 			So(dgut.store[""], ShouldBeNil)
 
-			cuidKey := fmt.Sprintf("2\t%d\t4", cuid)
+			cuidKey := fmt.Sprintf("2\t%d\t13", cuid)
 			So(dgut.store["/a/b/c"][cuidKey], ShouldResemble, &summaryWithAtime{summary{2, 30}, 0})
-			So(dgut.store["/a/b/c"]["2\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
-			So(dgut.store["/a/b/c"]["2\t2\t1"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
-			So(dgut.store["/a/b/c"]["3\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
-			So(dgut.store["/a/b/c"]["3\t2\t7"], ShouldBeNil)
-			So(dgut.store["/a/b/c"]["2\t10\t0"], ShouldResemble, &summaryWithAtime{summary{2, 4}, 200})
-			So(dgut.store["/a/b/c/d"]["2\t10\t0"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 200})
-			So(dgut.store["/a/b/c"]["10\t2\t0"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 301})
+			So(dgut.store["/a/b/c"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
+			So(dgut.store["/a/b/c"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
+			So(dgut.store["/a/b/c"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
+			So(dgut.store["/a/b/c"]["3\t2\t1"], ShouldBeNil)
+			So(dgut.store["/a/b/c"]["2\t10\t7"], ShouldResemble, &summaryWithAtime{summary{2, 4}, 200})
+			So(dgut.store["/a/b/c/d"]["2\t10\t7"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 200})
+			So(dgut.store["/a/b/c"]["10\t2\t7"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 301})
 
-			swa := dgut.store["/a/b"]["2\t10\t6"]
+			swa := dgut.store["/a/b"]["2\t10\t0"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
 			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18})
 
-			swa = dgut.store["/a/b/c"]["2\t10\t6"]
+			swa = dgut.store["/a/b/c"]["2\t10\t0"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
 			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18})
-			So(dgut.store["/a/b/c/d"]["2\t10\t6"], ShouldBeNil)
+			So(dgut.store["/a/b/c/d"]["2\t10\t0"], ShouldBeNil)
 
 			So(dgut.store["/a/b"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0})
-			So(dgut.store["/a/b"]["2\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
-			So(dgut.store["/a/b"]["2\t2\t1"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
-			So(dgut.store["/a/b"]["3\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
+			So(dgut.store["/a/b"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
+			So(dgut.store["/a/b"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
+			So(dgut.store["/a/b"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
 
 			So(dgut.store["/a"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0})
-			So(dgut.store["/a"]["2\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
-			So(dgut.store["/a"]["2\t2\t1"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
-			So(dgut.store["/a"]["3\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
+			So(dgut.store["/a"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
+			So(dgut.store["/a"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
+			So(dgut.store["/a"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
 
 			So(dgut.store["/"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0})
-			So(dgut.store["/"]["2\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
-			So(dgut.store["/"]["2\t2\t1"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
-			So(dgut.store["/"]["3\t2\t4"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
+			So(dgut.store["/"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0})
+			So(dgut.store["/"]["2\t2\t6"], ShouldResemble, &summaryWithAtime{summary{1, 3}, 100})
+			So(dgut.store["/"]["3\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 6}, 0})
 
 			Convey("And then given an output file", func() {
 				dir := t.TempDir()
@@ -290,12 +386,12 @@ func TestDirGUT(t *testing.T) {
 					So(errr, ShouldBeNil)
 					output := string(o)
 
-					So(output, ShouldContainSubstring, "/a/b/c/d\t2\t10\t0\t1\t2\t200\n")
+					So(output, ShouldContainSubstring, "/a/b/c/d\t2\t10\t7\t1\t2\t200\n")
 					So(output, ShouldContainSubstring, "/a/b/c\t"+cuidKey+"\t2\t30\t0\n")
 					So(output, ShouldContainSubstring, "/a/b\t"+cuidKey+"\t3\t60\t0\n")
-					So(output, ShouldContainSubstring, "/a/b\t2\t2\t4\t1\t5\t0\n")
-					So(output, ShouldContainSubstring, "/a/b\t2\t2\t1\t1\t3\t100\n")
-					So(output, ShouldContainSubstring, "/\t3\t2\t4\t1\t6\t0\n")
+					So(output, ShouldContainSubstring, "/a/b\t2\t2\t13\t1\t5\t0\n")
+					So(output, ShouldContainSubstring, "/a/b\t2\t2\t6\t1\t3\t100\n")
+					So(output, ShouldContainSubstring, "/\t3\t2\t13\t1\t6\t0\n")
 
 					So(checkFileIsSorted(outPath), ShouldBeTrue)
 				})

@@ -107,7 +107,7 @@ func TestDGUT(t *testing.T) {
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
-		filter.FTs = []summary.DirGUTFileType{7}
+		filter.FTs = []summary.DirGUTFileType{summary.DGUTFileTypeTemp}
 		a, b = expectedRootGUTs[0].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
@@ -115,7 +115,7 @@ func TestDGUT(t *testing.T) {
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
-		filter.FTs = []summary.DirGUTFileType{7, 0}
+		filter.FTs = []summary.DirGUTFileType{summary.DGUTFileTypeTemp, summary.DGUTFileTypeCram}
 		a, b = expectedRootGUTs[0].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
@@ -136,7 +136,7 @@ func TestDGUT(t *testing.T) {
 
 	expectedUIDs := []uint32{101, 102}
 	expectedGIDs := []uint32{1, 2}
-	expectedFTs := []summary.DirGUTFileType{0, 1, 7}
+	expectedFTs := []summary.DirGUTFileType{summary.DGUTFileTypeTemp, summary.DGUTFileTypeBam, summary.DGUTFileTypeCram}
 
 	Convey("GUTs can sum the count and size and provide UIDs, GIDs and FTs of their GUT elements", t, func() {
 		c, s, a, u, g, t := expectedRootGUTs.Summary(nil)
@@ -249,7 +249,7 @@ func TestDGUT(t *testing.T) {
 						So(a, ShouldEqual, 90)
 						So(u, ShouldResemble, []uint32{102})
 						So(g, ShouldResemble, []uint32{2})
-						So(t, ShouldResemble, []summary.DirGUTFileType{0})
+						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram})
 
 						c, s, a, u, g, t, errd = db.DirInfo("/a/b/d/g", nil)
 						So(errd, ShouldBeNil)
@@ -258,7 +258,7 @@ func TestDGUT(t *testing.T) {
 						So(a, ShouldEqual, 60)
 						So(u, ShouldResemble, expectedUIDs)
 						So(g, ShouldResemble, []uint32{1})
-						So(t, ShouldResemble, []summary.DirGUTFileType{0})
+						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram})
 
 						_, _, _, _, _, _, errd = db.DirInfo("/foo", nil)
 						So(errd, ShouldNotBeNil)
@@ -280,7 +280,7 @@ func TestDGUT(t *testing.T) {
 						So(a, ShouldEqual, 75)
 						So(u, ShouldResemble, []uint32{102})
 						So(g, ShouldResemble, expectedGIDs)
-						So(t, ShouldResemble, []summary.DirGUTFileType{0})
+						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram})
 
 						c, s, a, u, g, t, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
 						So(errd, ShouldBeNil)
@@ -289,7 +289,7 @@ func TestDGUT(t *testing.T) {
 						So(a, ShouldEqual, 75)
 						So(u, ShouldResemble, []uint32{102})
 						So(g, ShouldResemble, []uint32{1})
-						So(t, ShouldResemble, []summary.DirGUTFileType{0})
+						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram})
 
 						c, s, a, u, g, t, errd = db.DirInfo("/", &Filter{
 							GIDs: []uint32{1},
@@ -310,7 +310,7 @@ func TestDGUT(t *testing.T) {
 						So(a, ShouldEqual, 50)
 						So(u, ShouldResemble, []uint32{101})
 						So(g, ShouldResemble, []uint32{1})
-						So(t, ShouldResemble, []summary.DirGUTFileType{7})
+						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeTemp})
 
 						children := db.Children("/a")
 						So(children, ShouldResemble, []string{"/a/b", "/a/c"})
@@ -352,9 +352,9 @@ func TestDGUT(t *testing.T) {
 					})
 
 					Convey("Store()ing multiple times", func() {
-						data = strings.NewReader("/\t3\t103\t0\t2\t2\t25\n" +
-							"/a/i\t3\t103\t0\t1\t1\t25\n" +
-							"/i\t3\t103\t0\t1\t1\t30\n")
+						data = strings.NewReader("/\t3\t103\t7\t2\t2\t25\n" +
+							"/a/i\t3\t103\t7\t1\t1\t25\n" +
+							"/i\t3\t103\t7\t1\t1\t30\n")
 
 						Convey("to the same db file doesn't work", func() {
 							err = db.Store(data, 4)
@@ -481,11 +481,11 @@ func testData() (dgutData string, expectedRootGUTs GUTs, expected []*DGUT, expec
 	dgutData = testDGUTData()
 
 	expectedRootGUTs = GUTs{
-		{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30, Atime: 50},
-		{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10, Atime: 50},
-		{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5, Atime: 50},
-		{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40, Atime: 75},
-		{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5, Atime: 75},
+		{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50},
+		{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 50},
+		{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 1, Size: 5, Atime: 50},
+		{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75},
+		{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 75},
 	}
 
 	expected = []*DGUT{
@@ -500,63 +500,63 @@ func testData() (dgutData string, expectedRootGUTs GUTs, expected []*DGUT, expec
 		{
 			Dir: "/a/b",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30, Atime: 50},
-				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10, Atime: 50},
-				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5, Atime: 50},
-				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40, Atime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 1, Size: 5, Atime: 50},
+				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75},
 			},
 		},
 		{
 			Dir: "/a/b/d",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30, Atime: 50},
-				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40, Atime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50},
+				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75},
 			},
 		},
 		{
 			Dir: "/a/b/d/f",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 0, Count: 1, Size: 10, Atime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 1, Size: 10, Atime: 50},
 			},
 		},
 		{
 			Dir: "/a/b/d/g",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 0, Count: 2, Size: 20, Atime: 60},
-				{GID: 1, UID: 102, FT: 0, Count: 4, Size: 40, Atime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 2, Size: 20, Atime: 60},
+				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75},
 			},
 		},
 		{
 			Dir: "/a/b/e",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10, Atime: 75},
-				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5, Atime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 1, Size: 5, Atime: 80},
 			},
 		},
 		{
 			Dir: "/a/b/e/h",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 1, Count: 2, Size: 10, Atime: 75},
-				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5, Atime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 1, Size: 5, Atime: 80},
 			},
 		},
 		{
 			Dir: "/a/b/e/h/tmp",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: 1, Count: 1, Size: 5, Atime: 75},
-				{GID: 1, UID: 101, FT: 7, Count: 1, Size: 5, Atime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 1, Size: 5, Atime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 1, Size: 5, Atime: 80},
 			},
 		},
 		{
 			Dir: "/a/c",
 			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5, Atime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90},
 			},
 		},
 		{
 			Dir: "/a/c/d",
 			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: 0, Count: 5, Size: 5, Atime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90},
 			},
 		},
 	}
@@ -568,34 +568,34 @@ func testData() (dgutData string, expectedRootGUTs GUTs, expected []*DGUT, expec
 }
 
 func testDGUTData() string {
-	return `/	1	101	0	3	30	50
-/	1	101	1	2	10	50
-/	1	101	7	1	5	50
-/	1	102	0	4	40	75
-/	2	102	0	5	5	75
-/a	1	101	0	3	30	50
-/a	1	101	1	2	10	50
-/a	1	101	7	1	5	50
-/a	1	102	0	4	40	75
-/a	2	102	0	5	5	75
-/a/b	1	101	0	3	30	50
-/a/b	1	101	1	2	10	50
-/a/b	1	101	7	1	5	50
-/a/b	1	102	0	4	40	75
-/a/b/d	1	101	0	3	30	50
-/a/b/d	1	102	0	4	40	75
-/a/b/d/f	1	101	0	1	10	50
-/a/b/d/g	1	101	0	2	20	60
-/a/b/d/g	1	102	0	4	40	75
-/a/b/e	1	101	1	2	10	75
-/a/b/e	1	101	7	1	5	80
-/a/b/e/h	1	101	1	2	10	75
-/a/b/e/h	1	101	7	1	5	80
-/a/b/e/h/tmp	1	101	1	1	5	75
-/a/b/e/h/tmp	1	101	7	1	5	80
-/a/c	2	102	0	5	5	90
-	2	102	0	5	5	100
-/a/c/d	2	102	0	5	5	90
+	return `/	1	101	7	3	30	50
+/	1	101	6	2	10	50
+/	1	101	1	1	5	50
+/	1	102	7	4	40	75
+/	2	102	7	5	5	75
+/a	1	101	7	3	30	50
+/a	1	101	6	2	10	50
+/a	1	101	1	1	5	50
+/a	1	102	7	4	40	75
+/a	2	102	7	5	5	75
+/a/b	1	101	7	3	30	50
+/a/b	1	101	6	2	10	50
+/a/b	1	101	1	1	5	50
+/a/b	1	102	7	4	40	75
+/a/b/d	1	101	7	3	30	50
+/a/b/d	1	102	7	4	40	75
+/a/b/d/f	1	101	7	1	10	50
+/a/b/d/g	1	101	7	2	20	60
+/a/b/d/g	1	102	7	4	40	75
+/a/b/e	1	101	6	2	10	75
+/a/b/e	1	101	1	1	5	80
+/a/b/e/h	1	101	6	2	10	75
+/a/b/e/h	1	101	1	1	5	80
+/a/b/e/h/tmp	1	101	6	1	5	75
+/a/b/e/h/tmp	1	101	1	1	5	80
+/a/c	2	102	7	5	5	90
+	2	102	7	5	5	100
+/a/c/d	2	102	7	5	5	90
 `
 }
 
