@@ -42,75 +42,9 @@ import (
 
 const DirPerms = 0755
 const ExampleDgutDirParentSuffix = "dgut.dbs"
-
-// GetUserAndGroups returns the current users username, uid and gids.
-func GetUserAndGroups(t *testing.T) (string, string, []string) {
-	t.Helper()
-
-	uu, err := user.Current()
-	if err != nil {
-		t.Logf("getting current user failed: %s", err.Error())
-
-		return "", "", nil
-	}
-
-	gids, err := uu.GroupIds()
-	if err != nil {
-		t.Logf("getting group ids failed: %s", err.Error())
-
-		return "", "", nil
-	}
-
-	return uu.Username, uu.Uid, gids
-}
-
-// CreateExampleDGUTDB creates a temporary dgut.db from some example data that
-// uses your uid and 2 of your gids, and returns the path to the database
-// directory. For use when testing something that needs a Tree.
-func CreateExampleDGUTDB(t *testing.T) (string, error) {
-	_, uid, gids := GetUserAndGroups(t)
-	if len(gids) < 2 {
-		gids = append(gids, "0")
-	}
-
-	return CreateExampleDB(t, uid, gids[0], gids[1])
-}
-
-// CreateExampleDB creates a temporary dgut.db from some example data that uses
-// the given uid and gids, and returns the path to the database directory.
-func CreateExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
-	t.Helper()
-
-	dir, err := createExampleDgutDir(t)
-	if err != nil {
-		return dir, err
-	}
-
-	dgutData := exampleDGUTData(uid, gidA, gidB)
-	data := strings.NewReader(dgutData)
-	db := dgut.NewDB(dir)
-
-	err = db.Store(data, 20)
-
-	return dir, err
-}
-
-// createExampleDgutDir creates a temp directory structure to hold dgut db files
-// in the same way that 'wrstat tidy' organises them.
-func createExampleDgutDir(t *testing.T) (string, error) {
-	t.Helper()
-
-	tdir := t.TempDir()
-	dir := filepath.Join(tdir, "orig."+ExampleDgutDirParentSuffix, "0")
-	err := os.MkdirAll(dir, DirPerms)
-
-	return dir, err
-}
-
-// exampleDGUTData is some example DGUT data that uses the given uid and gids,
-// along with root's uid.
-func exampleDGUTData(uid, gidA, gidB string) string {
-	data := `/	x	z	7	3	30	50	60
+const minGIDsForExampleDgutDB = 2
+const exampleDBBatchSize = 20
+const exampleDgutData = `/	x	z	7	3	30	50	60
 /	x	z	6	2	10	50	75
 /	x	z	1	1	5	50	80
 /	x	0	7	4	40	50	75
@@ -141,7 +75,76 @@ func exampleDGUTData(uid, gidA, gidB string) string {
 /a/c/d	y	0	7	5	5	50	90
 `
 
-	data = strings.ReplaceAll(data, "x", gidA)
+// GetUserAndGroups returns the current users username, uid and gids.
+func GetUserAndGroups(t *testing.T) (string, string, []string) {
+	t.Helper()
+
+	uu, err := user.Current()
+	if err != nil {
+		t.Logf("getting current user failed: %s", err.Error())
+
+		return "", "", nil
+	}
+
+	gids, err := uu.GroupIds()
+	if err != nil {
+		t.Logf("getting group ids failed: %s", err.Error())
+
+		return "", "", nil
+	}
+
+	return uu.Username, uu.Uid, gids
+}
+
+// CreateExampleDGUTDB creates a temporary dgut.db from some example data that
+// uses your uid and 2 of your gids, and returns the path to the database
+// directory. For use when testing something that needs a Tree.
+func CreateExampleDGUTDB(t *testing.T) (string, error) {
+	t.Helper()
+
+	_, uid, gids := GetUserAndGroups(t)
+	if len(gids) < minGIDsForExampleDgutDB {
+		gids = append(gids, "0")
+	}
+
+	return CreateExampleDB(t, uid, gids[0], gids[1])
+}
+
+// CreateExampleDB creates a temporary dgut.db from some example data that uses
+// the given uid and gids, and returns the path to the database directory.
+func CreateExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
+	t.Helper()
+
+	dir, err := createExampleDgutDir(t)
+	if err != nil {
+		return dir, err
+	}
+
+	dgutData := exampleDGUTData(uid, gidA, gidB)
+	data := strings.NewReader(dgutData)
+	db := dgut.NewDB(dir)
+
+	err = db.Store(data, exampleDBBatchSize)
+
+	return dir, err
+}
+
+// createExampleDgutDir creates a temp directory structure to hold dgut db files
+// in the same way that 'wrstat tidy' organises them.
+func createExampleDgutDir(t *testing.T) (string, error) {
+	t.Helper()
+
+	tdir := t.TempDir()
+	dir := filepath.Join(tdir, "orig."+ExampleDgutDirParentSuffix, "0")
+	err := os.MkdirAll(dir, DirPerms)
+
+	return dir, err
+}
+
+// exampleDGUTData is some example DGUT data that uses the given uid and gids,
+// along with root's uid.
+func exampleDGUTData(uid, gidA, gidB string) string {
+	data := strings.ReplaceAll(exampleDgutData, "x", gidA)
 	data = strings.ReplaceAll(data, "y", gidB)
 	data = strings.ReplaceAll(data, "z", uid)
 
