@@ -26,6 +26,7 @@
 package basedirs
 
 import (
+	"strconv"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -39,9 +40,37 @@ func TestTree(t *testing.T) {
 		t.Fatalf("could not create dgut db: %s", err)
 	}
 
+	_, uidStr, gidsStrs := internal.GetUserAndGroups(t)
+	expectedUIDs := []uint32{0, strToID(t, uidStr)}
+
+	expectedGIDs := make([]uint32, 3)
+	expectedGIDs[0] = 0
+
+	for i := 0; i < 2; i++ {
+		expectedGIDs[i+1] = strToID(t, gidsStrs[i])
+	}
+
 	Convey("Given a Tree", t, func() {
 		tree, err := dgut.NewTree(dbPath)
 		So(err, ShouldBeNil)
 		So(tree, ShouldNotBeNil)
+
+		Convey("You can get all the gids and uids in it", func() {
+			gids, uids, err := getAllGIDsandUIDsInTree(tree)
+			So(err, ShouldBeNil)
+			So(gids, ShouldResemble, expectedGIDs)
+			So(uids, ShouldResemble, expectedUIDs)
+		})
 	})
+}
+
+func strToID(t *testing.T, s string) uint32 {
+	t.Helper()
+
+	id, err := strconv.Atoi(s)
+	if err != nil {
+		t.Fatalf("could not convert uid: %s", err)
+	}
+
+	return uint32(id)
 }

@@ -26,13 +26,38 @@
 package basedirs
 
 import (
+	"path/filepath"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/dgut"
+	"github.com/wtsi-ssg/wrstat/internal"
 )
 
 func TestBaseDirs(t *testing.T) {
-	Convey("Given ", t, func() {
+	dbPath, err := internal.CreateExampleDGUTDB(t)
+	if err != nil {
+		t.Fatalf("could not create dgut db: %s", err)
+	}
 
+	csvPath := makeQuotasCSV(t, `1,/disk/1,10
+1,/disk/2,11
+2,/disk/1,12
+`)
+
+	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
+		tree, err := dgut.NewTree(dbPath)
+		So(err, ShouldBeNil)
+		So(tree, ShouldNotBeNil)
+
+		quotas, err := ParseQuotas(csvPath)
+		So(err, ShouldBeNil)
+
+		dir := t.TempDir()
+		dbDir := filepath.Join(dir, "basedir.db")
+
+		bd, err := New(dbDir, tree, quotas)
+		So(err, ShouldBeNil)
+		So(bd, ShouldNotBeNil)
 	})
 }
