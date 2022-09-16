@@ -36,6 +36,7 @@ import (
 
 	"github.com/spf13/cobra"
 	shutil "github.com/termie/go-shutil"
+	"github.com/wtsi-ssg/wrstat/tidy"
 )
 
 // modeRW are the read-write permission bits for user, group and other.
@@ -117,6 +118,8 @@ through; it won't clobber final outputs already moved.`,
 		if err != nil {
 			die("could not determine absolute path to source dir: %s", err)
 		}
+
+		err = tidy.Up(sourceDir, destDir, tidyDate)
 
 		err = moveAndDelete(sourceDir, destDir, destDirInfo, tidyDate)
 		if err != nil {
