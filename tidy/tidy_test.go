@@ -1,27 +1,27 @@
 /*******************************************************************************
- * Copyright (c) 2022 Genome Research Ltd.
- *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
- *         Kyle Mace <km34@sanger.ac.uk>
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+* Copyright (c) 2022 Genome Research Ltd.
+*
+* Author: Sendu Bala <sb10@sanger.ac.uk>
+*         Kyle Mace <km34@sanger.ac.uk>
+*
+* Permission is hereby granted, free of charge, to any person obtaining
+* a copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to
+* permit persons to whom the Software is furnished to do so, subject to
+* the following conditions:
+*
+* The above copyright notice and this permission notice shall be included
+* in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Given a srcDir of multi and a destDir of multi/final, and told to work on
 go and perl folders, tidy produces:
@@ -67,14 +67,14 @@ multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.dgut.db
 multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.dgut.db/dgut.db
 multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.dgut.db/dgut.db.children
 multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.stats.gz
-[]
+[...]
 multi/cci4fafnu1ia052l75sg/perl
 multi/cci4fafnu1ia052l75sg/perl/cci4fafnu1ia052l75tg
 multi/cci4fafnu1ia052l75sg/perl/cci4fafnu1ia052l75tg/walk.1
 [...]
 multi/cci4fafnu1ia052l75sg/base.dirs
 
- ******************************************************************************/
+******************************************************************************/
 
 package tidy
 
@@ -86,6 +86,38 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// Takes a set of bases and creates a directory out of them - effectively
+// combines filepath.Join and os.Mkdir.
+func createAndTestDir(root string, bases ...string) (string, error) {
+	for _, base := range bases {
+		if _, err := os.Stat(root); !os.IsNotExist(err) {
+			root = filepath.Join(root, base)
+
+			continue
+		} else if err := os.Mkdir(root, modePermUser); err != nil {
+			return root, err
+		}
+
+		root = filepath.Join(root, base)
+	}
+
+	err := os.Mkdir(root, modePermUser)
+
+	return root, err
+}
+
+// Creates a file in the path provided by the user.
+func createFile(fileName string) (os.File, error) {
+	returnFile, err := os.Create(fileName)
+	if err != nil {
+		return *returnFile, err
+	}
+
+	err = returnFile.Close()
+
+	return *returnFile, err
+}
+
 func TestTidy(t *testing.T) {
 	date := "20220829"
 
@@ -94,59 +126,128 @@ func TestTidy(t *testing.T) {
 		srcDir := filepath.Join(tmpDir, "src")
 		destDir := filepath.Join(tmpDir, "dest")
 
-		err := os.Mkdir(srcDir, modePermUser)
+		srcUniversalPath := "cci4fafnu1ia052l75sg"
+		srcUniquePathGo := "cci4fafnu1ia052l75t0"
+		srcUniquePathPerl := "cci4fafnu1ia052l75tg"
+
+		destUniversalPath := "cci4au7nu1ibc2ta5j7g"
+		destUniquePathGo := "cci4au7nu1ibc2ta5j80"
+		destUniquePathPerl := "cci4au7nu1ibc2ta5j8g"
+
+		interestUniqueDir1, err := createAndTestDir(srcDir, srcUniversalPath, "go", srcUniquePathGo)
+		So(err, ShouldBeNil)
+		interestUniqueDir2, err := createAndTestDir(srcDir, srcUniversalPath, "perl", srcUniquePathPerl)
 		So(err, ShouldBeNil)
 
-		err = os.Mkdir(destDir, modePermUser)
-		So(err, ShouldBeNil)
+		Convey("For each file suffix, it moves those files in the source dir to the dest dir", func() {
+			fileSuffixes := [4]string{"stats.gz", "byusergroup.gz", "bygroup", "logs.gz"}
 
-		multiUniqueDir := filepath.Join(srcDir, "cci4fafnu1ia052l75sg")
-		interestBaseDir1 := filepath.Join(multiUniqueDir, "go")
-		interestUniqueDir1 := filepath.Join(interestBaseDir1, "cci4fafnu1ia052l75t0")
-		interestBaseDir2 := filepath.Join(multiUniqueDir, "perl")
-		interestUniqueDir2 := filepath.Join(interestBaseDir2, "cci4fafnu1ia052l75tg")
+			for i := range fileSuffixes {
+				// Create test file 1
+				combineLog1 := filepath.Join(interestUniqueDir1, fileSuffixes[i])
+				_, err = createFile(combineLog1)
+				So(err, ShouldBeNil)
 
-		err = os.Mkdir(multiUniqueDir, modePermUser)
-		So(err, ShouldBeNil)
-		err = os.Mkdir(interestBaseDir1, modePermUser)
-		So(err, ShouldBeNil)
-		err = os.Mkdir(interestUniqueDir1, modePermUser)
-		So(err, ShouldBeNil)
-		err = os.Mkdir(interestBaseDir2, modePermUser)
-		So(err, ShouldBeNil)
-		err = os.Mkdir(interestUniqueDir2, modePermUser)
-		So(err, ShouldBeNil)
+				// Create test file 2
+				combineLog2 := filepath.Join(interestUniqueDir2, fileSuffixes[i])
+				_, err = createFile(combineLog2)
+				So(err, ShouldBeNil)
 
-		Convey("The combine.log.gz files are moved to uniquely named logs.gz files in the dest dir", func() {
-			combineLog1 := filepath.Join(interestUniqueDir1, "combine.log.gz")
-			emptyFile, errc := os.Create(combineLog1)
-			So(errc, ShouldBeNil)
-			err = emptyFile.Close()
+				err = Up(srcDir, destDir, date)
+				So(err, ShouldBeNil)
+
+				// The created files should no longer exist in the src dir
+				_, err = os.Stat(combineLog1)
+				So(err, ShouldNotBeNil)
+				_, err = os.Stat(combineLog2)
+				So(err, ShouldNotBeNil)
+
+				// See if test file 1 has been appropriately moved and renamed
+				finalLog1 := filepath.Join(destDir, date+"_go."+destUniquePathGo+"."+destUniversalPath+"."+fileSuffixes[i])
+				_, err = createFile(finalLog1)
+				So(err, ShouldBeNil)
+
+				// See if test file 2 has been appropriately moved and renamed
+				finalLog2 := filepath.Join(destDir, date+"_perl"+"."+destUniquePathPerl+"."+destUniversalPath+"."+fileSuffixes[i])
+				_, err = createFile(finalLog2)
+				So(err, ShouldBeNil)
+			}
+		})
+
+		Convey("The permissions of a moved file should match those of a destination directory", func() {
+			// Create a file
+			srcFile := filepath.Join(interestUniqueDir1, "combine.dgut.db")
+			_, err = createFile(srcFile)
 			So(err, ShouldBeNil)
-			combineLog2 := filepath.Join(interestUniqueDir2, "combine.log.gz")
-			emptyFile, err = os.Create(combineLog2)
-			So(err, ShouldBeNil)
-			err = emptyFile.Close()
-			So(err, ShouldBeNil)
 
+			// Get permissions of the file and the dest dir
+			srcFilePerm, err := os.Stat(srcFile)
+			So(err, ShouldBeNil)
+			// destPerm, err := os.Stat(destDir)
+
+			// Move file to dest dir
 			err = Up(srcDir, destDir, date)
 			So(err, ShouldBeNil)
 
-			_, err = os.Stat(combineLog1)
-			So(err, ShouldNotBeNil)
-			_, err = os.Stat(combineLog2)
-			So(err, ShouldNotBeNil)
-
-			finalLog1 := filepath.Join(destDir, date+"_go.cci4fafnu1ia052l75t0.cci4fafnu1ia052l75sg.logs.gz")
-			_, err = os.Stat(finalLog1)
+			// Check permissions of the file are still the same as before
+			endingFile := filepath.Join(destDir, date+"_"+destUniversalPath+".dgut.dbs")
+			_, err = createFile(endingFile)
 			So(err, ShouldBeNil)
-			finalLog2 := filepath.Join(destDir, date+"_perl.cci4fafnu1ia052l75tg.cci4fafnu1ia052l75sg.logs.gz")
-			_, err = os.Stat(finalLog2)
+			newFilePerm, err := os.Stat(endingFile)
+			So(err, ShouldBeNil)
+			So(srcFilePerm == newFilePerm, ShouldBeTrue) // Not quite sure how to assert that permissions should match each other
+		})
+
+		Convey("The combine.dgut.db directories are moved into the appropriate directory", func() {
+			// Create file name
+			startingFile := filepath.Join(interestUniqueDir1, "combine.dgut.db")
+
+			// Create dir with this name
+			_, err = createFile(startingFile)
+			So(err, ShouldBeNil)
+
+			// Call the function with file now in src dir
+			err = Up(srcDir, destDir, date)
+			So(err, ShouldBeNil)
+
+			// Create corresponding file name in dest dir
+			endingFile := filepath.Join(destDir, date+"_"+destUniversalPath+".dgut.dbs")
+
+			// Check this file exists in dest dir
+			_, err = os.Stat(endingFile)
 			So(err, ShouldBeNil)
 		})
 
+		Convey("base.dirs file in the src dir is moved to a .basedirs file in dest dir", func() {
+			// Create file name
+			startingFile := filepath.Join(srcDir, srcUniversalPath, "base.dirs")
+
+			// Create dir with this name
+			_, err = createFile(startingFile)
+			So(err, ShouldBeNil)
+
+			// Call the function with file now in src dir
+			err = Up(srcDir, destDir, date)
+			So(err, ShouldBeNil)
+
+			// Create corresponding file name in dest dir
+			endingFile := filepath.Join(destDir, date+"_"+destUniversalPath+".basedirs")
+
+			// Check this file exists in dest dir
+			_, err = os.Stat(endingFile)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Up deletes the source directory after the files have been moved", func() {
+			err = Up(srcDir, destDir, date)
+			So(err, ShouldBeNil)
+
+			_, err = os.Stat(srcDir)
+			So(err, ShouldNotBeNil)
+		})
+
 		Convey("It also works if the dest dir doesn't exist", func() {
-			err = os.RemoveAll(destDir)
+			err := os.RemoveAll(destDir)
 			So(err, ShouldBeNil)
 
 			err = Up(srcDir, destDir, date)
@@ -157,7 +258,7 @@ func TestTidy(t *testing.T) {
 		})
 
 		Convey("It doesn't work if source dir doesn't exist", func() {
-			err = os.RemoveAll(srcDir)
+			err := os.RemoveAll(srcDir)
 			So(err, ShouldBeNil)
 
 			err = Up(srcDir, destDir, date)
@@ -169,7 +270,7 @@ func TestTidy(t *testing.T) {
 
 		Convey("It doesn't work if source or dest is an incorrect relative path", func() {
 			relDir := filepath.Join(tmpDir, "rel")
-			err = os.Mkdir(relDir, modePermUser)
+			err := os.Mkdir(relDir, modePermUser)
 			So(err, ShouldBeNil)
 
 			err = os.Chdir(relDir)
@@ -187,5 +288,6 @@ func TestTidy(t *testing.T) {
 	})
 }
 
-// src/sdf/sd/f/sdf/sd/stats.gz ...
-// /sdfsdf//sdfsdf/output/..._
+func createSourceDirectoryStructure(t *testing.T) {
+	t.Helper()
+}

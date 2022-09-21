@@ -55,12 +55,34 @@ func Up(srcDir, destDir, date string) error {
 	return err
 }
 
+/*func expeditedMove() {
+	directoryMap := map[string]string{
+		"combine.stats.gz": "stats.gz",
+		"combine.byusergroup.gz": "byusergroup.gz",
+		"combine.bygroup": "bygroup",
+		"combine.log.gz": "logs.gz"}
+
+	for fileBasename, suffix := range directoryMap {
+		if err := findAndMoveOutputs(srcDir, destDir, destDirInfo, date,
+			fileBasename, suffix); err != nil {
+			return err
+		}
+	}
+}
+
+func findAndMoveOutputs(sourceDir, destDir string, destDirInfo fs.FileInfo,
+	date, inputSuffix, outputSuffix string){
+
+}*/
+
+// Checks if the directory is valid; exists or not
+
 func dirValid(addr string) error {
 	addr, err := filepath.Abs(addr)
 	if err != nil {
 		return err
 	}
-
+	// Just return nil here instead?
 	_, err = os.Stat(addr)
 
 	return err
