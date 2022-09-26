@@ -2,7 +2,7 @@
  * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
- *         Kyle Mace <km34@sanger.ac.uk>
+ *         Kyle Mace  <km34@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -55,28 +55,7 @@ func Up(srcDir, destDir, date string) error {
 	return err
 }
 
-/*func expeditedMove() {
-	directoryMap := map[string]string{
-		"combine.stats.gz": "stats.gz",
-		"combine.byusergroup.gz": "byusergroup.gz",
-		"combine.bygroup": "bygroup",
-		"combine.log.gz": "logs.gz"}
-
-	for fileBasename, suffix := range directoryMap {
-		if err := findAndMoveOutputs(srcDir, destDir, destDirInfo, date,
-			fileBasename, suffix); err != nil {
-			return err
-		}
-	}
-}
-
-func findAndMoveOutputs(sourceDir, destDir string, destDirInfo fs.FileInfo,
-	date, inputSuffix, outputSuffix string){
-
-}*/
-
-// Checks if the directory is valid; exists or not
-
+// Checks if the directory is valid; exists or not.
 func dirValid(addr string) error {
 	addr, err := filepath.Abs(addr)
 	if err != nil {
