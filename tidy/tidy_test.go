@@ -83,7 +83,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"syscall"
 	"testing"
 	"time"
 
@@ -91,47 +90,45 @@ import (
 )
 
 // modeRW are the read-write permission bits for user, group and other.
-const modeRW = 0666
+// const modeRW = 0666
 
 func TestTidy(t *testing.T) {
 	date := "20220829"
 	srcUniversal := "cci4fafnu1ia052l75sg"
 	srcUniqueGo := "cci4fafnu1ia052l75t0"
 	srcUniquePerl := "cci4fafnu1ia052l75tg"
-	destUniversal := "cci4au7nu1ibc2ta5j7g"
-	destUniqueGo := "cci4au7nu1ibc2ta5j80"
-	destUniquePerl := "cci4au7nu1ibc2ta5j8g"
 
 	Convey("Given existing source and dest dirs you can tidy the source", t, func() {
-		tmpDir := t.TempDir()
-		srcDir := filepath.Join(tmpDir, "src")
-		destDir := filepath.Join(tmpDir, "dest")
-		interestUniqueDir1 := createTestPath([]string{srcDir, srcUniversal, "go", srcUniqueGo})
-		interestUniqueDir2 := createTestPath([]string{srcDir, srcUniversal, "perl", srcUniquePerl})
+		myDir, err := os.Getwd()
+		So(err, ShouldBeNil)
+		tmpDir := filepath.Join(myDir, "tmpDir")
+		srcDir := filepath.Join(tmpDir, "src", srcUniversal)
+		destDir := filepath.Join(tmpDir, "dest", "final")
+		interestUniqueDir1 := createTestPath([]string{srcDir, "go", srcUniqueGo})
+		interestUniqueDir2 := createTestPath([]string{srcDir, "perl", srcUniquePerl})
 
-		buildSrcDir(srcDir, srcUniversal, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+		buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
 
 		createTestDirWithDifferentPerms(destDir)
 
-		err := Up(srcDir, destDir, date)
-		So(err, ShouldBeNil)
+		err = Up(srcDir, destDir, date)
 
 		Convey("And the combine files are moved from the source dir to the dest dir", func() {
 			combineFileSuffixes := [4]string{".logs.gz", ".byusergroup.gz", ".bygroup", ".stats.gz"}
 
 			for i := range combineFileSuffixes {
-				final1 := filepath.Join(destDir, date+"_go."+destUniqueGo+"."+destUniversal+combineFileSuffixes[i])
+				final1 := filepath.Join(destDir, date+"_go."+srcUniqueGo+"."+srcUniversal+combineFileSuffixes[i])
 				_, err = os.Stat(final1)
 				So(err, ShouldBeNil)
 
-				final2 := filepath.Join(destDir, date+"_perl."+destUniquePerl+"."+destUniversal+combineFileSuffixes[i])
+				final2 := filepath.Join(destDir, date+"_perl."+srcUniquePerl+"."+srcUniversal+combineFileSuffixes[i])
 				_, err = os.Stat(final2)
 				So(err, ShouldBeNil)
 			}
 		})
 
 		Convey("And the the contents of the .basedirs and .dgut.dbs dir exist", func() {
-			dbsPath := filepath.Join(destDir, date+"_"+destUniversal)
+			dbsPath := filepath.Join(destDir, date+"_"+srcUniversal)
 			dbsSuffixes := [5]string{
 				".basedirs",
 				".dgut.dbs/0/dgut.db",
@@ -153,6 +150,13 @@ func TestTidy(t *testing.T) {
 		})
 
 		Convey("And the mtime of the .dgut.dbs file matches the oldest mtime of the walk log files", func() {
+			err = os.RemoveAll(tmpDir)
+			So(err, ShouldBeNil)
+
+			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+
+			createTestDirWithDifferentPerms(destDir)
+
 			newMtimeFile := filepath.Join(interestUniqueDir1, "walk.1.log")
 			mTime := time.Date(2006, time.April, 1, 3, 4, 5, 0, time.UTC)
 			aTime := time.Date(2007, time.March, 2, 4, 5, 6, 0, time.UTC)
@@ -163,7 +167,7 @@ func TestTidy(t *testing.T) {
 			err = Up(srcDir, destDir, date)
 			So(err, ShouldBeNil)
 
-			dbsFileMTime := getMTime(filepath.Join(destDir, "dgut.dbs.updated"))
+			dbsFileMTime := getMTime(filepath.Join(destDir, ".dgut.dbs.updated"))
 
 			So(mTime, ShouldEqual, dbsFileMTime)
 		})
@@ -190,6 +194,16 @@ func TestTidy(t *testing.T) {
 		})
 
 		Convey("Up deletes the source directory after the files have been moved", func() {
+			err = os.RemoveAll(tmpDir)
+			So(err, ShouldBeNil)
+
+			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+
+			createTestDirWithDifferentPerms(destDir)
+
+			err = Up(srcDir, destDir, date)
+			So(err, ShouldBeNil)
+
 			_, err = os.Stat(srcDir)
 			So(err, ShouldNotBeNil)
 		})
@@ -201,7 +215,7 @@ func TestTidy(t *testing.T) {
 			err = os.RemoveAll(srcDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(srcDir, srcUniversal, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
 
 			err = Up(srcDir, destDir, date)
 			So(err, ShouldBeNil)
@@ -222,26 +236,34 @@ func TestTidy(t *testing.T) {
 		})
 
 		Convey("It doesn't work if source or dest is an incorrect relative path", func() {
-			relDir := filepath.Join(tmpDir, "rel")
-			err := os.Mkdir(relDir, modePermUser)
+			err := os.RemoveAll(destDir)
+			So(err, ShouldBeNil)
+
+			err = os.RemoveAll(srcDir)
+			So(err, ShouldBeNil)
+
+			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+
+			relDir := filepath.Join("tmpDir", "rel")
+			err = os.Mkdir(relDir, modePermUser)
 			So(err, ShouldBeNil)
 
 			err = os.Chdir(relDir)
 			So(err, ShouldBeNil)
 
-			err = Up("../src", "../dest", date)
+			err = Up("../src/"+srcUniversal, "../dest/final", date)
 			So(err, ShouldBeNil)
 
 			err = os.RemoveAll(relDir)
 			So(err, ShouldBeNil)
 
-			err = Up("../src", "../dest", date)
+			err = Up("../src"+srcUniversal, "../dest/final", date)
 			So(err, ShouldNotBeNil)
 		})
 	})
 }
 
-func buildSrcDir(srcDir, srcUniversal, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2 string) {
+func buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2 string) {
 	walkFileSuffixes := [5]string{".log", ".stats", ".byusergroup", ".bygroup", ".dgut"}
 	combineFileSuffixes := [4]string{"combine.log.gz", "combine.byusergroup.gz", "combine.bygroup", "combine.stats.gz"}
 
@@ -251,20 +273,20 @@ func buildSrcDir(srcDir, srcUniversal, srcUniqueGo, srcUniquePerl, interestUniqu
 	}
 
 	for i := range combineFileSuffixes {
-		createTestPath([]string{interestUniqueDir1}, "walk.1"+combineFileSuffixes[i])
-		createTestPath([]string{interestUniqueDir2}, "walk.1"+combineFileSuffixes[i])
+		createTestPath([]string{interestUniqueDir1}, combineFileSuffixes[i])
+		createTestPath([]string{interestUniqueDir2}, combineFileSuffixes[i])
 	}
 
-	goDBDir := []string{srcDir, srcUniversal, "go", srcUniqueGo, "combine.dgut.db"}
-	perlDBDir := []string{srcDir, srcUniversal, "perl", srcUniquePerl, "combine.dgut.db"}
-	combineDirSuffixes := [3]string{"dgut.db", "dgut.db.children", "combine.bygroup"}
+	goDBDir := []string{srcDir, "go", srcUniqueGo, "combine.dgut.db"}
+	perlDBDir := []string{srcDir, "perl", srcUniquePerl, "combine.dgut.db"}
+	combineDirSuffixes := [2]string{"dgut.db", "dgut.db.children"}
 
 	for i := range combineDirSuffixes {
 		createTestPath(goDBDir, combineDirSuffixes[i])
 		createTestPath(perlDBDir, combineDirSuffixes[i])
 	}
 
-	createTestPath([]string{srcDir, srcUniversal}, "base.dirs")
+	createTestPath([]string{srcDir}, "base.dirs")
 }
 
 // createTestPath takes a set of subdirectory names and an optional file
@@ -281,19 +303,6 @@ func createTestPath(dirs []string, basename ...string) string {
 	}
 
 	return wholeDir
-}
-
-// createFile creates an empty file in the path provided by the user.
-func createFile(fileName string) {
-	f, err := os.Create(fileName)
-	if err != nil {
-		So(err, ShouldBeNil)
-
-		return
-	}
-
-	err = f.Close()
-	So(err, ShouldBeNil)
 }
 
 // createTestDirWithDifferentPerms creates the given directory with different
@@ -332,12 +341,6 @@ func userAndGroupOwnershipSame(a, b fs.FileInfo) bool {
 	bUID, bGID := getUIDAndGID(b)
 
 	return aUID == bUID && aGID == bGID
-}
-
-// getUIDAndGID extracts the UID and GID from a FileInfo. NB: this will only
-// work on linux.
-func getUIDAndGID(info fs.FileInfo) (int, int) {
-	return int(info.Sys().(*syscall.Stat_t).Uid), int(info.Sys().(*syscall.Stat_t).Gid) //nolint:forcetypeassert
 }
 
 // matchReadWrite ensures that the given file with the current fileinfo has the
