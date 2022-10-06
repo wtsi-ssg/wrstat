@@ -28,6 +28,7 @@ package cmd
 import (
 	"io/fs"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -41,6 +42,8 @@ const statOutputFileSuffix = ".stats"
 const statUserGroupSummaryOutputFileSuffix = ".byusergroup"
 const statGroupSummaryOutputFileSuffix = ".bygroup"
 const statDGUTSummaryOutputFileSuffix = ".dgut"
+const statPathSizeUnsortedOutputFileSuffix = ".size_unsorted"
+const statPathSizeSortedOutputFileSuffix = ".size"
 const statLogOutputFileSuffix = ".log"
 const lstatTimeout = 10 * time.Second
 const lstatAttempts = 3
@@ -143,6 +146,13 @@ and stores this summary in another file named after the input file with a
 2. username
 3. number of files belonging to both 1 & 2.
 4. total file size in bytes of the files in 3.
+
+It also produces a file named after the input file with a .size suffix, showing
+the size of regular files (only). This is a 2 column, tab separated file (sorted
+on the 1st column):
+
+1. path
+2. size in bytes
 
 If you supply a yaml file to --ch of the following format:
 prefixes: ["/disk1", "/disk2/sub", "/disk3"]
@@ -284,6 +294,11 @@ func addSummaryOperations(input string, p *stat.Paths) (func() error, error) {
 		return nil, err
 	}
 
+	pathSizeSorter, err := addPathSizeOperation(input, p)
+	if err != nil {
+		return nil, err
+	}
+
 	return func() error {
 		if err = outputUserGroupSummaryData(); err != nil {
 			return err
@@ -293,7 +308,11 @@ func addSummaryOperations(input string, p *stat.Paths) (func() error, error) {
 			return err
 		}
 
-		return outputDGUTSummaryData()
+		if err = outputDGUTSummaryData(); err != nil {
+			return err
+		}
+
+		return pathSizeSorter()
 	}, nil
 }
 
@@ -343,6 +362,39 @@ func addDGUTSummaryOperation(input string, p *stat.Paths) (func() error, error) 
 	d := summary.NewByDirGroupUserType()
 
 	return addSummaryOperator(input, statDGUTSummaryOutputFileSuffix, "dgut", p, d)
+}
+
+// addPathSizeOperation adds an operation to Paths that prints path\tsize to an
+// output file. Returns a function that should be called after scanning to
+// close the file and sort it, then delete the unsorted file.
+func addPathSizeOperation(input string, p *stat.Paths) (func() error, error) {
+	output := createOutputFileWithSuffix(input, statPathSizeUnsortedOutputFileSuffix)
+	err := p.AddOperation("pathsize", stat.SizeOperation(output))
+
+	return func() error {
+		err = output.Close()
+		if err != nil {
+			return err
+		}
+
+		return sortPathSizeFile(input)
+	}, err
+}
+
+func sortPathSizeFile(input string) error {
+	unsorted := input + statPathSizeUnsortedOutputFileSuffix
+	cmd := exec.Command("sort", "-o", //nolint:gosec
+		input+statPathSizeSortedOutputFileSuffix,
+		unsorted)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "LC_ALL=C")
+
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return os.Remove(input + statPathSizeUnsortedOutputFileSuffix)
 }
 
 // addChOperation adds the chmod&chown operation to the Paths if the yaml file

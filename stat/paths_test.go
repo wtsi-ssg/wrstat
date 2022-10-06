@@ -140,6 +140,27 @@ func TestPaths(t *testing.T) {
 			So(string(output), ShouldContainSubstring, "\t1\t")
 			So(string(output), ShouldContainSubstring, "\tf\t")
 		})
+
+		Convey("SizeOperation works as expected", func() {
+			dir := t.TempDir()
+			outPath := filepath.Join(dir, "out")
+			out, err := os.Create(outPath)
+			So(err, ShouldBeNil)
+
+			err = p.AddOperation("szie", SizeOperation(out))
+			So(err, ShouldBeNil)
+
+			err = p.Scan(r)
+			So(err, ShouldBeNil)
+
+			err = out.Close()
+			So(err, ShouldBeNil)
+			output, err := os.ReadFile(outPath)
+			So(err, ShouldBeNil)
+
+			So(string(output), ShouldContainSubstring, "empty\t0\n")
+			So(string(output), ShouldContainSubstring, "content\t1\n")
+		})
 	})
 }
 
