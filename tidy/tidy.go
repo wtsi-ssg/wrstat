@@ -38,6 +38,10 @@ import (
 	"github.com/termie/go-shutil"
 )
 
+type Up struct {
+	inputOutputFileSuffixes map[string]string
+}
+
 type Error string
 
 func (e Error) Error() string { return string(e) }
@@ -50,7 +54,7 @@ const modeRW = 0666
 // Up takes a source directory of wrstat output files and tidies them in to the
 // given dest directory, using date in the filenames. If the dest dir doesn't
 // exist, it will be created.
-func Up(srcDir, destDir, date string) error {
+func (u *Up) Up(srcDir, destDir, date string) error {
 	if err := dirValid(srcDir); err != nil {
 		return err
 	}
@@ -77,7 +81,7 @@ func Up(srcDir, destDir, date string) error {
 		return err
 	}
 
-	return moveAndDelete(absSrcDir, absDestDir, destDirInfo, date)
+	return u.moveAndDelete(absSrcDir, absDestDir, destDirInfo, date)
 }
 
 // Checks if the directory is valid; exists or not.
@@ -93,27 +97,22 @@ func dirValid(addr string) error {
 }
 
 // moveAndDelete does the main work of this cmd.
-func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
-	combineSuffixes := map[string]string{
-		"combine.stats.gz":       "stats.gz",
-		"combine.byusergroup.gz": "byusergroup.gz",
-		"combine.bygroup":        "bygroup",
-		"combine.log.gz":         "logs.gz"}
-
-	otherSuffixes := [2]string{"base.dirs", "combine.dgut.db"}
-
-	for inSuffix, outSuffix := range combineSuffixes {
-		if err := findAndMoveOutputs(sourceDir, destDir, destDirInfo, date, inSuffix, outSuffix); err != nil {
-			return err
+func (u *Up) moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
+	for inSuffix, outSuffix := range u.inputOutputFileSuffixes {
+		switch inSuffix {
+		case "combine.dgut.db":
+			if err := findAndMoveDBs(sourceDir, destDir, destDirInfo, inSuffix, date); err != nil {
+				return err
+			}
+		case "base.dirs":
+			if err := moveBaseDirsFile(sourceDir, destDir, destDirInfo, inSuffix, outSuffix, date); err != nil {
+				return err
+			}
+		default:
+			if err := findAndMoveOutputs(sourceDir, destDir, destDirInfo, inSuffix, outSuffix, date); err != nil {
+				return err
+			}
 		}
-	}
-
-	if err := moveBaseDirsFile(sourceDir, destDir, destDirInfo, date, otherSuffixes[0]); err != nil {
-		return err
-	}
-
-	if err := findAndMoveDBs(sourceDir, destDir, destDirInfo, date, otherSuffixes[1]); err != nil {
-		return err
 	}
 
 	return os.RemoveAll(sourceDir)
@@ -122,8 +121,7 @@ func moveAndDelete(sourceDir, destDir string, destDirInfo fs.FileInfo, date stri
 // findAndMoveOutputs finds output files in the given sourceDir with given
 // suffix and moves them to destDir, including date in the name, and adjusting
 // ownership and permissions to match the destDir.
-func findAndMoveOutputs(sourceDir, destDir string, destDirInfo fs.FileInfo,
-	date, inputSuffix, outputSuffix string) error {
+func findAndMoveOutputs(sourceDir, destDir string, destDirInfo fs.FileInfo, inputSuffix, outputSuffix, date string) error {
 	outputPaths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, inputSuffix))
 	if err != nil {
 		return err
@@ -239,12 +237,13 @@ func matchReadWrite(path string, current, desired fs.FileInfo) error {
 
 // moveBaseDirsFile moves the base.dirs file in sourceDir to a uniquely named
 // .basedirs file in destDir that includes the given date.
-func moveBaseDirsFile(sourceDir, destDir string, destDirInfo fs.FileInfo, date, basedirBasename string) error {
-	source := filepath.Join(sourceDir, basedirBasename)
+func moveBaseDirsFile(sourceDir, destDir string, destDirInfo fs.FileInfo, inSuffix, outSuffix, date string) error {
+	source := filepath.Join(sourceDir, inSuffix)
 
-	dest := filepath.Join(destDir, fmt.Sprintf("%s_%s.basedirs",
+	dest := filepath.Join(destDir, fmt.Sprintf("%s_%s.%s",
 		date,
-		filepath.Base(sourceDir)))
+		filepath.Base(sourceDir),
+		outSuffix))
 
 	return renameAndMatchPerms(source, dest, destDirInfo)
 }
@@ -256,15 +255,13 @@ func moveBaseDirsFile(sourceDir, destDir string, destDirInfo fs.FileInfo, date, 
 // It also touches a file that 'wrstat server' monitors to know when to reload
 // its database files. It gives that file an mtime corresponding to the oldest
 // mtime of the walk log files.
-func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date, combineDGUTOutputFileBasename string) error {
-	sources, errg := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, combineDGUTOutputFileBasename))
+func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, inputSuffix, date string) error {
+	sources, errg := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, inputSuffix))
 	if errg != nil {
 		return errg
 	}
 
-	dgutDBsSuffix := "dgut.dbs"
-
-	dbsDir, err := makeDBsDir(sourceDir, destDir, destDirInfo, date, dgutDBsSuffix)
+	dbsDir, err := makeDBsDir(sourceDir, destDir, destDirInfo, date, "dgut.dbs")
 	if err != nil {
 		return err
 	}
@@ -287,9 +284,7 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date, co
 		return err
 	}
 
-	dgutDBsSentinelBasename := ".dgut.dbs.updated"
-
-	return touchDBUpdatedFile(sourceDir, destDir, destDirInfo, dgutDBsSentinelBasename)
+	return touchDBUpdatedFile(sourceDir, destDir, destDirInfo, ".dgut.dbs.updated")
 }
 
 // makeDBsDir makes a uniquely named directory featuring the given date to hold
@@ -329,9 +324,7 @@ func matchPermsInsideDir(dir string, desired fs.FileInfo) error {
 func touchDBUpdatedFile(sourceDir, destDir string, desired fs.FileInfo, dgutDBsSentinelBasename string) error {
 	sentinel := filepath.Join(destDir, dgutDBsSentinelBasename)
 
-	statLogOutputFileSuffix := ".log"
-
-	oldest, err := getOldestMtimeOfWalkFiles(sourceDir, statLogOutputFileSuffix)
+	oldest, err := getOldestMtimeOfWalkFiles(sourceDir, ".log")
 	if err != nil {
 		return err
 	}

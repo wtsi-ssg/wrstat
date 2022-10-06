@@ -165,8 +165,8 @@ func doMultiScheduling(args []string) error {
 	}
 
 	scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, forcedQueue, s)
-	scheduleBasedirsJob(outputRoot, unique, s)
-	// scheduleTidyJob(outputRoot, finalDir, unique, s)
+	// scheduleBasedirsJob(outputRoot, unique, s)
+	scheduleTidyJob(outputRoot, finalDir, unique, s)
 
 	return nil
 }

@@ -99,9 +99,7 @@ func TestTidy(t *testing.T) {
 	srcUniquePerl := "cci4fafnu1ia052l75tg"
 
 	Convey("Given existing source and dest dirs you can tidy the source", t, func() {
-		myDir, err := os.Getwd()
-		So(err, ShouldBeNil)
-		tmpDir := filepath.Join(myDir, "tmpDir")
+		tmpDir := t.TempDir()
 		srcDir := filepath.Join(tmpDir, "src", srcUniversal)
 		destDir := filepath.Join(tmpDir, "dest", "final")
 		interestUniqueDir1 := createTestPath([]string{srcDir, "go", srcUniqueGo})
@@ -111,7 +109,17 @@ func TestTidy(t *testing.T) {
 
 		createTestDirWithDifferentPerms(destDir)
 
-		err = Up(srcDir, destDir, date)
+		suffixes := map[string]string{
+			"combine.stats.gz":       "stats.gz",
+			"combine.byusergroup.gz": "byusergroup.gz",
+			"combine.bygroup":        "bygroup",
+			"combine.log.gz":         "logs.gz",
+			"combine.dgut.db":        "dgut.dbs.updated",
+			"base.dirs":              "basedirs"}
+
+		test := Up{inputOutputFileSuffixes: suffixes}
+
+		err := test.Up(srcDir, destDir, date)
 
 		Convey("And the combine files are moved from the source dir to the dest dir", func() {
 			combineFileSuffixes := [4]string{".logs.gz", ".byusergroup.gz", ".bygroup", ".stats.gz"}
@@ -164,7 +172,7 @@ func TestTidy(t *testing.T) {
 			err = os.Chtimes(newMtimeFile, aTime, mTime)
 			So(err, ShouldBeNil)
 
-			err = Up(srcDir, destDir, date)
+			err = test.Up(srcDir, destDir, date)
 			So(err, ShouldBeNil)
 
 			dbsFileMTime := getMTime(filepath.Join(destDir, ".dgut.dbs.updated"))
@@ -193,7 +201,7 @@ func TestTidy(t *testing.T) {
 			So(err, ShouldBeNil)
 		})
 
-		Convey("Up deletes the source directory after the files have been moved", func() {
+		Convey("And up deletes the source directory after the files have been moved", func() {
 			err = os.RemoveAll(tmpDir)
 			So(err, ShouldBeNil)
 
@@ -201,14 +209,14 @@ func TestTidy(t *testing.T) {
 
 			createTestDirWithDifferentPerms(destDir)
 
-			err = Up(srcDir, destDir, date)
+			err = test.Up(srcDir, destDir, date)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(srcDir)
 			So(err, ShouldNotBeNil)
 		})
 
-		Convey("It also works if the dest dir doesn't exist", func() {
+		Convey("And it also works if the dest dir doesn't exist", func() {
 			err := os.RemoveAll(destDir)
 			So(err, ShouldBeNil)
 
@@ -217,25 +225,25 @@ func TestTidy(t *testing.T) {
 
 			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
 
-			err = Up(srcDir, destDir, date)
+			err = test.Up(srcDir, destDir, date)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(destDir)
 			So(err, ShouldBeNil)
 		})
 
-		Convey("It doesn't work if source dir doesn't exist", func() {
+		Convey("And it doesn't work if source dir doesn't exist", func() {
 			err := os.RemoveAll(srcDir)
 			So(err, ShouldBeNil)
 
-			err = Up(srcDir, destDir, date)
+			err = test.Up(srcDir, destDir, date)
 			So(err, ShouldNotBeNil)
 
 			_, err = os.Stat(srcDir)
 			So(err, ShouldNotBeNil)
 		})
 
-		Convey("It doesn't work if source or dest is an incorrect relative path", func() {
+		Convey("And it doesn't work if source or dest is an incorrect relative path", func() {
 			err := os.RemoveAll(destDir)
 			So(err, ShouldBeNil)
 
@@ -244,20 +252,17 @@ func TestTidy(t *testing.T) {
 
 			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
 
-			relDir := filepath.Join("tmpDir", "rel")
-			err = os.Mkdir(relDir, modePermUser)
+			relDir := filepath.Join(tmpDir, "rel")
+			err = os.MkdirAll(relDir, modePermUser)
 			So(err, ShouldBeNil)
 
 			err = os.Chdir(relDir)
 			So(err, ShouldBeNil)
 
-			err = Up("../src/"+srcUniversal, "../dest/final", date)
-			So(err, ShouldBeNil)
-
 			err = os.RemoveAll(relDir)
 			So(err, ShouldBeNil)
 
-			err = Up("../src"+srcUniversal, "../dest/final", date)
+			err = test.Up("../src/"+srcUniversal, "../dest/final", date)
 			So(err, ShouldNotBeNil)
 		})
 	})
