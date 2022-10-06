@@ -381,6 +381,7 @@ func addPathSizeOperation(input string, p *stat.Paths) (func() error, error) {
 	}, err
 }
 
+// sortPathSizeFile sorts the size file.
 func sortPathSizeFile(input string) error {
 	unsorted := input + statPathSizeUnsortedOutputFileSuffix
 	cmd := exec.Command("sort", "-o", //nolint:gosec
