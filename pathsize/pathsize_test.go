@@ -35,7 +35,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func TestPathSize(t *testing.T) {
+func TestPathSize(t *testing.T) { //nolint:gocognit
 	Convey("You can parse a single line of size data", t, func() {
 		line := "/a/b/c/d.txt\t5\n"
 		path, size, err := parsePathSizeLine(line)
