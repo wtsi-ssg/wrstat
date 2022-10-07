@@ -40,6 +40,7 @@ import (
 	"github.com/klauspost/pgzip"
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/dgut"
+	"github.com/wtsi-ssg/wrstat/pathsize"
 )
 
 const bytesInMB = 1000000
@@ -48,6 +49,7 @@ const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
 const combineGroupOutputFileBasename = "combine.bygroup"
 const combineDGUTOutputFileBasename = "combine.dgut.db"
+const combinePathSizeOutputFileBasename = "combine.pathsize.db"
 const combineLogOutputFileBasename = "combine.log.gz"
 const numSummaryColumns = 2
 const numSummaryColumnsDGUT = 3
@@ -75,6 +77,8 @@ The same applies to the *.log files, being called 'combine.log.gz'.
 
 The *.dugt files will be turned in to databases in a directory
 'combine.dgut.db'.
+
+The *.size files will be turned in to a database in a directory 'pathsize.db'.
 
 The *.bygroup files are merged but not compressed and called 'combine.bygroup'.
 
@@ -114,6 +118,12 @@ you supplied 'wrstat walk'.`,
 		go func() {
 			defer wg.Done()
 			mergeDGUTFilesToDB(sourceDir)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mergeSizeFilesToDB(sourceDir)
 		}()
 
 		wg.Add(1)
@@ -475,7 +485,7 @@ func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
 // information in a database.
 func mergeDGUTFilesToDB(sourceDir string) {
 	paths := findDGUTFilePaths(sourceDir)
-	outputDir := createCombineDGUTOutputDir(sourceDir)
+	outputDir := createDBOutputDir(sourceDir, combineDGUTOutputFileBasename)
 
 	err := mergeDGUTAndStoreInDB(paths, outputDir)
 	if err != nil {
@@ -488,11 +498,11 @@ func findDGUTFilePaths(dir string) []string {
 	return findFilePathsInDir(dir, statDGUTSummaryOutputFileSuffix)
 }
 
-// createCombineDGUTOutputDir creates a dgut output dir in the given dir.
-// Returns the path to the created directory. If it already existed, will delete
-// it first, since we can't store to a pre-existing db.
-func createCombineDGUTOutputDir(dir string) string {
-	path := filepath.Join(dir, combineDGUTOutputFileBasename)
+// createDBOutputDir creates an output dir in the given dir and subdir. Returns
+// the path to the created directory. If it already existed, will delete it
+// first, since we can't store to a pre-existing db.
+func createDBOutputDir(dir, subdir string) string {
+	path := filepath.Join(dir, subdir)
 
 	os.RemoveAll(path)
 
@@ -529,6 +539,46 @@ func mergeDGUTAndStoreInDB(inputs []string, outputDir string) error {
 	if err = writer.Close(); err != nil {
 		return err
 	}
+
+	err = <-errCh
+	if err != nil {
+		return err
+	}
+
+	return cleanup()
+}
+
+// mergeSizeFilesToDB finds and merges the sort files and then stores the
+// information in a database.
+func mergeSizeFilesToDB(sourceDir string) {
+	paths := findSizeFilePaths(sourceDir)
+	outputPath := filepath.Join(sourceDir, combinePathSizeOutputFileBasename)
+
+	err := mergePathSizeAndStoreInDB(paths, outputPath)
+	if err != nil {
+		die("failed to merge the size files: %s", err)
+	}
+}
+
+// findSizeFilePaths returns files in the given dir named with a '.size' suffix.
+func findSizeFilePaths(dir string) []string {
+	return findFilePathsInDir(dir, statPathSizeSortedOutputFileSuffix)
+}
+
+// mergePathSizeAndStoreInDB merges pre-sorted path->size data and outputs the
+// results to an embedded database.
+func mergePathSizeAndStoreInDB(inputs []string, outputPath string) error {
+	sortMergeOutput, cleanup, err := mergeSortedFiles(inputs)
+	if err != nil {
+		return err
+	}
+
+	db := pathsize.NewDB(outputPath)
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- db.Store(sortMergeOutput, dgutStoreBatchSize)
+	}()
 
 	err = <-errCh
 	if err != nil {

@@ -42,7 +42,8 @@ import (
 const modeRW = 0666
 
 const dgutDBsSuffix = "dgut.dbs"
-const dgutDBsSentinelBasename = ".dgut.dbs.updated"
+const pathSizeDBsSuffix = "pathsize.dbs"
+const dbsSentinelBasename = ".dbs.updated"
 
 // options for this cmd.
 var tidyDir string
@@ -77,6 +78,10 @@ The base.dirs file directly inside the given "multi unique" directory is named:
 It also moves the combine.dgut.db directories to inside a directory named:
 [date]_[multi unique].dgut.dbs
 (making them sequentially numbered sub-directories)
+
+Likewise, it moves the combine.pathsize.db files to inside a directory named:
+[date]_[multi unique].pathsize.dbs
+(making them sequentially numbered files)
 
 Finally, it creates or touches a file named '.dgut.dbs.updated' in the
 --final_output directory, giving it an mtime matching the oldest mtime of the
@@ -300,16 +305,37 @@ func moveBaseDirsFile(sourceDir, destDir string, destDirInfo fs.FileInfo, date s
 // and moves them to a uniquely named dir in destDir that includes the given
 // date, and adjusts ownership and permissions to match the destDir.
 //
+// Likewise, it finds the combine.pathsize.db files in the given sourceDir and
+// moves them to a similarly named dir in destDir, with ownership and perms
+// matched.
+//
 // It also touches a file that 'wrstat server' monitors to know when to reload
 // its database files. It gives that file an mtime corresponding to the oldest
 // mtime of the walk log files.
 func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
-	sources, errg := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, combineDGUTOutputFileBasename))
+	err := findAndMoveSpecificDBs(combineDGUTOutputFileBasename, dgutDBsSuffix,
+		sourceDir, destDir, destDirInfo, date)
+	if err != nil {
+		return err
+	}
+
+	err = findAndMoveSpecificDBs(combinePathSizeOutputFileBasename, pathSizeDBsSuffix,
+		sourceDir, destDir, destDirInfo, date)
+	if err != nil {
+		return err
+	}
+
+	return touchDBUpdatedFile(sourceDir, destDir, destDirInfo)
+}
+
+func findAndMoveSpecificDBs(sourceBase, destSuffix,
+	sourceDir, destDir string, destDirInfo fs.FileInfo, date string) error {
+	sources, errg := filepath.Glob(fmt.Sprintf("%s/*/*/%s", sourceDir, sourceBase))
 	if errg != nil {
 		return errg
 	}
 
-	dbsDir, err := makeDBsDir(sourceDir, destDir, destDirInfo, date)
+	dbsDir, err := makeDBsDir(sourceDir, destDir, destSuffix, destDirInfo, date)
 	if err != nil {
 		return err
 	}
@@ -327,22 +353,17 @@ func findAndMoveDBs(sourceDir, destDir string, destDirInfo fs.FileInfo, date str
 		}
 	}
 
-	err = matchPermsInsideDir(dbsDir, destDirInfo)
-	if err != nil {
-		return err
-	}
-
-	return touchDBUpdatedFile(sourceDir, destDir, destDirInfo)
+	return matchPermsInsideDir(dbsDir, destDirInfo)
 }
 
 // makeDBsDir makes a uniquely named directory featuring the given date to hold
 // database files in destDir. If it already exists, does nothing. Returns the
 // path to the database directory and any error.
-func makeDBsDir(sourceDir, destDir string, destDirInfo fs.FileInfo, date string) (string, error) {
+func makeDBsDir(sourceDir, destDir, suffix string, destDirInfo fs.FileInfo, date string) (string, error) {
 	dbsDir := filepath.Join(destDir, fmt.Sprintf("%s_%s.%s",
 		date,
 		filepath.Base(sourceDir),
-		dgutDBsSuffix,
+		suffix,
 	))
 
 	err := os.Mkdir(dbsDir, destDirInfo.Mode().Perm())
@@ -370,7 +391,7 @@ func matchPermsInsideDir(dir string, desired fs.FileInfo) error {
 // to the given permissions. Gives the file an mtime corresponding to the oldest
 // mtime of walk log files.
 func touchDBUpdatedFile(sourceDir, destDir string, desired fs.FileInfo) error {
-	sentinel := filepath.Join(destDir, dgutDBsSentinelBasename)
+	sentinel := filepath.Join(destDir, dbsSentinelBasename)
 
 	oldest, err := getOldestMtimeOfWalkFiles(sourceDir)
 	if err != nil {

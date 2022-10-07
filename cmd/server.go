@@ -146,7 +146,7 @@ creation time in reports.
 			die("failed to load database: %s", err)
 		}
 
-		sentinel := filepath.Join(args[0], dgutDBsSentinelBasename)
+		sentinel := filepath.Join(args[0], dbsSentinelBasename)
 
 		err = s.EnableDGUTDBReloading(sentinel, args[0], dgutDBsSuffix, sentinelPollFrequencty)
 		if err != nil {
