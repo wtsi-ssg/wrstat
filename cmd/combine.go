@@ -299,7 +299,14 @@ func mergeFilesAndStreamToOutput(inputs []string, output *os.File, streamFunc me
 // Returns a pipe of the output from sort, and function you should call after
 // you've finished reading the output to cleanup.
 func mergeSortedFiles(inputs []string) (io.ReadCloser, func() error, error) {
-	cmd := exec.Command("sort", "-m", "--files0-from", "-")
+	inputDir := filepath.Dir(inputs[0])
+
+	sortTmpDir, err := os.MkdirTemp(inputDir, ".sort_tmp")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cmd := exec.Command("sort", "-m", "-T", sortTmpDir, "--files0-from", "-")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "LC_ALL=C")
 
@@ -321,7 +328,15 @@ func mergeSortedFiles(inputs []string) (io.ReadCloser, func() error, error) {
 		return nil, nil, err
 	}
 
-	return sortMergeOutput, cmd.Wait, nil
+	w := func() error {
+		errw := cmd.Wait()
+
+		os.RemoveAll(sortTmpDir)
+
+		return errw
+	}
+
+	return sortMergeOutput, w, nil
 }
 
 // sendFilePathsToSort will pipe the given paths null terminated to the pipe.
