@@ -38,10 +38,10 @@ import (
 )
 
 const (
-	walkTime    = 19 * time.Hour
+	walkTime    = 6 * time.Hour
 	walkRAM     = 16000
-	combineTime = 40 * time.Minute
-	combineRAM  = 800
+	combineTime = 2 * time.Hour
+	combineRAM  = 2000
 	basedirTime = 15 * time.Minute
 	basedirRAM  = 42000
 )
