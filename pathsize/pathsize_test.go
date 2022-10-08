@@ -43,6 +43,12 @@ func TestPathSize(t *testing.T) { //nolint:gocognit
 		So(path, ShouldEqual, "/a/b/c/d.txt")
 		So(size, ShouldEqual, 5)
 
+		line = "/a/b.txt\taftertab\t6\n"
+		path, size, err = parsePathSizeLine(line)
+		So(err, ShouldBeNil)
+		So(path, ShouldEqual, "/a/b.txt\taftertab")
+		So(size, ShouldEqual, 6)
+
 		Convey("But invalid data won't parse", func() {
 			_, _, err = parsePathSizeLine("/a/b/c/d.txt\tfoo\n")
 			So(err, ShouldNotBeNil)

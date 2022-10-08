@@ -38,9 +38,8 @@ type ParseError string
 func (e ParseError) Error() string { return "the provided data was not in size format: " + string(e) }
 
 const (
-	ErrBlankLine           = Error("the provided line had no information")
-	pathsizeDataCols       = 2
-	pathsizeDataColsBugged = 3
+	ErrBlankLine     = Error("the provided line had no information")
+	pathsizeDataCols = 2
 )
 
 type pathsizeParserCallBack func(*PathSize)
@@ -95,9 +94,10 @@ func splitPathSizeLine(line string) ([]string, error) {
 
 	parts := strings.Split(line, "\t")
 
-	if len(parts) == pathsizeDataColsBugged {
-		// assume bizarre bug with "FALSEFALSE" appearing in 2nd column
-		parts = []string{parts[0], parts[2]}
+	if len(parts) > pathsizeDataCols {
+		// assume the filename had tabs in it
+		size, path := parts[len(parts)-1], parts[:len(parts)-1]
+		parts = []string{strings.Join(path, "\t"), size}
 	}
 
 	if len(parts) != pathsizeDataCols {
