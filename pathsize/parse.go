@@ -33,10 +33,14 @@ import (
 	"strings"
 )
 
+type ParseError string
+
+func (e ParseError) Error() string { return "the provided data was not in size format: " + string(e) }
+
 const (
-	ErrInvalidFormat = Error("the provided data was not in size format")
-	ErrBlankLine     = Error("the provided line had no information")
-	pathsizeDataCols = 2
+	ErrBlankLine           = Error("the provided line had no information")
+	pathsizeDataCols       = 2
+	pathsizeDataColsBugged = 3
 )
 
 type pathsizeParserCallBack func(*PathSize)
@@ -90,8 +94,14 @@ func splitPathSizeLine(line string) ([]string, error) {
 	line = strings.TrimSuffix(line, "\n")
 
 	parts := strings.Split(line, "\t")
+
+	if len(parts) == pathsizeDataColsBugged {
+		// assume bizarre bug with "FALSEFALSE" appearing in 2nd column
+		parts = []string{parts[0], parts[2]}
+	}
+
 	if len(parts) != pathsizeDataCols {
-		return nil, ErrInvalidFormat
+		return nil, ParseError(line)
 	}
 
 	return parts, nil

@@ -48,9 +48,8 @@ func TestPathSize(t *testing.T) { //nolint:gocognit
 			So(err, ShouldNotBeNil)
 
 			_, _, err = parsePathSizeLine("/a/b/c/d.txt\n")
-			So(err, ShouldEqual, ErrInvalidFormat)
-
-			So(err.Error(), ShouldEqual, "the provided data was not in size format")
+			So(err.Error(), ShouldContainSubstring, "the provided data was not in size format")
+			So(err.Error(), ShouldContainSubstring, "/a/b/c/d.txt")
 
 			_, _, err = parsePathSizeLine("\t\n")
 			So(err, ShouldEqual, ErrBlankLine)
