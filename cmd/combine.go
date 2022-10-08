@@ -573,6 +573,8 @@ func mergePathSizeAndStoreInDB(inputs []string, outputPath string) error {
 		return err
 	}
 
+	os.Remove(outputPath)
+
 	db := pathsize.NewDB(outputPath)
 	errCh := make(chan error, 1)
 
