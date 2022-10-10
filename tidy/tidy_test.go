@@ -23,60 +23,8 @@
 * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-Given a srcDir of multi and a destDir of multi/final, and told to work on
-go and perl folders, tidy produces:
-
-multi
-multi/final
-multi/final/20220916_go.cci4au7nu1ibc2ta5j80.cci4au7nu1ibc2ta5j7g.stats.gz
-multi/final/20220916_perl.cci4au7nu1ibc2ta5j8g.cci4au7nu1ibc2ta5j7g.stats.gz
-multi/final/20220916_go.cci4au7nu1ibc2ta5j80.cci4au7nu1ibc2ta5j7g.byusergroup.gz
-multi/final/20220916_perl.cci4au7nu1ibc2ta5j8g.cci4au7nu1ibc2ta5j7g.byusergroup.gz
-multi/final/20220916_go.cci4au7nu1ibc2ta5j80.cci4au7nu1ibc2ta5j7g.bygroup
-multi/final/20220916_perl.cci4au7nu1ibc2ta5j8g.cci4au7nu1ibc2ta5j7g.bygroup
-multi/final/20220916_go.cci4au7nu1ibc2ta5j80.cci4au7nu1ibc2ta5j7g.logs.gz
-multi/final/20220916_perl.cci4au7nu1ibc2ta5j8g.cci4au7nu1ibc2ta5j7g.logs.gz
-multi/final/20220916_cci4au7nu1ibc2ta5j7g.basedirs
-multi/final/20220916_cci4au7nu1ibc2ta5j7g.dgut.dbs
-multi/final/20220916_cci4au7nu1ibc2ta5j7g.dgut.dbs/0
-multi/final/20220916_cci4au7nu1ibc2ta5j7g.dgut.dbs/0/dgut.db
-multi/final/20220916_cci4au7nu1ibc2ta5j7g.dgut.dbs/0/dgut.db.children
-multi/final/20220916_cci4au7nu1ibc2ta5j7g.dgut.dbs/1
-multi/final/20220916_cci4au7nu1ibc2ta5j7g.dgut.dbs/1/dgut.db
-multi/final/20220916_cci4au7nu1ibc2ta5j7g.dgut.dbs/1/dgut.db.children
-multi/final/.dgut.dbs.updated
-
-Before running tidy, the srcDir looks like:
-
-multi/cci4fafnu1ia052l75sg
-multi/cci4fafnu1ia052l75sg/go
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/walk.1
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/walk.2
-[...]
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/walk.1.log
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/walk.1.stats
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/walk.1.byusergroup
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/walk.1.bygroup
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/walk.1.dgut
-[...]
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.log.gz
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.byusergroup.gz
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.bygroup
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.dgut.db
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.dgut.db/dgut.db
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.dgut.db/dgut.db.children
-multi/cci4fafnu1ia052l75sg/go/cci4fafnu1ia052l75t0/combine.stats.gz
-[...]
-multi/cci4fafnu1ia052l75sg/perl
-multi/cci4fafnu1ia052l75sg/perl/cci4fafnu1ia052l75tg
-multi/cci4fafnu1ia052l75sg/perl/cci4fafnu1ia052l75tg/walk.1
-[...]
-multi/cci4fafnu1ia052l75sg/base.dirs
-
 *****************************************************************************
-*/
+ */
 package tidy
 
 import (
@@ -89,8 +37,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-// modeRW are the read-write permission bits for user, group and other.
-// const modeRW = 0666
+const modePermUser = 0700
+const modeRW = 0666
 
 func TestTidy(t *testing.T) {
 	date := "20220829"
@@ -109,15 +57,30 @@ func TestTidy(t *testing.T) {
 
 		createTestDirWithDifferentPerms(destDir)
 
-		suffixes := map[string]string{
+		combineSuffixes := map[string]string{
 			"combine.stats.gz":       "stats.gz",
 			"combine.byusergroup.gz": "byusergroup.gz",
 			"combine.bygroup":        "bygroup",
-			"combine.log.gz":         "logs.gz",
-			"combine.dgut.db":        "dgut.dbs.updated",
-			"base.dirs":              "basedirs"}
+			"combine.log.gz":         "logs.gz"}
 
-		test := Up{inputOutputFileSuffixes: suffixes}
+		dbSuffixes := map[string]string{
+			"combine.dgut.db": "dgut.dbs"}
+
+		baseSuffixes := map[string]string{
+			"base.dirs": "basedirs"}
+
+		test := Up{
+			CombineFileSuffixes: combineSuffixes,
+			DBFileSuffixes:      dbSuffixes,
+			BaseFileSuffixes:    baseSuffixes,
+
+			CombineFilePaths: [2]string{"%s/*/*/%s", "%s_%s.%s.%s.%s"},
+			DBFilePaths:      [2]string{"%s/*/*/%s", "%s_%s.%s"},
+			BaseFilePath:     "%s_%s.%s",
+			WalkFilePath:     "%s/*/*/*%s",
+
+			modePermUser: modePermUser,
+			modeRW:       modeRW}
 
 		err := test.Up(srcDir, destDir, date)
 
@@ -253,7 +216,7 @@ func TestTidy(t *testing.T) {
 			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
 
 			relDir := filepath.Join(tmpDir, "rel")
-			err = os.MkdirAll(relDir, modePermUser)
+			err = os.MkdirAll(relDir, test.modePermUser)
 			So(err, ShouldBeNil)
 
 			err = os.Chdir(relDir)
