@@ -58,10 +58,12 @@ func (s *Server) LoadDGUTDBs(paths ...string) error {
 	s.tree = tree
 	s.dgutPaths = paths
 
-	if s.authGroup == nil {
-		s.router.GET(EndPointWhere, s.getWhere)
+	authGroup := s.AuthRouter()
+
+	if authGroup == nil {
+		s.Router().GET(EndPointWhere, s.getWhere)
 	} else {
-		s.authGroup.GET(wherePath, s.getWhere)
+		authGroup.GET(wherePath, s.getWhere)
 	}
 
 	return nil
@@ -118,21 +120,21 @@ func (s *Server) reloadDGUTDBs(dir, suffix string, mtime time.Time) {
 
 	err := s.findNewDgutPaths(dir, suffix)
 	if err != nil {
-		s.logger.Printf("reloading dgut dbs failed: %s", err)
+		s.Logger.Printf("reloading dgut dbs failed: %s", err)
 
 		return
 	}
 
-	s.logger.Printf("reloading dgut dbs from %s", s.dgutPaths)
+	s.Logger.Printf("reloading dgut dbs from %s", s.dgutPaths)
 
 	s.tree, err = dgut.NewTree(s.dgutPaths...)
 	if err != nil {
-		s.logger.Printf("reloading dgut dbs failed: %s", err)
+		s.Logger.Printf("reloading dgut dbs failed: %s", err)
 
 		return
 	}
 
-	s.logger.Printf("server ready again after reloading dgut dbs")
+	s.Logger.Printf("server ready again after reloading dgut dbs")
 
 	s.deleteDirs(oldPaths)
 
@@ -211,13 +213,13 @@ func getChildDirectories(dir string) ([]string, error) {
 func (s *Server) deleteDirs(dirs []string) {
 	for _, dir := range dirs {
 		if err := os.RemoveAll(dir); err != nil {
-			s.logger.Printf("deleting dgut dbs failed: %s", err)
+			s.Logger.Printf("deleting dgut dbs failed: %s", err)
 		}
 	}
 
 	parent := filepath.Dir(dirs[0])
 
 	if err := os.Remove(parent); err != nil {
-		s.logger.Printf("deleting dgut dbs parent dir failed: %s", err)
+		s.Logger.Printf("deleting dgut dbs parent dir failed: %s", err)
 	}
 }
