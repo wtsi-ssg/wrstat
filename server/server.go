@@ -71,10 +71,6 @@ const (
 	unknown       = "#unknown"
 )
 
-// AuthCallback is a function that returns true if the given password is valid
-// for the given username. It also returns the user's UID.
-type AuthCallback func(username, password string) (bool, string)
-
 // Server is used to start a web server that provides a REST API to the dgut
 // package's database, and a website that displays the information nicely.
 type Server struct {
