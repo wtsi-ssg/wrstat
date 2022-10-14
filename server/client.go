@@ -33,14 +33,7 @@ import (
 	gas "github.com/wtsi-hgi/go-authserver"
 )
 
-type Error string
-
-func (e Error) Error() string { return string(e) }
-
-const ErrNoAuth = Error("authentication failed")
-const ErrBadQuery = Error("bad query; check dir, group, user and type")
-
-const ClientProtocol = "https://"
+const ErrBadQuery = gas.Error("bad query; check dir, group, user and type")
 
 // GetGroupAreas is a client call to a Server listening at the given
 // domain:port url that queries its configured group area information. The
@@ -62,7 +55,7 @@ func GetGroupAreas(url, cert, jwt string) (map[string][]string, error) {
 
 	switch resp.StatusCode() {
 	case http.StatusUnauthorized, http.StatusNotFound:
-		return nil, ErrNoAuth
+		return nil, gas.ErrNoAuth
 	}
 
 	return *resp.Result().(*map[string][]string), nil //nolint:forcetypeassert
@@ -97,7 +90,7 @@ func GetWhereDataIs(url, cert, jwt, dir, groups, users, types, splits string) ([
 
 	switch resp.StatusCode() {
 	case http.StatusUnauthorized, http.StatusNotFound:
-		return nil, nil, ErrNoAuth
+		return nil, nil, gas.ErrNoAuth
 	case http.StatusOK:
 		return resp.Body(), *resp.Result().(*[]*DirSummary), nil //nolint:forcetypeassert
 	}

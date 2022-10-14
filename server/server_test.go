@@ -525,7 +525,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 
 			_, _, err = GetWhereDataIs(addr, cert, "", "/", "", "", "", "")
 			So(err, ShouldNotBeNil)
-			So(err, ShouldEqual, ErrNoAuth)
+			So(err, ShouldEqual, gas.ErrNoAuth)
 
 			err = s.AddTreePage()
 			So(err, ShouldNotBeNil)

@@ -33,11 +33,12 @@ import (
 	"strings"
 	"time"
 
+	gas "github.com/wtsi-hgi/go-authserver"
 	"github.com/wtsi-ssg/wrstat/dgut"
 	"github.com/wtsi-ssg/wrstat/watch"
 )
 
-const ErrNoDgutDBDirFound = Error("dgut database directory not found")
+const ErrNoDgutDBDirFound = gas.Error("dgut database directory not found")
 
 // LoadDGUTDBs loads the given dgut.db directories (as produced by one or more
 // invocations of dgut.DB.Store()) and adds the /rest/v1/where GET endpoint to
