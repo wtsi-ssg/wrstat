@@ -36,6 +36,10 @@ import (
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
 
+// destDirPerms are the permissions of the dest directory, to be used
+// in making it if it does not already exist.
+const destDirPerms = 0700
+
 const dgutDBsSuffix = "dgut.dbs"
 const dgutDBsSentinelBasename = ".dgut.dbs.updated"
 
@@ -103,11 +107,6 @@ through; it won't clobber final outputs already moved.`,
 			die("failed to create --final_output dir [%s]: %s", destDir, err)
 		}
 
-		/*destDirInfo, err := os.Stat(destDir)
-		if err != nil {
-			die("could not stat the --final_output dir: %s", err)
-		}*/
-
 		sourceDir, err := filepath.Abs(args[0])
 		if err != nil {
 			die("could not determine absolute path to source dir: %s", err)
@@ -134,9 +133,12 @@ through; it won't clobber final outputs already moved.`,
 			DBFileGlobPattern:       "%s/*/*/%s",
 			WalkFilePathGlobPattern: "%s/*/*/*%s",
 
-			DirPerms: 0700}
+			DestDirPerms: destDirPerms}
 
-		tidy.Up()
+		err = tidy.Up()
+		if err != nil {
+			die("could not neaten dir: %s", err)
+		}
 
 	},
 }

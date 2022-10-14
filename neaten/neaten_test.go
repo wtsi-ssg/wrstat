@@ -81,7 +81,7 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 			DBFileGlobPattern:       "%s/*/*/%s",
 			WalkFilePathGlobPattern: "%s/*/*/*%s",
 
-			DirPerms: modePermUser,
+			DestDirPerms: modePermUser,
 		}
 
 		err := test.Up()
