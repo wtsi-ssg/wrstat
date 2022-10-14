@@ -27,7 +27,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -45,9 +44,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	gas "github.com/wtsi-hgi/go-authserver"
-	"github.com/wtsi-ssg/wr/network/port"
 	"github.com/wtsi-ssg/wrstat/dgut"
-	"golang.org/x/sync/errgroup"
 )
 
 const dirPerms = 0755
@@ -116,7 +113,8 @@ func TestServer(t *testing.T) {
 			certPath, keyPath, err := gas.CreateTestCert(t)
 			So(err, ShouldBeNil)
 
-			addr, dfunc := startTestServer(s, certPath, keyPath)
+			addr, dfunc, err := gas.StartTestServer(s, certPath, keyPath)
+			So(err, ShouldBeNil)
 			defer dfunc()
 
 			client := resty.New()
@@ -385,7 +383,8 @@ func TestServer(t *testing.T) {
 
 						certPath, keyPath, err := gas.CreateTestCert(t)
 						So(err, ShouldBeNil)
-						_, stop := startTestServer(s, certPath, keyPath)
+						_, stop, err := gas.StartTestServer(s, certPath, keyPath)
+						So(err, ShouldBeNil)
 
 						stop()
 						So(s.dgutWatcher, ShouldBeNil)
@@ -612,7 +611,8 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			err = s.AddTreePage()
 			So(err, ShouldBeNil)
 
-			addr, dfunc := startTestServer(s, cert, key)
+			addr, dfunc, err := gas.StartTestServer(s, cert, key)
+			So(err, ShouldBeNil)
 			defer dfunc()
 
 			token, err := gas.Login(addr, cert, "user", "pass")
@@ -1054,44 +1054,6 @@ func runSliceMatrixTest(t *testing.T, matrix []string, s *Server) {
 		response, err := queryWhere(s, filter)
 		So(err, ShouldBeNil)
 		So(response.Code, ShouldEqual, http.StatusBadRequest)
-	}
-}
-
-// startTestServer starts the given server using the given cert and key paths
-// and returns the address and a func you should defer to stop the server.
-func startTestServer(s *Server, certPath, keyPath string) (string, func()) {
-	addr := getTestServerAddress()
-	dfunc := startTestServerUsingAddress(addr, s, certPath, keyPath)
-
-	return addr, dfunc
-}
-
-// getTestServerAddress determines a free port and returns localhost:port.
-func getTestServerAddress() string {
-	checker, err := port.NewChecker("localhost")
-	So(err, ShouldBeNil)
-	port, _, err := checker.AvailableRange(2)
-	So(err, ShouldBeNil)
-
-	return fmt.Sprintf("localhost:%d", port)
-}
-
-// startTestServerUsingAddress does what startTestServer, but using the given
-// address.
-func startTestServerUsingAddress(addr string, s *Server, certPath, keyPath string) func() {
-	var g errgroup.Group
-
-	g.Go(func() error {
-		return s.Start(addr, certPath, keyPath)
-	})
-
-	<-time.After(100 * time.Millisecond)
-
-	return func() {
-		s.Stop()
-
-		err := g.Wait()
-		So(err, ShouldBeNil)
 	}
 }
 
