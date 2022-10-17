@@ -5,12 +5,9 @@ go 1.18
 require (
 	github.com/VertebrateResequencing/wr v0.32.0
 	github.com/adhocore/gronx v0.2.7
-	github.com/appleboy/gin-jwt/v2 v2.9.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/gin-contrib/secure v0.0.1
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-resty/resty/v2 v2.7.0
-	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v0.0.0-20201112154412-8562bdadbbac
 	github.com/karrick/godirwalk v1.17.0
@@ -25,12 +22,17 @@ require (
 	github.com/wtsi-ssg/wr v0.5.5
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0
-	gopkg.in/tylerb/graceful.v1 v1.2.15
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require github.com/wtsi-hgi/go-authserver v1.0.2 // indirect
+require (
+	github.com/appleboy/gin-jwt/v2 v2.9.0 // indirect
+	github.com/gin-contrib/secure v0.0.1 // indirect
+	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
+	github.com/wtsi-hgi/go-authserver v1.0.2
+	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
+	gopkg.in/tylerb/graceful.v1 v1.2.15 // indirect
+)
 
 require (
 	cloud.google.com/go/compute v1.8.0 // indirect
@@ -72,7 +74,7 @@ require (
 	github.com/gophercloud/utils v0.0.0-20220704184730-55bdbbaec4ba // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
-	github.com/gorilla/sessions v1.2.1
+	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grafov/bcast v0.0.0-20190217190352-1447f067e08d // indirect
 	github.com/hanwen/go-fuse/v2 v2.1.0 // indirect
@@ -104,7 +106,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/okta/okta-jwt-verifier-golang v1.3.1
+	github.com/okta/okta-jwt-verifier-golang v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
@@ -121,13 +123,13 @@ require (
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/smartystreets/assertions v1.13.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/thanhpk/randstr v1.0.4
+	github.com/thanhpk/randstr v1.0.4 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a // indirect
 	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458 // indirect
-	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1
+	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1 // indirect
 	golang.org/x/sys v0.0.0-20221010170243-090e33056c14 // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.8 // indirect
