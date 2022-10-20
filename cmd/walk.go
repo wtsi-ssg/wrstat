@@ -141,8 +141,7 @@ func statRepGrp(dir, unique string) string {
 }
 
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup, repGroup,
-	yamlPath string, s *scheduler.Scheduler) {
+func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup, repGroup, yamlPath string, s *scheduler.Scheduler) {
 	n := calculateSplitBasedOnInodes(inodes, desiredDir)
 
 	walker, err := walk.New(outputDir, n)

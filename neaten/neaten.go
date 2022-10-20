@@ -51,22 +51,22 @@ type Tidy struct {
 	// Date used in the renaming of files.
 	Date string
 
-	// File suffixes of combine files in the SrcDir, and their counterpart in the destDir
+	// File suffixes of combine files in the SrcDir, and their counterpart in the destDir.
 	CombineFileSuffixes map[string]string
 
-	// File suffixes of db files in the SrcDir, and their counterpart in the destDir
+	// File suffixes of db files in the SrcDir, and their counterpart in the destDir.
 	DBFileSuffixes map[string]string
 
-	// File suffixes of base files in the SrcDir, and their counterpart in the destDir
+	// File suffixes of base files in the SrcDir, and their counterpart in the destDir.
 	BaseFileSuffixes map[string]string
 
-	// Glob pattern describing the path of combine files in SrcDir
+	// Glob pattern describing the path of combine files in SrcDir.
 	CombineFileGlobPattern string
 
-	// Glob pattern describing the path of db files in SrcDir
+	// Glob pattern describing the path of db files in SrcDir.
 	DBFileGlobPattern string
 
-	// Glob pattern describing the path of walk files in SrcDir
+	// Glob pattern describing the path of walk files in SrcDir.
 	WalkFilePathGlobPattern string
 
 	DestDirPerms fs.FileMode
@@ -74,8 +74,9 @@ type Tidy struct {
 }
 
 // Up takes our source directory of wrstat output files, renames them and relocates
-// them to our dest directory, using our date. If our dest dir doesn't exist, it
-// will be created.
+// them to our dest directory, using our date. Also ensures that the permissions of
+// wrstat output files match those of dest directory. And if our dest dir doesn't
+// exist, it will be created.
 func (t *Tidy) Up() error {
 	if err := dirValid(t.SrcDir); err != nil {
 		return err
@@ -178,7 +179,7 @@ func (t *Tidy) moveOutput(source string, suffix string) error {
 func (t *Tidy) renameAndMatchPerms(source, dest string) error {
 	if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
 		if _, err = os.Stat(dest); err == nil {
-			return t.PermsOK(dest)
+			return t.CorrectPerms(dest)
 		}
 	}
 
@@ -189,12 +190,13 @@ func (t *Tidy) renameAndMatchPerms(source, dest string) error {
 		}
 	}
 
-	return t.PermsOK(dest)
+	return t.CorrectPerms(dest)
 }
 
-// PermsOK checks whether the given file has the same ownership and read-write
-// permissions as our destDir.
-func (t *Tidy) PermsOK(path string) error {
+// CorrectPerms checks whether the given file has the same ownership and read-write
+// permissions as our destDir. If permissions do not match, they will be changed
+// accordingly.
+func (t *Tidy) CorrectPerms(path string) error {
 	current, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -208,7 +210,8 @@ func (t *Tidy) PermsOK(path string) error {
 }
 
 // ownershipMatches checks whether the given file with the current fileinfo
-// has the same user and group ownership as the desired fileinfo.
+// has the same user and group ownership as the desired fileinfo. If the
+// user and group ownerships do not match, they will be changed accordingly.
 func ownershipMatches(path string, current, desired fs.FileInfo) error {
 	uid, gid := getUIDAndGID(current)
 	desiredUID, desiredGID := getUIDAndGID(desired)
@@ -226,8 +229,9 @@ func getUIDAndGID(info fs.FileInfo) (int, int) {
 	return int(info.Sys().(*syscall.Stat_t).Uid), int(info.Sys().(*syscall.Stat_t).Gid) //nolint:forcetypeassert
 }
 
-// readWriteMatches ensures that the given file with the current fileinfo has the
-// same user,group,other read&write permissions as our destDir.
+// readWriteMatches checks whether the given file with the current fileinfo has the
+// same user, group, other read&write permissions as our destDir. If they do not match
+// they will be changed accordingly.
 func (t *Tidy) readWriteMatches(path string, current fs.FileInfo) error {
 	currentMode := current.Mode()
 	currentRW := currentMode & modeRW
@@ -318,7 +322,7 @@ func (t *Tidy) matchPermsInsideDir(dir string) error {
 			return err
 		}
 
-		return t.PermsOK(path)
+		return t.CorrectPerms(path)
 	})
 }
 
@@ -345,7 +349,7 @@ func (t *Tidy) touchDBUpdatedFile(dgutDBsSentinelBasename string) error {
 		return err
 	}
 
-	return t.PermsOK(sentinel)
+	return t.CorrectPerms(sentinel)
 }
 
 // createFile creates a file in the given path.

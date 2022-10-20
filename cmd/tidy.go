@@ -2,6 +2,7 @@
 * Copyright (c) 2021-2022 Genome Research Ltd.
 *
 * Author: Sendu Bala <sb10@sanger.ac.uk>
+* Author: Kyle Mace <km34@sanger.ac.uk>
 *
 * Permission is hereby granted, free of charge, to any person obtaining
 * a copy of this software and associated documentation files (the
@@ -118,16 +119,16 @@ through; it won't clobber final outputs already moved.`,
 			Date:    tidyDate,
 
 			CombineFileSuffixes: map[string]string{
-				"combine.stats.gz":       "stats.gz",
-				"combine.byusergroup.gz": "byusergroup.gz",
-				"combine.bygroup":        "bygroup",
-				"combine.log.gz":         "logs.gz"},
+				combineStatsOutputFileBasename:     "stats.gz",
+				combineUserGroupOutputFileBasename: "byusergroup.gz",
+				combineGroupOutputFileBasename:     "bygroup",
+				combineLogOutputFileBasename:       "logs.gz"},
 
 			DBFileSuffixes: map[string]string{
-				"combine.dgut.db": "dgut.dbs"},
+				combineDGUTOutputFileBasename: "dgut.dbs"},
 
 			BaseFileSuffixes: map[string]string{
-				"base.dirs": "basedirs"},
+				basedirBasename: "basedirs"},
 
 			CombineFileGlobPattern:  "%s/*/*/%s",
 			DBFileGlobPattern:       "%s/*/*/%s",

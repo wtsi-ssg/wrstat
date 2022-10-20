@@ -48,13 +48,12 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 	Convey("Given existing source and dest dirs you can tidy the source", t, func() {
 		tmpDir := t.TempDir()
 		srcDir := filepath.Join(tmpDir, "src", srcUniversal)
-		destDir := filepath.Join(tmpDir, "dest", "final")
 		interestUniqueDir1 := createTestPath([]string{srcDir, "go", srcUniqueGo})
 		interestUniqueDir2 := createTestPath([]string{srcDir, "perl", srcUniquePerl})
 
 		buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
 
-		createTestDirWithDifferentPerms(destDir)
+		destDir := createTestDirWithDifferentPerms(tmpDir)
 
 		combineSuffixes := map[string]string{
 			"combine.stats.gz":       "stats.gz",
@@ -281,16 +280,19 @@ func createTestPath(dirs []string, basename ...string) string {
 
 // createTestDirWithDifferentPerms creates the given directory with different
 // group ownership and rw permissions than normal.
-func createTestDirWithDifferentPerms(dir string) {
-	err := os.MkdirAll(dir, 0777)
+func createTestDirWithDifferentPerms(testDir string) string {
+	destDir := filepath.Join(testDir, "dest", "final")
+	err := os.MkdirAll(destDir, 0777)
 	So(err, ShouldBeNil)
 
 	destUID := os.Getuid()
 	destGroups, err := os.Getgroups()
 	So(err, ShouldBeNil)
 
-	err = os.Lchown(dir, destUID, destGroups[1])
+	err = os.Lchown(destDir, destUID, destGroups[1])
 	So(err, ShouldBeNil)
+
+	return destDir
 }
 
 // getMTime takes a filePath and returns its Mtime.
