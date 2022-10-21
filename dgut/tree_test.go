@@ -160,6 +160,31 @@ func TestTree(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 
+		Convey("You can find Where() in the Tree files are, when directories are counted in the db", func() {
+			paths = testMakeDBPaths(t)
+
+			data := strings.NewReader(`/	1	101	7	1	1	50
+/a	1	101	7	1	1	50
+/a/b	1	101	7	1	1	50
+/a/b/c	1	101	7	1	1	50
+/a/b/d	1	101	7	1	1	50
+`)
+			db := NewDB(paths[0])
+
+			errc = db.Store(data, 20)
+			So(errc, ShouldBeNil)
+
+			tree, errc = NewTree(paths[0])
+			So(errc, ShouldBeNil)
+			So(tree, ShouldNotBeNil)
+
+			dcss, err := tree.Where("/", &Filter{}, 0)
+			So(err, ShouldBeNil)
+			So(dcss, ShouldResemble, DCSs{
+				{"/a/b/d", 3, 30, expectedAtime, expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+			})
+		})
+
 		Convey("You can get the FileLocations()", func() {
 			dcss, err := tree.FileLocations("/",
 				&Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram})
