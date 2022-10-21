@@ -22,13 +22,13 @@ require (
 	github.com/wtsi-ssg/wr v0.5.5
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-<<<<<<< HEAD
-=======
-	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
-	gopkg.in/tylerb/graceful.v1 v1.2.15
->>>>>>> work in progress
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1 // indirect
+	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
+	gopkg.in/tylerb/graceful.v1 v1.2.15 // indirect
 )
 
 require (
@@ -36,8 +36,6 @@ require (
 	github.com/gin-contrib/secure v0.0.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/wtsi-hgi/go-authserver v1.0.2
-	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
-	gopkg.in/tylerb/graceful.v1 v1.2.15 // indirect
 )
 
 require (
@@ -133,16 +131,9 @@ require (
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-<<<<<<< HEAD
-	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a // indirect
-	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458 // indirect
-	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1 // indirect
+	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2 // indirect
+	golang.org/x/net v0.0.0-20221004154528-8021a29435af // indirect
 	golang.org/x/sys v0.0.0-20221010170243-090e33056c14 // indirect
-=======
-	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
-	golang.org/x/net v0.0.0-20220811182439-13a9a731de15 // indirect
-	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
->>>>>>> work in progress
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.8 // indirect
 	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
