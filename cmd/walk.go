@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2022 Genome Research Ltd.
+ * Copyright (c) 2021 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -141,7 +141,8 @@ func statRepGrp(dir, unique string) string {
 }
 
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup, repGroup, yamlPath string, s *scheduler.Scheduler) {
+func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup, repGroup,
+	yamlPath string, s *scheduler.Scheduler) {
 	n := calculateSplitBasedOnInodes(inodes, desiredDir)
 
 	walker, err := walk.New(outputDir, n)

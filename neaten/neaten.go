@@ -1,8 +1,8 @@
 /*******************************************************************************
- * Copyright (c) 2022 Genome Research Ltd.
+ * Copyright (c) 2021 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
- *         Kyle Mace  <km34@sanger.ac.uk>
+ * Author: Kyle Mace <km34@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -51,13 +51,16 @@ type Tidy struct {
 	// Date used in the renaming of files.
 	Date string
 
-	// File suffixes of combine files in the SrcDir, and their counterpart in the destDir.
+	// File suffixes of combine files in the SrcDir, and their counterpart in
+	// the destDir.
 	CombineFileSuffixes map[string]string
 
-	// File suffixes of db files in the SrcDir, and their counterpart in the destDir.
+	// File suffixes of db files in the SrcDir, and their counterpart in the
+	// destDir.
 	DBFileSuffixes map[string]string
 
-	// File suffixes of base files in the SrcDir, and their counterpart in the destDir.
+	// File suffixes of base files in the SrcDir, and their counterpart in the
+	// destDir.
 	BaseFileSuffixes map[string]string
 
 	// Glob pattern describing the path of combine files in SrcDir.
@@ -73,10 +76,10 @@ type Tidy struct {
 	DestDirInfo  fs.FileInfo
 }
 
-// Up takes our source directory of wrstat output files, renames them and relocates
-// them to our dest directory, using our date. Also ensures that the permissions of
-// wrstat output files match those of dest directory. And if our dest dir doesn't
-// exist, it will be created.
+// Up takes our source directory of wrstat output files, renames them and
+// relocates them to our dest directory, using our date. Also ensures that the
+// permissions of wrstat output files match those of dest directory. And if our
+// dest dir doesn't exist, it will be created.
 func (t *Tidy) Up() error {
 	if err := dirValid(t.SrcDir); err != nil {
 		return err
@@ -84,9 +87,10 @@ func (t *Tidy) Up() error {
 
 	err := dirValid(t.DestDir)
 	if os.IsNotExist(err) {
-		err = os.Mkdir(t.DestDir, t.DestDirPerms)
-
-		return err
+		err = os.MkdirAll(t.DestDir, t.DestDirPerms)
+		if err != nil {
+			return err
+		}
 	}
 
 	t.DestDirInfo, err = os.Stat(t.DestDir)
@@ -109,9 +113,9 @@ func dirValid(dir string) error {
 	return err
 }
 
-// moveAndDelete does the main work of this package: it finds, renames and
-// moves the combine, base and db files, ensuring that their permissions
-// match those of our destDir.
+// moveAndDelete does the main work of this package: it finds, renames and moves
+// the combine, base and db files, ensuring that their permissions match those
+// of our destDir.
 func (t *Tidy) moveAndDelete() error {
 	for inSuffix, outSuffix := range t.CombineFileSuffixes {
 		if err := t.findAndMoveOutputs(inSuffix, outSuffix); err != nil {
@@ -135,8 +139,8 @@ func (t *Tidy) moveAndDelete() error {
 }
 
 // findAndMoveOutputs finds output files in the given sourceDir with given
-// suffix and moves them to our destDir, including date in the name, and
-// adjusts ownership and permissions to match the destDir.
+// suffix and moves them to our destDir, including date in the name, and adjusts
+// ownership and permissions to match the destDir.
 func (t *Tidy) findAndMoveOutputs(inSuffix, outSuffix string) error {
 	outputPaths, err := filepath.Glob(fmt.Sprintf(t.CombineFileGlobPattern, t.SrcDir, inSuffix))
 	if err != nil {
@@ -153,9 +157,8 @@ func (t *Tidy) findAndMoveOutputs(inSuffix, outSuffix string) error {
 	return nil
 }
 
-// moveOutput moves an output file to our desrDir and changes its name to
-// the correct format, then adjusts ownership and permissions to match the
-// destDir.
+// moveOutput moves an output file to our desrDir and changes its name to the
+// correct format, then adjusts ownership and permissions to match the destDir.
 func (t *Tidy) moveOutput(source string, suffix string) error {
 	interestUniqueDir := filepath.Dir(source)
 	interestBaseDir := filepath.Dir(interestUniqueDir)
@@ -167,19 +170,19 @@ func (t *Tidy) moveOutput(source string, suffix string) error {
 		filepath.Base(multiUniqueDir),
 		suffix))
 
-	return t.renameAndMatchPerms(source, dest)
+	return t.renameAndCorrectPerms(source, dest)
 }
 
-// renameAndMatchPerms tries 2 ways to rename the file (resorting to a copy if
+// renameAndCorrectPerms tries 2 ways to rename the file (resorting to a copy if
 // this is across filesystem boundaries), then matches the dest file permissions
-// to the given FileInfo.
+// to those of our FileInfo.
 //
 // If source doesn't exist, but dest does, assumes the rename was done
 // previously and just tries to match the permissions.
-func (t *Tidy) renameAndMatchPerms(source, dest string) error {
+func (t *Tidy) renameAndCorrectPerms(source, dest string) error {
 	if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
 		if _, err = os.Stat(dest); err == nil {
-			return t.CorrectPerms(dest)
+			return CorrectPerms(dest, t.DestDirInfo)
 		}
 	}
 
@@ -190,29 +193,29 @@ func (t *Tidy) renameAndMatchPerms(source, dest string) error {
 		}
 	}
 
-	return t.CorrectPerms(dest)
+	return CorrectPerms(dest, t.DestDirInfo)
 }
 
-// CorrectPerms checks whether the given file has the same ownership and read-write
-// permissions as our destDir. If permissions do not match, they will be changed
-// accordingly.
-func (t *Tidy) CorrectPerms(path string) error {
+// CorrectPerms checks whether the given file has the same ownership and
+// read-write permissions as the given destDir info. If permissions do not
+// match, they will be changed accordingly.
+func CorrectPerms(path string, destDirInfo fs.FileInfo) error {
 	current, err := os.Stat(path)
 	if err != nil {
 		return err
 	}
 
-	if err = ownershipMatches(path, current, t.DestDirInfo); err != nil {
+	if err = matchOwnership(path, current, destDirInfo); err != nil {
 		return err
 	}
 
-	return t.readWriteMatches(path, current)
+	return matchReadWrite(path, current, destDirInfo)
 }
 
-// ownershipMatches checks whether the given file with the current fileinfo
-// has the same user and group ownership as the desired fileinfo. If the
-// user and group ownerships do not match, they will be changed accordingly.
-func ownershipMatches(path string, current, desired fs.FileInfo) error {
+// ownershipMatches checks whether the given file with the current fileinfo has
+// the same user and group ownership as the desired fileinfo. If the user and
+// group ownerships do not match, they will be changed accordingly.
+func matchOwnership(path string, current, desired fs.FileInfo) error {
 	uid, gid := getUIDAndGID(current)
 	desiredUID, desiredGID := getUIDAndGID(desired)
 
@@ -229,13 +232,13 @@ func getUIDAndGID(info fs.FileInfo) (int, int) {
 	return int(info.Sys().(*syscall.Stat_t).Uid), int(info.Sys().(*syscall.Stat_t).Gid) //nolint:forcetypeassert
 }
 
-// readWriteMatches checks whether the given file with the current fileinfo has the
-// same user, group, other read&write permissions as our destDir. If they do not match
-// they will be changed accordingly.
-func (t *Tidy) readWriteMatches(path string, current fs.FileInfo) error {
+// matchReadWrite checks whether the given file with the current fileinfo has
+// the same user, group, other read&write permissions as our destDir. If they do
+// not match they will be changed accordingly.
+func matchReadWrite(path string, current, destDirInfo fs.FileInfo) error {
 	currentMode := current.Mode()
 	currentRW := currentMode & modeRW
-	desiredRW := t.DestDirInfo.Mode() & modeRW
+	desiredRW := destDirInfo.Mode() & modeRW
 
 	if currentRW == desiredRW {
 		return nil
@@ -254,12 +257,12 @@ func (t *Tidy) moveBaseDirsFile(inSuffix, outSuffix string) error {
 		filepath.Base(t.SrcDir),
 		outSuffix))
 
-	return t.renameAndMatchPerms(source, dest)
+	return t.renameAndCorrectPerms(source, dest)
 }
 
-// findAndMoveDBs finds the combine.dgut.db directories in our sourceDir
-// and moves them to a uniquely named dir in destDir that includes our
-// date, and adjusts ownership and permissions to match our destDir.
+// findAndMoveDBs finds the combine.dgut.db directories in our sourceDir and
+// moves them to a uniquely named dir in destDir that includes our date, and
+// adjusts ownership and permissions to match our destDir.
 //
 // It also touches a file that 'wrstat server' monitors to know when to reload
 // its database files. It gives that file an mtime corresponding to the oldest
@@ -282,7 +285,7 @@ func (t *Tidy) findAndMoveDBs(inSuffix, outSuffix string) error {
 
 		dest := filepath.Join(dbsDir, fmt.Sprintf("%d", i))
 
-		err = t.renameAndMatchPerms(source, dest)
+		err = t.renameAndCorrectPerms(source, dest)
 		if err != nil {
 			return err
 		}
@@ -322,7 +325,7 @@ func (t *Tidy) matchPermsInsideDir(dir string) error {
 			return err
 		}
 
-		return t.CorrectPerms(path)
+		return CorrectPerms(path, t.DestDirInfo)
 	})
 }
 
@@ -349,7 +352,7 @@ func (t *Tidy) touchDBUpdatedFile(dgutDBsSentinelBasename string) error {
 		return err
 	}
 
-	return t.CorrectPerms(sentinel)
+	return CorrectPerms(sentinel, t.DestDirInfo)
 }
 
 // createFile creates a file in the given path.
@@ -369,8 +372,8 @@ func changeAMFileTime(path string, t time.Time) error {
 	return os.Chtimes(path, t.Local(), t.Local())
 }
 
-// getOldestMtimeOfWalkFiles looks in our sourceDir for walk log files and returns
-// the oldest mtime of them all.
+// getOldestMtimeOfWalkFiles looks in our sourceDir for walk log files and
+// returns the oldest mtime of them all.
 func (t *Tidy) getOldestMtimeOfWalkFiles(dir, statLogOutputFileSuffix string) (time.Time, error) {
 	paths, err := filepath.Glob(fmt.Sprintf(t.WalkFilePathGlobPattern, dir, statLogOutputFileSuffix))
 	if err != nil || len(paths) == 0 {

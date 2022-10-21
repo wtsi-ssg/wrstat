@@ -159,9 +159,7 @@ func calculateBaseDirs(tree *dgut.Tree, outPath string, gids []uint32) error {
 		return err
 	}
 
-	tidy := neaten.Tidy{DestDirInfo: destDirInfo}
-
-	return tidy.CorrectPerms(outPath)
+	return neaten.CorrectPerms(outPath, destDirInfo)
 }
 
 // calculateBaseDirsOfGID uses the tree to work out what the base directories of
