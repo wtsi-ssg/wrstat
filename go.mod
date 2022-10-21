@@ -26,16 +26,13 @@ require (
 )
 
 require (
-	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1 // indirect
-	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
-	gopkg.in/tylerb/graceful.v1 v1.2.15 // indirect
-)
-
-require (
 	github.com/appleboy/gin-jwt/v2 v2.9.0 // indirect
 	github.com/gin-contrib/secure v0.0.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/wtsi-hgi/go-authserver v1.0.2
+	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1 // indirect
+	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
+	gopkg.in/tylerb/graceful.v1 v1.2.15 // indirect
 )
 
 require (
