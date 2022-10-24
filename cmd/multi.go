@@ -59,62 +59,62 @@ var multiCmd = &cobra.Command{
 	Short: "Get stats on the contents of multiple directories",
 	Long: `Get stats on the contents of multiple directories.
  
- wr manager must have been started before running this. If the manager can run
- commands on multiple nodes, be sure to set wr's ManagerHost config option to
- the host you started the manager on.
- 
- For full access to all files, either start wr manager as root, or start it as a
- user that can sudo without a password when running wrstat, and supply the --sudo
- option to this command.
- 
- This calls 'wrstat walk' and 'wrstat combine' on each of the given directories
- of interest. Their outputs go to a unique subdirectory of the given
- --working_directory, which means you can start running this before a previous
- run has completed on the same inputs, and there won't be conflicts.
- It is best if all your directories of interest have different basenames, but
- things will still work and not conflict if they don't. To ensure this, the
- output directory for each directory of interest is a unique subdirectory of the
- unique directory created for all of them.
- 
- (When jobs are added to wr's queue to get the work done, they are given a
- --rep_grp of wrstat-[cmd]-[directory_basename]-[date]-[unique], so you can use
- 'wr status -i wrstat -z -o s' to get information on how long everything or
- particular subsets of jobs took.)
- 
- Once everything has completed, the final output files are moved to the given
- --final_output directory by 'wrstat tidy', with a name that includes the date
- this command was started, the basename of the directory operated on, a unique
- string per directory of interest, and a unique string for this call of multi:
- [year][month][day]_[directory_basename]/[interest unique].[unique].[type]
- eg. for 'wrstat multi -i foo -w /path/a -f /path/b /mnt/foo /mnt/bar /home/bar'
- It might produce: 
- /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.bygroup
- /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.byusergroup.gz
- /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.logs.gz
- /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.stats.gz
- /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.bygroup
- /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.byusergroup.gz
- /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.logs.gz
- /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.stats.gz
- /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.bygroup
- /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
- /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
- /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
- /path/b/20210617.c35m8359bnc8ni7dgphg.basedirs
- /path/b/20210617.c35m8359bnc8ni7dgphg.dgut.dbs
- 
- The output files will be given the same user:group ownership and
- user,group,other read & write permissions as the --final_output directory.
- 
- The base.*.dirs file gets made by calling 'wrstat basedirs' after the 'combine'
- step.
- 
- Finally, the unique subdirectory of --working_directory that was created is
- deleted.
- 
- Note that in your --final_output directory, if a *.dgut.dbs directory already
- exists, and you have a wrstat server using the database files inside, the server
- will automatically start using the new data and delete the old.`,
+wr manager must have been started before running this. If the manager can run
+commands on multiple nodes, be sure to set wr's ManagerHost config option to
+the host you started the manager on.
+
+For full access to all files, either start wr manager as root, or start it as a
+user that can sudo without a password when running wrstat, and supply the --sudo
+option to this command.
+
+This calls 'wrstat walk' and 'wrstat combine' on each of the given directories
+of interest. Their outputs go to a unique subdirectory of the given
+--working_directory, which means you can start running this before a previous
+run has completed on the same inputs, and there won't be conflicts.
+It is best if all your directories of interest have different basenames, but
+things will still work and not conflict if they don't. To ensure this, the
+output directory for each directory of interest is a unique subdirectory of the
+unique directory created for all of them.
+
+(When jobs are added to wr's queue to get the work done, they are given a
+--rep_grp of wrstat-[cmd]-[directory_basename]-[date]-[unique], so you can use
+'wr status -i wrstat -z -o s' to get information on how long everything or
+particular subsets of jobs took.)
+
+Once everything has completed, the final output files are moved to the given
+--final_output directory by 'wrstat tidy', with a name that includes the date
+this command was started, the basename of the directory operated on, a unique
+string per directory of interest, and a unique string for this call of multi:
+[year][month][day]_[directory_basename]/[interest unique].[unique].[type]
+eg. for 'wrstat multi -i foo -w /path/a -f /path/b /mnt/foo /mnt/bar /home/bar'
+It might produce: 
+/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.bygroup
+/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.logs.gz
+/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.bygroup
+/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.logs.gz
+/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.bygroup
+/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
+/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
+/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617.c35m8359bnc8ni7dgphg.basedirs
+/path/b/20210617.c35m8359bnc8ni7dgphg.dgut.dbs
+
+The output files will be given the same user:group ownership and
+user,group,other read & write permissions as the --final_output directory.
+
+The base.*.dirs file gets made by calling 'wrstat basedirs' after the 'combine'
+step.
+
+Finally, the unique subdirectory of --working_directory that was created is
+deleted.
+
+Note that in your --final_output directory, if a *.dgut.dbs directory already
+exists, and you have a wrstat server using the database files inside, the server
+will automatically start using the new data and delete the old.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		checkMultiArgs(args)
 		err := doMultiScheduling(args)
