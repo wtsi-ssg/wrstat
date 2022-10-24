@@ -1,30 +1,29 @@
-/*
-******************************************************************************
-* Copyright (c) 2022 Genome Research Ltd.
-*
-* Author: Sendu Bala <sb10@sanger.ac.uk>
-*         Kyle Mace <km34@sanger.ac.uk>
-*
-* Permission is hereby granted, free of charge, to any person obtaining
-* a copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to
-* permit persons to whom the Software is furnished to do so, subject to
-* the following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*****************************************************************************
- */
+/*******************************************************************************
+ * Copyright (c) 2022 Genome Research Ltd.
+ *
+ * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Author: Kyle Mace <km34@sanger.ac.uk>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ ******************************************************************************/
+
 package neaten
 
 import (
@@ -78,18 +77,18 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 		Convey("And the combine files are moved from the source dir to the dest dir", func() {
 			combineFileSuffixes := [4]string{".logs.gz", ".byusergroup.gz", ".bygroup", ".stats.gz"}
 
-			for i := range combineFileSuffixes {
-				final1 := filepath.Join(destDir, date+"_go."+srcUniqueGo+"."+srcUniversal+combineFileSuffixes[i])
+			for _, suffix := range combineFileSuffixes {
+				final1 := filepath.Join(destDir, date+"_go."+srcUniqueGo+"."+srcUniversal+suffix)
 				_, err = os.Stat(final1)
 				So(err, ShouldBeNil)
 
-				final2 := filepath.Join(destDir, date+"_perl."+srcUniquePerl+"."+srcUniversal+combineFileSuffixes[i])
+				final2 := filepath.Join(destDir, date+"_perl."+srcUniquePerl+"."+srcUniversal+suffix)
 				_, err = os.Stat(final2)
 				So(err, ShouldBeNil)
 			}
 		})
 
-		Convey("And the the contents of the .basedirs and .dgut.dbs dir exist", func() {
+		Convey("And the contents of the .basedirs and .dgut.dbs dir exist", func() {
 			dbsPath := filepath.Join(destDir, date+"_"+srcUniversal)
 			dbsSuffixes := [5]string{
 				".basedirs",
@@ -98,8 +97,8 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 				".dgut.dbs/1/dgut.db",
 				".dgut.dbs/1/dgut.db.children"}
 
-			for i := range dbsSuffixes {
-				_, err = os.Stat(dbsPath + dbsSuffixes[i])
+			for _, suffix := range dbsSuffixes {
+				_, err = os.Stat(dbsPath + suffix)
 				So(err, ShouldBeNil)
 			}
 		})
@@ -120,10 +119,10 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 			createTestDirWithDifferentPerms(destDir)
 
 			newMtimeFile := filepath.Join(interestUniqueDir1, "walk.1.log")
-			mTime := time.Date(2006, time.April, 1, 3, 4, 5, 0, time.UTC)
-			aTime := time.Date(2007, time.March, 2, 4, 5, 6, 0, time.UTC)
+			expectedMTime := time.Date(2006, time.April, 1, 3, 4, 5, 0, time.UTC)
+			expectedATime := time.Date(2007, time.March, 2, 4, 5, 6, 0, time.UTC)
 
-			err = os.Chtimes(newMtimeFile, aTime, mTime)
+			err = os.Chtimes(newMtimeFile, expectedATime, expectedMTime)
 			So(err, ShouldBeNil)
 
 			err = test.Up()
@@ -131,7 +130,7 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 
 			dbsFileMTime := getMTime(filepath.Join(destDir, ".dgut.dbs.updated"))
 
-			So(mTime, ShouldEqual, dbsFileMTime)
+			So(dbsFileMTime, ShouldEqual, expectedMTime)
 		})
 
 		Convey("And the moved file permissions match those of the dest dir", func() {
@@ -308,7 +307,8 @@ func getMTime(filePath string) time.Time {
 	return fileMTime
 }
 
-// permissionsAndOwnershipSame takes two fileinfos and returns whether their permissions and ownerships are the same.
+// permissionsAndOwnershipSame takes two fileinfos and returns whether their
+// permissions and ownerships are the same.
 func permissionsAndOwnershipSame(a, b fs.FileInfo) bool {
 	return readWritePermissionsSame(a, b) && userAndGroupOwnershipSame(a, b)
 }
@@ -325,8 +325,7 @@ func userAndGroupOwnershipSame(a, b fs.FileInfo) bool {
 // matchReadWrite ensures that the given file with the current fileinfo has the
 // same user,group,other read&write permissions as the desired fileinfo.
 func readWritePermissionsSame(a, b fs.FileInfo) bool {
-	aMode := a.Mode()
-	aRW := aMode & modeRW
+	aRW := a.Mode() & modeRW
 	bRW := b.Mode() & modeRW
 
 	return aRW == bRW

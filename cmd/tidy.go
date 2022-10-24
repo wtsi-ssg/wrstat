@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2021 - 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * Author: Kyle Mace <km34@sanger.ac.uk>
@@ -53,7 +53,7 @@ var tidyCmd = &cobra.Command{
 	Use:   "tidy",
 	Short: "Tidy up multi output.",
 	Long: `Tidy up multi output.
- 
+
 This is called by 'wrstat multi' after the main work has completed. It moves
 final output files from the supplied unique working directory to the
 --final_output directory, then deletes the working direcory.
@@ -134,13 +134,13 @@ through; it won't clobber final outputs already moved.`,
 			DBFileGlobPattern:       "%s/*/*/%s",
 			WalkFilePathGlobPattern: "%s/*/*/*%s",
 
-			DestDirPerms: destDirPerms}
+			DestDirPerms: destDirPerms,
+		}
 
 		err = tidy.Up()
 		if err != nil {
 			die("could not neaten dir: %s", err)
 		}
-
 	},
 }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * Author: Kyle Mace <km34@sanger.ac.uk>
@@ -72,14 +72,18 @@ type Tidy struct {
 	// Glob pattern describing the path of walk files in SrcDir.
 	WalkFilePathGlobPattern string
 
+	// The perms of destdir if we make the destdir ourselves.
 	DestDirPerms fs.FileMode
-	DestDirInfo  fs.FileInfo
+
+	destDirInfo fs.FileInfo
 }
 
 // Up takes our source directory of wrstat output files, renames them and
 // relocates them to our dest directory, using our date. Also ensures that the
-// permissions of wrstat output files match those of dest directory. And if our
-// dest dir doesn't exist, it will be created.
+// permissions of wrstat output files match those of dest directory. If our dest
+// dir doesn't exist, it will be created. And it touches a file called
+// .dgut.db.updated, setting its mTime equal to the oldest of all those from our
+// srcDir.
 func (t *Tidy) Up() error {
 	if err := dirValid(t.SrcDir); err != nil {
 		return err
@@ -93,7 +97,7 @@ func (t *Tidy) Up() error {
 		}
 	}
 
-	t.DestDirInfo, err = os.Stat(t.DestDir)
+	t.destDirInfo, err = os.Stat(t.DestDir)
 	if err != nil {
 		return err
 	}
@@ -182,7 +186,7 @@ func (t *Tidy) moveOutput(source string, suffix string) error {
 func (t *Tidy) renameAndCorrectPerms(source, dest string) error {
 	if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
 		if _, err = os.Stat(dest); err == nil {
-			return CorrectPerms(dest, t.DestDirInfo)
+			return CorrectPerms(dest, t.destDirInfo)
 		}
 	}
 
@@ -193,7 +197,7 @@ func (t *Tidy) renameAndCorrectPerms(source, dest string) error {
 		}
 	}
 
-	return CorrectPerms(dest, t.DestDirInfo)
+	return CorrectPerms(dest, t.destDirInfo)
 }
 
 // CorrectPerms checks whether the given file has the same ownership and
@@ -309,7 +313,7 @@ func (t *Tidy) makeDBsDir(dgutDBsSuffix string) (string, error) {
 		dgutDBsSuffix,
 	))
 
-	err := os.Mkdir(dbsDir, t.DestDirInfo.Mode().Perm())
+	err := os.Mkdir(dbsDir, t.destDirInfo.Mode().Perm())
 	if os.IsExist(err) {
 		err = nil
 	}
@@ -325,7 +329,7 @@ func (t *Tidy) matchPermsInsideDir(dir string) error {
 			return err
 		}
 
-		return CorrectPerms(path, t.DestDirInfo)
+		return CorrectPerms(path, t.destDirInfo)
 	})
 }
 
@@ -352,7 +356,7 @@ func (t *Tidy) touchDBUpdatedFile(dgutDBsSentinelBasename string) error {
 		return err
 	}
 
-	return CorrectPerms(sentinel, t.DestDirInfo)
+	return CorrectPerms(sentinel, t.destDirInfo)
 }
 
 // createFile creates a file in the given path.
