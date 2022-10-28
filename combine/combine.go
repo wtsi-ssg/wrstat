@@ -66,7 +66,7 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
-func combineThis(sourceDir string) error {
+func combine(sourceDir string) error {
 	sourceDir, err := filepath.Abs(sourceDir)
 	if err != nil {
 		return err
@@ -95,10 +95,10 @@ func combineThis(sourceDir string) error {
 	return nil
 }
 
-// concatenateAndCompressStatsFiles finds and conatenates the stats files and
+// concatenateAndCompressStatsFiles finds and concatenates the stats files and
 // compresses the output.
 func concatenateAndCompressStatsFiles(sourceDir string) error {
-	paths, err := findStatFilePaths(sourceDir)
+	paths, err := findFilePathsInDir(sourceDir, statOutputFileSuffix)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func concatenateAndCompressStatsFiles(sourceDir string) error {
 		return err
 	}
 
-	output, err := createCombineStatsOutputFile(sourceDir)
+	output, err := createOutputFileInDir(sourceDir, combineStatsOutputFileBasename)
 	if err != nil {
 		return err
 	}
@@ -119,12 +119,6 @@ func concatenateAndCompressStatsFiles(sourceDir string) error {
 	}
 
 	return nil
-}
-
-// findStatFilePaths returns files in the given dir named with a '.stats'
-// suffix.
-func findStatFilePaths(dir string) ([]string, error) {
-	return findFilePathsInDir(dir, statOutputFileSuffix)
 }
 
 // findFilePathsInDir finds files in the given dir that have basenames with the
@@ -152,11 +146,6 @@ func openFiles(paths []string) ([]*os.File, error) {
 	}
 
 	return files, nil
-}
-
-// createCombineStatsOutputFile creates a stats output file in the given dir.
-func createCombineStatsOutputFile(dir string) (*os.File, error) {
-	return createOutputFileInDir(dir, combineStatsOutputFileBasename)
 }
 
 // createOutputFileInDir creates a file for writing in the given dir with the
@@ -222,40 +211,22 @@ func compressOutput(output *os.File) (*pgzip.Writer, func(), error) {
 // mergeAndCompressUserGroupFiles finds and merges the byusergroup files and
 // compresses the output.
 func mergeAndCompressUserGroupFiles(sourceDir string) error {
-	paths, err := findUserGroupFilePaths(sourceDir)
+	paths, err := findFilePathsInDir(sourceDir, statUserGroupSummaryOutputFileSuffix)
 	if err != nil {
 		return err
 	}
 
-	output, err := createCombineUserGroupOutputFile(sourceDir)
+	output, err := createOutputFileInDir(sourceDir, combineUserGroupOutputFileBasename)
 	if err != nil {
 		return err
 	}
 
-	err = mergeUserGroupAndCompress(paths, output)
+	err = mergeFilesAndStreamToOutput(paths, output, mergeUserGroupStreamToCompressedFile)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-// findUserGroupFilePaths returns files in the given dir named with a
-// '.byusergroup' suffix.
-func findUserGroupFilePaths(dir string) ([]string, error) {
-	return findFilePathsInDir(dir, statUserGroupSummaryOutputFileSuffix)
-}
-
-// createCombineUserGroupOutputFile creates a usergroup output file in the given
-// dir.
-func createCombineUserGroupOutputFile(dir string) (*os.File, error) {
-	return createOutputFileInDir(dir, combineUserGroupOutputFileBasename)
-}
-
-// mergeUserGroupAndCompress merges the inputs and stores in the output,
-// compressed.
-func mergeUserGroupAndCompress(inputs []string, output *os.File) error {
-	return mergeFilesAndStreamToOutput(inputs, output, mergeUserGroupStreamToCompressedFile)
 }
 
 // mergeStreamToOutputFunc is one of our merge*StreamTo* functions.
@@ -429,39 +400,22 @@ func atoi(n string) int64 {
 
 // mergeGroupFiles finds and merges the bygroup files.
 func mergeGroupFiles(sourceDir string) error {
-	paths, err := findGroupFilePaths(sourceDir)
+	paths, err := findFilePathsInDir(sourceDir, statGroupSummaryOutputFileSuffix)
 	if err != nil {
 		return err
 	}
 
-	output, err := createCombineGroupOutputFile(sourceDir)
+	output, err := createOutputFileInDir(sourceDir, combineGroupOutputFileBasename)
 	if err != nil {
 		return err
 	}
 
-	err = mergeGroups(paths, output)
+	err = mergeFilesAndStreamToOutput(paths, output, mergeGroupStreamToFile)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-// findGroupFilePaths returns files in the given dir named with a
-// '.bygroup' suffix.
-func findGroupFilePaths(dir string) ([]string, error) {
-	return findFilePathsInDir(dir, statGroupSummaryOutputFileSuffix)
-}
-
-// createCombineGroupOutputFile creates a usergroup output file in the given
-// dir.
-func createCombineGroupOutputFile(dir string) (*os.File, error) {
-	return createOutputFileInDir(dir, combineGroupOutputFileBasename)
-}
-
-// mergeGroups merges and outputs bygroup data.
-func mergeGroups(inputs []string, output *os.File) error {
-	return mergeFilesAndStreamToOutput(inputs, output, mergeGroupStreamToFile)
 }
 
 // mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
@@ -478,7 +432,7 @@ func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
 // mergeDGUTFilesToDB finds and merges the dgut files and then stores the
 // information in a database.
 func mergeDGUTFilesToDB(sourceDir string) error {
-	paths, err := findDGUTFilePaths(sourceDir)
+	paths, err := findFilePathsInDir(sourceDir, statDGUTSummaryOutputFileSuffix)
 	if err != nil {
 		return err
 	}
@@ -494,11 +448,6 @@ func mergeDGUTFilesToDB(sourceDir string) error {
 	}
 
 	return nil
-}
-
-// findDGUTFilePaths returns files in the given dir named with a '.dgut' suffix.
-func findDGUTFilePaths(dir string) ([]string, error) {
-	return findFilePathsInDir(dir, statDGUTSummaryOutputFileSuffix)
 }
 
 // createCombineDGUTOutputDir creates a dgut output dir in the given dir.
@@ -554,37 +503,22 @@ func mergeDGUTAndStoreInDB(inputs []string, outputDir string) error {
 // mergeAndCompressLogFiles finds and merges the log files and compresses the
 // output.
 func mergeAndCompressLogFiles(sourceDir string) error {
-	paths, err := findLogFilePaths(sourceDir)
+	paths, err := findFilePathsInDir(sourceDir, statLogOutputFileSuffix)
 	if err != nil {
 		return err
 	}
 
-	output, err := createCombineLogOutputFile(sourceDir)
+	output, err := createOutputFileInDir(sourceDir, combineLogOutputFileBasename)
 	if err != nil {
 		return err
 	}
 
-	err = mergeLogAndCompress(paths, output)
+	err = mergeFilesAndStreamToOutput(paths, output, mergeLogStreamToCompressedFile)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-// findLogFilePaths returns files in the given dir named with a '.log' suffix.
-func findLogFilePaths(dir string) ([]string, error) {
-	return findFilePathsInDir(dir, statLogOutputFileSuffix)
-}
-
-// createCombineLogOutputFile creates a log output file in the given dir.
-func createCombineLogOutputFile(dir string) (*os.File, error) {
-	return createOutputFileInDir(dir, combineLogOutputFileBasename)
-}
-
-// mergeLogAndCompress merges the inputs and stores in the output, compressed.
-func mergeLogAndCompress(inputs []string, output *os.File) error {
-	return mergeFilesAndStreamToOutput(inputs, output, mergeLogStreamToCompressedFile)
 }
 
 // mergeLogStreamToCompressedFile combines log data, outputting the results to a
