@@ -162,7 +162,7 @@ func createOutputFileInDir(dir, basename string) (*os.File, error) {
 // concatenateAndCompress concatenates and compresses the inputs and stores in
 // the output.
 func concatenateAndCompress(inputs []*os.File, output *os.File) error {
-	zw, closeOutput, err := compressOutput(output)
+	compressedOutput, closeOutput, err := compressOutput(output)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func concatenateAndCompress(inputs []*os.File, output *os.File) error {
 	buf := make([]byte, bytesInMB)
 
 	for _, input := range inputs {
-		if _, err := io.CopyBuffer(zw, input, buf); err != nil {
+		if _, err := io.CopyBuffer(compressedOutput, input, buf); err != nil {
 			return err
 		}
 
@@ -188,15 +188,15 @@ func concatenateAndCompress(inputs []*os.File, output *os.File) error {
 // returns the writer. Also returns a function that you should call to close
 // the writer and output when you're done.
 func compressOutput(output *os.File) (*pgzip.Writer, func(), error) {
-	zw := pgzip.NewWriter(output)
+	compressedOutput := pgzip.NewWriter(output)
 
-	err := zw.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
+	err := compressedOutput.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return zw, func() {
-		err = zw.Close()
+	return compressedOutput, func() {
+		err = compressedOutput.Close()
 		if err != nil {
 			return
 		}

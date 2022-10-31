@@ -1,11 +1,14 @@
 package combine
 
 import (
+	"bufio"
+	"compress/gzip"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -14,9 +17,11 @@ import (
 func TestWalk(t *testing.T) {
 	Convey("The function combines and compresses the files", t, func() {
 		testDir := t.TempDir()
-		// here, err := os.Getwd()
-		// testDir := filepath.Join(here, "test")
-		// So(err, ShouldBeNil)
+		/*here, err := os.Getwd()
+		So(err, ShouldBeNil)
+		testDir := filepath.Join(here, "test")
+		err = os.MkdirAll(testDir, 448)
+		So(err, ShouldBeNil)*/
 
 		buildOutputDir(t, testDir)
 
@@ -47,7 +52,6 @@ func TestWalk(t *testing.T) {
 			err = combine(testDir)
 			So(err, ShouldNotBeNil)
 		})
-		// Not sure if this function passes for the right reason?
 		Convey("And combine fails if an incorrect relative path is supplied", func() {
 			relDir := filepath.Join(testDir, "rel")
 			err := os.MkdirAll(relDir, 448)
@@ -64,7 +68,7 @@ func TestWalk(t *testing.T) {
 			err = combine(relDir)
 			So(err, ShouldNotBeNil)
 		})
-		Convey(`And there exist the files combine.stats.gz, combine.byusergroup.gz, 
+		Convey(`And there exist the files combine.stats.gz, combine.byusergroup.gz,
 			combine.log.gz, combine.bygroup, combine.dgut.db at the root of output dir`, func() {
 			err := combine(testDir)
 			So(err, ShouldBeNil)
@@ -79,13 +83,13 @@ func TestWalk(t *testing.T) {
 			}
 		})
 		Convey("And the files have been properly compressed", func() {
-			compressedFiles := [4]string{"combine.stats.gz", "combine.byusergroup.gz", "combine.log.gz", "ha.gz"}
+			compressedFiles := [3]string{"combine.stats.gz", "combine.byusergroup.gz", "combine.log.gz"}
 
 			err := combine(testDir)
 			So(err, ShouldBeNil)
 
 			for _, file := range compressedFiles {
-				f, err := ioutil.ReadFile((filepath.Join(testDir, file)))
+				f, err := os.ReadFile((filepath.Join(testDir, file)))
 				So(err, ShouldBeNil)
 
 				expectedFileType := "application/x-gzip"
@@ -93,13 +97,61 @@ func TestWalk(t *testing.T) {
 				So(fileType, ShouldEqual, expectedFileType)
 			}
 		})
+		Convey("And combine.stats.gz and combine.log.gz contain the concatenation of the .stats files.", func() {
+			inputOutputSuffixes := map[string]string{
+				".stats": "combine.stats.gz",
+				".log":   "combine.log.gz"}
+
+			for inputSuffix, outputSuffix := range inputOutputSuffixes {
+				expectedOutputPath := filepath.Join(testDir, outputSuffix)
+
+				expectedFileContents := writeToTestFiles(t, testDir, inputSuffix)
+
+				err := combine(testDir)
+				So(err, ShouldBeNil)
+
+				actualFile, err := os.Open(expectedOutputPath)
+				So(err, ShouldBeNil)
+
+				actualFileReader, err := gzip.NewReader(actualFile)
+				So(err, ShouldBeNil)
+				defer actualFileReader.Close()
+
+				actualFileScanner := bufio.NewScanner(actualFileReader)
+
+				var actualFileContents string
+				for actualFileScanner.Scan() {
+					actualFileContents += actualFileScanner.Text()
+				}
+
+				So(actualFileContents, ShouldEqual, expectedFileContents)
+			}
+		})
+		Convey("And combine.bygroup contains the merged contents of the .bygroup files.", func() {
+			expectedOutputPath := filepath.Join(testDir, "combine.bygroup")
+
+			expectedFileContents := writeToTestFiles(t, testDir, ".bygroup")
+
+			err := combine(testDir)
+			So(err, ShouldBeNil)
+
+			actualFile, err := os.ReadFile(expectedOutputPath)
+			So(err, ShouldBeNil)
+
+			actualFileContents := strings.ReplaceAll(string(actualFile), "\n", "")
+
+			So(actualFileContents, ShouldEqual, expectedFileContents)
+		})
 	})
 }
 
+// buildOutputDir builds a directory within the provided testing environment.
 func buildOutputDir(t *testing.T, outputDir string) {
 	t.Helper()
 
-	pathSuffixes := [5]string{".stats", ".byusergroup", ".bygroup", ".dgut", ".log"}
+	pathSuffixes := [8]string{"walk.1.stats", "walk.2.stats",
+		"walk.1.byusergroup", "walk.1.bygroup", "walk.2.bygroup",
+		".dgut", "walk.1.log", "walk.2.log"}
 
 	for _, suffix := range pathSuffixes {
 		f, err := os.Create(filepath.Join(outputDir, suffix))
@@ -109,4 +161,35 @@ func buildOutputDir(t *testing.T, outputDir string) {
 
 		f.Close()
 	}
+}
+
+// writeToTestFiles writes an input of form (i+1)^2, where i is a for loop index
+// number, to a test file. It returns a concatenated string of all the numbers
+// it wrote to the files.
+func writeToTestFiles(t *testing.T, testDir, testFileSuffix string) string {
+	t.Helper()
+
+	files, err := filepath.Glob(fmt.Sprintf("%s/*%s", testDir, testFileSuffix))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var writtenInput string
+
+	for i, file := range files {
+		f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+
+		_, err = f.WriteString(strconv.Itoa((i + 1) * (i + 1)))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		writtenInput += strconv.Itoa((i + 1) * (i + 1))
+	}
+
+	return writtenInput
 }
