@@ -58,7 +58,7 @@ var multiCmd = &cobra.Command{
 	Use:   "multi",
 	Short: "Get stats on the contents of multiple directories",
 	Long: `Get stats on the contents of multiple directories.
-
+ 
 wr manager must have been started before running this. If the manager can run
 commands on multiple nodes, be sure to set wr's ManagerHost config option to
 the host you started the manager on.

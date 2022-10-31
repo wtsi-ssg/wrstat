@@ -35,6 +35,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/dgut"
+	"github.com/wtsi-ssg/wrstat/neaten"
 )
 
 const (
@@ -158,7 +159,7 @@ func calculateBaseDirs(tree *dgut.Tree, outPath string, gids []uint32) error {
 		return err
 	}
 
-	return matchPerms(outPath, destDirInfo)
+	return neaten.CorrectPerms(outPath, destDirInfo)
 }
 
 // calculateBaseDirsOfGID uses the tree to work out what the base directories of
