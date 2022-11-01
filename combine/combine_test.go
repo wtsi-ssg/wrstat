@@ -14,7 +14,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestWalk(t *testing.T) {
+func TestWalk(t *testing.T) { //nolint:gocognit
 	Convey("The function combines and compresses the files", t, func() {
 		testDir := t.TempDir()
 		/*here, err := os.Getwd()
@@ -97,10 +97,12 @@ func TestWalk(t *testing.T) {
 				So(fileType, ShouldEqual, expectedFileType)
 			}
 		})
-		Convey("And combine.stats.gz and combine.log.gz contain the concatenation of the .stats files.", func() {
+		Convey(`And combine.stats.gz, combine.log.gz, combine.byusergroup.gz contain the merging or 
+			concatenation of their corresponding input files.`, func() {
 			inputOutputSuffixes := map[string]string{
-				".stats": "combine.stats.gz",
-				".log":   "combine.log.gz"}
+				".stats":       "combine.stats.gz",
+				".log":         "combine.log.gz",
+				".byusergroup": "combine.byusergroup.gz"}
 
 			for inputSuffix, outputSuffix := range inputOutputSuffixes {
 				expectedOutputPath := filepath.Join(testDir, outputSuffix)
@@ -149,9 +151,10 @@ func TestWalk(t *testing.T) {
 func buildOutputDir(t *testing.T, outputDir string) {
 	t.Helper()
 
-	pathSuffixes := [8]string{"walk.1.stats", "walk.2.stats",
-		"walk.1.byusergroup", "walk.1.bygroup", "walk.2.bygroup",
-		".dgut", "walk.1.log", "walk.2.log"}
+	pathSuffixes := [10]string{"walk.1.stats", "walk.2.stats",
+		"walk.1.byusergroup", "walk.2.byusergroup", "walk.1.bygroup",
+		"walk.2.bygroup", "walk.1.dgut", "walk.2.dgut", "walk.1.log",
+		"walk.2.log"}
 
 	for _, suffix := range pathSuffixes {
 		f, err := os.Create(filepath.Join(outputDir, suffix))
