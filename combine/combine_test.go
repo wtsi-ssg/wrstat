@@ -14,9 +14,23 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestWalk(t *testing.T) { //nolint:gocognit
-	Convey("The function combines and compresses the files", t, func() {
+func TestCombine(t *testing.T) { //nolint:gocognit
+	Convey("The function combines the files", t, func() {
 		testDir := t.TempDir()
+
+		test := Combine{
+			SourceDir: testDir,
+
+			Suffixes: map[string]string{
+				".byusergroup": "combine.byusergroup.gz",
+				".log":         "combine.log.gz",
+				".bygroup":     "combine.bygroup",
+			},
+
+			Functions: [3]mergeStreamToOutputFunc{mergeUserGroupStreamToCompressedFile,
+				mergeLogStreamToCompressedFile, mergeGroupStreamToFile},
+		}
+
 		/*here, err := os.Getwd()
 		So(err, ShouldBeNil)
 		testDir := filepath.Join(here, "test")
@@ -38,7 +52,7 @@ func TestWalk(t *testing.T) { //nolint:gocognit
 					os.Remove(path)
 				}
 
-				err := combine(testDir)
+				err := test.Combine()
 				So(err, ShouldNotBeNil)
 			}
 		})
@@ -49,7 +63,7 @@ func TestWalk(t *testing.T) { //nolint:gocognit
 			_, err = os.Stat(testDir)
 			So(err, ShouldNotBeNil)
 
-			err = combine(testDir)
+			err = test.Combine()
 			So(err, ShouldNotBeNil)
 		})
 		Convey("And combine fails if an incorrect relative path is supplied", func() {
@@ -65,12 +79,13 @@ func TestWalk(t *testing.T) { //nolint:gocognit
 
 			relDir += "../"
 
-			err = combine(relDir)
+			test.SourceDir = relDir
+			err = test.Combine()
 			So(err, ShouldNotBeNil)
 		})
 		Convey(`And there exist the files combine.stats.gz, combine.byusergroup.gz,
 			combine.log.gz, combine.bygroup, combine.dgut.db at the root of output dir`, func() {
-			err := combine(testDir)
+			err := test.Combine()
 			So(err, ShouldBeNil)
 
 			expectedFiles := [5]string{"combine.stats.gz", "combine.byusergroup.gz", "combine.log.gz",
@@ -85,7 +100,7 @@ func TestWalk(t *testing.T) { //nolint:gocognit
 		Convey("And the files have been properly compressed", func() {
 			compressedFiles := [3]string{"combine.stats.gz", "combine.byusergroup.gz", "combine.log.gz"}
 
-			err := combine(testDir)
+			err := test.Combine()
 			So(err, ShouldBeNil)
 
 			for _, file := range compressedFiles {
@@ -109,7 +124,7 @@ func TestWalk(t *testing.T) { //nolint:gocognit
 
 				expectedFileContents := writeToTestFiles(t, testDir, inputSuffix)
 
-				err := combine(testDir)
+				err := test.Combine()
 				So(err, ShouldBeNil)
 
 				actualFile, err := os.Open(expectedOutputPath)
@@ -134,7 +149,7 @@ func TestWalk(t *testing.T) { //nolint:gocognit
 
 			expectedFileContents := writeToTestFiles(t, testDir, ".bygroup")
 
-			err := combine(testDir)
+			err := test.Combine()
 			So(err, ShouldBeNil)
 
 			actualFile, err := os.ReadFile(expectedOutputPath)
@@ -144,6 +159,9 @@ func TestWalk(t *testing.T) { //nolint:gocognit
 
 			So(actualFileContents, ShouldEqual, expectedFileContents)
 		})
+		// Convey("And the dgut file contains the right stuff. -- FILL LATER -- ", func () {
+
+		// })
 	})
 }
 

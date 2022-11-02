@@ -64,23 +64,32 @@ const userOnlyPerm = 448
 
 type Error string
 
+type Combine struct {
+	SourceDir string
+
+	Suffixes map[string]string
+
+	Functions [3]mergeStreamToOutputFunc
+}
+
 func (e Error) Error() string { return string(e) }
 
-func combine(sourceDir string) error {
-	sourceDir, err := filepath.Abs(sourceDir)
+func (c *Combine) Combine() error {
+	sourceDir, err := filepath.Abs(c.SourceDir)
 	if err != nil {
 		return err
 	}
 
+	var i int
+	for inputSuffix, outputSuffix := range c.Suffixes {
+		if err := mergeAndOptionallyCompressFiles(sourceDir, inputSuffix,
+			outputSuffix, c.Functions[i]); err != nil {
+			return err
+		}
+		i++
+	}
+
 	if err := concatenateAndCompressStatsFiles(sourceDir); err != nil {
-		return err
-	}
-
-	if err := mergeAndCompressUserGroupFiles(sourceDir); err != nil {
-		return err
-	}
-
-	if err := mergeGroupFiles(sourceDir); err != nil {
 		return err
 	}
 
@@ -88,32 +97,25 @@ func combine(sourceDir string) error {
 		return err
 	}
 
-	if err := mergeAndCompressLogFiles(sourceDir); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-// concatenateAndCompressStatsFiles finds and concatenates the stats files and
-// compresses the output.
-func concatenateAndCompressStatsFiles(sourceDir string) error {
-	paths, err := findFilePathsInDir(sourceDir, statOutputFileSuffix)
+// mergeAndOptionallyCompressFiles identifies files from the supplied suffix,
+// merges them, and then may or may not compress them based upon the type of
+// function supplied as mergeAndStreamFunc.
+func mergeAndOptionallyCompressFiles(sourceDir, inputFileSuffix, outputFileBasename string,
+	mergeAndStreamFunc mergeStreamToOutputFunc) error {
+	paths, err := findFilePathsInDir(sourceDir, inputFileSuffix)
 	if err != nil {
 		return err
 	}
 
-	inputs, err := openFiles(paths)
+	output, err := CreateOutputFileInDir(sourceDir, outputFileBasename)
 	if err != nil {
 		return err
 	}
 
-	output, err := createOutputFileInDir(sourceDir, combineStatsOutputFileBasename)
-	if err != nil {
-		return err
-	}
-
-	err = concatenateAndCompress(inputs, output)
+	err = mergeFilesAndStreamToOutput(paths, output, mergeAndStreamFunc)
 	if err != nil {
 		return err
 	}
@@ -132,101 +134,15 @@ func findFilePathsInDir(dir, suffix string) ([]string, error) {
 	return paths, nil
 }
 
-// openFiles opens the given files for reading.
-func openFiles(paths []string) ([]*os.File, error) {
-	files := make([]*os.File, len(paths))
-
-	for i, path := range paths {
-		file, err := os.Open(path)
-		if err != nil {
-			return files, err
-		}
-
-		files[i] = file
-	}
-
-	return files, nil
-}
-
 // createOutputFileInDir creates a file for writing in the given dir with the
 // given basename. Dies on error.
-func createOutputFileInDir(dir, basename string) (*os.File, error) {
+func CreateOutputFileInDir(dir, basename string) (*os.File, error) {
 	file, err := os.Create(filepath.Join(dir, basename))
 	if err != nil {
 		return file, err
 	}
 
 	return file, nil
-}
-
-// concatenateAndCompress concatenates and compresses the inputs and stores in
-// the output.
-func concatenateAndCompress(inputs []*os.File, output *os.File) error {
-	compressedOutput, closeOutput, err := compressOutput(output)
-	if err != nil {
-		return err
-	}
-
-	buf := make([]byte, bytesInMB)
-
-	for _, input := range inputs {
-		if _, err := io.CopyBuffer(compressedOutput, input, buf); err != nil {
-			return err
-		}
-
-		if err := input.Close(); err != nil {
-			return err
-		}
-	}
-
-	closeOutput()
-
-	return nil
-}
-
-// compressOutput wraps the given output to compress data copied to it, and
-// returns the writer. Also returns a function that you should call to close
-// the writer and output when you're done.
-func compressOutput(output *os.File) (*pgzip.Writer, func(), error) {
-	compressedOutput := pgzip.NewWriter(output)
-
-	err := compressedOutput.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return compressedOutput, func() {
-		err = compressedOutput.Close()
-		if err != nil {
-			return
-		}
-
-		err = output.Close()
-		if err != nil {
-			return
-		}
-	}, err
-}
-
-// mergeAndCompressUserGroupFiles finds and merges the byusergroup files and
-// compresses the output.
-func mergeAndCompressUserGroupFiles(sourceDir string) error {
-	paths, err := findFilePathsInDir(sourceDir, statUserGroupSummaryOutputFileSuffix)
-	if err != nil {
-		return err
-	}
-
-	output, err := createOutputFileInDir(sourceDir, combineUserGroupOutputFileBasename)
-	if err != nil {
-		return err
-	}
-
-	err = mergeFilesAndStreamToOutput(paths, output, mergeUserGroupStreamToCompressedFile)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // mergeStreamToOutputFunc is one of our merge*StreamTo* functions.
@@ -291,6 +207,97 @@ func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
 	}
 
 	return in.Close()
+}
+
+// concatenateAndCompressStatsFiles finds and concatenates the stats files and
+// compresses the output.
+func concatenateAndCompressStatsFiles(sourceDir string) error {
+	paths, err := findFilePathsInDir(sourceDir, statOutputFileSuffix)
+	if err != nil {
+		return err
+	}
+
+	inputs, err := openFiles(paths)
+	if err != nil {
+		return err
+	}
+
+	output, err := CreateOutputFileInDir(sourceDir, combineStatsOutputFileBasename)
+	if err != nil {
+		return err
+	}
+
+	err = concatenateAndCompress(inputs, output)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// openFiles opens the given files for reading.
+func openFiles(paths []string) ([]*os.File, error) {
+	files := make([]*os.File, len(paths))
+
+	for i, path := range paths {
+		file, err := os.Open(path)
+		if err != nil {
+			return files, err
+		}
+
+		files[i] = file
+	}
+
+	return files, nil
+}
+
+// concatenateAndCompress concatenates and compresses the inputs and stores in
+// the output.
+func concatenateAndCompress(inputs []*os.File, output *os.File) error {
+	compressedOutput, closeOutput, err := compressOutput(output)
+	if err != nil {
+		return err
+	}
+
+	buf := make([]byte, bytesInMB)
+
+	for _, input := range inputs {
+		if _, err := io.CopyBuffer(compressedOutput, input, buf); err != nil {
+			return err
+		}
+
+		if err := input.Close(); err != nil {
+			return err
+		}
+	}
+
+	closeOutput()
+
+	return nil
+}
+
+// compressOutput wraps the given output to compress data copied to it, and
+// returns the writer. Also returns a function that you should call to close
+// the writer and output when you're done.
+func compressOutput(output *os.File) (*pgzip.Writer, func(), error) {
+	compressedOutput := pgzip.NewWriter(output)
+
+	err := compressedOutput.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return compressedOutput, func() {
+		err = compressedOutput.Close()
+		if err != nil {
+			return
+		}
+
+		err = output.Close()
+		if err != nil {
+			return
+		}
+	}, err
 }
 
 // mergeUserGroupStreamToCompressedFile merges pre-sorted (pre-merged) usergroup
@@ -398,26 +405,6 @@ func atoi(n string) int64 {
 	return i
 }
 
-// mergeGroupFiles finds and merges the bygroup files.
-func mergeGroupFiles(sourceDir string) error {
-	paths, err := findFilePathsInDir(sourceDir, statGroupSummaryOutputFileSuffix)
-	if err != nil {
-		return err
-	}
-
-	output, err := createOutputFileInDir(sourceDir, combineGroupOutputFileBasename)
-	if err != nil {
-		return err
-	}
-
-	err = mergeFilesAndStreamToOutput(paths, output, mergeGroupStreamToFile)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
 // (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
 // the same first 2 columns, and outputting the results.
@@ -498,27 +485,6 @@ func mergeDGUTAndStoreInDB(inputs []string, outputDir string) error {
 	}
 
 	return cleanup()
-}
-
-// mergeAndCompressLogFiles finds and merges the log files and compresses the
-// output.
-func mergeAndCompressLogFiles(sourceDir string) error {
-	paths, err := findFilePathsInDir(sourceDir, statLogOutputFileSuffix)
-	if err != nil {
-		return err
-	}
-
-	output, err := createOutputFileInDir(sourceDir, combineLogOutputFileBasename)
-	if err != nil {
-		return err
-	}
-
-	err = mergeFilesAndStreamToOutput(paths, output, mergeLogStreamToCompressedFile)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // mergeLogStreamToCompressedFile combines log data, outputting the results to a
