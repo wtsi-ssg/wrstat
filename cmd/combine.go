@@ -26,7 +26,11 @@
 package cmd
 
 import (
+	"bufio"
+	"io"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 <<<<<<< HEAD
@@ -99,4 +103,79 @@ you supplied 'wrstat walk'.`,
 
 func init() {
 	RootCmd.AddCommand(combineCmd)
+}
+
+// sumCountAndSize is a matchingSummaryLineMerger that, given cols 2,  will sum
+// the second to last element of a and b and store the result in a[penultimate],
+// and likewise for the last element in a[last]. This corresponds to summing the
+// file count and size columns of 2 lines in a by* file.
+func sumCountAndSize(cols int, a, b []string) {
+	last := len(a) - (cols - 1)
+	penultimate := last - 1
+
+	a[penultimate] = addNumberStrings(a[penultimate], b[penultimate])
+	a[last] = addNumberStrings(a[last], b[last])
+}
+
+// addNumberStrings treats a and b as ints, adds them together, and returns the
+// resulting int64 as a string.
+func addNumberStrings(a, b string) string {
+	return strconv.FormatInt(atoi(a)+atoi(b), intBase)
+}
+
+// atoi is like strconv.Atoi but returns an int64 and dies on error.
+func atoi(n string) int64 {
+	i, _ := strconv.ParseInt(n, intBase, 0)
+
+	return i
+}
+
+// mergeSummaryLines merges pre-sorted (pre-merged) summary data (eg. from a
+// `sort -m` of .by* files), summing consecutive lines that have the same values
+// in the first matchColumns columns, and outputting the results.
+func mergeSummaryLines(data io.ReadCloser, matchColumns, summaryColumns int,
+	mslm matchingSummaryLineMerger, output io.Writer) error {
+	scanner := bufio.NewScanner(data)
+	previous := make([]string, matchColumns+summaryColumns)
+
+	for scanner.Scan() {
+		current := strings.Split(scanner.Text(), "\t")
+
+		if summaryLinesMatch(matchColumns, previous, current) {
+			mslm(summaryColumns, previous, current)
+
+			continue
+		}
+
+		if previous[0] != "" {
+			if _, err := output.Write([]byte(strings.Join(previous, "\t") + "\n")); err != nil {
+				return err
+			}
+		}
+
+		previous = current
+	}
+
+	_, err := output.Write([]byte(strings.Join(previous, "\t") + "\n"))
+
+	return err
+}
+
+// matchingSummaryLineMerger is a func used by mergeSummaryLines() to handle
+// summary columns when match columns match. a is the previous columns, b is the
+// current. a should have its summary columns altered to merge information from
+// b. Cols is the number of summary columns (the columns that contain info to
+// eg. sum).
+type matchingSummaryLineMerger func(cols int, a, b []string)
+
+// summaryLinesMatch returns true if the first matchColumns elements of 'a'
+// match the first matchColums elements of 'b'.
+func summaryLinesMatch(matchColumns int, a, b []string) bool {
+	for i := 0; i < matchColumns; i++ {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
 }
