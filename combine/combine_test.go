@@ -109,7 +109,7 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 			err2 := MergeAndOptionallyCompressFiles(relativeDir, ".byusergroup", "combine.byusergroup.gz",
 				mergeUserGroupStreamToCompressedFile)
 			err3 := MergeAndOptionallyCompressFiles(relativeDir, ".bygroup", "combine.bygroup.gz", mergeGroupStreamToFile)
-			err4 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
+			err4 := CompressAndConcatenate(relativeDir, ".stats", "combine.stats.gz")
 			err5 := MergeDGUTFilesToDB(relativeDir)
 
 			So(err1, ShouldNotBeNil)
