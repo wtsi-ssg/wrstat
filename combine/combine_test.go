@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	cmd "github.com/wtsi-ssg/wrstat/cmd"
 )
 
 func TestCombine(t *testing.T) { //nolint:gocognit
@@ -28,7 +29,7 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 				os.Remove(file)
 			}
 
-			err = MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err = MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", cmd.MergeLogStreamToCompressedFile)
 			So(err, ShouldNotBeNil)
 
 			buildOutputDir(t, testDir)
@@ -39,7 +40,7 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 			}
 
 			err = MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
-				mergeUserGroupStreamToCompressedFile)
+				cmd.MergeUserGroupStreamToCompressedFile)
 			So(err, ShouldNotBeNil)
 
 			buildOutputDir(t, testDir)
@@ -49,7 +50,7 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 				os.Remove(file)
 			}
 
-			err = MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", mergeGroupStreamToFile)
+			err = MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", cmd.MergeGroupStreamToFile)
 			So(err, ShouldNotBeNil)
 
 			buildOutputDir(t, testDir)
@@ -79,10 +80,10 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 			_, err = os.Stat(testDir)
 			So(err, ShouldNotBeNil)
 
-			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", cmd.MergeLogStreamToCompressedFile)
 			err2 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
-				mergeUserGroupStreamToCompressedFile)
-			err3 := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", mergeGroupStreamToFile)
+				cmd.MergeUserGroupStreamToCompressedFile)
+			err3 := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", cmd.MergeGroupStreamToFile)
 			err4 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
 			err5 := MergeDGUTFilesToDB(testDir)
 
@@ -105,10 +106,10 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 
 			relativeDir += "../"
 
-			err1 := MergeAndOptionallyCompressFiles(relativeDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err1 := MergeAndOptionallyCompressFiles(relativeDir, ".log", "combine.log.gz", cmd.MergeLogStreamToCompressedFile)
 			err2 := MergeAndOptionallyCompressFiles(relativeDir, ".byusergroup", "combine.byusergroup.gz",
-				mergeUserGroupStreamToCompressedFile)
-			err3 := MergeAndOptionallyCompressFiles(relativeDir, ".bygroup", "combine.bygroup.gz", mergeGroupStreamToFile)
+				cmd.MergeUserGroupStreamToCompressedFile)
+			err3 := MergeAndOptionallyCompressFiles(relativeDir, ".bygroup", "combine.bygroup.gz", cmd.MergeGroupStreamToFile)
 			err4 := CompressAndConcatenate(relativeDir, ".stats", "combine.stats.gz")
 			err5 := MergeDGUTFilesToDB(relativeDir)
 
@@ -120,10 +121,10 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 		})
 		Convey(`And there exist the files combine.stats.gz, combine.byusergroup.gz, combine.log.gz, combine.bygroup, 
 		combine.dgut.db at the root of output dir`, func() {
-			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", cmd.MergeLogStreamToCompressedFile)
 			err2 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
-				mergeUserGroupStreamToCompressedFile)
-			err3 := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", mergeGroupStreamToFile)
+				cmd.MergeUserGroupStreamToCompressedFile)
+			err3 := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", cmd.MergeGroupStreamToFile)
 			err4 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
 			err5 := MergeDGUTFilesToDB(testDir)
 
@@ -145,9 +146,9 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 		Convey("And the files have been properly compressed", func() {
 			expectedCompressedFiles := [3]string{"combine.stats.gz", "combine.byusergroup.gz", "combine.log.gz"}
 
-			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", cmd.MergeLogStreamToCompressedFile)
 			err2 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
-				mergeUserGroupStreamToCompressedFile)
+				cmd.MergeUserGroupStreamToCompressedFile)
 			err3 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
 
 			So(err1, ShouldBeNil)
@@ -175,9 +176,9 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 			expectedByusergroupFileContents := writeToTestFiles(t, testDir, ".byusergroup")
 
 			err1 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
-			err2 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err2 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", cmd.MergeLogStreamToCompressedFile)
 			err3 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
-				mergeUserGroupStreamToCompressedFile)
+				cmd.MergeUserGroupStreamToCompressedFile)
 
 			So(err1, ShouldBeNil)
 			So(err2, ShouldBeNil)
@@ -226,7 +227,7 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 			expectedOutputPath := filepath.Join(testDir, "combine.bygroup")
 			expectedBygroupFileContents := writeToTestFiles(t, testDir, ".bygroup")
 
-			err := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", mergeGroupStreamToFile)
+			err := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", cmd.MergeGroupStreamToFile)
 			So(err, ShouldBeNil)
 
 			bygroupFile, err := os.ReadFile(expectedOutputPath)

@@ -43,10 +43,7 @@ import (
 const bytesInMB = 1000000
 const pgzipWriterBlocksMultiplier = 2
 const combineDGUTOutputFileBasename = "combine.dgut.db"
-const numSummaryColumns = 2
 const numSummaryColumnsDGUT = 3
-const groupSumCols = 2
-const userGroupSumCols = 3
 const intBase = 10
 const dgutSumCols = 4
 const dgutStoreBatchSize = 100000
@@ -213,24 +210,6 @@ func Compress(output *os.File) (*pgzip.Writer, func(), error) {
 	}, err
 }
 
-// mergeUserGroupStreamToCompressedFile merges pre-sorted (pre-merged) usergroup
-// data (eg. from a `sort -m` of .byusergroup files), summing consecutive lines
-// with the first 3 columns, and outputting the results to a file, compressed.
-func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
-	zw, closeOutput, err := Compress(output)
-	if err != nil {
-		return err
-	}
-
-	if err := MergeSummaryLines(data, userGroupSumCols, numSummaryColumns, sumCountAndSize, zw); err != nil {
-		return err
-	}
-
-	closeOutput()
-
-	return nil
-}
-
 // MergeSummaryLines merges pre-sorted (pre-merged) summary data (eg. from a
 // `sort -m` of .by* files), summing consecutive lines that have the same values
 // in the first matchColumns columns, and outputting the results.
@@ -318,17 +297,6 @@ func atoi(n string) int64 {
 	return i
 }
 
-// mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
-// (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
-// the same first 2 columns, and outputting the results.
-func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
-	if err := MergeSummaryLines(data, groupSumCols, numSummaryColumns, sumCountAndSize, output); err != nil {
-		return err
-	}
-
-	return output.Close()
-}
-
 // MergeDGUTFilesToDB finds and merges the dgut files and then stores the
 // information in a database.
 func MergeDGUTFilesToDB(sourceDir string) error {
@@ -404,23 +372,6 @@ func Merge(inputData io.ReadCloser, dest io.Writer) error {
 	if _, err := io.Copy(dest, inputData); err != nil {
 		return err
 	}
-
-	return nil
-}
-
-// mergeLogStreamToCompressedFile combines log data, outputting the results to a
-// file, compressed.
-func mergeLogStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
-	compressedOutput, closeOutput, err := Compress(output)
-	if err != nil {
-		return err
-	}
-
-	if err := Merge(data, compressedOutput); err != nil {
-		return err
-	}
-
-	closeOutput()
 
 	return nil
 }
