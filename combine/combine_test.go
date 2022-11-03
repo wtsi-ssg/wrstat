@@ -18,93 +18,144 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 	Convey("The function combines the files", t, func() {
 		testDir := t.TempDir()
 
-		test := Combine{
-			SourceDir: testDir,
-
-			Suffixes: map[string]string{
-				".byusergroup": "combine.byusergroup.gz",
-				".log":         "combine.log.gz",
-				".bygroup":     "combine.bygroup",
-			},
-
-			Functions: [3]mergeStreamToOutputFunc{mergeUserGroupStreamToCompressedFile,
-				mergeLogStreamToCompressedFile, mergeGroupStreamToFile},
-		}
-
-		/*here, err := os.Getwd()
-		So(err, ShouldBeNil)
-		testDir := filepath.Join(here, "test")
-		err = os.MkdirAll(testDir, 448)
-		So(err, ShouldBeNil)*/
-
 		buildOutputDir(t, testDir)
 
-		Convey("And combine fails if there are no stat, group, user group, dgut and log files.", func() {
-			pathSuffixes := [5]string{".stats", ".byusergroup", ".bygroup", ".dgut", ".log"}
-
-			for _, suffix := range pathSuffixes {
-				buildOutputDir(t, testDir)
-
-				paths, errs := filepath.Glob(fmt.Sprintf("%s/*%s", testDir, suffix))
-				So(errs, ShouldBeNil)
-
-				for _, path := range paths {
-					os.Remove(path)
-				}
-
-				err := test.Combine()
-				So(err, ShouldNotBeNil)
+		Convey("And all functionality fails if there are no stat, group, user group, dgut and log files.", func() {
+			buildOutputDir(t, testDir)
+			logFiles, err := filepath.Glob(fmt.Sprintf("%s/*%s", testDir, ".log"))
+			So(err, ShouldBeNil)
+			for _, file := range logFiles {
+				os.Remove(file)
 			}
+
+			err = MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			So(err, ShouldNotBeNil)
+
+			buildOutputDir(t, testDir)
+			byusergroupFiles, err := filepath.Glob(fmt.Sprintf("%s/*%s", testDir, ".byusergroup"))
+			So(err, ShouldBeNil)
+			for _, file := range byusergroupFiles {
+				os.Remove(file)
+			}
+
+			err = MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
+				mergeUserGroupStreamToCompressedFile)
+			So(err, ShouldNotBeNil)
+
+			buildOutputDir(t, testDir)
+			bygroupFiles, err := filepath.Glob(fmt.Sprintf("%s/*%s", testDir, ".bygroup"))
+			So(err, ShouldBeNil)
+			for _, file := range bygroupFiles {
+				os.Remove(file)
+			}
+
+			err = MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", mergeGroupStreamToFile)
+			So(err, ShouldNotBeNil)
+
+			buildOutputDir(t, testDir)
+			statsFiles, err := filepath.Glob(fmt.Sprintf("%s/*%s", testDir, ".stats"))
+			So(err, ShouldBeNil)
+			for _, file := range statsFiles {
+				os.Remove(file)
+			}
+
+			err = CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
+			So(err, ShouldNotBeNil)
+
+			buildOutputDir(t, testDir)
+			dgutFiles, err := filepath.Glob(fmt.Sprintf("%s/*%s", testDir, ".dgut"))
+			So(err, ShouldBeNil)
+			for _, file := range dgutFiles {
+				os.Remove(file)
+			}
+
+			err = MergeDGUTFilesToDB(testDir)
+			So(err, ShouldNotBeNil)
 		})
-		Convey("And combine fails if the source dir does not exist.", func() {
+		Convey("And all functionality fails if the source dir does not exist.", func() {
 			err := os.RemoveAll(testDir)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(testDir)
 			So(err, ShouldNotBeNil)
 
-			err = test.Combine()
-			So(err, ShouldNotBeNil)
+			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err2 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
+				mergeUserGroupStreamToCompressedFile)
+			err3 := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", mergeGroupStreamToFile)
+			err4 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
+			err5 := MergeDGUTFilesToDB(testDir)
+
+			So(err1, ShouldNotBeNil)
+			So(err2, ShouldNotBeNil)
+			So(err3, ShouldNotBeNil)
+			So(err4, ShouldNotBeNil)
+			So(err5, ShouldNotBeNil)
 		})
-		Convey("And combine fails if an incorrect relative path is supplied", func() {
-			relDir := filepath.Join(testDir, "rel")
-			err := os.MkdirAll(relDir, 448)
+		Convey("And all functionality fails if an incorrect relative path is supplied", func() {
+			relativeDir := filepath.Join(testDir, "rel")
+			err := os.MkdirAll(relativeDir, 448)
 			So(err, ShouldBeNil)
 
-			err = os.Chdir(relDir)
+			err = os.Chdir(relativeDir)
 			So(err, ShouldBeNil)
 
-			err = os.RemoveAll(relDir)
+			err = os.RemoveAll(relativeDir)
 			So(err, ShouldBeNil)
 
-			relDir += "../"
+			relativeDir += "../"
 
-			test.SourceDir = relDir
-			err = test.Combine()
-			So(err, ShouldNotBeNil)
+			err1 := MergeAndOptionallyCompressFiles(relativeDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err2 := MergeAndOptionallyCompressFiles(relativeDir, ".byusergroup", "combine.byusergroup.gz",
+				mergeUserGroupStreamToCompressedFile)
+			err3 := MergeAndOptionallyCompressFiles(relativeDir, ".bygroup", "combine.bygroup.gz", mergeGroupStreamToFile)
+			err4 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
+			err5 := MergeDGUTFilesToDB(relativeDir)
+
+			So(err1, ShouldNotBeNil)
+			So(err2, ShouldNotBeNil)
+			So(err3, ShouldNotBeNil)
+			So(err4, ShouldNotBeNil)
+			So(err5, ShouldNotBeNil)
 		})
-		Convey(`And there exist the files combine.stats.gz, combine.byusergroup.gz,
-			combine.log.gz, combine.bygroup, combine.dgut.db at the root of output dir`, func() {
-			err := test.Combine()
-			So(err, ShouldBeNil)
+		Convey(`And there exist the files combine.stats.gz, combine.byusergroup.gz, combine.log.gz, combine.bygroup, 
+		combine.dgut.db at the root of output dir`, func() {
+			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err2 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
+				mergeUserGroupStreamToCompressedFile)
+			err3 := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", mergeGroupStreamToFile)
+			err4 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
+			err5 := MergeDGUTFilesToDB(testDir)
+
+			So(err1, ShouldBeNil)
+			So(err2, ShouldBeNil)
+			So(err3, ShouldBeNil)
+			So(err4, ShouldBeNil)
+			So(err5, ShouldBeNil)
 
 			expectedFiles := [5]string{"combine.stats.gz", "combine.byusergroup.gz", "combine.log.gz",
 				"combine.bygroup", "combine.dgut.db"}
 
 			for _, file := range expectedFiles {
 				expectedFile := filepath.Join(testDir, file)
-				_, err = os.Stat(expectedFile)
+				_, err := os.Stat(expectedFile)
 				So(err, ShouldBeNil)
 			}
 		})
 		Convey("And the files have been properly compressed", func() {
-			compressedFiles := [3]string{"combine.stats.gz", "combine.byusergroup.gz", "combine.log.gz"}
+			expectedCompressedFiles := [3]string{"combine.stats.gz", "combine.byusergroup.gz", "combine.log.gz"}
 
-			err := test.Combine()
-			So(err, ShouldBeNil)
+			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err2 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
+				mergeUserGroupStreamToCompressedFile)
+			err3 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
 
-			for _, file := range compressedFiles {
-				f, err := os.ReadFile((filepath.Join(testDir, file)))
+			So(err1, ShouldBeNil)
+			So(err2, ShouldBeNil)
+			So(err3, ShouldBeNil)
+
+			for _, file := range expectedCompressedFiles {
+				f, err := os.ReadFile(filepath.Join(testDir, file))
 				So(err, ShouldBeNil)
 
 				expectedFileType := "application/x-gzip"
@@ -112,52 +163,78 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 				So(fileType, ShouldEqual, expectedFileType)
 			}
 		})
-		Convey(`And combine.stats.gz, combine.log.gz, combine.byusergroup.gz contain the merging or 
-			concatenation of their corresponding input files.`, func() {
-			inputOutputSuffixes := map[string]string{
-				".stats":       "combine.stats.gz",
-				".log":         "combine.log.gz",
-				".byusergroup": "combine.byusergroup.gz"}
+		Convey(`And combine.stats.gz, combine.log.gz, combine.byusergroup.gz contain the merging or concatenation of 
+		their corresponding input files.`, func() {
+			statsOutputPath := filepath.Join(testDir, "combine.stats.gz")
+			expectedStatsFileContents := writeToTestFiles(t, testDir, ".stats")
 
-			for inputSuffix, outputSuffix := range inputOutputSuffixes {
-				expectedOutputPath := filepath.Join(testDir, outputSuffix)
+			logOutputPath := filepath.Join(testDir, "combine.log.gz")
+			expectedLogFileContents := writeToTestFiles(t, testDir, ".log")
 
-				expectedFileContents := writeToTestFiles(t, testDir, inputSuffix)
+			byusergroupOutputPath := filepath.Join(testDir, "combine.byusergroup.gz")
+			expectedByusergroupFileContents := writeToTestFiles(t, testDir, ".byusergroup")
 
-				err := test.Combine()
-				So(err, ShouldBeNil)
+			err1 := CompressAndConcatenate(testDir, ".stats", "combine.stats.gz")
+			err2 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", mergeLogStreamToCompressedFile)
+			err3 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
+				mergeUserGroupStreamToCompressedFile)
 
-				actualFile, err := os.Open(expectedOutputPath)
-				So(err, ShouldBeNil)
+			So(err1, ShouldBeNil)
+			So(err2, ShouldBeNil)
+			So(err3, ShouldBeNil)
 
-				actualFileReader, err := gzip.NewReader(actualFile)
-				So(err, ShouldBeNil)
-				defer actualFileReader.Close()
+			statsFile, err := os.Open(statsOutputPath)
+			So(err, ShouldBeNil)
+			logFile, err := os.Open(logOutputPath)
+			So(err, ShouldBeNil)
+			byusergroupFile, err := os.Open(byusergroupOutputPath)
+			So(err, ShouldBeNil)
 
-				actualFileScanner := bufio.NewScanner(actualFileReader)
+			statsFileReader, err := gzip.NewReader(statsFile)
+			So(err, ShouldBeNil)
+			logFileReader, err := gzip.NewReader(logFile)
+			So(err, ShouldBeNil)
+			byusergroupFileReader, err := gzip.NewReader(byusergroupFile)
+			So(err, ShouldBeNil)
 
-				var actualFileContents string
-				for actualFileScanner.Scan() {
-					actualFileContents += actualFileScanner.Text()
-				}
+			defer statsFileReader.Close()
+			defer logFileReader.Close()
+			defer byusergroupFileReader.Close()
 
-				So(actualFileContents, ShouldEqual, expectedFileContents)
+			statsFileScanner := bufio.NewScanner(statsFileReader)
+			logFileScanner := bufio.NewScanner(logFileReader)
+			byusergroupFileScanner := bufio.NewScanner(byusergroupFileReader)
+
+			var statsFileContents string
+			for statsFileScanner.Scan() {
+				statsFileContents += statsFileScanner.Text()
 			}
+			var logFileContents string
+			for logFileScanner.Scan() {
+				logFileContents += logFileScanner.Text()
+			}
+			var byusergroupFileContents string
+			for byusergroupFileScanner.Scan() {
+				byusergroupFileContents += byusergroupFileScanner.Text()
+			}
+
+			So(statsFileContents, ShouldEqual, expectedStatsFileContents)
+			So(logFileContents, ShouldEqual, expectedLogFileContents)
+			So(byusergroupFileContents, ShouldEqual, expectedByusergroupFileContents)
 		})
 		Convey("And combine.bygroup contains the merged contents of the .bygroup files.", func() {
 			expectedOutputPath := filepath.Join(testDir, "combine.bygroup")
+			expectedBygroupFileContents := writeToTestFiles(t, testDir, ".bygroup")
 
-			expectedFileContents := writeToTestFiles(t, testDir, ".bygroup")
-
-			err := test.Combine()
+			err := MergeAndOptionallyCompressFiles(testDir, ".bygroup", "combine.bygroup", mergeGroupStreamToFile)
 			So(err, ShouldBeNil)
 
-			actualFile, err := os.ReadFile(expectedOutputPath)
+			bygroupFile, err := os.ReadFile(expectedOutputPath)
 			So(err, ShouldBeNil)
 
-			actualFileContents := strings.ReplaceAll(string(actualFile), "\n", "")
+			bygroupFileContents := strings.ReplaceAll(string(bygroupFile), "\n", "")
 
-			So(actualFileContents, ShouldEqual, expectedFileContents)
+			So(bygroupFileContents, ShouldEqual, expectedBygroupFileContents)
 		})
 		// Convey("And the dgut file contains the right stuff. -- FILL LATER -- ", func () {
 
