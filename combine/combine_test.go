@@ -2,20 +2,146 @@ package combine
 
 import (
 	"bufio"
-	"compress/gzip"
-	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"testing"
 
+	"github.com/klauspost/pgzip"
 	. "github.com/smartystreets/goconvey/convey"
-	cmd "github.com/wtsi-ssg/wrstat/cmd"
 )
 
-func TestCombine(t *testing.T) { //nolint:gocognit
+type Error string
+
+func (e Error) Erorr() string { return string(e) }
+
+const errTest = Error("test error")
+
+func TestConcatenateAndCompress(t *testing.T) {
+	Convey("Given some inputs and an output", t, func() {
+		inputs, output, outputPath := createInputsAndOutput(t)
+
+		Convey("You can concatenate the inputs to the output", func() {
+			err := Concatenate(inputs, output)
+			So(err, ShouldBeNil)
+
+			output.Close()
+
+			b, err := os.ReadFile(outputPath)
+			So(err, ShouldBeNil)
+			So(string(b), ShouldEqual, "line from path1\nline from path2\n")
+		})
+
+		Convey("You can concatenate the inputs to compressed output", func() {
+			compressor, closer, err := Compress(output)
+			So(err, ShouldBeNil)
+
+			err = Concatenate(inputs, compressor)
+			So(err, ShouldBeNil)
+
+			closer()
+
+			b, err := os.ReadFile(outputPath)
+			So(err, ShouldBeNil)
+			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
+
+			file, err := os.Open(outputPath)
+			So(err, ShouldBeNil)
+
+			read, err := pgzip.NewReader(file)
+			So(err, ShouldBeNil)
+
+			defer read.Close()
+
+			scan := bufio.NewScanner(read)
+
+			var scanContents string
+			for scan.Scan() {
+				scanContents += scan.Text() + "\n"
+			}
+			So(scanContents, ShouldEqual, "line from path1\nline from path2\n")
+		})
+
+		Convey("You can concatenate the inputs to compressed output in a single method call", func() {
+			err := ConcatenateAndCompress(inputs, output)
+			So(err, ShouldBeNil)
+
+			b, err := os.ReadFile(outputPath)
+			So(err, ShouldBeNil)
+			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
+
+			file, err := os.Open(outputPath)
+			So(err, ShouldBeNil)
+
+			read, err := pgzip.NewReader(file)
+			So(err, ShouldBeNil)
+
+			defer read.Close()
+
+			scan := bufio.NewScanner(read)
+
+			var scanContents string
+			for scan.Scan() {
+				scanContents += scan.Text() + "\n"
+			}
+			So(scanContents, ShouldEqual, "line from path1\nline from path2\n")
+		})
+	})
+}
+
+/*func TestMergeAndCompress(t *testing.T) {
+	inputs, output, outputPath := createInputsAndOutput(t)
+
+	Convey("Given some inputs and an output", t, func() {
+		Convey("You can merge the inputs to the output.", func() {
+
+		})
+	})
+}*/
+
+func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
+	dir, err := os.Getwd()
+	So(err, ShouldBeNil)
+	//dir := t.TempDir()
+	input1Path := filepath.Join(dir, "path1")
+	input2Path := filepath.Join(dir, "path2")
+
+	f1, err := os.Create(input1Path)
+	if err != nil {
+		t.Fatalf("create error: %s", err)
+	}
+
+	f2, err := os.Create(input2Path)
+	if err != nil {
+		t.Fatalf("create error: %s", err)
+	}
+
+	f1.WriteString("line from path1\n")
+	f2.WriteString("line from path2\n")
+
+	f1.Close()
+	f2.Close()
+
+	f1, err = os.Open(input1Path)
+	if err != nil {
+		t.Fatalf("create error: %s", err)
+	}
+
+	f2, err = os.Open(input2Path)
+	if err != nil {
+		t.Fatalf("create error: %s", err)
+	}
+
+	outputPath := filepath.Join(dir, "output")
+	fo, err := os.Create(outputPath)
+
+	if err != nil {
+		t.Fatalf("create error: %s", err)
+	}
+
+	return []*os.File{f1, f2}, fo, outputPath
+}
+
+/*func TestCombine(t *testing.T) { //nolint:gocognit
 	Convey("The function combines the files", t, func() {
 		testDir := t.TempDir()
 
@@ -119,7 +245,7 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 			So(err4, ShouldNotBeNil)
 			So(err5, ShouldNotBeNil)
 		})
-		Convey(`And there exist the files combine.stats.gz, combine.byusergroup.gz, combine.log.gz, combine.bygroup, 
+		Convey(`And there exist the files combine.stats.gz, combine.byusergroup.gz, combine.log.gz, combine.bygroup,
 		combine.dgut.db at the root of output dir`, func() {
 			err1 := MergeAndOptionallyCompressFiles(testDir, ".log", "combine.log.gz", cmd.MergeLogStreamToCompressedFile)
 			err2 := MergeAndOptionallyCompressFiles(testDir, ".byusergroup", "combine.byusergroup.gz",
@@ -164,7 +290,7 @@ func TestCombine(t *testing.T) { //nolint:gocognit
 				So(fileType, ShouldEqual, expectedFileType)
 			}
 		})
-		Convey(`And combine.stats.gz, combine.log.gz, combine.byusergroup.gz contain the merging or concatenation of 
+		Convey(`And combine.stats.gz, combine.log.gz, combine.byusergroup.gz contain the merging or concatenation of
 		their corresponding input files.`, func() {
 			statsOutputPath := filepath.Join(testDir, "combine.stats.gz")
 			expectedStatsFileContents := writeToTestFiles(t, testDir, ".stats")
@@ -291,4 +417,4 @@ func writeToTestFiles(t *testing.T, testDir, testFileSuffix string) string {
 	}
 
 	return writtenInput
-}
+}*/
