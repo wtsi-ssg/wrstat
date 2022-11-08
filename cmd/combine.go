@@ -26,14 +26,11 @@
 package cmd
 
 import (
-	"bufio"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -145,60 +142,25 @@ func init() {
 // concatenateAndCompressStatsFiles finds and conatenates the stats files and
 // compresses the output.
 func concatenateAndCompressStatsFiles(sourceDir string) {
-	paths := findStatFilePaths(sourceDir)
-	inputs := openFiles(paths)
-	output := createCombineStatsOutputFile(sourceDir)
-
-	combine.ConcatenateAndCompress(inputs, output)
-}
-
-// findStatFilePaths returns files in the given dir named with a '.stats'
-// suffix.
-func findStatFilePaths(dir string) []string {
-	return findFilePathsInDir(dir, statOutputFileSuffix)
-}
-
-// findFilePathsInDir finds files in the given dir that have basenames with the
-// given suffix. Dies on error.
-func findFilePathsInDir(dir, suffix string) []string {
-	paths, err := filepath.Glob(fmt.Sprintf("%s/*%s", dir, suffix))
-	if err != nil || len(paths) == 0 {
-		die("failed to find input files based on [%s/*%s] (err: %s)", dir, suffix, err)
-	}
-
-	return paths
-}
-
-// openFiles opens the given files for reading.
-func openFiles(paths []string) []*os.File {
-	files := make([]*os.File, len(paths))
-
-	for i, path := range paths {
-		file, err := os.Open(path)
-		if err != nil {
-			die("failed to open a .stats files: %s", err)
-		}
-
-		files[i] = file
-	}
-
-	return files
-}
-
-// createCombineStatsOutputFile creates a stats output file in the given dir.
-func createCombineStatsOutputFile(dir string) *os.File {
-	return createOutputFileInDir(dir, combineStatsOutputFileBasename)
-}
-
-// createOutputFileInDir creates a file for writing in the given dir with the
-// given basename. Dies on error.
-func createOutputFileInDir(dir, basename string) *os.File {
-	file, err := os.Create(filepath.Join(dir, basename))
+	paths, err := fs.FindFilePathsInDir(sourceDir, statOutputFileSuffix)
 	if err != nil {
-		die("failed to create output file: %s", err)
+		die("failed to find input files (err: %s)", err)
 	}
 
-	return file
+	inputs, err := fs.OpenFiles(paths)
+	if err != nil {
+		die("failed to open input files (err: %s)", err)
+
+	}
+
+	output, err := fs.CreateOutputFileInDir(sourceDir, combineStatsOutputFileBasename)
+	if err != nil {
+		die("failed to create output file (err: %s)", err)
+	}
+
+	if err = combine.ConcatenateAndCompress(inputs, output); err != nil {
+		die("failed to concatenate and compress stats files (err: %s)", err)
+	}
 }
 
 // mergeAndCompressUserGroupFiles finds and merges the byusergroup files and
@@ -210,6 +172,9 @@ func mergeAndCompressUserGroupFiles(sourceDir string) {
 	}
 
 	output, err := fs.CreateOutputFileInDir(sourceDir, combineUserGroupOutputFileBasename)
+	if err != nil {
+		die("failed to create user group output file: %s", err)
+	}
 
 	err = mergeUserGroupAndCompress(paths, output)
 	if err != nil {
@@ -217,39 +182,14 @@ func mergeAndCompressUserGroupFiles(sourceDir string) {
 	}
 }
 
-// createCombineUserGroupOutputFile creates a usergroup output file in the given
-// dir.
-func createCombineUserGroupOutputFile(dir string) *os.File {
-	return createOutputFileInDir(dir, combineUserGroupOutputFileBasename)
-}
-
 // mergeUserGroupAndCompress merges the inputs and stores in the output,
 // compressed.
 func mergeUserGroupAndCompress(inputs []string, output *os.File) error {
-	return combine.Merge(inputs, output, mergeUserGroupStreamToCompressedFile)
+	return combine.MergeAndCompress(inputs, output, mergeUserGroupStreamToCompressedFile)
 }
 
 // mergeStreamToOutputFunc is one of our merge*StreamTo* functions.
 type mergeStreamToOutputFunc func(data io.ReadCloser, output *os.File) error
-
-// mergeFilesAndStreamToOutput merges the inputs files and streams the content
-// to the streamFunc.
-func mergeFilesAndStreamToOutput(inputs []string, output *os.File, streamFunc mergeStreamToOutputFunc) error {
-	sortMergeOutput, cleanup, err := mergeSortedFiles(inputs)
-	if err != nil {
-		return err
-	}
-
-	if err = streamFunc(sortMergeOutput, output); err != nil {
-		return err
-	}
-
-	if err = cleanup(); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // mergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
 // Returns a pipe of the output from sort, and function you should call after
@@ -302,44 +242,13 @@ func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) e
 		return err
 	}
 
-	if err := mergeSummaryLines(data, userGroupSumCols, numSummaryColumns, sumCountAndSize, zw); err != nil {
+	if err := combine.MergeSummaryLines(data, userGroupSumCols, numSummaryColumns, sumCountAndSize, zw); err != nil {
 		return err
 	}
 
 	closeOutput()
 
 	return nil
-}
-
-// mergeSummaryLines merges pre-sorted (pre-merged) summary data (eg. from a
-// `sort -m` of .by* files), summing consecutive lines that have the same values
-// in the first matchColumns columns, and outputting the results.
-func mergeSummaryLines(data io.ReadCloser, matchColumns, summaryColumns int,
-	mslm matchingSummaryLineMerger, output io.Writer) error {
-	scanner := bufio.NewScanner(data)
-	previous := make([]string, matchColumns+summaryColumns)
-
-	for scanner.Scan() {
-		current := strings.Split(scanner.Text(), "\t")
-
-		if summaryLinesMatch(matchColumns, previous, current) {
-			mslm(summaryColumns, previous, current)
-
-			continue
-		}
-
-		if previous[0] != "" {
-			if _, err := output.Write([]byte(strings.Join(previous, "\t") + "\n")); err != nil {
-				return err
-			}
-		}
-
-		previous = current
-	}
-
-	_, err := output.Write([]byte(strings.Join(previous, "\t") + "\n"))
-
-	return err
 }
 
 // summaryLinesMatch returns true if the first matchColumns elements of 'a'
@@ -403,37 +312,31 @@ func atoi(n string) int64 {
 
 // mergeGroupFiles finds and merges the bygroup files.
 func mergeGroupFiles(sourceDir string) {
-	paths := findGroupFilePaths(sourceDir)
-	output := createCombineGroupOutputFile(sourceDir)
-
-	err := mergeGroups(paths, output)
+	paths, err := fs.FindFilePathsInDir(sourceDir, statGroupSummaryOutputFileSuffix)
 	if err != nil {
-		die("failed to merge the bygroup files: %s", err)
+		die("failed to find the the group files: %s", err)
 	}
-}
 
-// findGroupFilePaths returns files in the given dir named with a
-// '.bygroup' suffix.
-func findGroupFilePaths(dir string) []string {
-	return findFilePathsInDir(dir, statGroupSummaryOutputFileSuffix)
-}
+	output, err := fs.CreateOutputFileInDir(sourceDir, combineGroupOutputFileBasename)
+	if err != nil {
+		die("failed to find the the group files: %s", err)
+	}
 
-// createCombineGroupOutputFile creates a usergroup output file in the given
-// dir.
-func createCombineGroupOutputFile(dir string) *os.File {
-	return createOutputFileInDir(dir, combineGroupOutputFileBasename)
+	if err = mergeGroups(paths, output); err != nil {
+		die("failed to merge the group files: %s", err)
+	}
 }
 
 // mergeGroups merges and outputs bygroup data.
 func mergeGroups(inputs []string, output *os.File) error {
-	return mergeFilesAndStreamToOutput(inputs, output, mergeGroupStreamToFile)
+	return combine.Merge(inputs, output, mergeGroupStreamToFile)
 }
 
 // mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
 // (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
 // the same first 2 columns, and outputting the results.
 func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
-	if err := mergeSummaryLines(data, groupSumCols, numSummaryColumns, sumCountAndSize, output); err != nil {
+	if err := combine.MergeSummaryLines(data, groupSumCols, numSummaryColumns, sumCountAndSize, output); err != nil {
 		return err
 	}
 
@@ -443,18 +346,16 @@ func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
 // mergeDGUTFilesToDB finds and merges the dgut files and then stores the
 // information in a database.
 func mergeDGUTFilesToDB(sourceDir string) {
-	paths := findDGUTFilePaths(sourceDir)
+	paths, err := fs.FindFilePathsInDir(sourceDir, statDGUTSummaryOutputFileSuffix)
+	if err != nil {
+		die("failed to find the dgut files: %s", err)
+	}
+
 	outputDir := createCombineDGUTOutputDir(sourceDir)
 
-	err := mergeDGUTAndStoreInDB(paths, outputDir)
-	if err != nil {
+	if err = mergeDGUTAndStoreInDB(paths, outputDir); err != nil {
 		die("failed to merge the dgut files: %s", err)
 	}
-}
-
-// findDGUTFilePaths returns files in the given dir named with a '.dgut' suffix.
-func findDGUTFilePaths(dir string) []string {
-	return findFilePathsInDir(dir, statDGUTSummaryOutputFileSuffix)
 }
 
 // createCombineDGUTOutputDir creates a dgut output dir in the given dir.
@@ -490,7 +391,7 @@ func mergeDGUTAndStoreInDB(inputs []string, outputDir string) error {
 		errCh <- db.Store(reader, dgutStoreBatchSize)
 	}()
 
-	if err = mergeSummaryLines(sortMergeOutput, dgutSumCols,
+	if err = combine.MergeSummaryLines(sortMergeOutput, dgutSumCols,
 		numSummaryColumnsDGUT, sumCountAndSizeAndKeepOldestAtime, writer); err != nil {
 		return err
 	}
@@ -510,28 +411,24 @@ func mergeDGUTAndStoreInDB(inputs []string, outputDir string) error {
 // mergeAndCompressLogFiles finds and merges the log files and compresses the
 // output.
 func mergeAndCompressLogFiles(sourceDir string) {
-	paths := findLogFilePaths(sourceDir)
-	output := createCombineLogOutputFile(sourceDir)
-
-	err := mergeLogAndCompress(paths, output)
+	paths, err := fs.FindFilePathsInDir(sourceDir, statLogOutputFileSuffix)
 	if err != nil {
+		die("failed to find the log files: %s", err)
+	}
+
+	output, err := fs.CreateOutputFileInDir(sourceDir, combineLogOutputFileBasename)
+	if err != nil {
+		die("failed to create the log output file: %s", err)
+	}
+
+	if err := mergeLogAndCompress(paths, output); err != nil {
 		die("failed to merge the log files: %s", err)
 	}
 }
 
-// findLogFilePaths returns files in the given dir named with a '.log' suffix.
-func findLogFilePaths(dir string) []string {
-	return findFilePathsInDir(dir, statLogOutputFileSuffix)
-}
-
-// createCombineLogOutputFile creates a log output file in the given dir.
-func createCombineLogOutputFile(dir string) *os.File {
-	return createOutputFileInDir(dir, combineLogOutputFileBasename)
-}
-
 // mergeLogAndCompress merges the inputs and stores in the output, compressed.
 func mergeLogAndCompress(inputs []string, output *os.File) error {
-	return mergeFilesAndStreamToOutput(inputs, output, mergeLogStreamToCompressedFile)
+	return combine.MergeAndCompress(inputs, output, mergeLogStreamToCompressedFile)
 }
 
 // mergeLogStreamToCompressedFile combines log data, outputting the results to a

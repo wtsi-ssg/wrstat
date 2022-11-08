@@ -108,21 +108,20 @@ func Merge(inputs []string, output *os.File, streamFunc Merger) error {
 	return nil
 }
 
-func MergeAndCompress(sourceDir, inputSuffix, outputSuffix string, streamFunc Merger) error {
+func MergeAndCompress(sourceDir string, output *os.File, inputSuffix, outputSuffix string, streamFunc Merger) error {
 	paths, err := fs.FindFilePathsInDir(sourceDir, inputSuffix)
 	if err != nil {
 		return err
 	}
 
-	output, err := fs.CreateOutputFileInDir(sourceDir, outputSuffix)
+	zw, closer, err := Compress(output)
+
+	err = Merge(paths, zw, streamFunc)
 	if err != nil {
 		return err
 	}
 
-	err = Merge(paths, output, streamFunc)
-	if err != nil {
-		return err
-	}
+	closer()
 
 	return nil
 }

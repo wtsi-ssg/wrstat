@@ -18,6 +18,8 @@ func (e Error) Erorr() string { return string(e) }
 
 const errTest = Error("test error")
 
+// TestConcatenateAndCompress tests the concat, merge, and compress
+// functionality of the combine package.
 func TestConcatenateAndCompress(t *testing.T) {
 	Convey("Given some inputs and an output", t, func() {
 		inputs, output, outputPath := createInputsAndOutput(t)
@@ -136,7 +138,7 @@ func TestConcatenateAndCompress(t *testing.T) {
 			So(scanContents, ShouldEqual, "line from path1\nline from path2\n")
 		})
 
-		Convey("MergeSummaryLines properly merges the file contents", func() {
+		Convey("MergeSummaryLines merges the file contents to output", func() {
 			inputFiles := make([]string, len(inputs))
 			for i, file := range inputs {
 				inputFiles[i] = file.Name()
@@ -145,17 +147,56 @@ func TestConcatenateAndCompress(t *testing.T) {
 			sortMergeOutput, cleanup, err := mergeSortedFiles(inputFiles)
 			So(err, ShouldBeNil)
 
-			err = cleanup()
+			err = MergeSummaryLines(sortMergeOutput, 3, 2, myLineMerger, output)
 			So(err, ShouldBeNil)
 
-			err = MergeSummaryLines(sortMergeOutput, 3, 2, myLineMerger, output)
+			err = cleanup()
 			So(err, ShouldBeNil)
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
-			// I'm not sure what this should equal yet: still ascertaining
-			// how mergeSortedFiles works.
-			So(string(b), ShouldNotEqual, "Fill afterwards.")
+
+			So(string(b), ShouldEqual, "line from path1\nline from path2\n")
+		})
+
+		Convey("MergeSummaryLines merges the file contents to a compressed output", func() {
+			inputFiles := make([]string, len(inputs))
+			for i, file := range inputs {
+				inputFiles[i] = file.Name()
+			}
+
+			sortMergeOutput, cleanup, err := mergeSortedFiles(inputFiles)
+			So(err, ShouldBeNil)
+
+			zw, closeOutput, err := Compress(output)
+			So(err, ShouldBeNil)
+
+			err = MergeSummaryLines(sortMergeOutput, 3, 2, myLineMerger, zw)
+			So(err, ShouldBeNil)
+
+			closeOutput()
+
+			err = cleanup()
+			So(err, ShouldBeNil)
+
+			b, err := os.ReadFile(outputPath)
+			So(err, ShouldBeNil)
+			So(b, ShouldNotEqual, "line from path1\nline from path2\n")
+
+			actualFile, err := os.Open(outputPath)
+			So(err, ShouldBeNil)
+
+			actualFileReader, err := pgzip.NewReader(actualFile)
+			So(err, ShouldBeNil)
+			defer actualFileReader.Close()
+
+			actualFileScanner := bufio.NewScanner(actualFileReader)
+
+			var actualFileContents string
+			for actualFileScanner.Scan() {
+				actualFileContents += actualFileScanner.Text() + "\n"
+			}
+			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
 		})
 	})
 }
