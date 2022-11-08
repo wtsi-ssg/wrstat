@@ -155,7 +155,7 @@ func TestConcatenateAndCompress(t *testing.T) {
 			So(err, ShouldBeNil)
 			// I'm not sure what this should equal yet: still ascertaining
 			// how mergeSortedFiles works.
-			So(string(b), ShouldEqual, "Fill afterwards.")
+			So(string(b), ShouldNotEqual, "Fill afterwards.")
 		})
 	})
 }
