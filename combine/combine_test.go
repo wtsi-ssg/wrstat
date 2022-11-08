@@ -2,8 +2,10 @@ package combine
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/klauspost/pgzip"
@@ -85,23 +87,151 @@ func TestConcatenateAndCompress(t *testing.T) {
 			}
 			So(scanContents, ShouldEqual, "line from path1\nline from path2\n")
 		})
+
+		Convey("You can merge the inputs to the output", func() {
+			merger := myMerger
+
+			inputFiles := make([]string, len(inputs))
+			for i, file := range inputs {
+				inputFiles[i] = file.Name()
+			}
+
+			err := Merge(inputFiles, output, merger)
+			So(err, ShouldBeNil)
+
+			b, err := os.ReadFile(outputPath)
+			So(err, ShouldBeNil)
+			So(string(b), ShouldEqual, "line from path1\nline from path2\n")
+		})
+
+		Convey("You can merge and compress the inputs to the output in a single call", func() {
+			merger := myCompressMerger
+
+			inputFiles := make([]string, len(inputs))
+			for i, file := range inputs {
+				inputFiles[i] = file.Name()
+			}
+
+			err := Merge(inputFiles, output, merger)
+			So(err, ShouldBeNil)
+
+			b, err := os.ReadFile(outputPath)
+			So(err, ShouldBeNil)
+			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
+
+			file, err := os.Open(outputPath)
+			So(err, ShouldBeNil)
+
+			read, err := pgzip.NewReader(file)
+			So(err, ShouldBeNil)
+
+			defer read.Close()
+
+			scan := bufio.NewScanner(read)
+
+			var scanContents string
+			for scan.Scan() {
+				scanContents += scan.Text() + "\n"
+			}
+			So(scanContents, ShouldEqual, "line from path1\nline from path2\n")
+		})
+
+		Convey("MergeSummaryLines properly merges the file contents", func() {
+			inputFiles := make([]string, len(inputs))
+			for i, file := range inputs {
+				inputFiles[i] = file.Name()
+			}
+
+			sortMergeOutput, cleanup, err := mergeSortedFiles(inputFiles)
+			So(err, ShouldBeNil)
+
+			err = cleanup()
+			So(err, ShouldBeNil)
+
+			err = MergeSummaryLines(sortMergeOutput, 3, 2, myLineMerger, output)
+			So(err, ShouldBeNil)
+
+			b, err := os.ReadFile(outputPath)
+			So(err, ShouldBeNil)
+			// I'm not sure what this should equal yet: still ascertaining
+			// how mergeSortedFiles works.
+			So(string(b), ShouldEqual, "Fill afterwards.")
+		})
 	})
 }
 
-/*func TestMergeAndCompress(t *testing.T) {
-	inputs, output, outputPath := createInputsAndOutput(t)
+// myMerger specifies how a set of files is merged to an output.
+func myMerger(data io.ReadCloser, output *os.File) error {
+	if _, err := io.Copy(output, data); err != nil {
+		return err
+	}
 
-	Convey("Given some inputs and an output", t, func() {
-		Convey("You can merge the inputs to the output.", func() {
+	return nil
+}
 
-		})
-	})
-}*/
+// myCompressMerger specifies how a set of files is merged to a compressed
+// output.
+func myCompressMerger(data io.ReadCloser, output *os.File) error {
+	zw, closeOutput, err := Compress(output)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(zw, data); err != nil {
+		return err
+	}
+
+	closeOutput()
+
+	return nil
+}
+
+// myLineMerger is a matchingSummaryLineMerger that, given cols 2,  will sum
+// the second to last element of a and b and store the result in a[penultimate],
+// and likewise for the last element in a[last]. This corresponds to summing the
+// file count and size columns of 2 lines in a by* file.
+func myLineMerger(cols int, a, b []string) {
+	last := len(a) - (cols - 1)
+	penultimate := last - 1
+
+	a[penultimate] = addNumberStrings(a[penultimate], b[penultimate])
+	a[last] = addNumberStrings(a[last], b[last])
+}
+
+// addNumberStrings treats a and b as ints, adds them together, and returns the
+// resulting int64 as a string.
+func addNumberStrings(a, b string) string {
+	return strconv.FormatInt(atoi(a)+atoi(b), 10)
+}
+
+// atoi is like strconv.Atoi but returns an int64 and dies on error.
+func atoi(n string) int64 {
+	i, _ := strconv.ParseInt(n, 10, 0)
+
+	return i
+}
+
+// mergeLogStreamToCompressedFile combines log data, outputting the results to a
+// file, compressed.
+func MergeLogStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
+	zw, closeOutput, err := Compress(output)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(zw, data); err != nil {
+		return err
+	}
+
+	closeOutput()
+
+	return nil
+}
 
 func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
-	dir, err := os.Getwd()
-	So(err, ShouldBeNil)
-	//dir := t.TempDir()
+	// dir, err := os.Getwd().
+	// So(err, ShouldBeNil).
+	dir := t.TempDir()
 	input1Path := filepath.Join(dir, "path1")
 	input2Path := filepath.Join(dir, "path2")
 
