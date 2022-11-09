@@ -34,7 +34,6 @@ import (
 	"strings"
 
 	"github.com/klauspost/pgzip"
-	"github.com/wtsi-ssg/wrstat/fs"
 )
 
 const bytesInMB = 1000000
@@ -71,7 +70,7 @@ func Concatenate(inputs []*os.File, output io.Writer) error {
 	return nil
 }
 
-func Compress(output *os.File) (*pgzip.Writer, func(), error) {
+func Compress(output io.Writer) (*pgzip.Writer, func(), error) {
 	zw := pgzip.NewWriter(output)
 
 	return zw, func() {
@@ -80,7 +79,6 @@ func Compress(output *os.File) (*pgzip.Writer, func(), error) {
 			return
 		}
 
-		err = output.Close()
 		if err != nil {
 			return
 		}
@@ -88,11 +86,16 @@ func Compress(output *os.File) (*pgzip.Writer, func(), error) {
 }
 
 // Merger is one of our merge*StreamTo* functions.
-type Merger func(data io.ReadCloser, output *os.File) error
+type Merger func(data io.ReadCloser, output io.Writer) error
 
 // Merge merges the inputs files and streams the content to the streamFunc.
-func Merge(inputs []string, output *os.File, streamFunc Merger) error {
-	sortMergeOutput, cleanup, err := mergeSortedFiles(inputs)
+func Merge(inputs []*os.File, output io.Writer, streamFunc Merger) error {
+	inputFiles := make([]string, len(inputs))
+	for i, file := range inputs {
+		inputFiles[i] = file.Name()
+	}
+
+	sortMergeOutput, cleanup, err := mergeSortedFiles(inputFiles)
 	if err != nil {
 		return err
 	}
@@ -108,22 +111,18 @@ func Merge(inputs []string, output *os.File, streamFunc Merger) error {
 	return nil
 }
 
-func MergeAndCompress(sourceDir string, output *os.File, inputSuffix, outputSuffix string, streamFunc Merger) error {
-	paths, err := fs.FindFilePathsInDir(sourceDir, inputSuffix)
-	if err != nil {
-		return err
-	}
-
+func MergeAndCompress(inputs []*os.File, output *os.File, streamFunc Merger) error {
 	zw, closer, err := Compress(output)
-
-	err = Merge(paths, zw, streamFunc)
 	if err != nil {
 		return err
 	}
+
+	err = Merge(inputs, zw, streamFunc)
 
 	closer()
 
 	return nil
+
 }
 
 // mergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.

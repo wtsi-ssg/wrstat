@@ -93,12 +93,7 @@ func TestConcatenateAndCompress(t *testing.T) {
 		Convey("You can merge the inputs to the output", func() {
 			merger := myMerger
 
-			inputFiles := make([]string, len(inputs))
-			for i, file := range inputs {
-				inputFiles[i] = file.Name()
-			}
-
-			err := Merge(inputFiles, output, merger)
+			err := Merge(inputs, output, merger)
 			So(err, ShouldBeNil)
 
 			b, err := os.ReadFile(outputPath)
@@ -114,7 +109,7 @@ func TestConcatenateAndCompress(t *testing.T) {
 				inputFiles[i] = file.Name()
 			}
 
-			err := Merge(inputFiles, output, merger)
+			err := Merge(inputs, output, merger)
 			So(err, ShouldBeNil)
 
 			b, err := os.ReadFile(outputPath)
@@ -202,7 +197,7 @@ func TestConcatenateAndCompress(t *testing.T) {
 }
 
 // myMerger specifies how a set of files is merged to an output.
-func myMerger(data io.ReadCloser, output *os.File) error {
+func myMerger(data io.ReadCloser, output io.Writer) error {
 	if _, err := io.Copy(output, data); err != nil {
 		return err
 	}
@@ -212,7 +207,7 @@ func myMerger(data io.ReadCloser, output *os.File) error {
 
 // myCompressMerger specifies how a set of files is merged to a compressed
 // output.
-func myCompressMerger(data io.ReadCloser, output *os.File) error {
+func myCompressMerger(data io.ReadCloser, output io.Writer) error {
 	zw, closeOutput, err := Compress(output)
 	if err != nil {
 		return err

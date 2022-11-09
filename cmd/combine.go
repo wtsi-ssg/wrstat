@@ -185,11 +185,16 @@ func mergeAndCompressUserGroupFiles(sourceDir string) {
 // mergeUserGroupAndCompress merges the inputs and stores in the output,
 // compressed.
 func mergeUserGroupAndCompress(inputs []string, output *os.File) error {
-	return combine.MergeAndCompress(inputs, output, mergeUserGroupStreamToCompressedFile)
+	inputFiles, err := fs.OpenFiles(inputs)
+	if err != nil {
+		return err
+	}
+
+	return combine.MergeAndCompress(inputFiles, output, mergeUserGroupStreamToCompressedFile)
 }
 
 // mergeStreamToOutputFunc is one of our merge*StreamTo* functions.
-type mergeStreamToOutputFunc func(data io.ReadCloser, output *os.File) error
+type mergeStreamToOutputFunc func(data io.ReadCloser, output io.Writer) error
 
 // mergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
 // Returns a pipe of the output from sort, and function you should call after
@@ -236,7 +241,7 @@ func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
 // mergeUserGroupStreamToCompressedFile merges pre-sorted (pre-merged) usergroup
 // data (eg. from a `sort -m` of .byusergroup files), summing consecutive lines
 // with the first 3 columns, and outputting the results to a file, compressed.
-func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
+func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output io.Writer) error {
 	zw, closeOutput, err := combine.Compress(output)
 	if err != nil {
 		return err
@@ -329,18 +334,23 @@ func mergeGroupFiles(sourceDir string) {
 
 // mergeGroups merges and outputs bygroup data.
 func mergeGroups(inputs []string, output *os.File) error {
-	return combine.Merge(inputs, output, mergeGroupStreamToFile)
+	inputFiles, err := fs.OpenFiles(inputs)
+	if err != nil {
+		return err
+	}
+
+	return combine.Merge(inputFiles, output, mergeGroupStreamToFile)
 }
 
 // mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
 // (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
 // the same first 2 columns, and outputting the results.
-func mergeGroupStreamToFile(data io.ReadCloser, output *os.File) error {
+func mergeGroupStreamToFile(data io.ReadCloser, output io.Writer) error {
 	if err := combine.MergeSummaryLines(data, groupSumCols, numSummaryColumns, sumCountAndSize, output); err != nil {
 		return err
 	}
 
-	return output.Close()
+	return nil
 }
 
 // mergeDGUTFilesToDB finds and merges the dgut files and then stores the
@@ -428,12 +438,17 @@ func mergeAndCompressLogFiles(sourceDir string) {
 
 // mergeLogAndCompress merges the inputs and stores in the output, compressed.
 func mergeLogAndCompress(inputs []string, output *os.File) error {
-	return combine.MergeAndCompress(inputs, output, mergeLogStreamToCompressedFile)
+	inputFiles, err := fs.OpenFiles(inputs)
+	if err != nil {
+		return err
+	}
+
+	return combine.MergeAndCompress(inputFiles, output, mergeLogStreamToCompressedFile)
 }
 
 // mergeLogStreamToCompressedFile combines log data, outputting the results to a
 // file, compressed.
-func mergeLogStreamToCompressedFile(data io.ReadCloser, output *os.File) error {
+func mergeLogStreamToCompressedFile(data io.ReadCloser, output io.Writer) error {
 	zw, closeOutput, err := combine.Compress(output)
 	if err != nil {
 		return err
