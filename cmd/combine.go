@@ -193,9 +193,6 @@ func mergeUserGroupAndCompress(inputs []string, output *os.File) error {
 	return combine.MergeAndCompress(inputFiles, output, mergeUserGroupStreamToCompressedFile)
 }
 
-// mergeStreamToOutputFunc is one of our merge*StreamTo* functions.
-type mergeStreamToOutputFunc func(data io.ReadCloser, output io.Writer) error
-
 // mergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
 // Returns a pipe of the output from sort, and function you should call after
 // you've finished reading the output to cleanup.

@@ -12,12 +12,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-type Error string
-
-func (e Error) Erorr() string { return string(e) }
-
-const errTest = Error("test error")
-
 // TestConcatenateAndCompress tests the concat, merge, and compress
 // functionality of the combine package.
 func TestConcatenateAndCompress(t *testing.T) {
@@ -281,8 +275,11 @@ func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
 		t.Fatalf("create error: %s", err)
 	}
 
-	f1.WriteString("line from path1\n")
-	f2.WriteString("line from path2\n")
+	_, err = f1.WriteString("line from path1\n")
+	So(err, ShouldBeNil)
+
+	_, err = f2.WriteString("line from path2\n")
+	So(err, ShouldBeNil)
 
 	f1.Close()
 	f2.Close()
@@ -298,8 +295,8 @@ func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
 	}
 
 	outputPath := filepath.Join(dir, "output")
-	fo, err := os.Create(outputPath)
 
+	fo, err := os.Create(outputPath)
 	if err != nil {
 		t.Fatalf("create error: %s", err)
 	}

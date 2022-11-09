@@ -31,12 +31,14 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/klauspost/pgzip"
 )
 
 const bytesInMB = 1000000
+const pgzipWriterBlocksMultiplier = 2
 
 func ConcatenateAndCompress(inputs []*os.File, output *os.File) error {
 	compressor, closer, err := Compress(output)
@@ -73,8 +75,10 @@ func Concatenate(inputs []*os.File, output io.Writer) error {
 func Compress(output io.Writer) (*pgzip.Writer, func(), error) {
 	zw := pgzip.NewWriter(output)
 
+	err := zw.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
+
 	return zw, func() {
-		err := zw.Close()
+		err = zw.Close()
 		if err != nil {
 			return
 		}
@@ -82,7 +86,7 @@ func Compress(output io.Writer) (*pgzip.Writer, func(), error) {
 		if err != nil {
 			return
 		}
-	}, nil
+	}, err
 }
 
 // Merger is one of our merge*StreamTo* functions.
@@ -118,11 +122,13 @@ func MergeAndCompress(inputs []*os.File, output *os.File, streamFunc Merger) err
 	}
 
 	err = Merge(inputs, zw, streamFunc)
+	if err != nil {
+		return err
+	}
 
 	closer()
 
 	return nil
-
 }
 
 // mergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
