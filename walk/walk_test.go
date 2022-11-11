@@ -55,13 +55,16 @@ func TestWalk(t *testing.T) {
 		}
 
 		Convey("You can output the paths to a file", func() {
-			w, err := New(outDir, 1)
+			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
+
+			w := New(files.WritePaths(), true)
 
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldBeNil)
 
 			outPath := filepath.Join(outDir, "walk.1")
+			So(files.Paths[0], ShouldEqual, outPath)
 			content, err := os.ReadFile(outPath)
 			So(err, ShouldBeNil)
 
@@ -74,15 +77,14 @@ func TestWalk(t *testing.T) {
 
 		Convey("You can output the paths to multiple files", func() {
 			n := 4
-			w, err := New(outDir, n)
+			files, err := NewFiles(outDir, n)
 			So(err, ShouldBeNil)
+			w := New(files.WritePaths(), true)
 
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldBeNil)
 
 			totalFound := 0
-
-			outPaths := w.OutputPaths()
 
 			for i := 1; i <= n+1; i++ {
 				outPath := filepath.Join(outDir, fmt.Sprintf("walk.%d", i))
@@ -91,7 +93,7 @@ func TestWalk(t *testing.T) {
 				if i <= n {
 					So(errr, ShouldBeNil)
 
-					So(outPaths[i-1], ShouldEqual, outPath)
+					So(files.Paths[i-1], ShouldEqual, outPath)
 
 					found, dups, _ := checkPaths(string(content), expectedPaths)
 
@@ -106,21 +108,22 @@ func TestWalk(t *testing.T) {
 			So(totalFound, ShouldEqual, 81)
 			So(len(walkErrors), ShouldEqual, 0)
 
-			err = w.Close()
+			err = files.Close()
 			So(err, ShouldBeNil)
 
-			err = w.files[0].Close()
+			err = files.files[0].Close()
 			So(err, ShouldNotBeNil)
 
-			err = w.Close()
+			err = files.Close()
 			So(err, ShouldNotBeNil)
 		})
 
 		Convey("Write errors during a walk are reported and the walk terminated", func() {
-			w, err := New(outDir, 1)
+			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
+			w := New(files.WritePaths(), true)
 
-			err = w.files[0].Close()
+			err = files.files[0].Close()
 			So(err, ShouldBeNil)
 
 			err = w.Walk(walkDir, cb)
@@ -141,8 +144,9 @@ func TestWalk(t *testing.T) {
 		})
 
 		Convey("Read errors during a walk are reported and the path skipped", func() {
-			w, err := New(outDir, 1)
+			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
+			w := New(files.WritePaths(), true)
 
 			err = w.Walk("/root", cb)
 			So(err, ShouldBeNil)
@@ -156,8 +160,8 @@ func TestWalk(t *testing.T) {
 		})
 	})
 
-	Convey("You can't make a Walker on a bad directory", t, func() {
-		_, err := New("/foo", 1)
+	Convey("You can't create output files in a bad directory", t, func() {
+		_, err := NewFiles("/foo", 1)
 		So(err, ShouldNotBeNil)
 
 		tmpDir := t.TempDir()
@@ -165,7 +169,7 @@ func TestWalk(t *testing.T) {
 		err = os.Mkdir(outDir, permNoWrite)
 		So(err, ShouldBeNil)
 
-		_, err = New(outDir, 1)
+		_, err = NewFiles(outDir, 1)
 		So(err, ShouldNotBeNil)
 	})
 }

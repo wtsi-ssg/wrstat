@@ -145,13 +145,15 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup,
 	yamlPath string, s *scheduler.Scheduler) {
 	n := calculateSplitBasedOnInodes(inodes, desiredDir)
 
-	walker, err := walk.New(outputDir, n)
+	files, err := walk.NewFiles(outputDir, n)
 	if err != nil {
 		die("failed to create walk output files: %s", err)
 	}
 
+	walker := walk.New(files.WritePaths(), true)
+
 	defer func() {
-		err = walker.Close()
+		err = files.Close()
 		if err != nil {
 			warn("failed to close walk output file: %s", err)
 		}
@@ -164,7 +166,7 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup,
 		die("failed to walk the filesystem: %s", err)
 	}
 
-	scheduleStatJobs(walker.OutputPaths(), depGroup, repGroup, yamlPath, s)
+	scheduleStatJobs(files.Paths, depGroup, repGroup, yamlPath, s)
 }
 
 // calculateSplitBasedOnInodes sees how many used inodes are on the given path

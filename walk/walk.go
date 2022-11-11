@@ -30,7 +30,6 @@
 package walk
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -38,93 +37,49 @@ import (
 	"github.com/karrick/godirwalk"
 )
 
-const userOnlyPerm = 0700
 const walkers = 16
 const dirsChSize = 1024
 
-// WriteError is an error received when trying to write discovered paths to
-// disk.
-type WriteError struct {
-	Err error
-}
-
-func (e *WriteError) Error() string { return e.Err.Error() }
-
-func (e *WriteError) Unwrap() error { return e.Err }
+// PathCallback is a callback used by Walker.Walk() that receives a discovered
+// file path each time it's called. It should only return an error if you can no
+// longer cope with receiving more paths, and wish to terminate the Walk.
+type PathCallback func(path string) error
 
 // Walker can be used to quickly walk a filesystem to just see what paths there
 // are on it.
 type Walker struct {
-	outDir   string
-	files    []*os.File
-	filesI   int
-	filesMax int
-	mu       sync.RWMutex
-	mus      []sync.Mutex
+	cb       PathCallback
+	sendDirs bool
 	dirsCh   chan string
 	active   sync.WaitGroup
 	err      error
 	errCB    ErrorCallback
+	mu       sync.RWMutex
 	ended    bool
 }
 
-// New creates a new Walker that can Walk() a filesystem and write all the
-// encountered paths to the given number of output files in the given output
-// directory. The output files are created and opened ready for a Walk(). Any
-// error during that process is also returned.
-func New(outDir string, numOutputFiles int) (*Walker, error) {
-	w := &Walker{
-		outDir: outDir,
+// New creates a new Walker that can Walk() a filesystem and send all the
+// encountered paths to the given PathCallback. Set includeDirs to true to have
+// your PathCallback receive directory paths in addition to file paths.
+func New(cb PathCallback, includDirs bool) *Walker {
+	return &Walker{
+		cb:       cb,
+		sendDirs: includDirs,
 	}
-
-	err := w.createOutputFiles(numOutputFiles)
-
-	return w, err
-}
-
-// createOutputFiles creates the given number of output files ready for writing
-// to.
-func (w *Walker) createOutputFiles(n int) error {
-	if err := os.MkdirAll(w.outDir, userOnlyPerm); err != nil {
-		return err
-	}
-
-	files := make([]*os.File, n)
-
-	for i := range files {
-		var err error
-
-		files[i], err = w.createOutputFile(i + 1)
-		if err != nil {
-			return err
-		}
-	}
-
-	w.files = files
-	w.filesMax = len(files)
-	w.mus = make([]sync.Mutex, len(files))
-
-	return nil
-}
-
-// createOutputFile creates an output file ready for writing to.
-func (w *Walker) createOutputFile(i int) (*os.File, error) {
-	return os.Create(filepath.Join(w.outDir, fmt.Sprintf("walk.%d", i)))
 }
 
 // ErrorCallback is a callback function you supply Walker.Walk(), and it
 // will be provided problematic paths encountered during the walk.
 type ErrorCallback func(path string, err error)
 
-// Walk will discover all the paths nested under the given dir, and output them
-// 1 per line to walk.* files in our outDir. Be sure to Close() after you've
-// finished walking.
+// Walk will discover all the paths nested under the given dir, and send them to
+// our PathCallback.
 //
-// The given callback will be called every time there's an error handling a file
-// during the walk. Errors writing to an output file will result in the walk
-// terminating early and this method returning the error; other kinds of errors
-// will mean the path isn't output, but the walk will continue and this method
-// won't return an error.
+// The given error callback will be called every time there's an error handling
+// a file during the walk. Errors writing to an output file will result in the
+// walk terminating early and this method returning the error; other kinds of
+// errors will mean the path isn't output, but the walk will continue and this
+// method won't return an error.
 func (w *Walker) Walk(dir string, cb ErrorCallback) error {
 	dir = filepath.Clean(dir)
 
@@ -186,15 +141,22 @@ func (w *Walker) processDir(dir string, buffer []byte) {
 		return
 	}
 
-	subDirs, otherEntries, ok := w.getImmediateChildren(dir, buffer)
+	subDirs, paths, ok := w.getImmediateChildren(dir, buffer)
 	if !ok {
 		return
 	}
 
-	if err := w.writeEntries(append(otherEntries, dir)); err != nil {
-		w.terminate(err)
+	if w.sendDirs {
+		paths = append(paths, dir)
+	}
 
-		return
+	for _, path := range paths {
+		if err := w.cb(path); err != nil {
+			w.errCB(path, err)
+			w.terminate(err)
+
+			return
+		}
 	}
 
 	for _, subDir := range subDirs {
@@ -237,43 +199,6 @@ func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]string, []st
 	return subDirs, otherEntries, true
 }
 
-// writeEntries writes the given paths to our output files.
-func (w *Walker) writeEntries(paths []string) error {
-	for _, path := range paths {
-		if err := w.writePath(path); err != nil {
-			w.errCB(path, err)
-
-			return err
-		}
-	}
-
-	return nil
-}
-
-// writePath is a thread-safe way of writing the given path to our next output
-// file. Returns a WriteError on failure to write to an output file.
-func (w *Walker) writePath(path string) error {
-	w.mu.Lock()
-	i := w.filesI
-	w.filesI++
-
-	if w.filesI == w.filesMax {
-		w.filesI = 0
-	}
-
-	w.mu.Unlock()
-
-	w.mus[i].Lock()
-	defer w.mus[i].Unlock()
-
-	_, err := w.files[i].WriteString(path + "\n")
-	if err != nil {
-		err = &WriteError{Err: err}
-	}
-
-	return err
-}
-
 // terminate will store the err on self on the first call to terminate, and
 // cause subsequent terminated() calls to return true.
 func (w *Walker) terminate(err error) {
@@ -283,26 +208,4 @@ func (w *Walker) terminate(err error) {
 	if w.err == nil {
 		w.err = err
 	}
-}
-
-// Close should be called after Walk()ing to close all the output files.
-func (w *Walker) Close() error {
-	for _, file := range w.files {
-		if err := file.Close(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// OutputPaths gives you the paths to the Walk() output files.
-func (w *Walker) OutputPaths() []string {
-	outPaths := make([]string, len(w.files))
-
-	for i, file := range w.files {
-		outPaths[i] = file.Name()
-	}
-
-	return outPaths
 }
