@@ -177,7 +177,7 @@ func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
 // `sort -m` of .by* files), summing consecutive lines that have the same values
 // in the first matchColumns columns, and outputting the results.
 func MergeSummaryLines(data io.ReadCloser, matchColumns, summaryColumns int,
-	mslm matchingSummaryLineMerger, output io.Writer) error {
+	mslm MatchingSummaryLineMerger, output io.Writer) error {
 	scanner := bufio.NewScanner(data)
 	previous := make([]string, matchColumns+summaryColumns)
 
@@ -204,12 +204,12 @@ func MergeSummaryLines(data io.ReadCloser, matchColumns, summaryColumns int,
 	return err
 }
 
-// matchingSummaryLineMerger is a func used by mergeSummaryLines() to handle
+// MatchingSummaryLineMerger is a func used by mergeSummaryLines() to handle
 // summary columns when match columns match. a is the previous columns, b is the
 // current. a should have its summary columns altered to merge information from
 // b. Cols is the number of summary columns (the columns that contain info to
 // eg. sum).
-type matchingSummaryLineMerger func(cols int, a, b []string)
+type MatchingSummaryLineMerger func(cols int, a, b []string)
 
 // summaryLinesMatch returns true if the first matchColumns elements of 'a'
 // match the first matchColums elements of 'b'.
