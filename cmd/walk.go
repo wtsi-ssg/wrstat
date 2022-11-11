@@ -150,7 +150,7 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup,
 		die("failed to create walk output files: %s", err)
 	}
 
-	walker := walk.New(files.WritePaths())
+	walker := walk.New(files.WritePaths(), true)
 
 	defer func() {
 		err = files.Close()

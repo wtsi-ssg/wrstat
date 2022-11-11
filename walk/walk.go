@@ -48,19 +48,24 @@ type PathCallback func(path string) error
 // Walker can be used to quickly walk a filesystem to just see what paths there
 // are on it.
 type Walker struct {
-	cb     PathCallback
-	dirsCh chan string
-	active sync.WaitGroup
-	err    error
-	errCB  ErrorCallback
-	mu     sync.RWMutex
-	ended  bool
+	cb       PathCallback
+	sendDirs bool
+	dirsCh   chan string
+	active   sync.WaitGroup
+	err      error
+	errCB    ErrorCallback
+	mu       sync.RWMutex
+	ended    bool
 }
 
 // New creates a new Walker that can Walk() a filesystem and send all the
-// encountered paths to the given PathCallback.
-func New(cb PathCallback) *Walker {
-	return &Walker{cb: cb}
+// encountered paths to the given PathCallback. Set includeDirs to true to have
+// your PathCallback receive directory paths in addition to file paths.
+func New(cb PathCallback, includDirs bool) *Walker {
+	return &Walker{
+		cb:       cb,
+		sendDirs: includDirs,
+	}
 }
 
 // ErrorCallback is a callback function you supply Walker.Walk(), and it
@@ -141,7 +146,10 @@ func (w *Walker) processDir(dir string, buffer []byte) {
 		return
 	}
 
-	paths = append(paths, dir)
+	if w.sendDirs {
+		paths = append(paths, dir)
+	}
+
 	for _, path := range paths {
 		if err := w.cb(path); err != nil {
 			w.errCB(path, err)

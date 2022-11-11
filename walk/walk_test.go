@@ -58,7 +58,7 @@ func TestWalk(t *testing.T) {
 			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
 
-			w := New(files.WritePaths())
+			w := New(files.WritePaths(), true)
 
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldBeNil)
@@ -79,7 +79,7 @@ func TestWalk(t *testing.T) {
 			n := 4
 			files, err := NewFiles(outDir, n)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths())
+			w := New(files.WritePaths(), true)
 
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldBeNil)
@@ -121,7 +121,7 @@ func TestWalk(t *testing.T) {
 		Convey("Write errors during a walk are reported and the walk terminated", func() {
 			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths())
+			w := New(files.WritePaths(), true)
 
 			err = files.files[0].Close()
 			So(err, ShouldBeNil)
@@ -146,7 +146,7 @@ func TestWalk(t *testing.T) {
 		Convey("Read errors during a walk are reported and the path skipped", func() {
 			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths())
+			w := New(files.WritePaths(), true)
 
 			err = w.Walk("/root", cb)
 			So(err, ShouldBeNil)
