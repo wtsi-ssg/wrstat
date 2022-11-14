@@ -29,7 +29,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/wtsi-ssg/wrstat/summary"
+	"github.com/wtsi-ssg/wrstat/v3/summary"
 )
 
 // Tree is used to do high-level queries on DB.Store() database files.

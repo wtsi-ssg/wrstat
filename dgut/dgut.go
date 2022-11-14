@@ -29,7 +29,7 @@ package dgut
 
 import (
 	"github.com/ugorji/go/codec"
-	"github.com/wtsi-ssg/wrstat/summary"
+	"github.com/wtsi-ssg/wrstat/v3/summary"
 )
 
 // DGUT handles all the *GUT information for a directory.

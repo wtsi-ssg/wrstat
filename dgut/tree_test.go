@@ -31,7 +31,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/summary"
+	"github.com/wtsi-ssg/wrstat/v3/summary"
 )
 
 func TestTree(t *testing.T) {

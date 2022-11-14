@@ -31,9 +31,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/ch"
-	"github.com/wtsi-ssg/wrstat/stat"
-	"github.com/wtsi-ssg/wrstat/summary"
+	"github.com/wtsi-ssg/wrstat/v3/ch"
+	"github.com/wtsi-ssg/wrstat/v3/stat"
+	"github.com/wtsi-ssg/wrstat/v3/summary"
 )
 
 const reportFrequency = 10 * time.Minute

@@ -39,7 +39,7 @@ import (
 
 	"github.com/klauspost/pgzip"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/dgut"
+	"github.com/wtsi-ssg/wrstat/v3/dgut"
 )
 
 const bytesInMB = 1000000

@@ -33,8 +33,8 @@ import (
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/scheduler"
-	"github.com/wtsi-ssg/wrstat/walk"
+	"github.com/wtsi-ssg/wrstat/v3/scheduler"
+	"github.com/wtsi-ssg/wrstat/v3/walk"
 )
 
 const (

@@ -32,7 +32,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wtsi-ssg/wrstat/summary"
+	"github.com/wtsi-ssg/wrstat/v3/summary"
 )
 
 type Error string

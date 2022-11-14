@@ -28,7 +28,7 @@ package dgut
 import (
 	"sort"
 
-	"github.com/wtsi-ssg/wrstat/summary"
+	"github.com/wtsi-ssg/wrstat/v3/summary"
 	"golang.org/x/exp/constraints"
 )
 

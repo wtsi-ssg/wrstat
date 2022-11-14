@@ -31,7 +31,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/neaten"
+	"github.com/wtsi-ssg/wrstat/v3/neaten"
 )
 
 // modeRW are the read-write permission bits for user, group and other.
