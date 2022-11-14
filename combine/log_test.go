@@ -10,11 +10,11 @@ import (
 	"github.com/wtsi-ssg/wrstat/fs"
 )
 
-func TestByUserGroupFiles(t *testing.T) {
+func TestLogFiles(t *testing.T) {
 	Convey("Given byusergroup files and an output", t, func() {
-		inputs, output, outputPath := buildByUserGroupFiles(t)
+		inputs, output, outputPath := buildLogFiles(t)
 
-		err := MergeUserGroupFiles(inputs, output)
+		err := mergeLogAndCompress(inputs, output)
 		So(err, ShouldBeNil)
 
 		Convey("You can merge and compress the byusergroup files to the output", func() {
@@ -26,25 +26,20 @@ func TestByUserGroupFiles(t *testing.T) {
 			actualContent, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 
-			expectedContent := "KMace34\tkyle\ttest/dir/\t21\t27\n"
+			expectedContent := "This is line number0\nThis is line number1\nThis is line number2\nThis is line number3\nThis is line number4\nThis is line number5\n"
 			So(actualContent, ShouldEqual, expectedContent)
 		})
 	})
 }
 
-// buildByUserGroupFiles builds six testing files, whereby each file contains
-// the following tab-separated data:
-//
-// username group directory filecount filesize (for all files, the first 3 are
-// the same and the last 2 are different),
-//
-// and the even number files belong to a different group than the odd number
-// files.
-func buildByUserGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
+// buildLogFiles builds six testing files, whereby each file contains a line
+// that reads, 'This is line number n', where n is the index of the for loop.
+// The even number files belong to a different group than the odd number files.
+func buildLogFiles(t *testing.T) ([]*os.File, *os.File, string) {
 	t.Helper()
 
-	paths := [6]string{"walk.1.byusergroup", "walk.2.byusergroup", "walk.3.byusergroup",
-		"walk.4.byusergroup", "walk.5.byusergroup", "walk.6.byusergroup"}
+	paths := [6]string{"walk.1.log", "walk.2.log", "walk.3.log",
+		"walk.4.log", "walk.5.log", "walk.6.log"}
 	dir := t.TempDir()
 
 	inputs := make([]*os.File, len(paths))
@@ -57,22 +52,19 @@ func buildByUserGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
 
 		if even(i) {
 			fileID := os.Getuid()
-			file2ID := os.Geteuid()
-			fmt.Println(fileID)
-			fmt.Println(file2ID)
 
 			fileGroups, errs := os.Getgroups()
 			if errs != nil {
 				t.Fatal(errs)
 			}
 
-			err = os.Lchown(f.Name(), 1000, fileGroups[1])
+			err = os.Lchown(f.Name(), fileID, fileGroups[1])
 			if err != nil {
 				t.Fatal(err)
 			}
 		}
 
-		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%d", "KMace34", "kyle", "test/dir/", i+1, i+2))
+		_, err = f.WriteString(fmt.Sprintf("This is line number%d\n", i))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -82,7 +74,7 @@ func buildByUserGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
 		f.Close()
 	}
 
-	outputPath := filepath.Join(dir, "combine.byusergroup.gz")
+	outputPath := filepath.Join(dir, "combine.log.gz")
 
 	fileOutput, err := os.Create(outputPath)
 	if err != nil {
@@ -90,8 +82,4 @@ func buildByUserGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
 	}
 
 	return inputs, fileOutput, outputPath
-}
-
-func even(n int) bool {
-	return n%2 == 0
 }

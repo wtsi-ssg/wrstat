@@ -171,26 +171,20 @@ func mergeAndCompressUserGroupFiles(sourceDir string) {
 		die("failed to find byusergroup files: %s", err)
 	}
 
+	inputFiles, err := fs.OpenFiles(paths)
+	if err != nil {
+		die("failed to open input files (err: %s)", err)
+	}
+
 	output, err := fs.CreateOutputFileInDir(sourceDir, combineUserGroupOutputFileBasename)
 	if err != nil {
 		die("failed to create user group output file: %s", err)
 	}
 
-	err = mergeUserGroupAndCompress(paths, output)
+	err = combine.MergeAndCompress(inputFiles, output, mergeUserGroupStreamToCompressedFile)
 	if err != nil {
 		die("failed to merge the byusergroup files: %s", err)
 	}
-}
-
-// mergeUserGroupAndCompress merges the inputs and stores in the output,
-// compressed.
-func mergeUserGroupAndCompress(inputs []string, output *os.File) error {
-	inputFiles, err := fs.OpenFiles(inputs)
-	if err != nil {
-		return err
-	}
-
-	return combine.MergeAndCompress(inputFiles, output, mergeUserGroupStreamToCompressedFile)
 }
 
 // mergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
@@ -319,24 +313,20 @@ func mergeGroupFiles(sourceDir string) {
 		die("failed to find the the group files: %s", err)
 	}
 
+	inputFiles, err := fs.OpenFiles(paths)
+	if err != nil {
+		die("failed to open input files (err: %s)", err)
+	}
+
 	output, err := fs.CreateOutputFileInDir(sourceDir, combineGroupOutputFileBasename)
 	if err != nil {
 		die("failed to find the the group files: %s", err)
 	}
 
-	if err = mergeGroups(paths, output); err != nil {
+	err = combine.Merge(inputFiles, output, mergeGroupStreamToFile)
+	if err != nil {
 		die("failed to merge the group files: %s", err)
 	}
-}
-
-// mergeGroups merges and outputs bygroup data.
-func mergeGroups(inputs []string, output *os.File) error {
-	inputFiles, err := fs.OpenFiles(inputs)
-	if err != nil {
-		return err
-	}
-
-	return combine.Merge(inputFiles, output, mergeGroupStreamToFile)
 }
 
 // mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
@@ -423,24 +413,19 @@ func mergeAndCompressLogFiles(sourceDir string) {
 		die("failed to find the log files: %s", err)
 	}
 
+	inputFiles, err := fs.OpenFiles(paths)
+	if err != nil {
+		die("failed to open input files (err: %s)", err)
+	}
+
 	output, err := fs.CreateOutputFileInDir(sourceDir, combineLogOutputFileBasename)
 	if err != nil {
 		die("failed to create the log output file: %s", err)
 	}
 
-	if err := mergeLogAndCompress(paths, output); err != nil {
+	if err := combine.MergeAndCompress(inputFiles, output, mergeLogStreamToCompressedFile); err != nil {
 		die("failed to merge the log files: %s", err)
 	}
-}
-
-// mergeLogAndCompress merges the inputs and stores in the output, compressed.
-func mergeLogAndCompress(inputs []string, output *os.File) error {
-	inputFiles, err := fs.OpenFiles(inputs)
-	if err != nil {
-		return err
-	}
-
-	return combine.MergeAndCompress(inputFiles, output, mergeLogStreamToCompressedFile)
 }
 
 // mergeLogStreamToCompressedFile combines log data, outputting the results to a

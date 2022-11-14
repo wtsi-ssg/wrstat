@@ -1,15 +1,14 @@
 package combine
 
 import (
-	"bufio"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 
-	"github.com/klauspost/pgzip"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/fs"
 )
 
 // TestConcatenateMergeAndCompress tests the concat, merge, and compress
@@ -42,7 +41,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
 
-			actualFileContents, err := ReadCompressedFile(outputPath)
+			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
 		})
@@ -55,7 +54,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
 
-			actualFileContents, err := ReadCompressedFile(outputPath)
+			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
 		})
@@ -86,7 +85,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
 
-			actualFileContents, err := ReadCompressedFile(outputPath)
+			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
 		})
@@ -101,7 +100,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
 
-			actualFileContents, err := ReadCompressedFile(outputPath)
+			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
 		})
@@ -151,34 +150,11 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(b, ShouldNotEqual, "line from path1\nline from path2\n")
 
-			actualFileContents, err := ReadCompressedFile(outputPath)
+			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
 		})
 	})
-}
-
-func ReadCompressedFile(filePath string) (string, error) {
-	actualFile, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-
-	fileReader, err := pgzip.NewReader(actualFile)
-	if err != nil {
-		return "", err
-	}
-
-	defer fileReader.Close()
-
-	fileScanner := bufio.NewScanner(fileReader)
-
-	var fileContents string
-	for fileScanner.Scan() {
-		fileContents += fileScanner.Text() + "\n"
-	}
-
-	return fileContents, nil
 }
 
 // myMerger specifies how a set of files is merged to an output.

@@ -89,7 +89,9 @@ func Compress(output io.Writer) (*pgzip.Writer, func(), error) {
 	}, err
 }
 
-// Merger is one of our merge*StreamTo* functions.
+// Merger takes an input io.readCloser and an output io.writer, and defines how
+// we want to merge the content in the io.readCloser, and stream it to the
+// output io.writer.
 type Merger func(data io.ReadCloser, output io.Writer) error
 
 // Merge merges the inputs files and streams the content to the streamFunc.
@@ -204,7 +206,7 @@ func MergeSummaryLines(data io.ReadCloser, matchColumns, summaryColumns int,
 	return err
 }
 
-// MatchingSummaryLineMerger is a func used by mergeSummaryLines() to handle
+// MatchingSummaryLineMerger is a func used by MergeSummaryLines() to handle
 // summary columns when match columns match. a is the previous columns, b is the
 // current. a should have its summary columns altered to merge information from
 // b. Cols is the number of summary columns (the columns that contain info to

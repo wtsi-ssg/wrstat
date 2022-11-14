@@ -1,9 +1,12 @@
 package fs
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/klauspost/pgzip"
 )
 
 type Error string
@@ -46,4 +49,27 @@ func OpenFiles(paths []string) ([]*os.File, error) {
 	}
 
 	return files, nil
+}
+
+func ReadCompressedFile(filePath string) (string, error) {
+	actualFile, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	fileReader, err := pgzip.NewReader(actualFile)
+	if err != nil {
+		return "", err
+	}
+
+	defer fileReader.Close()
+
+	fileScanner := bufio.NewScanner(fileReader)
+
+	var fileContents string
+	for fileScanner.Scan() {
+		fileContents += fileScanner.Text() + "\n"
+	}
+
+	return fileContents, nil
 }
