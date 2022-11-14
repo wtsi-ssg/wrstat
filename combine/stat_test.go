@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/fs"
+	"github.com/wtsi-ssg/wrstat/v3/fs"
 )
 
 func TestStatFiles(t *testing.T) {
