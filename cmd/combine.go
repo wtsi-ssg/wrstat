@@ -132,7 +132,6 @@ func concatenateAndCompressStatsFiles(sourceDir string) {
 	inputs, err := fs.OpenFiles(paths)
 	if err != nil {
 		die("failed to open input files (err: %s)", err)
-
 	}
 
 	output, err := fs.CreateOutputFileInDir(sourceDir, combineStatsOutputFileBasename)

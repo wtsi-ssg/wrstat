@@ -57,16 +57,13 @@ func buildByUserGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
 
 		if even(i) {
 			fileID := os.Getuid()
-			file2ID := os.Geteuid()
-			fmt.Println(fileID)
-			fmt.Println(file2ID)
 
 			fileGroups, errs := os.Getgroups()
 			if errs != nil {
 				t.Fatal(errs)
 			}
 
-			err = os.Lchown(f.Name(), 1000, fileGroups[1])
+			err = os.Lchown(f.Name(), fileID, fileGroups[1])
 			if err != nil {
 				t.Fatal(err)
 			}

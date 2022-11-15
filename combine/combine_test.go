@@ -1,6 +1,7 @@
 package combine
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,7 +26,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
-			So(string(b), ShouldEqual, "line from path1\nline from path2\n")
+			So(string(b), ShouldEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 		})
 
 		Convey("You can concatenate the inputs to compressed output", func() {
@@ -39,11 +40,11 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
-			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
+			So(string(b), ShouldNotEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 
 			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
-			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
+			So(actualFileContents, ShouldEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 		})
 
 		Convey("You can concatenate the inputs to compressed output in a single method call", func() {
@@ -52,11 +53,11 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
-			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
+			So(string(b), ShouldNotEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 
 			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
-			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
+			So(actualFileContents, ShouldEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 		})
 
 		Convey("You can merge the inputs to the output", func() {
@@ -67,7 +68,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
-			So(string(b), ShouldEqual, "line from path1\nline from path2\n")
+			So(string(b), ShouldEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 		})
 
 		Convey("You can merge and compress the inputs to the output", func() {
@@ -83,11 +84,11 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
-			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
+			So(string(b), ShouldNotEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 
 			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
-			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
+			So(actualFileContents, ShouldEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 		})
 
 		Convey("You can merge and compress the inputs to the output in a single call", func() {
@@ -98,11 +99,11 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
-			So(string(b), ShouldNotEqual, "line from path1\nline from path2\n")
+			So(string(b), ShouldNotEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 
 			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
-			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
+			So(actualFileContents, ShouldEqual, "KMace34\tkyle\ttest/dir/\t1\t2\nKMace34\tkyle\ttest/dir/\t2\t3\n")
 		})
 
 		Convey("MergeSummaryLines merges the file contents to output", func() {
@@ -123,7 +124,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
 
-			So(string(b), ShouldEqual, "line from path1\nline from path2\n")
+			So(string(b), ShouldEqual, "KMace34\tkyle\ttest/dir/\t3\t5\n")
 		})
 
 		Convey("MergeSummaryLines merges the file contents to a compressed output", func() {
@@ -148,11 +149,11 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
-			So(b, ShouldNotEqual, "line from path1\nline from path2\n")
+			So(b, ShouldNotEqual, "KMace34\tkyle\ttest/dir/\t3\t5\n")
 
 			actualFileContents, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
-			So(actualFileContents, ShouldEqual, "line from path1\nline from path2\n")
+			So(actualFileContents, ShouldEqual, "KMace34\tkyle\ttest/dir/\t3\t5\n")
 		})
 	})
 }
@@ -186,36 +187,33 @@ func AddNumberStrings(a, b string) string {
 
 func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
 	dir := t.TempDir()
-	input1Path := filepath.Join(dir, "path1")
-	input2Path := filepath.Join(dir, "path2")
+	paths := [2]string{"path1", "path2"}
+	inputs := make([]*os.File, len(paths))
 
-	f1, err := os.Create(input1Path)
-	if err != nil {
-		t.Fatalf("create error: %s", err)
+	for i, path := range paths {
+		f, err := os.Create(filepath.Join(dir, path))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%d\n", "KMace34", "kyle", "test/dir/", i+1, i+2))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		inputs[i] = f
+
+		f.Close()
 	}
 
-	f2, err := os.Create(input2Path)
+	filenames, err := fs.FindFilePathsInDir(dir, "")
 	if err != nil {
-		t.Fatalf("create error: %s", err)
+		t.Fatal(err)
 	}
 
-	_, err = f1.WriteString("line from path1\n")
-	So(err, ShouldBeNil)
-
-	_, err = f2.WriteString("line from path2\n")
-	So(err, ShouldBeNil)
-
-	f1.Close()
-	f2.Close()
-
-	f1, err = os.Open(input1Path)
+	inputs, err = fs.OpenFiles(filenames)
 	if err != nil {
-		t.Fatalf("create error: %s", err)
-	}
-
-	f2, err = os.Open(input2Path)
-	if err != nil {
-		t.Fatalf("create error: %s", err)
+		t.Fatal(err)
 	}
 
 	outputPath := filepath.Join(dir, "output")
@@ -225,5 +223,5 @@ func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
 		t.Fatalf("create error: %s", err)
 	}
 
-	return []*os.File{f1, f2}, fo, outputPath
+	return inputs, fo, outputPath
 }

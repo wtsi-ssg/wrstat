@@ -26,7 +26,8 @@ func TestLogFiles(t *testing.T) {
 			actualContent, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 
-			expectedContent := "This is line number0\nThis is line number1\nThis is line number2\nThis is line number3\nThis is line number4\nThis is line number5\n"
+			expectedContent := "This is line number0\nThis is line number1\nThis is line number2\n" +
+				"This is line number3\nThis is line number4\nThis is line number5\n"
 			So(actualContent, ShouldEqual, expectedContent)
 		})
 	})

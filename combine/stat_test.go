@@ -13,7 +13,7 @@ import (
 
 func TestStatFiles(t *testing.T) {
 	Convey("Given stat files and an output", t, func() {
-		inputs, output, outputPath := buildStatFiles(t)
+		dir, inputs, output, outputPath := buildStatFiles(t)
 
 		err := concatenateAndCompressStatsFiles(inputs, output)
 		So(err, ShouldBeNil)
@@ -27,19 +27,22 @@ func TestStatFiles(t *testing.T) {
 			actualContent, err := fs.ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 
-			expectedContent := "This is line number0\nThis is line number1\nThis is line number2\n"
+			encodedDir := b64.StdEncoding.EncodeToString([]byte(dir))
+
+			expectedContent := fmt.Sprintf(
+				"%s\t5\t345\t152\t217434\t82183\t147\t'f'\t3\t7\t28472\t\n"+
+					"%s\t6\t345\t152\t652302\t246549\t441\t'f'\t4\t7\t28472\t\n"+
+					"%s\t7\t345\t152\t1087170\t410915\t735\t'f'\t5\t7\t28472\t\n", encodedDir, encodedDir, encodedDir)
 			So(actualContent, ShouldEqual, expectedContent)
 		})
 	})
 }
 
-func buildStatFiles(t *testing.T) ([]*os.File, *os.File, string) {
+func buildStatFiles(t *testing.T) (string, []*os.File, *os.File, string) {
 	t.Helper()
 
 	paths := [3]string{"walk.1.stats", "walk.2.stats", "walk.3.stats"}
 	dir := t.TempDir()
-	//dir, err := os.Getwd()
-	//So(err, ShouldBeNil)
 
 	inputs := make([]*os.File, len(paths))
 
@@ -50,7 +53,7 @@ func buildStatFiles(t *testing.T) ([]*os.File, *os.File, string) {
 		}
 
 		_, err = f.WriteString(fmt.Sprintf(
-			"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%q\t%d\t%d\t%d\t",
+			"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%q\t%d\t%d\t%d\t\n",
 			b64.StdEncoding.EncodeToString([]byte(dir)),
 			5+i,
 			345,
@@ -72,6 +75,16 @@ func buildStatFiles(t *testing.T) ([]*os.File, *os.File, string) {
 		f.Close()
 	}
 
+	filenames, err := fs.FindFilePathsInDir(dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inputs, err = fs.OpenFiles(filenames)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	outputPath := filepath.Join(dir, "combine.stats.gz")
 
 	fileOutput, err := os.Create(outputPath)
@@ -79,5 +92,5 @@ func buildStatFiles(t *testing.T) ([]*os.File, *os.File, string) {
 		t.Fatalf("create error: %s", err)
 	}
 
-	return inputs, fileOutput, outputPath
+	return dir, inputs, fileOutput, outputPath
 }
