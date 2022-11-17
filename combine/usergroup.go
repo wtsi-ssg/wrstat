@@ -1,3 +1,29 @@
+/*******************************************************************************
+ * Copyright (c) 2021-2022 Genome Research Ltd.
+ *
+ * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * 		   Kyle Mace  <km34@sanger.ac.uk>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ ******************************************************************************/
+
 package combine
 
 import (
@@ -17,11 +43,7 @@ func MergeUserGroupFiles(inputs []*os.File, output *os.File) error {
 // data (eg. from a `sort -m` of .byusergroup files), summing consecutive lines
 // with the first 3 columns, and outputting the results to a file, compressed.
 func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output io.Writer) error {
-	if err := MergeSummaryLines(data, userGroupSumCols, numSummaryColumns, sumCountAndSize, output); err != nil {
-		return err
-	}
-
-	return nil
+	return MergeSummaryLines(data, userGroupSumCols, numSummaryColumns, sumCountAndSize, output)
 }
 
 // sumCountAndSize is a matchingSummaryLineMerger that, given cols 2,  will sum
@@ -39,11 +61,11 @@ func sumCountAndSize(cols int, a, b []string) {
 // addNumberStrings treats a and b as ints, adds them together, and returns the
 // resulting int64 as a string.
 func addNumberStrings(a, b string) string {
-	return strconv.FormatInt(Atoi(a)+Atoi(b), intBase)
+	return strconv.FormatInt(atoi(a)+atoi(b), intBase)
 }
 
-// Atoi is like strconv.Atoi but returns an int64 and dies on error.
-func Atoi(n string) int64 {
+// atoi is like strconv.Atoi but returns an int64 and dies on error.
+func atoi(n string) int64 {
 	i, err := strconv.ParseInt(n, intBase, 0)
 	if err != nil {
 		panic("Was not able to convert string.")

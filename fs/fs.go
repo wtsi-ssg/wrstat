@@ -27,12 +27,7 @@ func FindFilePathsInDir(dir, suffix string) ([]string, error) {
 // CreateOutputFileInDir creates a file for writing in the given dir with the
 // given basename. Dies on error.
 func CreateOutputFileInDir(dir, basename string) (*os.File, error) {
-	file, err := os.Create(filepath.Join(dir, basename))
-	if err != nil {
-		return file, err
-	}
-
-	return file, nil
+	return os.Create(filepath.Join(dir, basename))
 }
 
 // OpenFiles opens the given files for reading.
@@ -51,6 +46,8 @@ func OpenFiles(paths []string) ([]*os.File, error) {
 	return files, nil
 }
 
+// ReadCompressedFile takes the path of a compressed file, decompresses it, and
+// returns the contents.
 func ReadCompressedFile(filePath string) (string, error) {
 	actualFile, err := os.Open(filePath)
 	if err != nil {
@@ -72,4 +69,42 @@ func ReadCompressedFile(filePath string) (string, error) {
 	}
 
 	return fileContents, nil
+}
+
+// RemoveAndCreateDir creates a dgut output dir in the given dir.
+// Returns the path to the created directory. If it already existed, will delete
+// it first, since we can't store to a pre-existing db.
+func RemoveAndCreateDir(dir string) (string, error) {
+	os.RemoveAll(dir)
+
+	err := os.MkdirAll(dir, 448)
+	if err != nil {
+		return "", err
+	}
+
+	return dir, nil
+}
+
+// FindOpenAndCreate takes an input and output directory, each with their own
+// file suffix. Filepaths are located in the input directory, using the input
+// suffix, an output file is created in the output directory, using the output
+// suffix, and the two are then both returned.
+func FindOpenAndCreate(inputDir, outputDir, inputDirSuffix, outputDirSuffix string) ([]*os.File, *os.File, error) {
+	paths, err := FindFilePathsInDir(inputDir, inputDirSuffix)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	inputFiles, err := OpenFiles(paths)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	output, err := CreateOutputFileInDir(outputDir, outputDirSuffix)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return inputFiles, output, nil
+
 }

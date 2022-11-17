@@ -1,3 +1,29 @@
+/*******************************************************************************
+ * Copyright (c) 2021-2022 Genome Research Ltd.
+ *
+ * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * 		   Kyle Mace  <km34@sanger.ac.uk>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ ******************************************************************************/
+
 package combine
 
 import (
@@ -15,29 +41,30 @@ func TestStatFiles(t *testing.T) {
 	Convey("Given stat files and an output", t, func() {
 		dir, inputs, output, outputPath := buildStatFiles(t)
 
-		err := concatenateAndCompressStatsFiles(inputs, output)
-		So(err, ShouldBeNil)
-
 		Convey("You can concatenate and compress the stats files to the output", func() {
-			_, err := os.Stat(outputPath)
-			So(err, ShouldBeNil)
-		})
-
-		Convey("The proper content exists within the output file", func() {
-			actualContent, err := fs.ReadCompressedFile(outputPath)
+			err := StatFiles(inputs, output)
 			So(err, ShouldBeNil)
 
-			encodedDir := b64.StdEncoding.EncodeToString([]byte(dir))
+			_, err = os.Stat(outputPath)
+			So(err, ShouldBeNil)
 
-			expectedContent := fmt.Sprintf(
-				"%s\t5\t345\t152\t217434\t82183\t147\t'f'\t3\t7\t28472\t\n"+
-					"%s\t6\t345\t152\t652302\t246549\t441\t'f'\t4\t7\t28472\t\n"+
-					"%s\t7\t345\t152\t1087170\t410915\t735\t'f'\t5\t7\t28472\t\n", encodedDir, encodedDir, encodedDir)
-			So(actualContent, ShouldEqual, expectedContent)
+			Convey("The proper content exists within the output file", func() {
+				actualContent, err := fs.ReadCompressedFile(outputPath)
+				So(err, ShouldBeNil)
+
+				encodedDir := b64.StdEncoding.EncodeToString([]byte(dir))
+
+				expectedOutput := fmt.Sprintf(
+					"%s\t5\t345\t152\t217434\t82183\t147\t'f'\t3\t7\t28472\t\n"+
+						"%s\t6\t345\t152\t652302\t246549\t441\t'f'\t4\t7\t28472\t\n"+
+						"%s\t7\t345\t152\t1087170\t410915\t735\t'f'\t5\t7\t28472\t\n", encodedDir, encodedDir, encodedDir)
+				So(actualContent, ShouldEqual, expectedOutput)
+			})
 		})
 	})
 }
 
+// buildStatFiles builds .stats files for testing
 func buildStatFiles(t *testing.T) (string, []*os.File, *os.File, string) {
 	t.Helper()
 

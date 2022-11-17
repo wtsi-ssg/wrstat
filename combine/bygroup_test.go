@@ -1,7 +1,34 @@
+/*******************************************************************************
+ * Copyright (c) 2021-2022 Genome Research Ltd.
+ *
+ * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * 		   Kyle Mace  <km34@sanger.ac.uk>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ ******************************************************************************/
+
 package combine
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +40,7 @@ func TestByGroupFiles(t *testing.T) {
 	Convey("Given bygroup files and an output", t, func() {
 		inputs, output, outputPath := buildByGroupFiles(t)
 
-		Convey("You can merge and compress the bygroup files to the output", func() {
+		Convey("You can merge the bygroup files to the output", func() {
 			err := MergeByGroupFiles(inputs, output)
 			So(err, ShouldBeNil)
 
@@ -27,7 +54,7 @@ func TestByGroupFiles(t *testing.T) {
 				actualContent := string(b)
 				So(err, ShouldBeNil)
 
-				expectedContent := "kyle\tKMace34\t21\t27\n"
+				expectedContent := "adam\tdavid\t3\t5\nben\tfred\t7\t9\ncharlie\tgraham\t11\t13\n"
 				So(actualContent, ShouldEqual, expectedContent)
 			})
 		})
@@ -43,38 +70,21 @@ func TestByGroupFiles(t *testing.T) {
 // and the even number files belong to a different group than the odd number
 // files.
 func buildByGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
-	t.Helper()
-
 	paths := [6]string{"walk.1.bygroup", "walk.2.bygroup", "walk.3.bygroup",
 		"walk.4.bygroup", "walk.5.bygroup", "walk.6.bygroup"}
-	dir := t.TempDir()
+	users, groups := [3]string{"adam", "ben", "charlie"}, [3]string{"david", "fred", "graham"}
 
+	dir := t.TempDir()
 	inputs := make([]*os.File, len(paths))
 
 	for i, path := range paths {
 		f, err := os.Create(filepath.Join(dir, path))
-		if err != nil {
-			t.Fatal(err)
-		}
+		So(err, ShouldBeNil)
 
-		if even(i) {
-			fileID := os.Getuid()
+		userIndex, groupIndex := floor(float64(i)/2), floor(float64(i)/2)
 
-			fileGroups, errs := os.Getgroups()
-			if errs != nil {
-				t.Fatal(errs)
-			}
-
-			err = os.Lchown(f.Name(), fileID, fileGroups[1])
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-
-		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n", "kyle", "KMace34", i+1, i+2))
-		if err != nil {
-			t.Fatal(err)
-		}
+		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n", users[userIndex], groups[groupIndex], i+1, i+2))
+		So(err, ShouldBeNil)
 
 		inputs[i] = f
 
@@ -89,4 +99,8 @@ func buildByGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
 	}
 
 	return inputs, fileOutput, outputPath
+}
+
+func floor(x float64) int {
+	return int(math.Floor(x))
 }

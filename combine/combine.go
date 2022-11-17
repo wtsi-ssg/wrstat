@@ -2,6 +2,7 @@
  * Copyright (c) 2021-2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * 		   Kyle Mace  <km34@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -27,7 +28,6 @@ package combine
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -35,11 +35,18 @@ import (
 	"strings"
 
 	"github.com/klauspost/pgzip"
+	"github.com/wtsi-ssg/wrstat/v3/dgut"
 )
 
 const bytesInMB = 1000000
 const pgzipWriterBlocksMultiplier = 2
+const dgutStoreBatchSize = 10000
+const dgutSumCols = 4
+const numSummaryColumnsDGUT = 3
 
+// ConcatenateAndCompress takes a list of open files as its input, and an open
+// file for its output. It compresses the output, and then stores there the
+// concatenated contents of the inputs.
 func ConcatenateAndCompress(inputs []*os.File, output *os.File) error {
 	compressor, closer, err := Compress(output)
 	if err != nil {
@@ -56,22 +63,26 @@ func ConcatenateAndCompress(inputs []*os.File, output *os.File) error {
 	return nil
 }
 
+// Concatenate takes a list of open files as its input, and an io.Writer as its
+// output. It concatenates the contents of the inputs into the output.
 func Concatenate(inputs []*os.File, output io.Writer) error {
 	buf := make([]byte, bytesInMB)
 
 	for _, input := range inputs {
 		if _, err := io.CopyBuffer(output, input, buf); err != nil {
-			return fmt.Errorf("failed to concatenate: %w", err)
+			return err
 		}
 
 		if err := input.Close(); err != nil {
-			return fmt.Errorf("failed to close an input file: %w", err)
+			return err
 		}
 	}
 
 	return nil
 }
 
+// Compress takes an io writer as its input, and compresses it. It returns this,
+// along with a function to close the writer and an error status.
 func Compress(output io.Writer) (*pgzip.Writer, func(), error) {
 	zw := pgzip.NewWriter(output)
 
@@ -101,7 +112,7 @@ func Merge(inputs []*os.File, output io.Writer, streamFunc Merger) error {
 		inputFiles[i] = file.Name()
 	}
 
-	sortMergeOutput, cleanup, err := mergeSortedFiles(inputFiles)
+	sortMergeOutput, cleanup, err := MergeSortedFiles(inputFiles)
 	if err != nil {
 		return err
 	}
@@ -117,6 +128,10 @@ func Merge(inputs []*os.File, output io.Writer, streamFunc Merger) error {
 	return nil
 }
 
+// MergeAndCompress takes a list of open files, an open output file, and a
+// Merger function to express the details of how the file contents should be
+// merged. It compresses the output, and stores the merged input contents in
+// there.
 func MergeAndCompress(inputs []*os.File, output *os.File, streamFunc Merger) error {
 	zw, closer, err := Compress(output)
 	if err != nil {
@@ -133,10 +148,63 @@ func MergeAndCompress(inputs []*os.File, output *os.File, streamFunc Merger) err
 	return nil
 }
 
-// mergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
+// StatFiles finds and conatenates the stats files into the output, compressed.
+func StatFiles(inputs []*os.File, output *os.File) error {
+	return ConcatenateAndCompress(inputs, output)
+}
+
+// GroupFiles merges the group files into the output.
+func GroupFiles(inputs []*os.File, output *os.File) error {
+	return Merge(inputs, output, mergeGroupStreamToFile)
+}
+
+// LogFiles merges the log files and stores in the output, compressed.
+func LogFiles(inputs []*os.File, output *os.File) error {
+	return MergeAndCompress(inputs, output, mergeLogStreamToCompressedFile)
+}
+
+// UserGroupFiles merges the usergroup files into the output, compressed.
+func UserGroupFiles(inputs []*os.File, output *os.File) error {
+	return MergeAndCompress(inputs, output, mergeUserGroupStreamToCompressedFile)
+}
+
+// DgutFiles merges the pre-sorted dgut files, summing consecutive lines with
+// the same first 4 columns, and outputs the results to an embedded database.
+func DgutFiles(inputs []string, outputDir string) error {
+	sortMergeOutput, cleanup, err := MergeSortedFiles(inputs)
+	if err != nil {
+		return err
+	}
+
+	db := dgut.NewDB(outputDir)
+	reader, writer := io.Pipe()
+	errCh := make(chan error, 1)
+
+	go func() {
+		errCh <- db.Store(reader, dgutStoreBatchSize)
+	}()
+
+	if err = MergeSummaryLines(sortMergeOutput, dgutSumCols,
+		numSummaryColumnsDGUT, sumCountAndSizeAndKeepOldestAtime, writer); err != nil {
+		return err
+	}
+
+	if err = writer.Close(); err != nil {
+		return err
+	}
+
+	err = <-errCh
+	if err != nil {
+		return err
+	}
+
+	return cleanup()
+}
+
+// MergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
 // Returns a pipe of the output from sort, and function you should call after
 // you've finished reading the output to cleanup.
-func mergeSortedFiles(inputs []string) (io.ReadCloser, func() error, error) {
+func MergeSortedFiles(inputs []string) (io.ReadCloser, func() error, error) {
 	cmd := exec.Command("sort", "-m", "--files0-from", "-")
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "LC_ALL=C")
@@ -223,4 +291,16 @@ func summaryLinesMatch(matchColumns int, a, b []string) bool {
 	}
 
 	return true
+}
+
+// sumCountAndSizeAndKeepOldestAtime needs cols 3, and is like sumCountAndSize,
+// but keeps the oldest atime (smallest number) found in the last column.
+func sumCountAndSizeAndKeepOldestAtime(cols int, a, b []string) {
+	sumCountAndSize(cols, a, b)
+
+	last := len(a) - 1
+
+	if atoi(b[last]) < atoi(a[last]) {
+		a[last] = b[last]
+	}
 }
