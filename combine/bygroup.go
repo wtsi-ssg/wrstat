@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -34,9 +34,8 @@ import (
 const numSummaryColumns = 2
 const groupSumCols = 2
 
-// MergeByGroupFiles merges the inputs based on the mergeGroupStreamToFile
-// function passed, and stores in the output.
-func MergeByGroupFiles(inputs []*os.File, output *os.File) error {
+// GroupFiles merges the group files into the output file.
+func GroupFiles(inputs []*os.File, output *os.File) error {
 	return Merge(inputs, output, mergeGroupStreamToFile)
 }
 

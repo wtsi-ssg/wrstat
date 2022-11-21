@@ -58,13 +58,17 @@ var combineCmd = &cobra.Command{
 Within the given output directory, all the 'wrstat stat' *.stats files produced
 following an invocation of 'wrstat walk' will be concatenated, compressed and
 placed at the root of the output directory in a file called 'combine.stats.gz'.
+
 Likewise, all the 'wrstat stat' *.byusergroup files will be merged,
 compressed and placed at the root of the output directory in a file called
 'combine.byusergroup.gz'.
+
 The same applies to the *.log files, being called 'combine.log.gz'.
 The *.dugt files will be turned in to databases in a directory
 'combine.dgut.db'.
+
 The *.bygroup files are merged but not compressed and called 'combine.bygroup'.
+
 NB: only call this by adding it to wr with a dependency on the dependency group
 you supplied 'wrstat walk'.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -100,13 +104,13 @@ you supplied 'wrstat walk'.`,
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mergeAndCompressLogFiles(sourceDir)
+			mergeDGUTFilesToDB(sourceDir)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mergeDGUTFilesToDB(sourceDir)
+			mergeAndCompressLogFiles(sourceDir)
 		}()
 
 		wg.Wait()

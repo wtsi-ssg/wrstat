@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -41,7 +41,7 @@ func TestByGroupFiles(t *testing.T) {
 		inputs, output, outputPath := buildByGroupFiles(t)
 
 		Convey("You can merge the bygroup files to the output", func() {
-			err := MergeByGroupFiles(inputs, output)
+			err := GroupFiles(inputs, output)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(outputPath)
@@ -70,6 +70,8 @@ func TestByGroupFiles(t *testing.T) {
 // and the even number files belong to a different group than the odd number
 // files.
 func buildByGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
+	t.Helper()
+
 	paths := [6]string{"walk.1.bygroup", "walk.2.bygroup", "walk.3.bygroup",
 		"walk.4.bygroup", "walk.5.bygroup", "walk.6.bygroup"}
 	users, groups := [3]string{"adam", "ben", "charlie"}, [3]string{"david", "fred", "graham"}

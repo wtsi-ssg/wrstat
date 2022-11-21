@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -64,7 +64,7 @@ func TestStatFiles(t *testing.T) {
 	})
 }
 
-// buildStatFiles builds .stats files for testing
+// buildStatFiles builds .stats files for testing.
 func buildStatFiles(t *testing.T) (string, []*os.File, *os.File, string) {
 	t.Helper()
 

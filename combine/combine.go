@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -100,6 +100,12 @@ func Compress(output io.Writer) (*pgzip.Writer, func(), error) {
 	}, err
 }
 
+type Stream interface {
+	StreamFunc() error
+}
+
+type StreamFunc func() error
+
 // Merger takes an input io.readCloser and an output io.writer, and defines how
 // we want to merge the content in the io.readCloser, and stream it to the
 // output io.writer.
@@ -146,26 +152,6 @@ func MergeAndCompress(inputs []*os.File, output *os.File, streamFunc Merger) err
 	closer()
 
 	return nil
-}
-
-// StatFiles finds and conatenates the stats files into the output, compressed.
-func StatFiles(inputs []*os.File, output *os.File) error {
-	return ConcatenateAndCompress(inputs, output)
-}
-
-// GroupFiles merges the group files into the output.
-func GroupFiles(inputs []*os.File, output *os.File) error {
-	return Merge(inputs, output, mergeGroupStreamToFile)
-}
-
-// LogFiles merges the log files and stores in the output, compressed.
-func LogFiles(inputs []*os.File, output *os.File) error {
-	return MergeAndCompress(inputs, output, mergeLogStreamToCompressedFile)
-}
-
-// UserGroupFiles merges the usergroup files into the output, compressed.
-func UserGroupFiles(inputs []*os.File, output *os.File) error {
-	return MergeAndCompress(inputs, output, mergeUserGroupStreamToCompressedFile)
 }
 
 // DgutFiles merges the pre-sorted dgut files, summing consecutive lines with

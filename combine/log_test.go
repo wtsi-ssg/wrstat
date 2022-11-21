@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -41,7 +41,7 @@ func TestLogFiles(t *testing.T) {
 		inputs, output, outputPath := buildLogFiles(t)
 
 		Convey("you can merge and compress the log files to the output", func() {
-			err := MergeLogAndCompress(inputs, output)
+			err := LogFiles(inputs, output)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(outputPath)

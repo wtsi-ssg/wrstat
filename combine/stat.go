@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -28,12 +28,7 @@ package combine
 
 import "os"
 
-// ConcatenateAndCompressStatsFiles finds and conatenates the stats files and
-// compresses the output.
-func ConcatenateAndCompressStatsFiles(inputs []*os.File, output *os.File) error {
-	if err := ConcatenateAndCompress(inputs, output); err != nil {
-		return err
-	}
-
-	return nil
+// StatFiles finds and conatenates the stats files into the output, compressed.
+func StatFiles(inputs []*os.File, output *os.File) error {
+	return ConcatenateAndCompress(inputs, output)
 }

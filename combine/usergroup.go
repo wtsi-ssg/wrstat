@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -35,7 +35,8 @@ import (
 const userGroupSumCols = 3
 const intBase = 10
 
-func MergeUserGroupFiles(inputs []*os.File, output *os.File) error {
+// UserGroupFiles merges the usergroup files into the output, compressed.
+func UserGroupFiles(inputs []*os.File, output *os.File) error {
 	return MergeAndCompress(inputs, output, mergeUserGroupStreamToCompressedFile)
 }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -27,9 +27,7 @@
 package combine
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -38,7 +36,12 @@ import (
 
 func TestByUserGroupFiles(t *testing.T) {
 	Convey("Given byusergroup files and an output", t, func() {
-		inputs, output, outputPath := buildByUserGroupFiles(t)
+		inputs, output, outputPath := BuildCombineAndUserGroupInputs(t,
+			[]string{"walk.1.byusergroup", "walk.2.byusergroup", "walk.3.byusergroup",
+				"walk.4.byusergroup", "walk.5.byusergroup", "walk.6.byusergroup"},
+			[]string{"david", "fred", "graham"},
+			[]string{"adam", "ben", "charlie"},
+			[]string{"short/test/dir/", "test/dir/that/is/much/longer"})
 
 		expectedMergeOutput := "david\tadam\tshort/test/dir/\t3\t5\n" +
 			"fred\tben\tshort/test/dir/\t3\t4\n" +
@@ -46,7 +49,7 @@ func TestByUserGroupFiles(t *testing.T) {
 			"graham\tcharlie\ttest/dir/that/is/much/longer\t11\t13\n"
 
 		Convey("You can merge and compress the byusergroup files to the output", func() {
-			err := MergeUserGroupFiles(inputs, output)
+			err := UserGroupFiles(inputs, output)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(outputPath)
@@ -60,52 +63,4 @@ func TestByUserGroupFiles(t *testing.T) {
 			})
 		})
 	})
-}
-
-// buildByUserGroupFiles builds six testing files, whereby each file contains
-// the following tab-separated data:
-//
-// username group directory filecount filesize (for all files, the first 3 are
-// the same and the last 2 are different)
-func buildByUserGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
-	t.Helper()
-
-	dir := t.TempDir()
-
-	paths := [6]string{"walk.1.byusergroup", "walk.2.byusergroup", "walk.3.byusergroup",
-		"walk.4.byusergroup", "walk.5.byusergroup", "walk.6.byusergroup"}
-	users := [3]string{"adam", "ben", "charlie"}
-	groups := [3]string{"david", "fred", "graham"}
-	dirs := [2]string{"short/test/dir/", "test/dir/that/is/much/longer"}
-
-	inputs := make([]*os.File, len(paths))
-
-	for i, path := range paths {
-		f, err := os.Create(filepath.Join(dir, path))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		userIndex, groupIndex := floor(float64(i)/2), floor(float64(i)/2)
-		dirIndex := floor(float64(i) / 3)
-
-		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%d", groups[groupIndex],
-			users[userIndex], dirs[dirIndex], i+1, i+2))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		inputs[i] = f
-
-		f.Close()
-	}
-
-	outputPath := filepath.Join(dir, "combine.byusergroup.gz")
-
-	fileOutput, err := os.Create(outputPath)
-	if err != nil {
-		t.Fatalf("create error: %s", err)
-	}
-
-	return inputs, fileOutput, outputPath
 }

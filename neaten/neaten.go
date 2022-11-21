@@ -147,8 +147,8 @@ func (t *Tidy) moveAndDelete() error {
 // ownership and permissions to match the destDir.
 func (t *Tidy) findAndMoveOutputs(inSuffix, outSuffix string) error {
 	outputPaths, err := filepath.Glob(fmt.Sprintf(t.CombineFileGlobPattern, t.SrcDir, inSuffix))
-	if err != nil {
-		return err
+	if err != nil || len(outputPaths) == 0 {
+		panic(fmt.Sprintf("could not find %s files in %s", inSuffix, t.SrcDir))
 	}
 
 	for _, path := range outputPaths {

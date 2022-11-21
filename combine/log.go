@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -31,8 +31,8 @@ import (
 	"os"
 )
 
-// MergeLogAndCompress merges the inputs and stores in the output, compressed.
-func MergeLogAndCompress(inputs []*os.File, output *os.File) error {
+// LogFiles merges the log files and stores in the output, compressed.
+func LogFiles(inputs []*os.File, output *os.File) error {
 	return MergeAndCompress(inputs, output, mergeLogStreamToCompressedFile)
 }
 

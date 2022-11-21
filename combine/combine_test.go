@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * 		   Kyle Mace  <km34@sanger.ac.uk>
@@ -41,7 +41,11 @@ import (
 // functionality of the combine package.
 func TestConcatenateMergeAndCompress(t *testing.T) {
 	Convey("Given some inputs and an output", t, func() {
-		inputs, output, outputPath := createInputsAndOutput(t)
+		inputs, output, outputPath := BuildCombineAndUserGroupInputs(t,
+			[]string{"path1", "path2", "path3", "path4", "path5", "path6"},
+			[]string{"adam", "ben", "charlie"},
+			[]string{"david", "fred", "graham"},
+			[]string{"short/test/dir/", "test/dir/that/is/much/longer"})
 
 		expectedConcatenatedOutput := "adam\tdavid\tshort/test/dir/\t1\t2\n" +
 			"adam\tdavid\tshort/test/dir/\t2\t3\n" +
@@ -162,7 +166,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 			So(string(b), ShouldEqual, expectedMergeLinesOutput)
 		})
 
-		Convey("can merge the file contents to a compressed output", func() {
+		Convey("You can merge the file contents to a compressed output", func() {
 			inputFiles := make([]string, len(inputs))
 			for i, file := range inputs {
 				inputFiles[i] = file.Name()
@@ -216,18 +220,29 @@ func lineMerger(cols int, a, b []string) {
 
 // createInputsAndOutput creates the combine files needed for testing, returning
 // a list of the open files, the open output file and the output file path.
-func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
+func BuildCombineAndUserGroupInputs(t *testing.T, paths, users, groups, dirs []string) ([]*os.File, *os.File, string) {
+	t.Helper()
 	dir := t.TempDir()
 
-	paths := [6]string{"path1", "path2", "path3", "path4", "path5", "path6"}
-	users := [3]string{"adam", "ben", "charlie"}
-	groups := [3]string{"david", "fred", "graham"}
-	dirs := [2]string{"short/test/dir/", "test/dir/that/is/much/longer"}
+	inputs := createInputsAndOutput(t, dir, paths, users, groups, dirs)
+
+	outputPath := filepath.Join(dir, "output")
+
+	fo, err := os.Create(outputPath)
+	if err != nil {
+		t.Fatalf("create error: %s", err)
+	}
+
+	return inputs, fo, outputPath
+}
+
+func createInputsAndOutput(t *testing.T, testingDir string, paths, users, groups, dirs []string) []*os.File {
+	t.Helper()
 
 	inputs := make([]*os.File, len(paths))
 
 	for i, path := range paths {
-		f, err := os.Create(filepath.Join(dir, path))
+		f, err := os.Create(filepath.Join(testingDir, path))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -246,7 +261,7 @@ func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
 		f.Close()
 	}
 
-	filenames, err := fs.FindFilePathsInDir(dir, "")
+	filenames, err := fs.FindFilePathsInDir(testingDir, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,12 +271,5 @@ func createInputsAndOutput(t *testing.T) ([]*os.File, *os.File, string) {
 		t.Fatal(err)
 	}
 
-	outputPath := filepath.Join(dir, "output")
-
-	fo, err := os.Create(outputPath)
-	if err != nil {
-		t.Fatalf("create error: %s", err)
-	}
-
-	return inputs, fo, outputPath
+	return inputs
 }

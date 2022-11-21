@@ -9,6 +9,11 @@ import (
 	"github.com/klauspost/pgzip"
 )
 
+// filePerms used to declare file mode permissions when making a new directory.
+const filePerms = 448
+
+const maxSize = 100000000
+
 type Error string
 
 func (e Error) Error() string { return string(e) }
@@ -62,6 +67,7 @@ func ReadCompressedFile(filePath string) (string, error) {
 	defer fileReader.Close()
 
 	fileScanner := bufio.NewScanner(fileReader)
+	fileScanner.Buffer([]byte{}, maxSize)
 
 	var fileContents string
 	for fileScanner.Scan() {
@@ -77,7 +83,7 @@ func ReadCompressedFile(filePath string) (string, error) {
 func RemoveAndCreateDir(dir string) (string, error) {
 	os.RemoveAll(dir)
 
-	err := os.MkdirAll(dir, 448)
+	err := os.MkdirAll(dir, filePerms)
 	if err != nil {
 		return "", err
 	}
@@ -106,5 +112,4 @@ func FindOpenAndCreate(inputDir, outputDir, inputDirSuffix, outputDirSuffix stri
 	}
 
 	return inputFiles, output, nil
-
 }
