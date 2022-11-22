@@ -151,7 +151,8 @@ func mergeAndCompressUserGroupFiles(sourceDir string) {
 
 // mergeGroupFiles finds and merges the bygroup files.
 func mergeGroupFiles(sourceDir string) {
-	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, sourceDir, statGroupSummaryOutputFileSuffix, combineGroupOutputFileBasename)
+	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, sourceDir,
+		statGroupSummaryOutputFileSuffix, combineGroupOutputFileBasename)
 	if err != nil {
 		die("failed to merge the group files: %s", err)
 	}
