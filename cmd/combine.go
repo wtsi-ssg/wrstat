@@ -124,8 +124,8 @@ func init() {
 // concatenateAndCompressStatsFiles finds and concatenates the stats files and
 // compresses the output.
 func concatenateAndCompressStatsFiles(sourceDir string) {
-	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, statOutputFileSuffix,
-		sourceDir, combineStatsOutputFileBasename)
+	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, sourceDir, statOutputFileSuffix,
+		combineStatsOutputFileBasename)
 	if err != nil {
 		die("failed to merge the stats files: %s", err)
 	}
@@ -138,8 +138,8 @@ func concatenateAndCompressStatsFiles(sourceDir string) {
 // mergeAndCompressUserGroupFiles finds and merges the byusergroup files and
 // compresses the output.
 func mergeAndCompressUserGroupFiles(sourceDir string) {
-	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, statUserGroupSummaryOutputFileSuffix,
-		sourceDir, combineUserGroupOutputFileBasename)
+	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir,
+		sourceDir, statUserGroupSummaryOutputFileSuffix, combineUserGroupOutputFileBasename)
 	if err != nil {
 		die("failed to merge the user group files: %s", err)
 	}
@@ -151,8 +151,7 @@ func mergeAndCompressUserGroupFiles(sourceDir string) {
 
 // mergeGroupFiles finds and merges the bygroup files.
 func mergeGroupFiles(sourceDir string) {
-	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, statGroupSummaryOutputFileSuffix,
-		sourceDir, combineGroupOutputFileBasename)
+	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, sourceDir, statGroupSummaryOutputFileSuffix, combineGroupOutputFileBasename)
 	if err != nil {
 		die("failed to merge the group files: %s", err)
 	}
@@ -165,8 +164,8 @@ func mergeGroupFiles(sourceDir string) {
 // mergeAndCompressLogFiles finds and merges the log files and compresses the
 // output.
 func mergeAndCompressLogFiles(sourceDir string) {
-	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, statLogOutputFileSuffix,
-		sourceDir, combineLogOutputFileBasename)
+	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir,
+		sourceDir, statLogOutputFileSuffix, combineLogOutputFileBasename)
 	if err != nil {
 		die("failed to merge the log files: %s", err)
 	}
