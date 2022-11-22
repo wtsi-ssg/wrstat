@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/termie/go-shutil"
+	fileCheck "github.com/wtsi-ssg/wrstat/v3/fs"
 )
 
 // modeRW are the read-write permission bits for user, group and other.
@@ -85,11 +86,11 @@ type Tidy struct {
 // .dgut.db.updated, setting its mTime equal to the oldest of all those from our
 // srcDir.
 func (t *Tidy) Up() error {
-	if err := dirValid(t.SrcDir); err != nil {
+	if err := fileCheck.DirValid(t.SrcDir); err != nil {
 		return err
 	}
 
-	err := dirValid(t.DestDir)
+	err := fileCheck.DirValid(t.DestDir)
 	if os.IsNotExist(err) {
 		err = os.MkdirAll(t.DestDir, t.DestDirPerms)
 		if err != nil {
@@ -103,18 +104,6 @@ func (t *Tidy) Up() error {
 	}
 
 	return t.moveAndDelete()
-}
-
-// dirValid checks if the directory is valid: is absolute and exists.
-func dirValid(dir string) error {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(dir)
-
-	return err
 }
 
 // moveAndDelete does the main work of this package: it finds, renames and moves

@@ -12,8 +12,6 @@ import (
 // filePerms used to declare file mode permissions when making a new directory.
 const filePerms = 448
 
-const maxSize = 100000000
-
 type Error string
 
 func (e Error) Error() string { return string(e) }
@@ -67,7 +65,7 @@ func ReadCompressedFile(filePath string) (string, error) {
 	defer fileReader.Close()
 
 	fileScanner := bufio.NewScanner(fileReader)
-	fileScanner.Buffer([]byte{}, maxSize)
+	fileScanner.Buffer([]byte{}, bufio.MaxScanTokenSize)
 
 	var fileContents string
 	for fileScanner.Scan() {
@@ -112,4 +110,33 @@ func FindOpenAndCreate(inputDir, outputDir, inputDirSuffix, outputDirSuffix stri
 	}
 
 	return inputFiles, output, nil
+}
+
+func ReadWholeFile(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	fileScanner := bufio.NewScanner(f)
+	fileScanner.Buffer([]byte{}, bufio.MaxScanTokenSize)
+
+	var fileContents string
+	for fileScanner.Scan() {
+		fileContents += fileScanner.Text() + "\n"
+	}
+
+	return fileContents, nil
+}
+
+// dirValid checks if the directory is valid: is absolute and exists.
+func DirValid(dir string) error {
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(dir)
+
+	return err
 }
