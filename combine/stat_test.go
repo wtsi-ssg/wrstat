@@ -37,6 +37,7 @@ import (
 	"github.com/wtsi-ssg/wrstat/v3/fs"
 )
 
+// TestStatFiles tests that the stat files concatenate and compress properly.
 func TestStatFiles(t *testing.T) {
 	Convey("Given stat files and an output", t, func() {
 		dir, inputs, output, outputPath := buildStatFiles(t)

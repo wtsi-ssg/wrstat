@@ -37,7 +37,7 @@ func LogFiles(inputs []*os.File, output *os.File) error {
 }
 
 // mergeLogStreamToCompressedFile combines log data, outputting the results to a
-// file, compressed.
+// file.
 func mergeLogStreamToCompressedFile(data io.ReadCloser, output io.Writer) error {
 	_, err := io.Copy(output, data)
 

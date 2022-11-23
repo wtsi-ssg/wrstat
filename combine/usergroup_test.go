@@ -34,6 +34,8 @@ import (
 	"github.com/wtsi-ssg/wrstat/v3/fs"
 )
 
+// TestByUserGroupFiles tests that the .byusergroup files merge and compress
+// properly.
 func TestByUserGroupFiles(t *testing.T) {
 	Convey("Given byusergroup files and an output", t, func() {
 		inputs, output, outputPath := BuildCombineAndUserGroupInputs(t,

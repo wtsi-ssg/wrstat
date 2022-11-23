@@ -199,11 +199,9 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 
 // concatMerger specifies how a set of files is merged to an output.
 func concatMerger(data io.ReadCloser, output io.Writer) error {
-	if _, err := io.Copy(output, data); err != nil {
-		return err
-	}
+	_, err := io.Copy(output, data)
 
-	return nil
+	return err
 }
 
 // lineMerger is a matchingSummaryLineMerger that, given cols 2, will sum
@@ -218,13 +216,15 @@ func lineMerger(cols int, a, b []string) {
 	a[last] = addNumberStrings(a[last], b[last])
 }
 
-// createInputsAndOutput creates the combine files needed for testing, returning
-// a list of the open files, the open output file and the output file path.
+// BuildCombineAndUserGroupInputs creates the combine files needed for testing,
+// returning a list of the open files, the open output file and the output file
+// path (and is also invoked in usergroup.go, as the file format used there is
+// the same).
 func BuildCombineAndUserGroupInputs(t *testing.T, paths, users, groups, dirs []string) ([]*os.File, *os.File, string) {
 	t.Helper()
 	dir := t.TempDir()
 
-	inputs := createInputsAndOutput(t, dir, paths, users, groups, dirs)
+	inputs := createInputs(t, dir, paths, users, groups, dirs)
 
 	outputPath := filepath.Join(dir, "output")
 
@@ -236,7 +236,8 @@ func BuildCombineAndUserGroupInputs(t *testing.T, paths, users, groups, dirs []s
 	return inputs, fo, outputPath
 }
 
-func createInputsAndOutput(t *testing.T, testingDir string, paths, users, groups, dirs []string) []*os.File {
+// createInputs creates the inputs needed for BuildCombineAndUserGroupInputs.
+func createInputs(t *testing.T, testingDir string, paths, users, groups, dirs []string) []*os.File {
 	t.Helper()
 
 	inputs := make([]*os.File, len(paths))

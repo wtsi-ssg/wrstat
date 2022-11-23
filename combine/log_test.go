@@ -36,6 +36,7 @@ import (
 	"github.com/wtsi-ssg/wrstat/v3/fs"
 )
 
+// TestLogFiles tests that the log files merge and compress properly.
 func TestLogFiles(t *testing.T) {
 	Convey("Given log files and an output", t, func() {
 		inputs, output, outputPath := buildLogFiles(t)

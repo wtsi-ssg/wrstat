@@ -36,6 +36,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// TestByGroupFiles tests that the .bygroup files properly merge to the output
+// file.
 func TestByGroupFiles(t *testing.T) {
 	Convey("Given bygroup files and an output", t, func() {
 		inputs, output, outputPath := buildByGroupFiles(t)

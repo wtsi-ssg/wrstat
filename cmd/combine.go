@@ -34,20 +34,11 @@ import (
 	"github.com/wtsi-ssg/wrstat/v3/fs"
 )
 
-const bytesInMB = 1000000
-const pgzipWriterBlocksMultiplier = 2
 const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
 const combineGroupOutputFileBasename = "combine.bygroup"
 const combineDGUTOutputFileBasename = "combine.dgut.db"
 const combineLogOutputFileBasename = "combine.log.gz"
-const numSummaryColumns = 2
-const numSummaryColumnsDGUT = 3
-const groupSumCols = 2
-const userGroupSumCols = 3
-const intBase = 10
-const dgutSumCols = 4
-const dgutStoreBatchSize = 100000
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
