@@ -94,7 +94,7 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string) {
 }
 
 // buildDGUTContent writes the top root from dir on line 1, and recursively
-// appends the dir of the root on line 2, 3, 4, etc. Appended to the path on
+// appends the base of the root on line 2, 3, 4, etc. Appended to the path on
 // each line, is the tab-separated data as follows: gid, uid, filetype,
 // nestedFiles, fileSize, atime. For example,
 // /	1313	13912	0	1	0	1668768807
@@ -113,7 +113,7 @@ func buildDGUTContent(directory, gid, uid string, filetype, nestedFiles, fileSiz
 }
 
 // recursivePath takes a path, and into an array equal to the length of the
-// path, recursively writes the path from the top root to the full path. For
+// path, recursively appends the path base, starting with the top dir. For
 // example: /lustre/scratch123 would give,
 // []string{"/", "/lustre", "/lustre/scratch123"}.
 func recursivePath(path string) []string {

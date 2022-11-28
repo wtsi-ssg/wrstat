@@ -105,6 +105,7 @@ func buildByGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
 	return inputs, fileOutput, outputPath
 }
 
+// floor returns the floor (a round-down, e.g. floor(3.9) = 3) of a float x.
 func floor(x float64) int {
 	return int(math.Floor(x))
 }

@@ -112,23 +112,6 @@ func FindOpenAndCreate(inputDir, outputDir, inputDirSuffix, outputDirSuffix stri
 	return inputFiles, output, nil
 }
 
-func ReadWholeFile(filePath string) (string, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-
-	fileScanner := bufio.NewScanner(f)
-	fileScanner.Buffer([]byte{}, bufio.MaxScanTokenSize)
-
-	var fileContents string
-	for fileScanner.Scan() {
-		fileContents += fileScanner.Text() + "\n"
-	}
-
-	return fileContents, nil
-}
-
 // dirValid checks if the directory is valid: is absolute and exists.
 func DirValid(dir string) error {
 	dir, err := filepath.Abs(dir)

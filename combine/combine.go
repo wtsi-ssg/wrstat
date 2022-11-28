@@ -39,9 +39,6 @@ import (
 
 const bytesInMB = 1000000
 const pgzipWriterBlocksMultiplier = 2
-const dgutStoreBatchSize = 10000
-const dgutSumCols = 4
-const numSummaryColumnsDGUT = 3
 
 // ConcatenateAndCompress takes a list of open files as its input, and an open
 // file for its output. It compresses the output, and then stores there the
@@ -98,12 +95,6 @@ func Compress(output io.Writer) (*pgzip.Writer, func(), error) {
 		}
 	}, err
 }
-
-type Stream interface {
-	StreamFunc() error
-}
-
-type StreamFunc func() error
 
 // Merger takes an input io.readCloser and an output io.writer, and defines how
 // we want to merge the content in the io.readCloser, and stream it to the
