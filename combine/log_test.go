@@ -87,6 +87,16 @@ func buildLogFiles(t *testing.T) ([]*os.File, *os.File, string) {
 		f.Close()
 	}
 
+	filenames, err := fs.FindFilePathsInDir(dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	inputs, err = fs.OpenFiles(filenames)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	outputPath := filepath.Join(dir, "combine.log.gz")
 
 	fileOutput, err := os.Create(outputPath)
