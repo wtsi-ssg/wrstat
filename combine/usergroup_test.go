@@ -28,6 +28,7 @@ package combine
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -38,7 +39,7 @@ import (
 // properly.
 func TestByUserGroupFiles(t *testing.T) {
 	Convey("Given byusergroup files and an output", t, func() {
-		inputs, output, outputPath := BuildCombineAndUserGroupInputs(t,
+		inputs, output, outputPath := buildUserGroupInputs(t,
 			[]string{"walk.1.byusergroup", "walk.2.byusergroup", "walk.3.byusergroup",
 				"walk.4.byusergroup", "walk.5.byusergroup", "walk.6.byusergroup"},
 			[]string{"david", "fred", "graham"},
@@ -65,4 +66,23 @@ func TestByUserGroupFiles(t *testing.T) {
 			})
 		})
 	})
+}
+
+// buildUserGroupInputs creates the usergroup files needed for testing,
+// returning a list of the open files, the open output file and the output file
+// path.
+func buildUserGroupInputs(t *testing.T, paths, users, groups, dirs []string) ([]*os.File, *os.File, string) {
+	t.Helper()
+	dir := t.TempDir()
+
+	inputs := createInputs(t, dir, paths, users, groups, dirs)
+
+	outputPath := filepath.Join(dir, "output")
+
+	fo, err := os.Create(outputPath)
+	if err != nil {
+		t.Fatalf("create error: %s", err)
+	}
+
+	return inputs, fo, outputPath
 }

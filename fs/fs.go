@@ -17,10 +17,14 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 // FindFilePathsInDir finds files in the given dir that have basenames with the
-// given suffix. Dies on error.
+// given suffix.
 func FindFilePathsInDir(dir, suffix string) ([]string, error) {
 	paths, err := filepath.Glob(fmt.Sprintf("%s/*%s", dir, suffix))
-	if err != nil || len(paths) == 0 {
+	if err != nil {
+		return paths, err
+	}
+
+	if len(paths) == 0 {
 		return paths, Error("Error: could not find paths.")
 	}
 
@@ -28,7 +32,7 @@ func FindFilePathsInDir(dir, suffix string) ([]string, error) {
 }
 
 // CreateOutputFileInDir creates a file for writing in the given dir with the
-// given basename. Dies on error.
+// given basename.
 func CreateOutputFileInDir(dir, basename string) (*os.File, error) {
 	return os.Create(filepath.Join(dir, basename))
 }
@@ -75,18 +79,14 @@ func ReadCompressedFile(filePath string) (string, error) {
 	return fileContents, nil
 }
 
-// RemoveAndCreateDir creates a dgut output dir in the given dir.
-// Returns the path to the created directory. If it already existed, will delete
-// it first, since we can't store to a pre-existing db.
-func RemoveAndCreateDir(dir string) (string, error) {
+// RemoveAndCreateDir creates the given directory, deleting it first if it
+// already exists.
+func RemoveAndCreateDir(dir string) error {
 	os.RemoveAll(dir)
 
 	err := os.MkdirAll(dir, filePerms)
-	if err != nil {
-		return "", err
-	}
 
-	return dir, nil
+	return err
 }
 
 // FindOpenAndCreate takes an input and output directory, each with their own
@@ -112,7 +112,7 @@ func FindOpenAndCreate(inputDir, outputDir, inputDirSuffix, outputDirSuffix stri
 	return inputFiles, output, nil
 }
 
-// dirValid checks if the directory is valid: is absolute and exists.
+// DirValid checks if the directory is valid: is absolute and exists.
 func DirValid(dir string) error {
 	dir, err := filepath.Abs(dir)
 	if err != nil {

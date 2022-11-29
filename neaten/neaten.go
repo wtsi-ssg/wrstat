@@ -39,6 +39,10 @@ import (
 	fileCheck "github.com/wtsi-ssg/wrstat/v3/fs"
 )
 
+type Error string
+
+func (e Error) Error() string { return string(e) }
+
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
 
@@ -136,8 +140,12 @@ func (t *Tidy) moveAndDelete() error {
 // ownership and permissions to match the destDir.
 func (t *Tidy) findAndMoveOutputs(inSuffix, outSuffix string) error {
 	outputPaths, err := filepath.Glob(fmt.Sprintf(t.CombineFileGlobPattern, t.SrcDir, inSuffix))
-	if err != nil || len(outputPaths) == 0 {
-		panic(fmt.Sprintf("could not find %s files in %s", inSuffix, t.SrcDir))
+	if err != nil {
+		return err
+	}
+
+	if len(outputPaths) == 0 {
+		return Error("There are no existing files according to the provided input and output suffixes.")
 	}
 
 	for _, path := range outputPaths {

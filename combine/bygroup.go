@@ -34,14 +34,14 @@ import (
 const numSummaryColumns = 2
 const groupSumCols = 2
 
-// GroupFiles merges the group files into the output file.
+// GroupFiles combines pre-sorted .bygroup file data, by merging lines that
+// share the same first 2 column values in to a single line.
 func GroupFiles(inputs []*os.File, output *os.File) error {
 	return Merge(inputs, output, mergeGroupStreamToFile)
 }
 
-// mergeGroupStreamToFile merges pre-sorted (pre-merged) group data
-// (eg. from a `sort -m` of .bygroup files), summing consecutive lines with
-// the same first 2 columns, and outputting the results.
+// mergeGroupStreamToFile is a Merger that sums consecutive lines with the same
+// first 2 columns.
 func mergeGroupStreamToFile(data io.ReadCloser, output io.Writer) error {
 	return MergeSummaryLines(data, groupSumCols, numSummaryColumns, sumCountAndSize, output)
 }

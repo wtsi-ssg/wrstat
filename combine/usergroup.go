@@ -35,15 +35,15 @@ import (
 const userGroupSumCols = 3
 const intBase = 10
 
-// UserGroupFiles merges the usergroup files into the output, compressed.
+// UserGroupFiles combines pre-sorted .byusergroup file data, by merging lines
+// that share the same first 3 column values in to a single line, and
+// compressing the output.
 func UserGroupFiles(inputs []*os.File, output *os.File) error {
-	return MergeAndCompress(inputs, output, mergeUserGroupStreamToCompressedFile)
+	return MergeAndCompress(inputs, output, mergeUserGroupStream)
 }
 
-// mergeUserGroupStreamToCompressedFile merges pre-sorted (pre-merged) usergroup
-// data (eg. from a `sort -m` of .byusergroup files), summing consecutive lines
-// with the first 3 columns, and outputting the results to a file, compressed.
-func mergeUserGroupStreamToCompressedFile(data io.ReadCloser, output io.Writer) error {
+// mergeUserGroupStream is a Merger that sums when the first 3 columns match.
+func mergeUserGroupStream(data io.ReadCloser, output io.Writer) error {
 	return MergeSummaryLines(data, userGroupSumCols, numSummaryColumns, sumCountAndSize, output)
 }
 

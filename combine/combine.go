@@ -41,8 +41,8 @@ const bytesInMB = 1000000
 const pgzipWriterBlocksMultiplier = 2
 
 // ConcatenateAndCompress takes a list of open files as its input, and an open
-// file for its output. It compresses the output, and then stores there the
-// concatenated contents of the inputs.
+// file for its output. It writes to the output the compressed, concatenated
+// inputs.
 func ConcatenateAndCompress(inputs []*os.File, output *os.File) error {
 	compressor, closer, err := Compress(output)
 	if err != nil {

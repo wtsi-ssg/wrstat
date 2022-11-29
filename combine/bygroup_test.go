@@ -56,7 +56,7 @@ func TestByGroupFiles(t *testing.T) {
 				actualContent := string(b)
 				So(err, ShouldBeNil)
 
-				expectedContent := "adam\tdavid\t3\t5\nben\tfred\t7\t9\ncharlie\tgraham\t11\t13\n"
+				expectedContent := "group1\tuser1\t3\t5\ngroup2\tuser2\t7\t9\ngroup3\tuser3\t11\t13\n"
 				So(actualContent, ShouldEqual, expectedContent)
 			})
 		})
@@ -76,7 +76,7 @@ func buildByGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
 
 	paths := [6]string{"walk.1.bygroup", "walk.2.bygroup", "walk.3.bygroup",
 		"walk.4.bygroup", "walk.5.bygroup", "walk.6.bygroup"}
-	users, groups := [3]string{"adam", "ben", "charlie"}, [3]string{"david", "fred", "graham"}
+	users, groups := [3]string{"user1", "user2", "user3"}, [3]string{"group1", "group2", "group3"}
 
 	dir := t.TempDir()
 	inputs := make([]*os.File, len(paths))
@@ -85,9 +85,9 @@ func buildByGroupFiles(t *testing.T) ([]*os.File, *os.File, string) {
 		f, err := os.Create(filepath.Join(dir, path))
 		So(err, ShouldBeNil)
 
-		userIndex, groupIndex := floor(float64(i)/2), floor(float64(i)/2)
+		index := floor(float64(i) / 2)
 
-		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n", users[userIndex], groups[groupIndex], i+1, i+2))
+		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n", groups[index], users[index], i+1, i+2))
 		So(err, ShouldBeNil)
 
 		inputs[i] = f

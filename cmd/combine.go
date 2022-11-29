@@ -55,6 +55,7 @@ compressed and placed at the root of the output directory in a file called
 'combine.byusergroup.gz'.
 
 The same applies to the *.log files, being called 'combine.log.gz'.
+
 The *.dugt files will be turned in to databases in a directory
 'combine.dgut.db'.
 
@@ -101,7 +102,7 @@ you supplied 'wrstat walk'.`,
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mergeAndCompressLogFiles(sourceDir)
+			concatenateAndCompressLogFiles(sourceDir)
 		}()
 
 		wg.Wait()
@@ -118,7 +119,7 @@ func concatenateAndCompressStatsFiles(sourceDir string) {
 	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, sourceDir, statOutputFileSuffix,
 		combineStatsOutputFileBasename)
 	if err != nil {
-		die("failed to merge the stats files: %s", err)
+		die("failed to find, open or create stats files: %s", err)
 	}
 
 	if err = combine.StatFiles(inputFiles, outputFile); err != nil {
@@ -132,7 +133,7 @@ func mergeAndCompressUserGroupFiles(sourceDir string) {
 	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir,
 		sourceDir, statUserGroupSummaryOutputFileSuffix, combineUserGroupOutputFileBasename)
 	if err != nil {
-		die("failed to merge the user group files: %s", err)
+		die("failed to find, open or create usergroup files: %s", err)
 	}
 
 	if err = combine.UserGroupFiles(inputFiles, outputFile); err != nil {
@@ -145,7 +146,7 @@ func mergeGroupFiles(sourceDir string) {
 	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, sourceDir,
 		statGroupSummaryOutputFileSuffix, combineGroupOutputFileBasename)
 	if err != nil {
-		die("failed to merge the group files: %s", err)
+		die("failed to find, open or create group files: %s", err)
 	}
 
 	if err = combine.GroupFiles(inputFiles, outputFile); err != nil {
@@ -153,13 +154,13 @@ func mergeGroupFiles(sourceDir string) {
 	}
 }
 
-// mergeAndCompressLogFiles finds and merges the log files and compresses the
+// concatenateAndCompressLogFiles finds and merges the log files and compresses the
 // output.
-func mergeAndCompressLogFiles(sourceDir string) {
+func concatenateAndCompressLogFiles(sourceDir string) {
 	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir,
 		sourceDir, statLogOutputFileSuffix, combineLogOutputFileBasename)
 	if err != nil {
-		die("failed to merge the log files: %s", err)
+		die("failed to find, open or create log files: %s", err)
 	}
 
 	if err := combine.LogFiles(inputFiles, outputFile); err != nil {
@@ -175,9 +176,10 @@ func mergeDGUTFilesToDB(sourceDir string) {
 		die("failed to find the dgut files: %s", err)
 	}
 
-	outputDir, err := fs.RemoveAndCreateDir(filepath.Join(sourceDir, combineDGUTOutputFileBasename))
+	outputDir := filepath.Join(sourceDir, combineDGUTOutputFileBasename)
+	err = fs.RemoveAndCreateDir(outputDir)
 	if err != nil {
-		die("failed to create the dgut files: %s", err)
+		die("failed to remove or create the dgut directory: %s", err)
 	}
 
 	if err = combine.DgutFiles(paths, outputDir); err != nil {

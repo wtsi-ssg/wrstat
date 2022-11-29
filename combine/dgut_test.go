@@ -39,7 +39,7 @@ import (
 
 // TestDGUTFiles tests that the DGUT files merge properly to the output.
 func TestDGUTFiles(t *testing.T) {
-	Convey("Given log files and an output", t, func() {
+	Convey("Given dgut files and an output", t, func() {
 		inputs, output, outputPath := buildDGUTFiles(t)
 
 		Convey("You can merge the DGUT files and store to a db", func() {
@@ -49,13 +49,6 @@ func TestDGUTFiles(t *testing.T) {
 			_, err = os.Stat(outputPath)
 			So(err, ShouldBeNil)
 		})
-		/*
-			ah, err := dgutDBCombinePaths(thisDir)
-			So(err, ShouldBeNil)
-
-			tree, err := dgut.NewTree(ah...)
-			So(err, ShouldBeNil)
-			So(tree, ShouldEqual, "")*/
 	})
 }
 
@@ -72,12 +65,9 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string) {
 	f3, err := os.Create(filepath.Join(dir, "file3"))
 	So(err, ShouldBeNil)
 
-	file1Content := buildDGUTContent("/lustre/scratch123/hgi/teams/hgi/mercury/km34_wrstat/src",
-		"1313", "13912", 0, 1, 0, 1668768807)
-	file2Content := buildDGUTContent("/lustre/scratch123/hgi/teams/hgi/mercury/km34_wrstat/src",
-		"1313", "13912", 0, 1, 21, 1668768807)
-	file3Content := buildDGUTContent("/lustre/scratch123/hgi/teams/hgi/mercury/km34_wrstat/src",
-		"1313", "21574", 0, 1, 0, 1668768810)
+	file1Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807)
+	file2Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 21, 1668768807)
+	file3Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 0, 1668768810)
 
 	_, err = f1.WriteString(file1Content)
 	So(err, ShouldBeNil)
@@ -87,7 +77,9 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string) {
 	So(err, ShouldBeNil)
 
 	outputPath := filepath.Join(dir, "combine.dgut.db")
-	output, err := fs.RemoveAndCreateDir(filepath.Join(dir, "combine.dgut.db"))
+	output := filepath.Join(dir, "combine.dgut.db")
+	// Investigate what the point is in returning output and outputPath; they are identical.
+	err = fs.RemoveAndCreateDir(output)
 	So(err, ShouldBeNil)
 
 	return []string{f1.Name(), f2.Name(), f3.Name()}, output, outputPath

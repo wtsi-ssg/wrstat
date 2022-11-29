@@ -28,7 +28,7 @@ package combine
 
 import "os"
 
-// StatFiles finds and conatenates the stats files into the output, compressed.
+// StatFiles concatenates and compresses the input stat files to the output.
 func StatFiles(inputs []*os.File, output *os.File) error {
 	return ConcatenateAndCompress(inputs, output)
 }

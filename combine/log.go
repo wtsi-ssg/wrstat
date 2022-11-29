@@ -27,19 +27,10 @@
 package combine
 
 import (
-	"io"
 	"os"
 )
 
 // LogFiles merges the log files and stores in the output, compressed.
 func LogFiles(inputs []*os.File, output *os.File) error {
-	return MergeAndCompress(inputs, output, mergeLogStreamToCompressedFile)
-}
-
-// mergeLogStreamToCompressedFile combines log data, outputting the results to a
-// file.
-func mergeLogStreamToCompressedFile(data io.ReadCloser, output io.Writer) error {
-	_, err := io.Copy(output, data)
-
-	return err
+	return ConcatenateAndCompress(inputs, output)
 }

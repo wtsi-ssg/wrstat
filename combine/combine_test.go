@@ -41,25 +41,33 @@ import (
 // functionality of the combine package.
 func TestConcatenateMergeAndCompress(t *testing.T) {
 	Convey("Given some inputs and an output", t, func() {
-		inputs, output, outputPath := BuildCombineAndUserGroupInputs(t,
+		maxLengthDir := "longString/longStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlong/StringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlongStringlong"
+		So(len(maxLengthDir), ShouldEqual, 4096)
+
+		inputs, output, outputPath := buildCombineInputs(t,
 			[]string{"path1", "path2", "path3", "path4", "path5", "path6"},
-			[]string{"adam", "ben", "charlie"},
-			[]string{"david", "fred", "graham"},
-			[]string{"short/test/dir/", "test/dir/that/is/much/longer"})
+			[]string{"user1", "user2", "user3"},
+			[]string{"group1", "group2", "group3"},
+			[]string{"short/test/dir/", maxLengthDir})
 
-		expectedConcatenatedOutput := "adam\tdavid\tshort/test/dir/\t1\t2\n" +
-			"adam\tdavid\tshort/test/dir/\t2\t3\n" +
-			"ben\tfred\tshort/test/dir/\t3\t4\n" +
-			"ben\tfred\ttest/dir/that/is/much/longer\t4\t5\n" +
-			"charlie\tgraham\ttest/dir/that/is/much/longer\t5\t6\n" +
-			"charlie\tgraham\ttest/dir/that/is/much/longer\t6\t7\n"
+		expectedConcatenatedOutput := fmt.Sprintf("user1\tgroup1\tshort/test/dir/\t1\t2\n"+
+			"user1\tgroup1\tshort/test/dir/\t2\t3\n"+
+			"user2\tgroup2\tshort/test/dir/\t3\t4\n"+
+			"user2\tgroup2\t%s\t4\t5\n"+
+			"user3\tgroup3\t%s\t5\t6\n"+
+			"user3\tgroup3\t%s\t6\t7\n", maxLengthDir, maxLengthDir, maxLengthDir)
 
-		expectedMergeOutput := expectedConcatenatedOutput
+		expectedMergeOutput := fmt.Sprintf("user1\tgroup1\tshort/test/dir/\t1\t2\n"+
+			"user1\tgroup1\tshort/test/dir/\t2\t3\n"+
+			"user2\tgroup2\t%s\t4\t5\n"+
+			"user2\tgroup2\tshort/test/dir/\t3\t4\n"+
+			"user3\tgroup3\t%s\t5\t6\n"+
+			"user3\tgroup3\t%s\t6\t7\n", maxLengthDir, maxLengthDir, maxLengthDir)
 
-		expectedMergeLinesOutput := "adam\tdavid\tshort/test/dir/\t3\t5\n" +
-			"ben\tfred\tshort/test/dir/\t3\t4\n" +
-			"ben\tfred\ttest/dir/that/is/much/longer\t4\t5\n" +
-			"charlie\tgraham\ttest/dir/that/is/much/longer\t11\t13\n"
+		expectedMergeLinesOutput := fmt.Sprintf("user1\tgroup1\tshort/test/dir/\t3\t5\n"+
+			"user2\tgroup2\t%s\t4\t5\n"+
+			"user2\tgroup2\tshort/test/dir/\t3\t4\n"+
+			"user3\tgroup3\t%s\t11\t13\n", maxLengthDir, maxLengthDir)
 
 		Convey("You can concatenate the inputs to the output", func() {
 			err := Concatenate(inputs, output)
@@ -216,11 +224,10 @@ func lineMerger(cols int, a, b []string) {
 	a[last] = addNumberStrings(a[last], b[last])
 }
 
-// BuildCombineAndUserGroupInputs creates the combine files needed for testing,
+// buildCombineInputs creates the combine files needed for testing,
 // returning a list of the open files, the open output file and the output file
-// path (and is also invoked in usergroup.go, as the file format used there is
-// the same).
-func BuildCombineAndUserGroupInputs(t *testing.T, paths, users, groups, dirs []string) ([]*os.File, *os.File, string) {
+// path.
+func buildCombineInputs(t *testing.T, paths, users, groups, dirs []string) ([]*os.File, *os.File, string) {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -248,11 +255,11 @@ func createInputs(t *testing.T, testingDir string, paths, users, groups, dirs []
 			t.Fatal(err)
 		}
 
-		userIndex, groupIndex := floor(float64(i)/2), floor(float64(i)/2)
+		userAndGroupIndex := floor(float64(i) / 2)
 		pathIndex := floor(float64(i) / 3)
 
-		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%d\n", users[userIndex],
-			groups[groupIndex], dirs[pathIndex], i+1, i+2))
+		_, err = f.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%d\n", users[userAndGroupIndex],
+			groups[userAndGroupIndex], dirs[pathIndex], i+1, i+2))
 		if err != nil {
 			t.Fatal(err)
 		}
