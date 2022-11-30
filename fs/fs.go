@@ -11,6 +11,7 @@ import (
 
 // filePerms used to declare file mode permissions when making a new directory.
 const filePerms = 448
+const bufferLength = 1000000
 
 type Error string
 
@@ -69,7 +70,7 @@ func ReadCompressedFile(filePath string) (string, error) {
 	defer fileReader.Close()
 
 	fileScanner := bufio.NewScanner(fileReader)
-	fileScanner.Buffer([]byte{}, bufio.MaxScanTokenSize)
+	fileScanner.Buffer([]byte{}, bufferLength)
 
 	var fileContents string
 	for fileScanner.Scan() {
