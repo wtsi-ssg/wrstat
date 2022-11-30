@@ -34,13 +34,15 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v3/dgut"
 	"github.com/wtsi-ssg/wrstat/v3/fs"
+	"github.com/wtsi-ssg/wrstat/v3/summary"
 )
 
 // TestDGUTFiles tests that the DGUT files merge properly to the output.
 func TestDGUTFiles(t *testing.T) {
 	Convey("Given dgut files and an output", t, func() {
-		inputs, output, outputPath := buildDGUTFiles(t)
+		inputs, output, outputPath, dir := buildDGUTFiles(t)
 
 		Convey("You can merge the DGUT files and store to a db", func() {
 			err := DgutFiles(inputs, output)
@@ -48,12 +50,31 @@ func TestDGUTFiles(t *testing.T) {
 
 			_, err = os.Stat(outputPath)
 			So(err, ShouldBeNil)
+
+			Convey("and a query of the db data should be valid, and return the content of our DGUT testing files.", func() {
+				db := dgut.NewDB(filepath.Join(dir, "combine.dgut.db"))
+				So(db, ShouldNotBeNil)
+
+				db.Close()
+
+				err = db.Open()
+				So(err, ShouldBeNil)
+
+				numFiles, fileSize, aTime, users, groups, fileType, err := db.DirInfo("/", nil)
+				So(err, ShouldBeNil)
+				So(numFiles, ShouldEqual, 3)
+				So(fileSize, ShouldEqual, 25)
+				So(aTime, ShouldEqual, 1668768807)
+				So(users, ShouldResemble, []uint32{13912, 21574})
+				So(groups, ShouldResemble, []uint32{1313})
+				So(fileType, ShouldResemble, []summary.DirGUTFileType{summary.DirGUTFileType(0)})
+			})
 		})
 	})
 }
 
 // buildDGUTFiles builds the DGUT files for testing.
-func buildDGUTFiles(t *testing.T) ([]string, string, string) {
+func buildDGUTFiles(t *testing.T) ([]string, string, string, string) {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -67,7 +88,7 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string) {
 
 	file1Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807)
 	file2Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 21, 1668768807)
-	file3Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 0, 1668768810)
+	file3Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, 1668768810)
 
 	_, err = f1.WriteString(file1Content)
 	So(err, ShouldBeNil)
@@ -78,11 +99,11 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string) {
 
 	outputPath := filepath.Join(dir, "combine.dgut.db")
 	output := filepath.Join(dir, "combine.dgut.db")
-	// Investigate what the point is in returning output and outputPath; they are identical.
+
 	err = fs.RemoveAndCreateDir(output)
 	So(err, ShouldBeNil)
 
-	return []string{f1.Name(), f2.Name(), f3.Name()}, output, outputPath
+	return []string{f1.Name(), f2.Name(), f3.Name()}, output, outputPath, dir
 }
 
 // buildDGUTContent writes the top root from dir on line 1, and recursively
