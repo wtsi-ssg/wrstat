@@ -43,6 +43,8 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
+const ErrNoOutputsFound = Error("There are no existing files according to the provided input and output suffixes.")
+
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
 
@@ -145,7 +147,7 @@ func (t *Tidy) findAndMoveOutputs(inSuffix, outSuffix string) error {
 	}
 
 	if len(outputPaths) == 0 {
-		return Error("There are no existing files according to the provided input and output suffixes.")
+		return ErrNoOutputsFound
 	}
 
 	for _, path := range outputPaths {

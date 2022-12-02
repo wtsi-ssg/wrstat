@@ -11,7 +11,12 @@ import (
 
 // filePerms used to declare file mode permissions when making a new directory.
 const filePerms = 448
-const bufferLength = 1000000
+
+// bufferLength describes the amount of content scanned when decompressing.
+// Given that the default MaxScanTokenSize is 65536, and we may get several
+// concatenated lines that are each over 65536 chars in length, we multiply this
+// by 10 to be safe.
+const scanBufferSize = 10 * bufio.MaxScanTokenSize
 
 type Error string
 
@@ -70,7 +75,7 @@ func ReadCompressedFile(filePath string) (string, error) {
 	defer fileReader.Close()
 
 	fileScanner := bufio.NewScanner(fileReader)
-	fileScanner.Buffer([]byte{}, bufferLength)
+	fileScanner.Buffer([]byte{}, scanBufferSize)
 
 	var fileContents string
 	for fileScanner.Scan() {

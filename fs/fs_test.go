@@ -1,12 +1,10 @@
 package fs
 
 import (
-	"bufio"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/klauspost/pgzip"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v3/combine"
 )
@@ -25,47 +23,13 @@ func TestFS(t *testing.T) {
 		_, err = os.Stat(outputPath)
 		So(err, ShouldBeNil)
 
-		Convey("With a default buffer length, the content cannot be read.", func() {
-			actualContent, err := readCompressedFileWithArbitraryBuffer(outputPath, bufio.MaxScanTokenSize)
-			So(err, ShouldBeNil)
-
-			So(actualContent, ShouldNotEqual, expectedOutput)
-		})
-
-		Convey("But with a large buffer length, the content can be read.", func() {
-			actualContent, err := readCompressedFileWithArbitraryBuffer(outputPath, 1000000)
+		Convey("And the compressed content can be read.", func() {
+			actualContent, err := ReadCompressedFile(outputPath)
 			So(err, ShouldBeNil)
 
 			So(actualContent, ShouldEqual, expectedOutput)
 		})
 	})
-}
-
-// readCompressedFileWithArbitraryBuffer is a copy of fs.ReadCompressedFile, but
-// has the option to change the buffer size, so as to demonstrate the difference
-// in content that can be read depending upon the buff size.
-func readCompressedFileWithArbitraryBuffer(filePath string, bufferSize int) (string, error) {
-	actualFile, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-
-	fileReader, err := pgzip.NewReader(actualFile)
-	if err != nil {
-		return "", err
-	}
-
-	defer fileReader.Close()
-
-	fileScanner := bufio.NewScanner(fileReader)
-	fileScanner.Buffer([]byte{}, bufferSize)
-
-	var fileContents string
-	for fileScanner.Scan() {
-		fileContents += fileScanner.Text() + "\n"
-	}
-
-	return fileContents, nil
 }
 
 // buildTestFiles builds two files, each with a line over 65536 chars long.
