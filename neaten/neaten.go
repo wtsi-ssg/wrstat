@@ -36,7 +36,14 @@ import (
 	"time"
 
 	"github.com/termie/go-shutil"
+	fileCheck "github.com/wtsi-ssg/wrstat/v3/fs"
 )
+
+type Error string
+
+func (e Error) Error() string { return string(e) }
+
+const ErrNoOutputsFound = Error("There are no existing files according to the provided input and output suffixes.")
 
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
@@ -85,11 +92,11 @@ type Tidy struct {
 // .dgut.db.updated, setting its mTime equal to the oldest of all those from our
 // srcDir.
 func (t *Tidy) Up() error {
-	if err := dirValid(t.SrcDir); err != nil {
+	if err := fileCheck.DirValid(t.SrcDir); err != nil {
 		return err
 	}
 
-	err := dirValid(t.DestDir)
+	err := fileCheck.DirValid(t.DestDir)
 	if os.IsNotExist(err) {
 		err = os.MkdirAll(t.DestDir, t.DestDirPerms)
 		if err != nil {
@@ -103,18 +110,6 @@ func (t *Tidy) Up() error {
 	}
 
 	return t.moveAndDelete()
-}
-
-// dirValid checks if the directory is valid: is absolute and exists.
-func dirValid(dir string) error {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(dir)
-
-	return err
 }
 
 // moveAndDelete does the main work of this package: it finds, renames and moves
@@ -149,6 +144,10 @@ func (t *Tidy) findAndMoveOutputs(inSuffix, outSuffix string) error {
 	outputPaths, err := filepath.Glob(fmt.Sprintf(t.CombineFileGlobPattern, t.SrcDir, inSuffix))
 	if err != nil {
 		return err
+	}
+
+	if len(outputPaths) == 0 {
+		return ErrNoOutputsFound
 	}
 
 	for _, path := range outputPaths {
