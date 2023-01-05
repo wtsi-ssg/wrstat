@@ -159,7 +159,7 @@ func doMultiScheduling(args []string) error {
 	unique := scheduler.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
 
-	err := os.MkdirAll(outputRoot, userOnlyPerm)
+	err := os.MkdirAll(outputRoot, userGroupPerm)
 	if err != nil {
 		return err
 	}

@@ -100,7 +100,7 @@ through; it won't clobber final outputs already moved.`,
 			die("could not determine absolute path to --final_output dir: %s", err)
 		}
 
-		err = os.MkdirAll(destDir, userOnlyPerm)
+		err = os.MkdirAll(destDir, userGroupPerm)
 		if err != nil {
 			die("failed to create --final_output dir [%s]: %s", destDir, err)
 		}
