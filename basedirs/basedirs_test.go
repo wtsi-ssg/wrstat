@@ -30,8 +30,8 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/dgut"
-	"github.com/wtsi-ssg/wrstat/internal"
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/internal"
 )
 
 func TestBaseDirs(t *testing.T) {
