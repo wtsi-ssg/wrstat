@@ -177,8 +177,8 @@ func mergeDGUTFilesToDB(sourceDir string) {
 	}
 
 	outputDir := filepath.Join(sourceDir, combineDGUTOutputFileBasename)
-	err = fs.RemoveAndCreateDir(outputDir)
-	if err != nil {
+
+	if err = fs.RemoveAndCreateDir(outputDir); err != nil {
 		die("failed to remove or create the dgut directory: %s", err)
 	}
 

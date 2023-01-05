@@ -34,9 +34,6 @@ import (
 	"github.com/wtsi-ssg/wrstat/v3/neaten"
 )
 
-// modeRW are the read-write permission bits for user, group and other.
-const modeRW = 0666
-
 // destDirPerms are the permissions of the dest directory, to be used in making
 // it if it does not already exist.
 const destDirPerms = 0700

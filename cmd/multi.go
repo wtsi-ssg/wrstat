@@ -179,18 +179,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
-	cmd := fmt.Sprintf("%s walk -n %d ", s.Executable(), n)
-	if yamlPath != "" {
-		cmd += fmt.Sprintf("--ch %s ", yamlPath)
-	}
-
-	if queue != "" {
-		cmd += fmt.Sprintf("--queue %s ", queue)
-	}
-
-	if sudo {
-		cmd += "--sudo "
-	}
+	cmd := buildWalkCommand(s, n, yamlPath, queue)
 
 	reqWalk, reqCombine := reqs()
 
@@ -208,6 +197,25 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 
 	addJobsToQueue(s, walkJobs)
 	addJobsToQueue(s, combineJobs)
+}
+
+// buildWalkCommand builds a wrstat walk command line based on the given n,
+// yaml path, queue, and if sudo is in effect.
+func buildWalkCommand(s *scheduler.Scheduler, n int, yamlPath, queue string) string {
+	cmd := fmt.Sprintf("%s walk -n %d ", s.Executable(), n)
+	if yamlPath != "" {
+		cmd += fmt.Sprintf("--ch %s ", yamlPath)
+	}
+
+	if queue != "" {
+		cmd += fmt.Sprintf("--queue %s ", queue)
+	}
+
+	if sudo {
+		cmd += "--sudo "
+	}
+
+	return cmd
 }
 
 // reqs returns Requirements suitable for walk and combine jobs.
