@@ -90,8 +90,11 @@ type Tidy struct {
 // permissions of wrstat output files match those of dest directory. If our dest
 // dir doesn't exist, it will be created. And it touches a file called
 // .dgut.db.updated, setting its mTime equal to the oldest of all those from our
-// srcDir.
-func (t *Tidy) Up() error {
+// srcDir. Finally, deletes the source directory.
+//
+// For debugging purposes, set disableDeletion to true to disable deletion of the
+// source directory after a successful move.
+func (t *Tidy) Up(disableDeletion bool) error {
 	if err := fileCheck.DirValid(t.SrcDir); err != nil {
 		return err
 	}
@@ -109,13 +112,26 @@ func (t *Tidy) Up() error {
 		return err
 	}
 
-	return t.moveAndDelete()
+	return t.moveAndDelete(disableDeletion)
 }
 
-// moveAndDelete does the main work of this package: it finds, renames and moves
-// the combine, base and db files, ensuring that their permissions match those
-// of our destDir.
-func (t *Tidy) moveAndDelete() error {
+// moveAndDelete does the main work of this package: move various files to our
+// destDir, then delete our SrcDir if disableDeletion is false.
+func (t *Tidy) moveAndDelete(disableDeletion bool) error {
+	if err := t.move(); err != nil {
+		return err
+	}
+
+	if disableDeletion {
+		return nil
+	}
+
+	return os.RemoveAll(t.SrcDir)
+}
+
+// move finds, renames and moves the combine, base and db files, ensuring that
+// their permissions match those of our destDir.
+func (t *Tidy) move() error {
 	for inSuffix, outSuffix := range t.CombineFileSuffixes {
 		if err := t.findAndMoveOutputs(inSuffix, outSuffix); err != nil {
 			return err
@@ -134,7 +150,7 @@ func (t *Tidy) moveAndDelete() error {
 		}
 	}
 
-	return os.RemoveAll(t.SrcDir)
+	return nil
 }
 
 // findAndMoveOutputs finds output files in the given sourceDir with given

@@ -34,15 +34,13 @@ import (
 	"github.com/wtsi-ssg/wrstat/v3/neaten"
 )
 
-// modeRW are the read-write permission bits for user, group and other.
-const modeRW = 0666
-
 // destDirPerms are the permissions of the dest directory, to be used in making
 // it if it does not already exist.
 const destDirPerms = 0700
 
 const dgutDBsSuffix = "dgut.dbs"
 const dgutDBsSentinelBasename = ".dgut.dbs.updated"
+const disableDeletion = false
 
 // options for this cmd.
 var tidyDir string
@@ -103,7 +101,7 @@ through; it won't clobber final outputs already moved.`,
 			die("could not determine absolute path to --final_output dir: %s", err)
 		}
 
-		err = os.MkdirAll(destDir, userOnlyPerm)
+		err = os.MkdirAll(destDir, userGroupPerm)
 		if err != nil {
 			die("failed to create --final_output dir [%s]: %s", destDir, err)
 		}
@@ -137,7 +135,7 @@ through; it won't clobber final outputs already moved.`,
 			DestDirPerms: destDirPerms,
 		}
 
-		err = tidy.Up()
+		err = tidy.Up(disableDeletion)
 		if err != nil {
 			die("could not neaten dir: %s", err)
 		}
