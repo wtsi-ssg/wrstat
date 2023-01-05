@@ -40,6 +40,7 @@ const destDirPerms = 0700
 
 const dgutDBsSuffix = "dgut.dbs"
 const dgutDBsSentinelBasename = ".dgut.dbs.updated"
+const disableDeletion = false
 
 // options for this cmd.
 var tidyDir string
@@ -134,7 +135,7 @@ through; it won't clobber final outputs already moved.`,
 			DestDirPerms: destDirPerms,
 		}
 
-		err = tidy.Up()
+		err = tidy.Up(disableDeletion)
 		if err != nil {
 			die("could not neaten dir: %s", err)
 		}

@@ -72,7 +72,9 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 			DestDirPerms: modePermUser,
 		}
 
-		err := test.Up()
+		disableDeletion := false
+
+		err := test.Up(disableDeletion)
 
 		Convey("And the combine files are moved from the source dir to the dest dir", func() {
 			combineFileSuffixes := [4]string{".logs.gz", ".byusergroup.gz", ".bygroup", ".stats.gz"}
@@ -125,7 +127,7 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 			err = os.Chtimes(newMtimeFile, expectedATime, expectedMTime)
 			So(err, ShouldBeNil)
 
-			err = test.Up()
+			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
 
 			dbsFileMTime := getMTime(filepath.Join(destDir, ".dgut.dbs.updated"))
@@ -162,11 +164,26 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 
 			createTestDirWithDifferentPerms(destDir)
 
-			err = test.Up()
+			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(srcDir)
 			So(err, ShouldNotBeNil)
+		})
+
+		Convey("And up does not delete the source directory after the files have been moved if the arg is false", func() {
+			err = os.RemoveAll(tmpDir)
+			So(err, ShouldBeNil)
+
+			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+
+			createTestDirWithDifferentPerms(destDir)
+
+			err = test.Up(true)
+			So(err, ShouldBeNil)
+
+			_, err = os.Stat(srcDir)
+			So(err, ShouldBeNil)
 		})
 
 		Convey("And it also works if the dest dir doesn't exist", func() {
@@ -178,7 +195,7 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 
 			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
 
-			err = test.Up()
+			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(destDir)
@@ -189,7 +206,7 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 			err := os.RemoveAll(srcDir)
 			So(err, ShouldBeNil)
 
-			err = test.Up()
+			err = test.Up(disableDeletion)
 			So(err, ShouldNotBeNil)
 
 			_, err = os.Stat(srcDir)
@@ -218,7 +235,7 @@ func TestTidy(t *testing.T) { //nolint:gocognit
 			test.SrcDir = "../src/" + srcUniversal
 			test.DestDir = "../dest/final"
 
-			err = test.Up()
+			err = test.Up(disableDeletion)
 			So(err, ShouldNotBeNil)
 		})
 	})
