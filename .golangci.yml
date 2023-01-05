@@ -73,6 +73,10 @@ issues:
     - path: usergroup\.go
       linters:
         - dupl
+    - path: ch/from\.go
+      linters:
+        - gci
+        - goimports
   max-issues-per-linter: 0
   max-same-issues: 0
   new-from-rev: master
