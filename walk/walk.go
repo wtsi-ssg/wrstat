@@ -48,23 +48,29 @@ type PathCallback func(path string) error
 // Walker can be used to quickly walk a filesystem to just see what paths there
 // are on it.
 type Walker struct {
-	cb       PathCallback
-	sendDirs bool
-	dirsCh   chan string
-	active   sync.WaitGroup
-	err      error
-	errCB    ErrorCallback
-	mu       sync.RWMutex
-	ended    bool
+	cb             PathCallback
+	sendDirs       bool
+	ignoreSymlinks bool
+	dirsCh         chan string
+	active         sync.WaitGroup
+	err            error
+	errCB          ErrorCallback
+	mu             sync.RWMutex
+	ended          bool
 }
 
 // New creates a new Walker that can Walk() a filesystem and send all the
-// encountered paths to the given PathCallback. Set includeDirs to true to have
-// your PathCallback receive directory paths in addition to file paths.
-func New(cb PathCallback, includDirs bool) *Walker {
+// encountered paths to the given PathCallback.
+//
+// Set includeDirs to true to have your PathCallback receive directory paths in
+// addition to file paths.
+//
+// Set ignoreSymlinks to true to have symlinks not be sent do your PathCallback.
+func New(cb PathCallback, includDirs, ignoreSymlinks bool) *Walker {
 	return &Walker{
-		cb:       cb,
-		sendDirs: includDirs,
+		cb:             cb,
+		sendDirs:       includDirs,
+		ignoreSymlinks: ignoreSymlinks,
 	}
 }
 
@@ -187,6 +193,10 @@ func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]string, []st
 	var subDirs, otherEntries []string
 
 	for _, child := range children {
+		if w.ignoreSymlinks && child.IsSymlink() {
+			continue
+		}
+
 		path := filepath.Join(dir, child.Name())
 
 		if child.ModeType().IsDir() {

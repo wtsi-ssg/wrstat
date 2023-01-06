@@ -55,20 +55,7 @@ func TestWalk(t *testing.T) {
 		}
 
 		Convey("You can output the paths to a file", func() {
-			files, err := NewFiles(outDir, 1)
-			So(err, ShouldBeNil)
-
-			w := New(files.WritePaths(), true)
-
-			err = w.Walk(walkDir, cb)
-			So(err, ShouldBeNil)
-
-			outPath := filepath.Join(outDir, "walk.1")
-			So(files.Paths[0], ShouldEqual, outPath)
-			content, err := os.ReadFile(outPath)
-			So(err, ShouldBeNil)
-
-			found, dups, missing := checkPaths(string(content), expectedPaths)
+			found, dups, missing := testOutputToFiles(false, walkDir, outDir, cb, expectedPaths)
 			So(found, ShouldEqual, 81)
 			So(dups, ShouldEqual, 0)
 			So(missing, ShouldEqual, 0)
@@ -79,7 +66,7 @@ func TestWalk(t *testing.T) {
 			n := 4
 			files, err := NewFiles(outDir, n)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths(), true)
+			w := New(files.WritePaths(), true, false)
 
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldBeNil)
@@ -118,10 +105,18 @@ func TestWalk(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 
+		Convey("You can ignore symlinks", func() {
+			found, dups, missing := testOutputToFiles(true, walkDir, outDir, cb, expectedPaths)
+			So(found, ShouldEqual, 80)
+			So(dups, ShouldEqual, 0)
+			So(missing, ShouldEqual, 1)
+			So(len(walkErrors), ShouldEqual, 0)
+		})
+
 		Convey("Write errors during a walk are reported and the walk terminated", func() {
 			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths(), true)
+			w := New(files.WritePaths(), true, false)
 
 			err = files.files[0].Close()
 			So(err, ShouldBeNil)
@@ -146,7 +141,7 @@ func TestWalk(t *testing.T) {
 		Convey("Read errors during a walk are reported and the path skipped", func() {
 			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths(), true)
+			w := New(files.WritePaths(), true, false)
 
 			err = w.Walk("/root", cb)
 			So(err, ShouldBeNil)
@@ -176,7 +171,7 @@ func TestWalk(t *testing.T) {
 
 // prepareTestDirs creates a temporary directory filled with files to walk, and
 // an empty directory you can output to. Also returns all the paths created in a
-// map.
+// map. One of the files will be a symlink to another of the files.
 func prepareTestDirs(t *testing.T) (string, string, map[string]int) {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -195,6 +190,8 @@ func prepareTestDirs(t *testing.T) (string, string, map[string]int) {
 	paths := make(map[string]int)
 	paths[walkDir] = 0
 	fillDirWithFiles(t, walkDir, 4, paths)
+
+	replaceFileWithSymlink(t, paths)
 
 	return walkDir, outDir, paths
 }
@@ -224,6 +221,63 @@ func fillDirWithFiles(t *testing.T, dir string, size int, paths map[string]int) 
 			fillDirWithFiles(t, path, size-1, paths)
 		}
 	}
+}
+
+func replaceFileWithSymlink(t *testing.T, paths map[string]int) {
+	t.Helper()
+
+	dest := ""
+
+	for path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat failed: %s", err)
+		}
+
+		if info.Mode().IsRegular() {
+			if dest == "" {
+				dest = path
+
+				continue
+			}
+
+			removeAndSymlink(t, path, dest)
+
+			break
+		}
+	}
+}
+
+func removeAndSymlink(t *testing.T, path, dest string) {
+	t.Helper()
+
+	err := os.Remove(path)
+	if err != nil {
+		t.Fatalf("remove failed: %s", err)
+	}
+
+	err = os.Symlink(dest, path)
+	if err != nil {
+		t.Fatalf("symlink failed: %s", err)
+	}
+}
+
+func testOutputToFiles(ignoreSymlinks bool, walkDir, outDir string, cb ErrorCallback,
+	expectedPaths map[string]int) (int, int, int) {
+	files, err := NewFiles(outDir, 1)
+	So(err, ShouldBeNil)
+
+	w := New(files.WritePaths(), true, ignoreSymlinks)
+
+	err = w.Walk(walkDir, cb)
+	So(err, ShouldBeNil)
+
+	outPath := filepath.Join(outDir, "walk.1")
+	So(files.Paths[0], ShouldEqual, outPath)
+	content, err := os.ReadFile(outPath)
+	So(err, ShouldBeNil)
+
+	return checkPaths(string(content), expectedPaths)
 }
 
 // checkPaths parses the string content of a Walk() output file and marks how
