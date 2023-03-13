@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Genome Research Ltd.
+ * Copyright (c) 2022, 2023 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -39,13 +39,15 @@ import (
 )
 
 const (
-	basedirBasename   = "base.dirs"
-	basedirSplits     = 4
-	basedirMinDirs    = 4
-	basedirMinDirsMDT = 5
+	basedirBasename        = "base.dirs"
+	basedirSplits          = 4
+	basedirMinDirs         = 4
+	basedirMinDirsHumgen   = basedirMinDirs + 1
+	basedirMinDirsMDTExtra = 1
 )
 
 var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
+var basedirHumgenRegexp = regexp.MustCompile(`\/lustre\/scratch\d\d\d\/(humgen|hgi|tol|pam|opentargets)`)
 
 // basedirCmd represents the basedir command.
 var basedirCmd = &cobra.Command{
@@ -112,7 +114,7 @@ func init() {
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
 // creates in the given output directory.
 func dgutDBCombinePaths(dir string) []string {
-	paths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", dir, combineDGUTOutputFileBasename))
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*", dir))
 	if err != nil || len(paths) == 0 {
 		die("failed to find dgut database directories based on [%s/*/*/%s] (err: %s)",
 			dir, combineDGUTOutputFileBasename, err)
@@ -195,8 +197,13 @@ func notEnoughDirs(path string) bool {
 	numDirs := strings.Count(path, "/")
 
 	min := basedirMinDirs
+
+	if basedirHumgenRegexp.MatchString(path) {
+		min = basedirMinDirsHumgen
+	}
+
 	if basedirMDTRegexp.MatchString(path) {
-		min = basedirMinDirsMDT
+		min += basedirMinDirsMDTExtra
 	}
 
 	return numDirs < min
