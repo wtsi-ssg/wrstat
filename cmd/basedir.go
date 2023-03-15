@@ -114,7 +114,7 @@ func init() {
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
 // creates in the given output directory.
 func dgutDBCombinePaths(dir string) []string {
-	paths, err := filepath.Glob(fmt.Sprintf("%s/*", dir))
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", dir, combineDGUTOutputFileBasename))
 	if err != nil || len(paths) == 0 {
 		die("failed to find dgut database directories based on [%s/*/*/%s] (err: %s)",
 			dir, combineDGUTOutputFileBasename, err)
