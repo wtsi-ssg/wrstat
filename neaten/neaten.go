@@ -36,7 +36,7 @@ import (
 	"time"
 
 	"github.com/termie/go-shutil"
-	fileCheck "github.com/wtsi-ssg/wrstat/v3/fs"
+	fileCheck "github.com/wtsi-ssg/wrstat/v4/fs"
 )
 
 type Error string

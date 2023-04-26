@@ -34,7 +34,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v3/fs"
+	"github.com/wtsi-ssg/wrstat/v4/fs"
 )
 
 // TestConcatenateMergeAndCompress tests the concat, merge, and compress
