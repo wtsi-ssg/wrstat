@@ -34,16 +34,19 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/karrick/godirwalk"
+	"github.com/wtsi-hgi/godirwalk"
 )
 
 const walkers = 16
 const dirsChSize = 1024
 
 // PathCallback is a callback used by Walker.Walk() that receives a discovered
-// file path each time it's called. It should only return an error if you can no
+// file path, and a directory entry structure containing the inode and file
+// mode, each time it's called. It should only return an error if you can no
 // longer cope with receiving more paths, and wish to terminate the Walk.
-type PathCallback func(path string) error
+//
+// If the path is a directory, a nil entry will be received.
+type PathCallback func(path string, entry *godirwalk.Dirent) error
 
 // Walker can be used to quickly walk a filesystem to just see what paths there
 // are on it.
@@ -152,13 +155,19 @@ func (w *Walker) processDir(dir string, buffer []byte) {
 		return
 	}
 
-	if w.sendDirs {
-		paths = append(paths, dir)
+	for _, entry := range paths {
+		path := filepath.Join(dir, entry.Name())
+		if err := w.cb(path, entry); err != nil {
+			w.errCB(path, err)
+			w.terminate(err)
+
+			return
+		}
 	}
 
-	for _, path := range paths {
-		if err := w.cb(path); err != nil {
-			w.errCB(path, err)
+	if w.sendDirs {
+		if err := w.cb(dir, nil); err != nil {
+			w.errCB(dir, err)
 			w.terminate(err)
 
 			return
@@ -182,7 +191,7 @@ func (w *Walker) terminated() bool {
 // returns any entries that are subdirectories, then any other entries. Any
 // failure to read is passed to our errCB, but we don't return an error (just
 // nil results and false).
-func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]string, []string, bool) {
+func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]string, []*godirwalk.Dirent, bool) {
 	children, err := godirwalk.ReadDirents(dir, buffer)
 	if err != nil {
 		w.errCB(dir, err)
@@ -190,19 +199,20 @@ func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]string, []st
 		return nil, nil, false
 	}
 
-	var subDirs, otherEntries []string
+	var (
+		subDirs      []string
+		otherEntries []*godirwalk.Dirent
+	)
 
 	for _, child := range children {
 		if w.ignoreSymlinks && child.IsSymlink() {
 			continue
 		}
 
-		path := filepath.Join(dir, child.Name())
-
 		if child.ModeType().IsDir() {
-			subDirs = append(subDirs, path)
+			subDirs = append(subDirs, filepath.Join(dir, child.Name()))
 		} else {
-			otherEntries = append(otherEntries, path)
+			otherEntries = append(otherEntries, child)
 		}
 	}
 

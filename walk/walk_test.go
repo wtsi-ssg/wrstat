@@ -33,9 +33,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-hgi/godirwalk"
 )
 
 const permNoWrite = 0500
@@ -152,6 +154,35 @@ func TestWalk(t *testing.T) {
 			outPath := filepath.Join(outDir, "walk.1")
 			_, err = os.ReadFile(outPath)
 			So(err, ShouldBeNil)
+		})
+
+		Convey("You can get the inode of files in your callback", func() {
+			tdir := t.TempDir()
+			file := filepath.Join(tdir, "file")
+			f, err := os.Create(file)
+			So(err, ShouldBeNil)
+			err = f.Close()
+			So(err, ShouldBeNil)
+
+			info, err := os.Stat(file)
+			So(err, ShouldBeNil)
+			u, ok := info.Sys().(*syscall.Stat_t)
+			So(ok, ShouldBeTrue)
+			So(u.Ino, ShouldNotEqual, 0)
+
+			var gotInode uint64
+
+			pcb := func(path string, entry *godirwalk.Dirent) error {
+				gotInode = entry.Inode()
+
+				return nil
+			}
+
+			w := New(pcb, false, false)
+			err = w.Walk(tdir, cb)
+			So(err, ShouldBeNil)
+			So(len(walkErrors), ShouldEqual, 0)
+			So(gotInode, ShouldEqual, u.Ino)
 		})
 	})
 
