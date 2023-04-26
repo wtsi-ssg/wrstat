@@ -31,6 +31,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/wtsi-hgi/godirwalk"
 )
 
 const userOnlyPerm = 0700
@@ -99,7 +101,7 @@ func NewFiles(outDir string, n int) (*Files, error) {
 //
 // It will terminate the walk if writes to our output files fail.
 func (f *Files) WritePaths() PathCallback {
-	return func(path string) error {
+	return func(path string, _ *godirwalk.Dirent) error {
 		return f.writePath(path)
 	}
 }
