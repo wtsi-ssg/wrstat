@@ -32,7 +32,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ugorji/go/codec"
-	"github.com/wtsi-ssg/wrstat/v3/summary"
+	"github.com/wtsi-ssg/wrstat/v4/summary"
 	bolt "go.etcd.io/bbolt"
 )
 

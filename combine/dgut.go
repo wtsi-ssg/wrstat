@@ -3,7 +3,7 @@ package combine
 import (
 	"io"
 
-	"github.com/wtsi-ssg/wrstat/v3/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
 )
 
 const dgutStoreBatchSize = 10000
