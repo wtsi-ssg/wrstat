@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Genome Research Ltd.
+ * Copyright (c) 2022, 2023 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * Partially based on github.com/MichaelTJones/walk
@@ -40,13 +40,11 @@ import (
 const walkers = 16
 const dirsChSize = 1024
 
-// PathCallback is a callback used by Walker.Walk() that receives a discovered
-// file path, and a directory entry structure containing the inode and file
-// mode, each time it's called. It should only return an error if you can no
-// longer cope with receiving more paths, and wish to terminate the Walk.
-//
-// If the path is a directory, a nil entry will be received.
-type PathCallback func(path string, entry *godirwalk.Dirent) error
+// PathCallback is a callback used by Walker.Walk() that receives a directory
+// entry containing the path, inode and file type each time it's called. It
+// should only return an error if you can no longer cope with receiving more
+// paths, and wish to terminate the Walk.
+type PathCallback func(entry *Dirent) error
 
 // Walker can be used to quickly walk a filesystem to just see what paths there
 // are on it.
@@ -150,32 +148,19 @@ func (w *Walker) processDir(dir string, buffer []byte) {
 		return
 	}
 
-	subDirs, paths, ok := w.getImmediateChildren(dir, buffer)
+	children, ok := w.getImmediateChildren(dir, buffer)
 	if !ok {
 		return
 	}
 
-	for _, entry := range paths {
-		path := filepath.Join(dir, entry.Name())
-		if err := w.cb(path, entry); err != nil {
-			w.errCB(path, err)
-			w.terminate(err)
-
-			return
-		}
-	}
-
 	if w.sendDirs {
-		if err := w.cb(dir, nil); err != nil {
-			w.errCB(dir, err)
-			w.terminate(err)
-
-			return
-		}
+		children = append(children, newDirentForDirectoryPath(dir))
 	}
 
-	for _, subDir := range subDirs {
-		w.addDir(subDir)
+	for _, entry := range children {
+		if ok := w.handleDirent(entry, dir); !ok {
+			return
+		}
 	}
 }
 
@@ -188,35 +173,52 @@ func (w *Walker) terminated() bool {
 }
 
 // getImmediateChildren finds the immediate children of the given directory and
-// returns any entries that are subdirectories, then any other entries. Any
-// failure to read is passed to our errCB, but we don't return an error (just
-// nil results and false).
-func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]string, []*godirwalk.Dirent, bool) {
+// returns the entries. Any failure to read is passed to our errCB, but we don't
+// return an error (just nil results and false).
+func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]*Dirent, bool) {
 	children, err := godirwalk.ReadDirents(dir, buffer)
 	if err != nil {
 		w.errCB(dir, err)
 
-		return nil, nil, false
+		return nil, false
 	}
 
-	var (
-		subDirs      []string
-		otherEntries []*godirwalk.Dirent
-	)
+	entries := make([]*Dirent, 0, len(children))
 
 	for _, child := range children {
 		if w.ignoreSymlinks && child.IsSymlink() {
 			continue
 		}
 
-		if child.ModeType().IsDir() {
-			subDirs = append(subDirs, filepath.Join(dir, child.Name()))
-		} else {
-			otherEntries = append(otherEntries, child)
-		}
+		entries = append(entries, &Dirent{
+			Path:  filepath.Join(dir, child.Name()),
+			Type:  child.ModeType(),
+			Inode: child.Inode(),
+		})
 	}
 
-	return subDirs, otherEntries, true
+	return entries, true
+}
+
+// handleDirent calls addDir() for directories (except for the given parent dir
+// which was already done), and the path callback for files.
+//
+// Returns false if the path callback failed.
+func (w *Walker) handleDirent(entry *Dirent, parentDir string) bool {
+	if entry.IsDir() && entry.Path != parentDir {
+		w.addDir(entry.Path)
+
+		return true
+	}
+
+	if err := w.cb(entry); err != nil {
+		w.errCB(entry.Path, err)
+		w.terminate(err)
+
+		return false
+	}
+
+	return true
 }
 
 // terminate will store the err on self on the first call to terminate, and

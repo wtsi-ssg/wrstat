@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022 Genome Research Ltd.
+ * Copyright (c) 2023 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -37,7 +37,6 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-hgi/godirwalk"
 )
 
 const permNoWrite = 0500
@@ -172,8 +171,8 @@ func TestWalk(t *testing.T) {
 
 			var gotInode uint64
 
-			pcb := func(path string, entry *godirwalk.Dirent) error {
-				gotInode = entry.Inode()
+			pcb := func(entry *Dirent) error {
+				gotInode = entry.Inode
 
 				return nil
 			}
