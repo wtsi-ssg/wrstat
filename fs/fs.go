@@ -10,7 +10,7 @@ import (
 )
 
 // filePerms used to declare file mode permissions when making a new directory.
-const filePerms = 448
+const filePerms = 0770
 
 // bufferLength describes the amount of content scanned when decompressing.
 // Given that the default MaxScanTokenSize is 65536, and we may get several

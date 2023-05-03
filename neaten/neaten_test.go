@@ -36,7 +36,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-const modePermUser = 0700
+const modePermUser = 0770
 
 func TestTidy(t *testing.T) { //nolint:gocognit
 	date := "20220829"

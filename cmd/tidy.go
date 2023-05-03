@@ -36,7 +36,7 @@ import (
 
 // destDirPerms are the permissions of the dest directory, to be used in making
 // it if it does not already exist.
-const destDirPerms = 0700
+const destDirPerms = 0770
 
 const dgutDBsSuffix = "dgut.dbs"
 const dgutDBsSentinelBasename = ".dgut.dbs.updated"
