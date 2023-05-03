@@ -103,10 +103,10 @@ func init() {
 	cronCmd.Flags().StringVarP(&crontab, "crontab", "c",
 		"0 17 * * *",
 		"crontab describing when to run, first 5 columns only")
-	cronCmd.Flags().BoolVar(&cronKill, "kill", false, "kill prior invocations of wrstat cron")
+	cronCmd.Flags().BoolVar(&cronKill, "kill", false, "kill all wrstat processes on the system")
 }
 
-// killCronProcesses tries to kill all 'wrstat cron' processes on the system.
+// killCronProcesses tries to kill all 'wrstat' processes on the system.
 func killCronProcesses() {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -116,7 +116,7 @@ func killCronProcesses() {
 	exe := filepath.Base(exePath)
 
 	cmd := exec.Command("bash", "-c", `ps ax | grep "`+exe+ //nolint: gosec
-		` cron" | grep -v grep | grep -v '\--kill' | grep -o '^[ ]*[0-9]*'`)
+		`" | grep -v grep | grep -v '\--kill' | grep -o '^[ ]*[0-9]*'`)
 
 	out, err := cmd.Output()
 	if err != nil {
