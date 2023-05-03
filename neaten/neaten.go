@@ -123,7 +123,7 @@ func (t *Tidy) moveAndDelete(disableDeletion bool) error {
 	}
 
 	if disableDeletion {
-		return nil
+		return t.matchPermsInsideDir(t.SrcDir)
 	}
 
 	return os.RemoveAll(t.SrcDir)
