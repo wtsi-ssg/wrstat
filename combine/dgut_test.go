@@ -60,11 +60,12 @@ func TestDGUTFiles(t *testing.T) {
 				err = db.Open()
 				So(err, ShouldBeNil)
 
-				numFiles, fileSize, aTime, _, users, groups, fileType, err := db.DirInfo("/", nil)
+				numFiles, fileSize, aTime, mTime, users, groups, fileType, err := db.DirInfo("/", nil)
 				So(err, ShouldBeNil)
 				So(numFiles, ShouldEqual, 3)
 				So(fileSize, ShouldEqual, 25)
 				So(aTime, ShouldEqual, 1668768807)
+				So(mTime, ShouldEqual, 1668768811)
 				So(users, ShouldResemble, []uint32{13912, 21574})
 				So(groups, ShouldResemble, []uint32{1313})
 				So(fileType, ShouldResemble, []summary.DirGUTFileType{summary.DirGUTFileType(0)})
@@ -86,9 +87,9 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string, string) {
 	f3, err := os.Create(filepath.Join(dir, "file3"))
 	So(err, ShouldBeNil)
 
-	file1Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807)
-	file2Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 21, 1668768807)
-	file3Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, 1668768810)
+	file1Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807, 1668768808)
+	file2Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 21, 1668768807, 1668768809)
+	file3Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, 1668768810, 1668768811)
 
 	_, err = f1.WriteString(file1Content)
 	So(err, ShouldBeNil)
@@ -113,13 +114,15 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string, string) {
 // /	1313	13912	0	1	0	1668768807
 // /lustre	1313	13912	0	1	0	1668768807
 // /lustre/scratch123	1313	13912	0	1	0	1668768807.
-func buildDGUTContent(directory, gid, uid string, filetype, nestedFiles, fileSize, atime int) string {
+func buildDGUTContent(directory, gid, uid string, filetype, nestedFiles,
+	fileSize, oldestAtime, newestAtime int) string {
 	var DGUTContents string
 
 	splitDir := recursivePath(directory)
 
 	for _, split := range splitDir {
-		DGUTContents += split + fmt.Sprintf("\t%s\t%s\t%d\t%d\t%d\t%d\n", gid, uid, filetype, nestedFiles, fileSize, atime)
+		DGUTContents += split + fmt.Sprintf("\t%s\t%s\t%d\t%d\t%d\t%d\t%d\n",
+			gid, uid, filetype, nestedFiles, fileSize, oldestAtime, newestAtime)
 	}
 
 	return DGUTContents

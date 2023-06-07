@@ -26,6 +26,7 @@
 package basedirs
 
 import (
+	"sort"
 	"strconv"
 	"testing"
 
@@ -57,6 +58,15 @@ func TestTree(t *testing.T) {
 
 		Convey("You can get all the gids and uids in it", func() {
 			gids, uids, err := getAllGIDsandUIDsInTree(tree)
+
+			sort.Slice(gids, func(i, j int) bool {
+				return gids[i] < gids[j]
+			})
+
+			sort.Slice(expectedGIDs, func(i, j int) bool {
+				return expectedGIDs[i] < expectedGIDs[j]
+			})
+
 			So(err, ShouldBeNil)
 			So(gids, ShouldResemble, expectedGIDs)
 			So(uids, ShouldResemble, expectedUIDs)

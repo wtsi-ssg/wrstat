@@ -8,7 +8,7 @@ import (
 
 const dgutStoreBatchSize = 10000
 const dgutSumCols = 4
-const numSummaryColumnsDGUT = 3
+const numSummaryColumnsDGUT = 4
 
 // DgutFiles merges the pre-sorted dgut files, summing consecutive lines with
 // the same first 4 columns, and outputs the results to an embedded database.
@@ -23,7 +23,13 @@ func DgutFiles(inputs []string, outputDir string) error {
 	errCh := make(chan error, 1)
 
 	go func() {
-		errCh <- db.Store(reader, dgutStoreBatchSize)
+		errs := db.Store(reader, dgutStoreBatchSize)
+
+		if errs != nil {
+			reader.Close()
+		}
+
+		errCh <- errs
 	}()
 
 	if err = MergeSummaryLines(sortMergeOutput, dgutSumCols,

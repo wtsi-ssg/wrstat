@@ -63,6 +63,7 @@ func parseDGUTLines(data io.Reader, cb dgutParserCallBack) error {
 	dgut, guts := &DGUT{}, []*GUT{}
 
 	scanner := bufio.NewScanner(data)
+
 	for scanner.Scan() {
 		thisDir, g, err := parseDGUTLine(scanner.Text())
 		if err != nil {

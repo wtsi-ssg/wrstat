@@ -83,7 +83,8 @@ func TestTree(t *testing.T) {
 			di, err = tree.DirInfo("/a", &Filter{FTs: expectedFTsBam})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a", 2, 10, expectedAtime, time.Unix(75, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsBam},
+				Current: &DirSummary{"/a", 2, 10, expectedAtime, time.Unix(75, 0),
+					expectedUIDsOne, expectedGIDsOne, expectedFTsBam},
 				Children: []*DirSummary{
 					{"/a/b", 2, 10, expectedAtime, time.Unix(75, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsBam},
 				},
