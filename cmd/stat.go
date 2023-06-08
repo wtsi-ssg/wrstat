@@ -311,7 +311,7 @@ func addUserGroupSummaryOperation(input string, p *stat.Paths) (func() error, er
 // outputOperators are types returned by summary.New*().
 type outputOperator interface {
 	Add(path string, info fs.FileInfo) error
-	Output(output *os.File) error
+	Output(output summary.StringCloser) error
 }
 
 // addSummaryOperator adds the operation method of o to p after creating an

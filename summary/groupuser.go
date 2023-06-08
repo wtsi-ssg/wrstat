@@ -28,7 +28,6 @@ package summary
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"sort"
 	"syscall"
 )
@@ -170,7 +169,7 @@ func (g *GroupUser) Add(path string, info fs.FileInfo) error {
 // Returns an error on failure to write, or if username or group can't be
 // determined from the uids and gids in the added file info. output is closed
 // on completion.
-func (g *GroupUser) Output(output *os.File) error {
+func (g *GroupUser) Output(output StringCloser) error {
 	groups, uStores := g.store.sort()
 
 	uidLookupCache := make(map[uint32]string)
@@ -186,7 +185,7 @@ func (g *GroupUser) Output(output *os.File) error {
 
 // outputUserSummariesForGroup sorts the users for this group and outputs the
 // summary information.
-func outputUserSummariesForGroup(output *os.File, groupname string,
+func outputUserSummariesForGroup(output StringCloser, groupname string,
 	uStore userToSummaryStore, uidLookupCache map[uint32]string) error {
 	usernames, summaries := uStore.sort(uidLookupCache)
 

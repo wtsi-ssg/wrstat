@@ -43,7 +43,7 @@ func TestTree(t *testing.T) {
 		So(errc, ShouldNotBeNil)
 		So(tree, ShouldBeNil)
 
-		errc = testCreateDB(paths[0])
+		errc = testCreateDB(t, paths[0])
 		So(errc, ShouldBeNil)
 
 		tree, errc = NewTree(paths[0])
@@ -75,7 +75,7 @@ func TestTree(t *testing.T) {
 			So(di, ShouldResemble, &DirInfo{
 				Current: &DirSummary{"/a", 14, 85, expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs},
 				Children: []*DirSummary{
-					{"/a/b", 9, 80, expectedAtime, time.Unix(75, 0), expectedUIDs, expectedGIDsOne, expectedFTs},
+					{"/a/b", 9, 80, expectedAtime, time.Unix(80, 0), expectedUIDs, expectedGIDsOne, expectedFTs},
 					{"/a/c", 5, 5, time.Unix(90, 0), time.Unix(90, 0), []uint32{102}, []uint32{2}, expectedFTsCram},
 				},
 			})
@@ -83,17 +83,17 @@ func TestTree(t *testing.T) {
 			di, err = tree.DirInfo("/a", &Filter{FTs: expectedFTsBam})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a", 2, 10, expectedAtime, time.Unix(75, 0),
+				Current: &DirSummary{"/a", 2, 10, time.Unix(80, 0), time.Unix(80, 0),
 					expectedUIDsOne, expectedGIDsOne, expectedFTsBam},
 				Children: []*DirSummary{
-					{"/a/b", 2, 10, expectedAtime, time.Unix(75, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsBam},
+					{"/a/b", 2, 10, time.Unix(80, 0), time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsBam},
 				},
 			})
 
 			di, err = tree.DirInfo("/a/b/e/h/tmp", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a/b/e/h/tmp", 1, 5, time.Unix(75, 0), time.Unix(75, 0),
+				Current: &DirSummary{"/a/b/e/h/tmp", 1, 5, time.Unix(80, 0), time.Unix(80, 0),
 					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{summary.DGUTFileTypeTemp, summary.DGUTFileTypeBam}},
 				Children: nil,
 			})
@@ -133,7 +133,7 @@ func TestTree(t *testing.T) {
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, 0)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b", 5, 40, expectedAtime, time.Unix(75, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs},
+				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, 1)
@@ -236,8 +236,10 @@ func TestTree(t *testing.T) {
 	})
 }
 
-func testCreateDB(path string) error {
-	dgutData := testDGUTData()
+func testCreateDB(t *testing.T, path string) error {
+	t.Helper()
+
+	dgutData := testDGUTData(t)
 	data := strings.NewReader(dgutData)
 	db := NewDB(path)
 

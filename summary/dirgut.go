@@ -27,8 +27,8 @@ package summary
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -398,6 +398,11 @@ func (d *DirGroupUserType) addForEachDir(path string, gutKeys []string, size int
 	doForEachDir(path, cb)
 }
 
+type StringCloser interface {
+	io.StringWriter
+	io.Closer
+}
+
 // Output will write summary information for all the paths previously added. The
 // format is (tab separated):
 //
@@ -429,7 +434,7 @@ func (d *DirGroupUserType) addForEachDir(path string, gutKeys []string, size int
 //	14 = log (.log | .out | .o | .err | .e | .err | .oe suffix)
 //
 // Returns an error on failure to write. output is closed on completion.
-func (d *DirGroupUserType) Output(output *os.File) error {
+func (d *DirGroupUserType) Output(output StringCloser) error {
 	dirs, gStores := d.store.sort()
 
 	for i, dir := range dirs {
