@@ -52,31 +52,41 @@ func TestTree(t *testing.T) {
 
 		expectedUIDs := []uint32{101, 102}
 		expectedGIDs := []uint32{1, 2}
-		expectedFTs := []summary.DirGUTFileType{summary.DGUTFileTypeTemp, summary.DGUTFileTypeBam, summary.DGUTFileTypeCram}
+		expectedFTs := []summary.DirGUTFileType{summary.DGUTFileTypeTemp,
+			summary.DGUTFileTypeBam, summary.DGUTFileTypeCram, summary.DGUTFileTypeDir}
 		expectedUIDsOne := []uint32{101}
 		expectedGIDsOne := []uint32{1}
-		expectedFTsCram := []summary.DirGUTFileType{summary.DGUTFileTypeCram}
+		expectedFTsCram := []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir}
 		expectedAtime := time.Unix(50, 0)
 		expectedAtimeG := time.Unix(60, 0)
 		expectedMtime := time.Unix(90, 0)
+
+		const numDirectories = 10
+
+		const directorySize = 1024
 
 		Convey("You can query the Tree for DirInfo", func() {
 			di, err := tree.DirInfo("/", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/", 14, 85, expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs},
+				Current: &DirSummary{"/", 14 + numDirectories, 85 + numDirectories*directorySize,
+					expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs},
 				Children: []*DirSummary{
-					{"/a", 14, 85, expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs},
+					{"/a", 14 + numDirectories, 85 + numDirectories*directorySize,
+						expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs},
 				},
 			})
 
 			di, err = tree.DirInfo("/a", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a", 14, 85, expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs},
+				Current: &DirSummary{"/a", 14 + numDirectories, 85 + numDirectories*directorySize,
+					expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs},
 				Children: []*DirSummary{
-					{"/a/b", 9, 80, expectedAtime, time.Unix(80, 0), expectedUIDs, expectedGIDsOne, expectedFTs},
-					{"/a/c", 5, 5, time.Unix(90, 0), time.Unix(90, 0), []uint32{102}, []uint32{2}, expectedFTsCram},
+					{"/a/b", 9 + 7, 80 + 7*directorySize, expectedAtime, time.Unix(80, 0),
+						expectedUIDs, expectedGIDsOne, expectedFTs},
+					{"/a/c", 5 + 2, 5 + 2*directorySize, time.Unix(90, 0), time.Unix(90, 0),
+						[]uint32{102}, []uint32{2}, expectedFTsCram},
 				},
 			})
 
@@ -93,8 +103,9 @@ func TestTree(t *testing.T) {
 			di, err = tree.DirInfo("/a/b/e/h/tmp", nil)
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a/b/e/h/tmp", 1, 5, time.Unix(80, 0), time.Unix(80, 0),
-					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{summary.DGUTFileTypeTemp, summary.DGUTFileTypeBam}},
+				Current: &DirSummary{"/a/b/e/h/tmp", 2, 5 + directorySize, time.Unix(80, 0), time.Unix(80, 0),
+					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{summary.DGUTFileTypeTemp,
+						summary.DGUTFileTypeBam, summary.DGUTFileTypeDir}},
 				Children: nil,
 			})
 
