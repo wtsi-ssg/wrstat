@@ -105,7 +105,7 @@ func File(absPath string, info os.FileInfo) *FileStats {
 		fs.Mtim = stat.Mtim.Sec
 		fs.Ctim = stat.Ctim.Sec
 		fs.Ino = stat.Ino
-		fs.Nlink = uint64(stat.Nlink)
+		fs.Nlink = uint64(stat.Nlink) //nolint:unconvert
 		fs.Dev = stat.Dev
 
 		fs.correctSize(stat)

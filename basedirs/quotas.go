@@ -40,14 +40,15 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
-	quotaCSVCols       = 3
+	quotaCSVCols       = 4
 	errBadQuotaCSVFile = Error("invalid number of columns in quota csv file")
 )
 
 // diskQuota stores the quota in bytes for a particular disk location.
 type diskQuota struct {
-	disk  string
-	quota uint64
+	disk       string
+	quotaSize  uint64
+	quotaInode uint64
 }
 
 // Quotas stores information about group disk quotas.
@@ -98,38 +99,44 @@ func parseRowAndStore(row []string, q *Quotas) error {
 		return err
 	}
 
-	quota, err := strconv.ParseUint(row[2], 10, 64)
+	quotaSize, err := strconv.ParseUint(row[2], 10, 64)
 	if err != nil {
 		return err
 	}
 
-	q.store(uint32(gid), row[1], quota)
+	quotaInode, err := strconv.ParseUint(row[3], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	q.store(uint32(gid), row[1], quotaSize, quotaInode)
 
 	return nil
 }
 
 // store stores the given quota information.
-func (q *Quotas) store(gid uint32, disk string, quota uint64) {
+func (q *Quotas) store(gid uint32, disk string, quotaSize, quotaInode uint64) {
 	q.gids[gid] = append(q.gids[gid], &diskQuota{
-		disk:  disk,
-		quota: quota,
+		disk:       disk,
+		quotaSize:  quotaSize,
+		quotaInode: quotaInode,
 	})
 }
 
 // Get returns the quota (in bytes) for the given gid for the given disk
 // location. If path isn't a sub-directory of a disk in the csv file used to
 // create this Quotas, or gid doesn't have a quota on that disk, returns 0.
-func (q *Quotas) Get(gid uint32, path string) uint64 {
+func (q *Quotas) Get(gid uint32, path string) (uint64, uint64) {
 	dqs, found := q.gids[gid]
 	if !found {
-		return 0
+		return 0, 0
 	}
 
 	for _, dq := range dqs {
 		if strings.HasPrefix(path, dq.disk) {
-			return dq.quota
+			return dq.quotaSize, dq.quotaInode
 		}
 	}
 
-	return 0
+	return 0, 0
 }

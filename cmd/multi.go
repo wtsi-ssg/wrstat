@@ -52,6 +52,7 @@ var finalDir string
 var multiInodes int
 var multiCh string
 var forcedQueue string
+var quota string
 
 // multiCmd represents the multi command.
 var multiCmd = &cobra.Command{
@@ -133,7 +134,8 @@ func init() {
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
-	multiCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
+	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
+	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of group,disk,size_quota,inode_quota")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -144,6 +146,10 @@ func checkMultiArgs(args []string) {
 
 	if finalDir == "" {
 		die("--final_output is required")
+	}
+
+	if quota == "" {
+		die("--quota is required")
 	}
 
 	if len(args) == 0 {
@@ -246,7 +252,7 @@ func combineRepGrp(dir, unique string) string {
 // scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
 // from the combined dgut.dbs folders.
 func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob(fmt.Sprintf("%s basedir %s", s.Executable(), outputRoot),
+	job := s.NewJob(fmt.Sprintf("%s basedir -q %s %s", s.Executable(), quota, outputRoot),
 		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

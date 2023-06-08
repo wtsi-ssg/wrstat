@@ -40,9 +40,9 @@ func TestBaseDirs(t *testing.T) {
 		t.Fatalf("could not create dgut db: %s", err)
 	}
 
-	csvPath := makeQuotasCSV(t, `1,/disk/1,10
-1,/disk/2,11
-2,/disk/1,12
+	csvPath := makeQuotasCSV(t, `1,/disk/1,10,20
+1,/disk/2,11,21
+2,/disk/1,12,22
 `)
 
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {

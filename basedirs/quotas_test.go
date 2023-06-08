@@ -36,9 +36,9 @@ import (
 const testFilePerms = 0644
 
 func TestQuotas(t *testing.T) {
-	csvPath := makeQuotasCSV(t, `1,/disk/1,10
-1,/disk/2,11
-2,/disk/1,12
+	csvPath := makeQuotasCSV(t, `1,/disk/1,10,20
+1,/disk/2,11,21
+2,/disk/1,12,22
 `)
 
 	Convey("Given a valid quotas csv file you can parse it", t, func() {
@@ -47,22 +47,27 @@ func TestQuotas(t *testing.T) {
 		So(quota, ShouldNotBeNil)
 
 		Convey("Then get the quota of a gid and disk", func() {
-			s := quota.Get(1, "/disk/1/sub")
+			s, i := quota.Get(1, "/disk/1/sub")
 			So(s, ShouldEqual, 10)
+			So(i, ShouldEqual, 20)
 
-			s = quota.Get(1, "/disk/2/sub")
+			s, i = quota.Get(1, "/disk/2/sub")
 			So(s, ShouldEqual, 11)
+			So(i, ShouldEqual, 21)
 
-			s = quota.Get(2, "/disk/1/sub")
+			s, i = quota.Get(2, "/disk/1/sub")
 			So(s, ShouldEqual, 12)
+			So(i, ShouldEqual, 22)
 		})
 
 		Convey("Invalid gids and disks return 0 quota", func() {
-			s := quota.Get(3, "/disk/1/sub")
+			s, i := quota.Get(3, "/disk/1/sub")
 			So(s, ShouldEqual, 0)
+			So(i, ShouldEqual, 0)
 
-			s = quota.Get(2, "/disk/2/sub")
+			s, i = quota.Get(2, "/disk/2/sub")
 			So(s, ShouldEqual, 0)
+			So(i, ShouldEqual, 0)
 		})
 	})
 
@@ -72,11 +77,15 @@ func TestQuotas(t *testing.T) {
 		So(err, ShouldNotBeNil)
 		So(err, ShouldEqual, errBadQuotaCSVFile)
 
-		csvPath = makeQuotasCSV(t, `g,/disk/1,10`)
+		csvPath = makeQuotasCSV(t, `g,/disk/1,10,20`)
 		_, err = ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 
-		csvPath = makeQuotasCSV(t, `1,/disk/1,s`)
+		csvPath = makeQuotasCSV(t, `1,/disk/1,s,20`)
+		_, err = ParseQuotas(csvPath)
+		So(err, ShouldNotBeNil)
+
+		csvPath = makeQuotasCSV(t, `1,/disk/1,10,t`)
 		_, err = ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 

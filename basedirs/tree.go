@@ -93,7 +93,8 @@ func summariseBaseDirsOfID(tree *dgut.Tree, id uint32, q *Quotas) error {
 		}
 
 		storeSummariesInDB(ds, id, q)
-		// used to be `dirs = append(dirs, ds.Dir)` // then for each dir, `outFile.WriteString(fmt.Sprintf("%d\t%s\n", gid, dir))`
+		// used to be `dirs = append(dirs, ds.Dir)`
+		// then for each dir, `outFile.WriteString(fmt.Sprintf("%d\t%s\n", gid, dir))`
 
 		previous = ds.Dir
 	}

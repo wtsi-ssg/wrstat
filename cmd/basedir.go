@@ -56,9 +56,10 @@ var basedirCmd = &cobra.Command{
 	Long: `Create a database that summarises disk usage by unix group and base directory.
 
 Provide the unique subdirectory of your 'wrstat multi -w' directory as an unamed
-argument to this command. You must also provide a csv file of group,disk,quota
-via the --quota option (where the quota is the maximum disk usage allowed for
-that group on that disk in bytes).
+argument to this command. You must also provide a csv file of group,disk,
+size_quota,inode_quota via the --quota option (where size_quota is the maximum
+disk usage allowed for that group on that disk in bytes, and inode_quota is the
+maximum number of files they can have).
 
 This is called by 'wrstat multi' after the combine step has completed. It does
 some 'wrstat where'-type calls for every unix group to come up with hopefully
@@ -135,7 +136,7 @@ func init() {
 	RootCmd.AddCommand(basedirCmd)
 
 	// flags specific to this sub-command
-	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "group,disk,quota csv file")
+	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "group,disk,size_quota,inode_quota csv file")
 }
 
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
