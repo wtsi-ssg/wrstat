@@ -56,14 +56,34 @@ const (
 	DGUTFileTypeCompressed DirGUTFileType = 12
 	DGUTFileTypeText       DirGUTFileType = 13
 	DGUTFileTypeLog        DirGUTFileType = 14
+	DGUTFileTypeDir        DirGUTFileType = 15
 )
+
+var AllTypesExceptDirectories = []DirGUTFileType{ //nolint:gochecknoglobals
+	DGUTFileTypeOther,
+	DGUTFileTypeTemp,
+	DGUTFileTypeVCF,
+	DGUTFileTypeVCFGz,
+	DGUTFileTypeBCF,
+	DGUTFileTypeSam,
+	DGUTFileTypeBam,
+	DGUTFileTypeCram,
+	DGUTFileTypeFasta,
+	DGUTFileTypeFastq,
+	DGUTFileTypeFastqGz,
+	DGUTFileTypePedBed,
+	DGUTFileTypeCompressed,
+	DGUTFileTypeText,
+	DGUTFileTypeLog,
+}
 
 const ErrInvalidType = Error("not a valid file type")
 
 // String lets you convert a DirGUTFileType to a meaningful string.
 func (d DirGUTFileType) String() string {
 	return [...]string{"other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
-		"cram", "fasta", "fastq", "fastq.gz", "ped/bed", "compressed", "text", "log"}[d]
+		"cram", "fasta", "fastq", "fastq.gz", "ped/bed", "compressed", "text",
+		"log", "dir"}[d]
 }
 
 // FileTypeStringToDirGUTFileType converts the String() representation of a
@@ -86,6 +106,7 @@ func FileTypeStringToDirGUTFileType(ft string) (DirGUTFileType, error) {
 		"compressed": DGUTFileTypeCompressed,
 		"text":       DGUTFileTypeText,
 		"log":        DGUTFileTypeLog,
+		"dir":        DGUTFileTypeDir,
 	}
 
 	dgft, ok := convert[ft]
@@ -326,13 +347,23 @@ func (d *DirGroupUserType) Add(path string, info fs.FileInfo) error {
 
 	var atime int64
 
+	var gutKeys []string
+
 	if info.IsDir() {
 		atime = time.Now().Unix()
+		path = filepath.Join(path, "leaf")
+
+		if isTemp(path) {
+			gutKeys = append(gutKeys, fmt.Sprintf("%d\t%d\t%d", stat.Gid, stat.Uid, DGUTFileTypeTemp))
+		}
+
+		gutKeys = append(gutKeys, fmt.Sprintf("%d\t%d\t%d", stat.Gid, stat.Uid, DGUTFileTypeDir))
 	} else {
 		atime = maxInt(stat.Ctim.Sec, stat.Mtim.Sec, stat.Atim.Sec)
+		gutKeys = d.statToGUTKeys(stat, path)
 	}
 
-	d.addForEachDir(path, d.statToGUTKeys(stat, path), info.Size(), atime, stat.Mtim.Sec)
+	d.addForEachDir(path, gutKeys, info.Size(), atime, stat.Mtim.Sec)
 
 	return nil
 }

@@ -201,6 +201,14 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 func (t *Tree) Where(dir string, filter *Filter, depth int) (DCSs, error) {
 	var dcss DCSs
 
+	if filter == nil {
+		filter = new(Filter)
+	}
+
+	if filter.FTs == nil {
+		filter.FTs = summary.AllTypesExceptDirectories
+	}
+
 	di, err := t.where0(dir, filter)
 	if err != nil {
 		return nil, err

@@ -56,7 +56,8 @@ func TestTree(t *testing.T) {
 			summary.DGUTFileTypeBam, summary.DGUTFileTypeCram, summary.DGUTFileTypeDir}
 		expectedUIDsOne := []uint32{101}
 		expectedGIDsOne := []uint32{1}
-		expectedFTsCram := []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir}
+		expectedFTsCram := []summary.DirGUTFileType{summary.DGUTFileTypeCram}
+		expectedFTsCramAndDir := []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir}
 		expectedAtime := time.Unix(50, 0)
 		expectedAtimeG := time.Unix(60, 0)
 		expectedMtime := time.Unix(90, 0)
@@ -86,7 +87,7 @@ func TestTree(t *testing.T) {
 					{"/a/b", 9 + 7, 80 + 7*directorySize, expectedAtime, time.Unix(80, 0),
 						expectedUIDs, expectedGIDsOne, expectedFTs},
 					{"/a/c", 5 + 2, 5 + 2*directorySize, time.Unix(90, 0), time.Unix(90, 0),
-						[]uint32{102}, []uint32{2}, expectedFTsCram},
+						[]uint32{102}, []uint32{2}, expectedFTsCramAndDir},
 				},
 			})
 
@@ -144,7 +145,7 @@ func TestTree(t *testing.T) {
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, 0)
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs},
+				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs[:3]},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, 1)
@@ -168,6 +169,14 @@ func TestTree(t *testing.T) {
 				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
 				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
 				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram},
+			})
+
+			dcss, err = tree.Where("/", nil, 1)
+			So(err, ShouldBeNil)
+			So(dcss, ShouldResemble, DCSs{
+				{"/a", 14, 85, expectedAtime, time.Unix(90, 0), expectedUIDs, expectedGIDs, expectedFTs[:3]},
+				{"/a/b", 9, 80, expectedAtime, time.Unix(80, 0), expectedUIDs, expectedGIDsOne, expectedFTs[:3]},
+				{"/a/c/d", 5, 5, time.Unix(90, 0), time.Unix(90, 0), []uint32{102}, []uint32{2}, expectedFTsCram},
 			})
 
 			_, err = tree.Where("/foo", nil, 1)

@@ -345,18 +345,18 @@ func TestDirGUT(t *testing.T) {
 			So(dgut.store["/a/b/c/d"]["2\t10\t7"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 200, 200})
 			So(dgut.store["/a/b/c"]["10\t2\t7"], ShouldResemble, &summaryWithAtime{summary{1, 2}, 301, 0})
 
-			swa := dgut.store["/a/b"]["2\t10\t0"]
+			swa := dgut.store["/a/b"]["2\t10\t15"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
 			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18, 0})
 
-			swa = dgut.store["/a/b/c"]["2\t10\t0"]
+			swa = dgut.store["/a/b/c"]["2\t10\t15"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
 			So(swa, ShouldResemble, &summaryWithAtime{summary{1, 4096}, 18, 0})
-			So(dgut.store["/a/b/c/d"]["2\t10\t0"], ShouldBeNil)
+			So(dgut.store["/a/b/c/d"]["2\t10\t15"], ShouldNotBeNil)
 
 			So(dgut.store["/a/b"][cuidKey], ShouldResemble, &summaryWithAtime{summary{3, 60}, 0, 0})
 			So(dgut.store["/a/b"]["2\t2\t13"], ShouldResemble, &summaryWithAtime{summary{1, 5}, 0, 0})
