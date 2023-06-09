@@ -29,10 +29,12 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
+	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
 func TestTree(t *testing.T) {
@@ -51,10 +53,14 @@ func TestTree(t *testing.T) {
 		expectedGIDs[i+1] = strToID(t, gidsStrs[i])
 	}
 
-	Convey("Given a Tree", t, func() {
+	Convey("Given a Tree and quota", t, func() {
 		tree, err := dgut.NewTree(dbPath)
 		So(err, ShouldBeNil)
 		So(tree, ShouldNotBeNil)
+
+		csvPath := makeQuotasCSV(t, exampleQuotaCSV)
+		quota, err := ParseQuotas(csvPath)
+		So(err, ShouldBeNil)
 
 		Convey("You can get all the gids and uids in it", func() {
 			gids, uids, err := getAllGIDsandUIDsInTree(tree)
@@ -70,6 +76,25 @@ func TestTree(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(gids, ShouldResemble, expectedGIDs)
 			So(uids, ShouldResemble, expectedUIDs)
+
+			Convey("Then we can calculate the base directories of each", func() {
+				dir := t.TempDir()
+
+				bd, err := New(dir, tree, quota)
+				So(err, ShouldBeNil)
+
+				expectedAtime := time.Unix(15, 0)
+				expectedMtime := time.Unix(20, 0)
+				expectedFTsBam := []summary.DirGUTFileType{summary.DGUTFileTypeBam}
+
+				dcss, err := bd.CalculateForGroup(gids[0])
+				So(err, ShouldBeNil)
+				So(dcss, ShouldNotResemble, dgut.DCSs{ // TODO: ShouldResemble correct data, need to make deeper tree!
+					{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam},
+					{"/a/b/c/d", 1, 1, time.Unix(20, 0), expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam},
+					{"/a/b/c/e", 1, 1, expectedAtime, expectedAtime, []uint32{11}, []uint32{1}, expectedFTsBam},
+				})
+			})
 		})
 	})
 }

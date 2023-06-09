@@ -33,10 +33,17 @@ import "github.com/wtsi-ssg/wrstat/v4/dgut"
 // BaseDirs is used to summarise disk usage information by base directory and
 // group or user.
 type BaseDirs struct {
+	dir    string
+	tree   *dgut.Tree
+	quotas *Quotas
 }
 
 func New(dir string, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
-	return &BaseDirs{}, nil
+	return &BaseDirs{
+		dir:    dir,
+		tree:   tree,
+		quotas: quotas,
+	}, nil
 }
 
 func (b *BaseDirs) SummariseGroups() error {

@@ -78,6 +78,12 @@ func summariseBaseDirsOfID(tree *dgut.Tree, id uint32, q *Quotas) error {
 		filter = &dgut.Filter{UIDs: []uint32{id}}
 	}
 
+	return filterWhereResults(tree, filter, func(ds *dgut.DirSummary) {
+		storeSummariesInDB(ds, id, q)
+	})
+}
+
+func filterWhereResults(tree *dgut.Tree, filter *dgut.Filter, cb func(ds *dgut.DirSummary)) error {
 	dcss, err := tree.Where("/", filter, basedirSplits)
 	if err != nil {
 		return err
@@ -92,7 +98,8 @@ func summariseBaseDirsOfID(tree *dgut.Tree, id uint32, q *Quotas) error {
 			continue
 		}
 
-		storeSummariesInDB(ds, id, q)
+		cb(ds)
+
 		// used to be `dirs = append(dirs, ds.Dir)`
 		// then for each dir, `outFile.WriteString(fmt.Sprintf("%d\t%s\n", gid, dir))`
 
@@ -100,6 +107,18 @@ func summariseBaseDirsOfID(tree *dgut.Tree, id uint32, q *Quotas) error {
 	}
 
 	return nil
+}
+
+func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
+	var dcss dgut.DCSs
+
+	if err := filterWhereResults(b.tree, &dgut.Filter{GIDs: []uint32{gid}}, func(ds *dgut.DirSummary) {
+		dcss = append(dcss, ds)
+	}); err != nil {
+		return nil, err
+	}
+
+	return dcss, nil
 }
 
 // notEnoughDirs returns true if the given path has fewer than 4 directories.

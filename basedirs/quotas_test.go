@@ -35,11 +35,13 @@ import (
 
 const testFilePerms = 0644
 
-func TestQuotas(t *testing.T) {
-	csvPath := makeQuotasCSV(t, `1,/disk/1,10,20
+const exampleQuotaCSV = `1,/disk/1,10,20
 1,/disk/2,11,21
 2,/disk/1,12,22
-`)
+`
+
+func TestQuotas(t *testing.T) {
+	csvPath := makeQuotasCSV(t, exampleQuotaCSV)
 
 	Convey("Given a valid quotas csv file you can parse it", t, func() {
 		quota, err := ParseQuotas(csvPath)
