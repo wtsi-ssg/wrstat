@@ -28,52 +28,24 @@
 // package internal provides some test-related functions needed by multiple
 // other packages.
 
-package internal
+package internaldb
 
 import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 )
 
 const DirPerms = 0755
 const ExampleDgutDirParentSuffix = "dgut.dbs"
 const minGIDsForExampleDgutDB = 2
 const exampleDBBatchSize = 20
-const exampleDgutData = `/	x	z	7	3	30	50	60
-/	x	z	6	2	10	50	75
-/	x	z	1	1	5	50	80
-/	x	0	7	4	40	50	75
-/	y	0	7	5	5	50	90
-/	0	0	7	1	1	50	50
-/a	x	z	7	3	30	50	60
-/a	x	z	6	2	10	50	75
-/a	x	z	1	1	5	50	80
-/a	x	0	7	4	40	50	75
-/a	y	0	7	5	5	50	90
-/a	0	0	7	1	1	50	50
-/a/b	x	z	7	3	30	50	60
-/a/b	x	z	6	2	10	50	75
-/a/b	x	z	1	1	5	50	80
-/a/b	x	0	7	4	40	50	75
-/a/b/d	x	z	7	3	30	50	60
-/a/b/d	x	0	7	4	40	50	75
-/a/b/d/f	x	z	7	1	10	75	50
-/a/b/d/g	x	z	7	2	20	50	60
-/a/b/d/g	x	0	7	4	40	50	75
-/a/b/e	x	z	6	2	10	50	75
-/a/b/e	x	z	1	1	5	50	80
-/a/b/e/h	x	z	6	2	10	50	75
-/a/b/e/h	x	z	1	1	5	50	80
-/a/b/e/h/tmp	x	z	6	1	5	50	75
-/a/b/e/h/tmp	x	z	1	1	5	50	80
-/a/c	y	0	7	5	5	50	90
-/a/c/d	y	0	7	5	5	50	90
-`
 
 // GetUserAndGroups returns the current users username, uid and gids.
 func GetUserAndGroups(t *testing.T) (string, string, []string) {
@@ -120,7 +92,7 @@ func CreateExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
 		return dir, err
 	}
 
-	dgutData := exampleDGUTData(uid, gidA, gidB)
+	dgutData := exampleDGUTData(t, uid, gidA, gidB)
 	data := strings.NewReader(dgutData)
 	db := dgut.NewDB(dir)
 
@@ -143,10 +115,23 @@ func createExampleDgutDir(t *testing.T) (string, error) {
 
 // exampleDGUTData is some example DGUT data that uses the given uid and gids,
 // along with root's uid.
-func exampleDGUTData(uid, gidA, gidB string) string {
-	data := strings.ReplaceAll(exampleDgutData, "x", gidA)
-	data = strings.ReplaceAll(data, "y", gidB)
-	data = strings.ReplaceAll(data, "z", uid)
+func exampleDGUTData(t *testing.T, uidStr, gidAStr, gidBStr string) string {
+	t.Helper()
 
-	return data
+	uid, err := strconv.ParseUint(uidStr, 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gidA, err := strconv.ParseUint(gidAStr, 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gidB, err := strconv.ParseUint(gidBStr, 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return internaldata.TestDGUTData(t, int(gidA), int(gidB), 0, int(uid), 0)
 }

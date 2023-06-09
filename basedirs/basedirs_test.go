@@ -31,11 +31,11 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	"github.com/wtsi-ssg/wrstat/v4/internal"
+	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 )
 
 func TestBaseDirs(t *testing.T) {
-	dbPath, err := internal.CreateExampleDGUTDB(t)
+	dbPath, err := internaldb.CreateExampleDGUTDB(t)
 	if err != nil {
 		t.Fatalf("could not create dgut db: %s", err)
 	}
@@ -59,5 +59,9 @@ func TestBaseDirs(t *testing.T) {
 		bd, err := New(dbDir, tree, quotas)
 		So(err, ShouldBeNil)
 		So(bd, ShouldNotBeNil)
+
+		Convey("Given a Tree and Quotas you can make a BaseDirs", func() {
+
+		})
 	})
 }

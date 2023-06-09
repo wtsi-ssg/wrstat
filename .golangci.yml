@@ -58,6 +58,10 @@ issues:
         - funlen
         - maintidx
         - contextcheck
+    - path: internal
+      linters:
+        - gomnd
+        - funlen
     - path: cmd
       linters:
         - gochecknoinits

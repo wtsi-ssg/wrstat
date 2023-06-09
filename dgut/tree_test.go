@@ -31,6 +31,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
+	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
@@ -259,7 +260,7 @@ func TestTree(t *testing.T) {
 func testCreateDB(t *testing.T, path string) error {
 	t.Helper()
 
-	dgutData := testDGUTData(t)
+	dgutData := internaldata.TestDGUTData(t, 1, 2, 1, 101, 102)
 	data := strings.NewReader(dgutData)
 	db := NewDB(path)
 

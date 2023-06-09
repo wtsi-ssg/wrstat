@@ -32,16 +32,16 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	"github.com/wtsi-ssg/wrstat/v4/internal"
+	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 )
 
 func TestTree(t *testing.T) {
-	dbPath, err := internal.CreateExampleDGUTDB(t)
+	dbPath, err := internaldb.CreateExampleDGUTDB(t)
 	if err != nil {
 		t.Fatalf("could not create dgut db: %s", err)
 	}
 
-	_, uidStr, gidsStrs := internal.GetUserAndGroups(t)
+	_, uidStr, gidsStrs := internaldb.GetUserAndGroups(t)
 	expectedUIDs := []uint32{0, strToID(t, uidStr)}
 
 	expectedGIDs := make([]uint32, 3)

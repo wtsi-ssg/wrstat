@@ -26,18 +26,14 @@
 package dgut
 
 import (
-	"io/fs"
 	"math"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
-	"syscall"
 	"testing"
-	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ugorji/go/codec"
+	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 	bolt "go.etcd.io/bbolt"
 )
@@ -510,7 +506,7 @@ func TestDGUT(t *testing.T) {
 func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []*DGUT, expectedKeys []string) {
 	t.Helper()
 
-	dgutData = testDGUTData(t)
+	dgutData = internaldata.TestDGUTData(t, 1, 2, 1, 101, 102)
 
 	expectedRootGUTs = GUTs{
 		{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
@@ -608,116 +604,6 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		"/a/b/d/g", "/a/b/e", "/a/b/e/h", "/a/b/e/h/tmp", "/a/c", "/a/c/d"}
 
 	return dgutData, expectedRootGUTs, expected, expectedKeys
-}
-
-type stringBuilderCloser struct {
-	strings.Builder
-}
-
-func (s stringBuilderCloser) Close() error {
-	return nil
-}
-
-func testDGUTData(t *testing.T) string {
-	t.Helper()
-
-	dir := "/"
-	abdf := filepath.Join(dir, "a", "b", "d", "f")
-	abdg := filepath.Join(dir, "a", "b", "d", "g")
-	abehtmp := filepath.Join(dir, "a", "b", "e", "h", "tmp")
-	acd := filepath.Join(dir, "a", "c", "d")
-
-	dgut := summary.NewByDirGroupUserType()
-	doneDirs := make(map[string]bool)
-
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(abdf, "file.cram"), 1, 10, 1, 101, 50, 50)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(abdg, "file.cram"), 2, 10, 1, 101, 60, 60)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(abdg, "file.cram"), 4, 10, 1, 102, 75, 75)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(dir, "a", "b", "e", "h", "file.bam"), 1, 5, 1, 101, 100, 30)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(abehtmp, "file.bam"), 1, 5, 1, 101, 80, 80)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(acd, "file.cram"), 5, 1, 2, 102, 90, 90)
-
-	var sb stringBuilderCloser
-
-	err := dgut.Output(&sb)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return sb.String()
-}
-
-type fakeFileInfo struct {
-	dir  bool
-	stat *syscall.Stat_t
-}
-
-func (f *fakeFileInfo) Name() string       { return "" }
-func (f *fakeFileInfo) Size() int64        { return f.stat.Size }
-func (f *fakeFileInfo) Mode() fs.FileMode  { return 0 }
-func (f *fakeFileInfo) ModTime() time.Time { return time.Time{} }
-func (f *fakeFileInfo) IsDir() bool        { return f.dir }
-func (f *fakeFileInfo) Sys() any           { return f.stat }
-
-func addTestFileInfo(t *testing.T, dgut *summary.DirGroupUserType, doneDirs map[string]bool,
-	path string, numFiles, sizeOfEachFile, gid, uid, atime, mtime int) {
-	t.Helper()
-
-	dir, basename := filepath.Split(path)
-
-	for i := 0; i < numFiles; i++ {
-		filePath := filepath.Join(dir, strconv.FormatInt(int64(i), 10)+basename)
-
-		info := &fakeFileInfo{
-			stat: &syscall.Stat_t{
-				Uid:  uint32(uid),
-				Gid:  uint32(gid),
-				Size: int64(sizeOfEachFile),
-				Atim: syscall.Timespec{Sec: int64(atime)},
-				Mtim: syscall.Timespec{Sec: int64(mtime)},
-			},
-		}
-
-		err := dgut.Add(filePath, info)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	addTestDirInfo(t, dgut, doneDirs, filepath.Dir(path), gid, uid)
-}
-
-func addTestDirInfo(t *testing.T, dgut *summary.DirGroupUserType, doneDirs map[string]bool,
-	dir string, gid, uid int) {
-	t.Helper()
-
-	for {
-		if doneDirs[dir] {
-			return
-		}
-
-		info := &fakeFileInfo{
-			dir: true,
-			stat: &syscall.Stat_t{
-				Uid:  uint32(uid),
-				Gid:  uint32(gid),
-				Size: int64(1024),
-				Mtim: syscall.Timespec{Sec: int64(1)},
-			},
-		}
-
-		err := dgut.Add(dir, info)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		doneDirs[dir] = true
-
-		dir = filepath.Dir(dir)
-		if dir == "/" {
-			return
-		}
-	}
 }
 
 // testMakeDBPaths creates a temp dir that will be cleaned up automatically, and
