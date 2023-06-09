@@ -20,28 +20,110 @@ func (s stringBuilderCloser) Close() error {
 	return nil
 }
 
-func TestDGUTData(t *testing.T, gidA, gidB, gidC, uidA, uidB int) string {
-	t.Helper()
+type TestFile struct {
+	Path           string
+	UID, GID       int
+	NumFiles       int
+	SizeOfEachFile int
+	ATime, MTime   int
+}
 
+func CreateDefaultTestData(gidA, gidB, gidC, uidA, uidB int) []TestFile {
 	dir := "/"
 	abdf := filepath.Join(dir, "a", "b", "d", "f")
 	abdg := filepath.Join(dir, "a", "b", "d", "g")
 	abehtmp := filepath.Join(dir, "a", "b", "e", "h", "tmp")
 	acd := filepath.Join(dir, "a", "c", "d")
+	files := []TestFile{
+		{
+			Path:           filepath.Join(abdf, "file.cram"),
+			NumFiles:       1,
+			SizeOfEachFile: 10,
+			GID:            gidA,
+			UID:            uidA,
+			ATime:          50,
+			MTime:          50,
+		},
+		{
+			Path:           filepath.Join(abdg, "file.cram"),
+			NumFiles:       2,
+			SizeOfEachFile: 10,
+			GID:            gidA,
+			UID:            uidA,
+			ATime:          60,
+			MTime:          60,
+		},
+		{
+			Path:           filepath.Join(abdg, "file.cram"),
+			NumFiles:       4,
+			SizeOfEachFile: 10,
+			GID:            gidA,
+			UID:            uidB,
+			ATime:          75,
+			MTime:          75,
+		},
+		{
+			Path:           filepath.Join(dir, "a", "b", "e", "h", "file.bam"),
+			NumFiles:       1,
+			SizeOfEachFile: 5,
+			GID:            gidA,
+			UID:            uidA,
+			ATime:          100,
+			MTime:          30,
+		},
+		{
+			Path:           filepath.Join(abehtmp, "file.bam"),
+			NumFiles:       1,
+			SizeOfEachFile: 5,
+			GID:            gidA,
+			UID:            uidA,
+			ATime:          80,
+			MTime:          80,
+		},
+		{Path: filepath.Join(acd, "file.cram"),
+			NumFiles:       5,
+			SizeOfEachFile: 1,
+			GID:            gidB,
+			UID:            uidB,
+			ATime:          90,
+			MTime:          90,
+		},
+	}
+
+	if gidC == 0 {
+		files = append(files,
+			TestFile{
+				Path:           filepath.Join(dir, "a", "file.cram"),
+				NumFiles:       1,
+				SizeOfEachFile: 1,
+				GID:            gidC,
+				UID:            uidB,
+				ATime:          50,
+				MTime:          50,
+			},
+			TestFile{Path: filepath.Join(abdg, "file.cram"),
+				NumFiles:       4,
+				SizeOfEachFile: 10,
+				GID:            gidA,
+				UID:            uidB,
+				ATime:          50,
+				MTime:          75,
+			},
+		)
+	}
+
+	return files
+}
+
+func TestDGUTData(t *testing.T, files []TestFile) string {
+	t.Helper()
 
 	dgut := summary.NewByDirGroupUserType()
 	doneDirs := make(map[string]bool)
 
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(abdf, "file.cram"), 1, 10, gidA, uidA, 50, 50)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(abdg, "file.cram"), 2, 10, gidA, uidA, 60, 60)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(abdg, "file.cram"), 4, 10, gidA, uidB, 75, 75)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(dir, "a", "b", "e", "h", "file.bam"), 1, 5, gidA, uidA, 100, 30)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(abehtmp, "file.bam"), 1, 5, gidA, uidA, 80, 80)
-	addTestFileInfo(t, dgut, doneDirs, filepath.Join(acd, "file.cram"), 5, 1, gidB, uidB, 90, 90)
-
-	if gidC == 0 {
-		addTestFileInfo(t, dgut, doneDirs, filepath.Join(dir, "a", "file.cram"), 1, 1, gidC, uidB, 50, 50)
-		addTestFileInfo(t, dgut, doneDirs, filepath.Join(abdg, "file.cram"), 4, 10, gidA, uidB, 50, 75)
+	for _, file := range files {
+		addTestFileInfo(t, dgut, doneDirs, file.Path, file.NumFiles,
+			file.SizeOfEachFile, file.GID, file.UID, file.ATime, file.MTime)
 	}
 
 	var sb stringBuilderCloser

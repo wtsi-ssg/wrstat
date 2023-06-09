@@ -506,7 +506,7 @@ func TestDGUT(t *testing.T) {
 func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []*DGUT, expectedKeys []string) {
 	t.Helper()
 
-	dgutData = internaldata.TestDGUTData(t, 1, 2, 1, 101, 102)
+	dgutData = internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
 
 	expectedRootGUTs = GUTs{
 		{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80},

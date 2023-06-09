@@ -260,7 +260,7 @@ func TestTree(t *testing.T) {
 func testCreateDB(t *testing.T, path string) error {
 	t.Helper()
 
-	dgutData := internaldata.TestDGUTData(t, 1, 2, 1, 101, 102)
+	dgutData := internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
 	data := strings.NewReader(dgutData)
 	db := NewDB(path)
 

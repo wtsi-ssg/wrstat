@@ -133,5 +133,5 @@ func exampleDGUTData(t *testing.T, uidStr, gidAStr, gidBStr string) string {
 		t.Fatal(err)
 	}
 
-	return internaldata.TestDGUTData(t, int(gidA), int(gidB), 0, int(uid), 0)
+	return internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(int(gidA), int(gidB), 0, int(uid), 0))
 }
