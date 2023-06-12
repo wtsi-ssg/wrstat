@@ -1,7 +1,9 @@
 /*******************************************************************************
- * Copyright (c) 2022 Genome Research Ltd.
+ * Copyright (c) 2022, 2023 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *   Sendu Bala <sb10@sanger.ac.uk>
+ *   Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -28,7 +30,22 @@
 
 package basedirs
 
-import "github.com/wtsi-ssg/wrstat/v4/dgut"
+import (
+	"regexp"
+	"strings"
+
+	"github.com/ugorji/go/codec"
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	bolt "go.etcd.io/bbolt"
+)
+
+const (
+	basedirSplits     = 4
+	basedirMinDirs    = 4
+	basedirMinDirsMDT = 5
+)
+
+var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
 
 // BaseDirs is used to summarise disk usage information by base directory and
 // group or user.
@@ -36,20 +53,109 @@ type BaseDirs struct {
 	dir    string
 	tree   *dgut.Tree
 	quotas *Quotas
+	ch     codec.Handle
 }
 
-func New(dir string, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
+// NewCreator returns a BaseDirs that lets you create a database summarising
+// usage information by base directory, taken from the given tree and quotas.
+func NewCreator(dir string, tree *dgut.Tree, quotas *Quotas) *BaseDirs {
 	return &BaseDirs{
 		dir:    dir,
 		tree:   tree,
 		quotas: quotas,
+		ch:     new(codec.BincHandle),
+	}
+}
+
+// CalculateForGroup calculates all the base directories for the given group.
+func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
+	var dcss dgut.DCSs
+
+	if err := b.filterWhereResults(&dgut.Filter{GIDs: []uint32{gid}}, func(ds *dgut.DirSummary) {
+		dcss = append(dcss, ds)
+	}); err != nil {
+		return nil, err
+	}
+
+	return dcss, nil
+}
+
+func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirSummary)) error {
+	dcss, err := b.tree.Where("/", filter, basedirSplits)
+	if err != nil {
+		return err
+	}
+
+	dcss.SortByDir()
+
+	var previous string
+
+	for _, ds := range dcss {
+		if notEnoughDirs(ds.Dir) || childOfPreviousResult(ds.Dir, previous) {
+			continue
+		}
+
+		cb(ds)
+
+		// used to be `dirs = append(dirs, ds.Dir)`
+		// then for each dir, `outFile.WriteString(fmt.Sprintf("%d\t%s\n", gid, dir))`
+
+		previous = ds.Dir
+	}
+
+	return nil
+}
+
+// notEnoughDirs returns true if the given path has fewer than 4 directories.
+// If path has an mdt directory in it, then it becomes 5 directories.
+func notEnoughDirs(path string) bool {
+	numDirs := strings.Count(path, "/")
+
+	min := basedirMinDirs
+	if basedirMDTRegexp.MatchString(path) {
+		min = basedirMinDirsMDT
+	}
+
+	return numDirs < min
+}
+
+// childOfPreviousResult returns true if previous is not blank, and dir starts
+// with it.
+func childOfPreviousResult(dir, previous string) bool {
+	return previous != "" && strings.HasPrefix(dir, previous)
+}
+
+// CalculateForUser calculates all the base directories for the given user.
+func (b *BaseDirs) CalculateForUser(uid uint32) (dgut.DCSs, error) {
+	var dcss dgut.DCSs
+
+	if err := b.filterWhereResults(&dgut.Filter{UIDs: []uint32{uid}}, func(ds *dgut.DirSummary) {
+		dcss = append(dcss, ds)
+	}); err != nil {
+		return nil, err
+	}
+
+	return dcss, nil
+}
+
+// BaseDirReader is used to read the information stored in a BaseDir database.
+type BaseDirReader struct {
+	db *bolt.DB
+	ch codec.Handle
+}
+
+// NewReader returns a BaseDirReader that can return the summary information
+// stored in a BaseDir database.
+func NewReader(path string) (*BaseDirReader, error) {
+	db, err := bolt.Open(path, dbOpenMode, &bolt.Options{
+		ReadOnly: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &BaseDirReader{
+		db: db,
+		ch: new(codec.BincHandle),
 	}, nil
-}
-
-func (b *BaseDirs) SummariseGroups() error {
-	return nil
-}
-
-func (b *BaseDirs) SummariseUsers() error {
-	return nil
 }

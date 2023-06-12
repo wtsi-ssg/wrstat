@@ -111,24 +111,14 @@ the latest summary information.`,
 
 		dbDir := filepath.Join(args[0], basedirBasename)
 
-		bd, err := basedirs.New(dbDir, tree, quotas)
-		if err != nil {
-			die("failed to prepare base directory database: %s", err)
-		}
+		bd := basedirs.NewCreator(dbDir, tree, quotas)
 
 		t = time.Now()
-		err = bd.SummariseGroups()
+		err = bd.CreateDatabase()
 		if err != nil {
-			die("failed to summarise group base directories: %s", err)
+			die("failed to create base directories database: %s", err)
 		}
-		info("summarising group base dirs took %s", time.Since(t))
-
-		t = time.Now()
-		err = bd.SummariseUsers()
-		if err != nil {
-			die("failed to summarise user base directories: %s", err)
-		}
-		info("summarising user base dirs took %s", time.Since(t))
+		info("creating base dirs took %s", time.Since(t))
 	},
 }
 

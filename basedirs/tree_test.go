@@ -1,7 +1,9 @@
 /*******************************************************************************
- * Copyright (c) 2022 Genome Research Ltd.
+ * Copyright (c) 2022, 2023 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *   Sendu Bala <sb10@sanger.ac.uk>
+ *   Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -28,21 +30,39 @@ package basedirs
 import (
 	"path/filepath"
 	"testing"
-	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
-	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
 func TestTree(t *testing.T) {
+	Convey("Given a Tree", t, func() {
+		tree, _ := baseDirsTree(t)
+
+		Convey("You can get all the gids and uids in it", func() {
+			gids, uids, err := getAllGIDsandUIDsInTree(tree)
+			expectedGIDs := []uint32{1, 2, 3}
+			expectedUIDs := []uint32{101, 102, 103}
+			So(err, ShouldBeNil)
+			So(gids, ShouldResemble, expectedGIDs)
+			So(uids, ShouldResemble, expectedUIDs)
+		})
+	})
+}
+
+// baseDirsTree makes a tree database with data useful for testing basedirs,
+// and returns it along with a slice of directories where the data is.
+func baseDirsTree(t *testing.T) (*dgut.Tree, []string) {
+	t.Helper()
+
 	projectA := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "A")
 	projectB125 := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "B")
 	projectB123 := filepath.Join("/", "lustre", "scratch123", "hgi", "mdt1", "projects", "B")
 	projectC1 := filepath.Join("/", "lustre", "scratch123", "hgi", "m0")
 	projectC2 := filepath.Join("/", "lustre", "scratch123", "hgi", "mdt0")
+	user2 := filepath.Join("/", "lustre", "scratch125", "humgen", "teams", "102")
 	files := []internaldata.TestFile{
 		{
 			Path:           filepath.Join(projectA, "a.bam"),
@@ -60,7 +80,7 @@ func TestTree(t *testing.T) {
 			GID:            1,
 			UID:            101,
 			ATime:          50,
-			MTime:          50,
+			MTime:          100,
 		},
 		{
 			Path:           filepath.Join(projectB125, "b.bam"),
@@ -85,7 +105,7 @@ func TestTree(t *testing.T) {
 			NumFiles:       1,
 			SizeOfEachFile: 40,
 			GID:            2,
-			UID:            102,
+			UID:            103,
 			ATime:          50,
 			MTime:          50,
 		},
@@ -94,6 +114,15 @@ func TestTree(t *testing.T) {
 			NumFiles:       1,
 			SizeOfEachFile: 40,
 			GID:            2,
+			UID:            103,
+			ATime:          50,
+			MTime:          50,
+		},
+		{
+			Path:           filepath.Join(user2, "d.bam"),
+			NumFiles:       1,
+			SizeOfEachFile: 60,
+			GID:            3,
 			UID:            102,
 			ATime:          50,
 			MTime:          50,
@@ -107,83 +136,9 @@ func TestTree(t *testing.T) {
 		t.Fatalf("could not create dgut db: %s", err)
 	}
 
-	Convey("Given a Tree and quota", t, func() {
-		tree, err := dgut.NewTree(dbPath)
-		So(err, ShouldBeNil)
-		So(tree, ShouldNotBeNil)
+	tree, err := dgut.NewTree(dbPath)
+	So(err, ShouldBeNil)
+	So(tree, ShouldNotBeNil)
 
-		csvPath := makeQuotasCSV(t, exampleQuotaCSV)
-		quota, err := ParseQuotas(csvPath)
-		So(err, ShouldBeNil)
-
-		Convey("You can get all the gids and uids in it", func() {
-			gids, uids, err := getAllGIDsandUIDsInTree(tree)
-			expectedGIDs := []uint32{1, 2}
-			expectedUIDs := []uint32{101, 102}
-			So(err, ShouldBeNil)
-			So(gids, ShouldResemble, expectedGIDs)
-			So(uids, ShouldResemble, expectedUIDs)
-
-			Convey("Then we can calculate the base directories of each", func() {
-				dir := t.TempDir()
-
-				bd, err := New(dir, tree, quota)
-				So(err, ShouldBeNil)
-
-				expectedAtime := time.Unix(50, 0)
-				expectedMtime := time.Unix(50, 0)
-				expectedFTsBam := []summary.DirGUTFileType{summary.DGUTFileTypeBam}
-
-				dcss, err := bd.CalculateForGroup(1)
-				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
-					{
-						Dir:   projectA,
-						Count: 2,
-						Size:  21,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{1},
-						UIDs:  []uint32{101},
-						FTs:   expectedFTsBam,
-					},
-				})
-
-				dcss, err = bd.CalculateForGroup(2)
-				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
-					{
-						Dir:   projectC1,
-						Count: 1,
-						Size:  40,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{2},
-						UIDs:  []uint32{102},
-						FTs:   expectedFTsBam,
-					},
-					{
-						Dir:   projectB123,
-						Count: 1,
-						Size:  30,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{2},
-						UIDs:  []uint32{102},
-						FTs:   expectedFTsBam,
-					},
-					{
-						Dir:   projectB125,
-						Count: 1,
-						Size:  20,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{2},
-						UIDs:  []uint32{102},
-						FTs:   expectedFTsBam,
-					},
-				})
-			})
-		})
-	})
+	return tree, []string{projectA, projectB125, projectB123, projectC1, projectC2, user2}
 }
