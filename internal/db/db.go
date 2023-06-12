@@ -87,12 +87,19 @@ func CreateExampleDGUTDB(t *testing.T) (string, error) {
 func CreateExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
 	t.Helper()
 
+	dgutData := exampleDGUTData(t, uid, gidA, gidB)
+
+	return CreateCustomDB(t, dgutData)
+}
+
+func CreateCustomDB(t *testing.T, dgutData string) (string, error) {
+	t.Helper()
+
 	dir, err := createExampleDgutDir(t)
 	if err != nil {
 		return dir, err
 	}
 
-	dgutData := exampleDGUTData(t, uid, gidA, gidB)
 	data := strings.NewReader(dgutData)
 	db := dgut.NewDB(dir)
 
