@@ -114,7 +114,7 @@ the latest summary information.`,
 		bd := basedirs.NewCreator(dbDir, tree, quotas)
 
 		t = time.Now()
-		err = bd.CreateDatabase()
+		err = bd.CreateDatabase(time.Now())
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}

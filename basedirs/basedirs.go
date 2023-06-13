@@ -140,8 +140,9 @@ func (b *BaseDirs) CalculateForUser(uid uint32) (dgut.DCSs, error) {
 
 // BaseDirReader is used to read the information stored in a BaseDir database.
 type BaseDirReader struct {
-	db *bolt.DB
-	ch codec.Handle
+	db          *bolt.DB
+	ch          codec.Handle
+	mountPoints mountPoints
 }
 
 // NewReader returns a BaseDirReader that can return the summary information
@@ -154,8 +155,14 @@ func NewReader(path string) (*BaseDirReader, error) {
 		return nil, err
 	}
 
+	mp, err := getMountPoints()
+	if err != nil {
+		return nil, err
+	}
+
 	return &BaseDirReader{
-		db: db,
-		ch: new(codec.BincHandle),
+		db:          db,
+		ch:          new(codec.BincHandle),
+		mountPoints: mp,
 	}, nil
 }

@@ -174,7 +174,8 @@ func TestBaseDirs(t *testing.T) {
 		})
 
 		Convey("With which you can store group and user summary info in a database", func() {
-			err := bd.CreateDatabase()
+			yesterday := time.Now().Add(-25 * time.Hour)
+			err := bd.CreateDatabase(yesterday)
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(dbPath)
@@ -221,6 +222,39 @@ func TestBaseDirs(t *testing.T) {
 							Mtime: expectedMtime},
 						{UID: 103, BaseDir: projectC1, UsageSize: 40, UsageInodes: 1,
 							Mtime: expectedMtime},
+					})
+				})
+
+				Convey("getting group historical quota", func() {
+					expectedAHistory := History{
+						Date:        yesterday.In(l),
+						UsageSize:   21,
+						QuotaSize:   200,
+						UsageInodes: 2,
+						QuotaInodes: 20,
+					}
+
+					history, err := bdr.History(1, projectA)
+					So(err, ShouldBeNil)
+					So(len(history), ShouldEqual, 1)
+					So(history, ShouldResemble, []History{expectedAHistory})
+
+					history, err = bdr.History(1, filepath.Join(projectA, "newsub"))
+					So(err, ShouldBeNil)
+					So(len(history), ShouldEqual, 1)
+					So(history, ShouldResemble, []History{expectedAHistory})
+
+					history, err = bdr.History(2, projectB125)
+					So(err, ShouldBeNil)
+					So(len(history), ShouldEqual, 1)
+					So(history, ShouldResemble, []History{
+						{
+							Date:        yesterday.In(l),
+							UsageSize:   20,
+							QuotaSize:   300,
+							UsageInodes: 1,
+							QuotaInodes: 30,
+						},
 					})
 				})
 			})

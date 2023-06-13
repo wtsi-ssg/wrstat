@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/ugorji/go/codec"
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -40,7 +41,7 @@ const bucketKeySeparator = "-"
 
 const (
 	groupUsageBucket      = "groupUsage"
-	groupHistoricalBucket = "groupHistoricalQuota"
+	groupHistoricalBucket = "groupHistorical"
 	groupSubDirsBucket    = "groupSubDirs"
 	userUsageBucket       = "userUsage"
 	userSubDirsBucket     = "userSubDirs"
@@ -60,7 +61,10 @@ type Usage struct {
 
 // CreateDatabase creates a database containing usage information for each of
 // our groups and users by calculated base directory.
-func (b *BaseDirs) CreateDatabase() error {
+//
+// Provide a time that will be used as the date when appending to the historical
+// data.
+func (b *BaseDirs) CreateDatabase(historyDate time.Time) error {
 	db, err := bolt.Open(b.dir, dbOpenMode, &bolt.Options{
 		NoFreelistSync: true,
 		NoGrowSync:     true,
@@ -75,17 +79,7 @@ func (b *BaseDirs) CreateDatabase() error {
 		return err
 	}
 
-	err = db.Update(func(tx *bolt.Tx) error {
-		if errc := createBucketsIfNotExit(tx); errc != nil {
-			return errc
-		}
-
-		if errc := b.storeGIDBaseDirs(tx, gids); errc != nil {
-			return errc
-		}
-
-		return b.storeUIDBaseDirs(tx, uids)
-	})
+	err = db.Update(b.updateDatabase(historyDate, gids, uids))
 	if err != nil {
 		return err
 	}
@@ -93,7 +87,26 @@ func (b *BaseDirs) CreateDatabase() error {
 	return db.Close()
 }
 
-func createBucketsIfNotExit(tx *bolt.Tx) error {
+func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		if err := createBucketsIfNotExist(tx); err != nil {
+			return err
+		}
+
+		gidBase, err := b.gidsToBaseDirs(gids)
+		if err != nil {
+			return err
+		}
+
+		if errc := b.updateUsage(tx, gidBase, uids); errc != nil {
+			return errc
+		}
+
+		return b.updateHistories(tx, historyDate, gidBase)
+	}
+}
+
+func createBucketsIfNotExist(tx *bolt.Tx) error {
 	for _, bucket := range [...]string{groupUsageBucket, groupHistoricalBucket,
 		groupSubDirsBucket, userUsageBucket, userSubDirsBucket} {
 		if _, errc := tx.CreateBucketIfNotExists([]byte(bucket)); errc != nil {
@@ -104,15 +117,33 @@ func createBucketsIfNotExit(tx *bolt.Tx) error {
 	return nil
 }
 
-func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gids []uint32) error {
-	gub := tx.Bucket([]byte(groupUsageBucket))
+func (b *BaseDirs) gidsToBaseDirs(gids []uint32) (map[uint32]dgut.DCSs, error) {
+	gidBase := make(map[uint32]dgut.DCSs, len(gids))
 
 	for _, gid := range gids {
 		dcss, err := b.CalculateForGroup(gid)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
+		gidBase[gid] = dcss
+	}
+
+	return gidBase, nil
+}
+
+func (b *BaseDirs) updateUsage(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs, uids []uint32) error {
+	if errc := b.storeGIDBaseDirs(tx, gidBase); errc != nil {
+		return errc
+	}
+
+	return b.storeUIDBaseDirs(tx, uids)
+}
+
+func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) error {
+	gub := tx.Bucket([]byte(groupUsageBucket))
+
+	for gid, dcss := range gidBase {
 		for _, dcs := range dcss {
 			keyName := strconv.FormatUint(uint64(gid), 10) + bucketKeySeparator + dcs.Dir
 			quotaSize, quotaInode := b.quotas.Get(gid, dcs.Dir)
@@ -171,6 +202,102 @@ func (b *BaseDirs) storeUIDBaseDirs(tx *bolt.Tx, uids []uint32) error {
 	return nil
 }
 
+func (b *BaseDirs) updateHistories(tx *bolt.Tx, historyDate time.Time,
+	gidBase map[uint32]dgut.DCSs) error {
+	ghb := tx.Bucket([]byte(groupHistoricalBucket))
+
+	gidMounts, err := b.gidsToMountpoints(gidBase)
+	if err != nil {
+		return err
+	}
+
+	for gid, mounts := range gidMounts {
+		if err = b.updateGroupHistories(ghb, gid, mounts, historyDate); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type gidMountsMap map[uint32]map[string]dgut.DirSummary
+
+func (b *BaseDirs) gidsToMountpoints(gidBase map[uint32]dgut.DCSs) (gidMountsMap, error) {
+	gidMounts := make(gidMountsMap, len(gidBase))
+
+	mps, err := getMountPoints()
+	if err != nil {
+		return nil, err
+	}
+
+	for gid, dcss := range gidBase {
+		mounts := make(map[string]dgut.DirSummary)
+
+		for _, dcs := range dcss {
+			mp := mps.prefixOf(dcs.Dir)
+			if mp != "" {
+				ds := mounts[mp]
+
+				ds.Count += dcs.Count
+				ds.Size += dcs.Size
+
+				mounts[mp] = ds
+			}
+		}
+
+		gidMounts[gid] = mounts
+	}
+
+	return gidMounts, nil
+}
+
+func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,
+	mounts map[string]dgut.DirSummary, historyDate time.Time) error {
+	for mount, ds := range mounts {
+		quotaSize, quotaInode := b.quotas.Get(gid, mount)
+
+		key := []byte(strconv.FormatUint(uint64(gid), 10) + bucketKeySeparator + mount)
+
+		existing := ghb.Get(key)
+
+		histories, err := b.updateHistory(ds, quotaSize, quotaInode, historyDate, existing)
+		if err != nil {
+			return err
+		}
+
+		if err = ghb.Put(key, histories); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *BaseDirs) updateHistory(ds dgut.DirSummary, quotaSize, quotaInode uint64,
+	historyDate time.Time, existing []byte) ([]byte, error) {
+	var histories []History
+
+	if existing != nil {
+		if err := b.decodeFromBytes(existing, &histories); err != nil {
+			return nil, err
+		}
+	}
+
+	histories = append(histories, History{
+		Date:        historyDate,
+		UsageSize:   ds.Size,
+		UsageInodes: ds.Count,
+		QuotaSize:   quotaSize,
+		QuotaInodes: quotaInode,
+	})
+
+	return b.encodeToBytes(histories), nil
+}
+
+func (b *BaseDirs) decodeFromBytes(encoded []byte, data any) error {
+	return codec.NewDecoderBytes(encoded, b.ch).Decode(data)
+}
+
 // GroupUsage returns the usage for every GID-BaseDir combination in the
 // database.
 func (b *BaseDirReader) GroupUsage() ([]*Usage, error) {
@@ -181,9 +308,9 @@ func (b *BaseDirReader) usage(bucket string) ([]*Usage, error) {
 	var uwms []*Usage
 
 	if err := b.db.View(func(tx *bolt.Tx) error {
-		gub := tx.Bucket([]byte(bucket))
+		bucket := tx.Bucket([]byte(bucket))
 
-		return gub.ForEach(func(_, data []byte) error {
+		return bucket.ForEach(func(_, data []byte) error {
 			uwm := new(Usage)
 
 			if err := b.decodeFromBytes(data, uwm); err != nil {

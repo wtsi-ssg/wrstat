@@ -133,6 +133,10 @@ func (q *Quotas) Get(gid uint32, path string) (uint64, uint64) {
 	}
 
 	for _, dq := range dqs {
+		if !strings.HasSuffix(dq.disk, "/") {
+			dq.disk += "/"
+		}
+
 		if strings.HasPrefix(path, dq.disk) {
 			return dq.quotaSize, dq.quotaInode
 		}
