@@ -30,6 +30,8 @@ package basedirs
 import (
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,14 +42,24 @@ import (
 )
 
 func TestBaseDirs(t *testing.T) {
-	csvPath := makeQuotasCSV(t, `1,/lustre/scratch125,200,20
+	csvPath := makeQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
 2,/lustre/scratch125,300,30
 2,/lustre/scratch123,400,40
 3,/lustre/scratch125,500,50
 `)
 
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
-		tree, locDirs := baseDirsTree(t)
+		locDirs, files := testFiles()
+
+		const (
+			halfGig = 1 << 29
+			twoGig  = 1 << 31
+		)
+
+		files[0].SizeOfEachFile = halfGig
+		files[1].SizeOfEachFile = twoGig
+
+		tree := createTestTreeDB(t, files)
 		projectA := locDirs[0]
 		projectB125 := locDirs[1]
 		projectB123 := locDirs[2]
@@ -82,7 +94,7 @@ func TestBaseDirs(t *testing.T) {
 					{
 						Dir:   projectA,
 						Count: 2,
-						Size:  21,
+						Size:  halfGig + twoGig,
 						Atime: expectedAtime,
 						Mtime: expectedMtimeA,
 						GIDs:  []uint32{1},
@@ -134,7 +146,7 @@ func TestBaseDirs(t *testing.T) {
 					{
 						Dir:   projectA,
 						Count: 2,
-						Size:  21,
+						Size:  halfGig + twoGig,
 						Atime: expectedAtime,
 						Mtime: expectedMtimeA,
 						GIDs:  []uint32{1},
@@ -204,7 +216,7 @@ func TestBaseDirs(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(len(mainTable), ShouldEqual, 5)
 					So(mainTable, ShouldResemble, []*Usage{
-						{GID: 1, BaseDir: projectA, UsageSize: 21, QuotaSize: 200,
+						{GID: 1, BaseDir: projectA, UsageSize: halfGig + twoGig, QuotaSize: 4000000000,
 							UsageInodes: 2, QuotaInodes: 20, Mtime: expectedMtimeA},
 						{GID: 2, BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
 							UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
@@ -222,7 +234,7 @@ func TestBaseDirs(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(len(mainTable), ShouldEqual, 5)
 					So(mainTable, ShouldResemble, []*Usage{
-						{UID: 101, BaseDir: projectA, UsageSize: 21, UsageInodes: 2,
+						{UID: 101, BaseDir: projectA, UsageSize: halfGig + twoGig, UsageInodes: 2,
 							Mtime: expectedMtimeA},
 						{UID: 102, BaseDir: projectB123, UsageSize: 30, UsageInodes: 1,
 							Mtime: expectedMtime},
@@ -238,8 +250,8 @@ func TestBaseDirs(t *testing.T) {
 				Convey("getting group historical quota", func() {
 					expectedAHistory := History{
 						Date:        yesterday,
-						UsageSize:   21,
-						QuotaSize:   200,
+						UsageSize:   halfGig + twoGig,
+						QuotaSize:   4000000000,
 						UsageInodes: 2,
 						QuotaInodes: 20,
 					}
@@ -283,10 +295,15 @@ func TestBaseDirs(t *testing.T) {
 					Convey("Then you can add and retrieve a new day's usage and quota", func() {
 						_, files := testFiles()
 						files[0].NumFiles = 2
+						files[0].SizeOfEachFile = halfGig
+						files[1].SizeOfEachFile = twoGig
+
 						files = files[:len(files)-1]
 						tree = createTestTreeDB(t, files)
 
-						quotas.gids[1][0].quotaSize = 201
+						const fiveGig = 5 * (1 << 30)
+
+						quotas.gids[1][0].quotaSize = fiveGig
 						quotas.gids[1][0].quotaInode = 21
 
 						bd, err = NewCreator(dbPath, tree, quotas)
@@ -308,7 +325,7 @@ func TestBaseDirs(t *testing.T) {
 						So(err, ShouldBeNil)
 						So(len(mainTable), ShouldEqual, 4)
 						So(mainTable, ShouldResemble, []*Usage{
-							{GID: 1, BaseDir: projectA, UsageSize: 31, QuotaSize: 201,
+							{GID: 1, BaseDir: projectA, UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
 								UsageInodes: 3, QuotaInodes: 21, Mtime: expectedMtimeA},
 							{GID: 2, BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
 								UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
@@ -327,20 +344,176 @@ func TestBaseDirs(t *testing.T) {
 							expectedAHistory,
 							{
 								Date:        today,
-								UsageSize:   31,
-								QuotaSize:   201,
+								UsageSize:   twoGig + halfGig*2,
+								QuotaSize:   fiveGig,
 								UsageInodes: 3,
 								QuotaInodes: 21,
 							},
 						})
 
-						expectedUntilSize := today.Add(secondsInDay * 17).Unix()
+						expectedUntilSize := today.Add(secondsInDay * 4).Unix()
 						expectedUntilInode := today.Add(secondsInDay * 18).Unix()
 
 						dtrSize, dtrInode := DateQuotaFull(history)
-						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-2, expectedUntilSize+2)
+						So(dtrSize.Unix(), ShouldEqual, expectedUntilSize)
 						So(dtrInode.Unix(), ShouldBeBetween, expectedUntilInode-2, expectedUntilInode+2)
 					})
+				})
+
+				daysSince := func(mtime time.Time) uint64 {
+					return uint64(time.Since(mtime) / secondsInDay)
+				}
+
+				Convey("getting subdir information for a group-basedir", func() {
+					unknownProject, err := bdr.SubDirs(1, "unknown")
+					So(err, ShouldBeNil)
+					So(unknownProject, ShouldBeNil)
+
+					unknownGroup, err := bdr.SubDirs(10, projectA)
+					So(err, ShouldBeNil)
+					So(unknownGroup, ShouldBeNil)
+
+					subdirsA1, err := bdr.SubDirs(1, projectA)
+					So(err, ShouldBeNil)
+					So(subdirsA1, ShouldResemble, []SubDir{
+						{
+							Path:                  ".",
+							NumFiles:              1,
+							SizeFiles:             halfGig,
+							DaysSinceLastModified: daysSince(expectedMtime),
+							FileUsage: map[summary.DirGUTFileType]uint64{
+								summary.DGUTFileTypeBam: 10,
+							},
+						},
+						{
+							Path:                  "sub",
+							NumFiles:              1,
+							SizeFiles:             twoGig,
+							DaysSinceLastModified: daysSince(expectedMtimeA),
+							FileUsage: map[summary.DirGUTFileType]uint64{
+								summary.DGUTFileTypeBam: 11,
+							},
+						},
+					})
+				})
+
+				joinWithNewLines := func(rows ...string) string {
+					return strings.Join(rows, "\n")
+				}
+
+				joinWithTabs := func(cols ...string) string {
+					return strings.Join(cols, "\t")
+				}
+
+				daysSinceString := func(mtime time.Time) string {
+					return strconv.FormatUint(daysSince(mtime), 10)
+				}
+
+				expectedDaysSince := daysSinceString(expectedMtime)
+
+				Convey("getting weaver-like output for base-dirs", func() {
+					// used
+					// quota
+					// last_modified
+					// directory_path
+					// record_date
+					// warning
+					// pi_name
+					// group_name
+					yesterdayString := yesterday.Format("2006-01-02")
+
+					wbo, err := bdr.WeaverBasedirOutput()
+					So(err, ShouldBeNil)
+					So(wbo, ShouldEqual, joinWithNewLines(
+						joinWithTabs(
+							"2684354560",
+							"5368709120",
+							expectedDaysSince,
+							projectA,
+							yesterdayString,
+							"OK",
+							"",
+							"A",
+						),
+						joinWithTabs(
+							"40",
+							"400",
+							expectedDaysSince,
+							projectC1,
+							yesterdayString,
+							"OK",
+							"",
+							"2",
+						),
+						joinWithTabs(
+							"30",
+							"400",
+							expectedDaysSince,
+							projectB123,
+							yesterdayString,
+							"OK",
+							"",
+							"2",
+						),
+						joinWithTabs(
+							"20",
+							"300",
+							expectedDaysSince,
+							projectB125,
+							yesterdayString,
+							"OK",
+							"",
+							"2",
+						),
+						joinWithTabs(
+							"60",
+							"500",
+							expectedDaysSince,
+							user2,
+							yesterdayString,
+							"OK",
+							"",
+							"3",
+						),
+					))
+				})
+
+				Convey("getting weaver-like output for sub-dirs", func() {
+					// base_directory_path
+					// sub_directory
+					// num_files
+					// size
+					// last_modified
+					// filetypes
+
+					unknown, err := bdr.WeaverSubdirOutput(1, "unknown")
+					So(err, ShouldBeNil)
+					So(unknown, ShouldBeEmpty)
+
+					badgroup, err := bdr.WeaverSubdirOutput(999, projectA)
+					So(err, ShouldBeNil)
+					So(badgroup, ShouldBeEmpty)
+
+					wso, err := bdr.WeaverSubdirOutput(1, projectA)
+					So(err, ShouldBeNil)
+					So(wso, ShouldEqual, joinWithNewLines(
+						joinWithTabs(
+							projectA,
+							".",
+							"1",
+							"536870912",
+							expectedDaysSince,
+							"BAM: 0.50",
+						),
+						joinWithTabs(
+							projectA,
+							"sub",
+							"1",
+							"2147483648",
+							expectedDaysSince,
+							"BAM: 2.00",
+						),
+					))
 				})
 			})
 		})

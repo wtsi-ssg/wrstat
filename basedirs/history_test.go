@@ -34,7 +34,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-const secondsInDay = time.Second * 60 * 60 * 24
+const secondsInDay = time.Hour * 24
 
 func TestHistory(t *testing.T) {
 	now := time.Now()

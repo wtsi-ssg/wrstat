@@ -36,6 +36,7 @@ import (
 
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -176,4 +177,25 @@ func NewReader(path string) (*BaseDirReader, error) {
 
 func (b *BaseDirReader) Close() error {
 	return b.db.Close()
+}
+
+type SubDir struct {
+	Project               string
+	Path                  string
+	NumFiles              uint64
+	SizeFiles             uint64
+	DaysSinceLastModified uint64
+	FileUsage             map[summary.DirGUTFileType]uint64
+}
+
+func (b *BaseDirReader) SubDirs(gid uint32, basedir string) ([]SubDir, error) {
+	return nil, nil
+}
+
+func (b *BaseDirReader) WeaverBasedirOutput() (string, error) {
+	return "", nil
+}
+
+func (b *BaseDirReader) WeaverSubdirOutput(gid uint32, basedir string) (string, error) {
+	return "", nil
 }
