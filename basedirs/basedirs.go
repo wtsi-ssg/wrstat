@@ -166,3 +166,7 @@ func NewReader(path string) (*BaseDirReader, error) {
 		mountPoints: mp,
 	}, nil
 }
+
+func (b *BaseDirReader) Close() error {
+	return b.db.Close()
+}

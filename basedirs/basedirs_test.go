@@ -174,7 +174,9 @@ func TestBaseDirs(t *testing.T) {
 		})
 
 		Convey("With which you can store group and user summary info in a database", func() {
-			yesterday := time.Now().Add(-25 * time.Hour)
+			_, offset := time.Now().Zone()
+			l := time.FixedZone("", offset)
+			yesterday := time.Now().Add(-24 * time.Hour).In(l)
 			err := bd.CreateDatabase(yesterday)
 			So(err, ShouldBeNil)
 
@@ -184,9 +186,6 @@ func TestBaseDirs(t *testing.T) {
 			Convey("and then read the database", func() {
 				bdr, err := NewReader(dbPath)
 				So(err, ShouldBeNil)
-
-				_, offset := time.Now().Zone()
-				l := time.FixedZone("", offset)
 
 				expectedMtime := time.Unix(50, 0).In(l)
 				expectedMtimeA := time.Unix(100, 0).In(l)
@@ -227,7 +226,7 @@ func TestBaseDirs(t *testing.T) {
 
 				Convey("getting group historical quota", func() {
 					expectedAHistory := History{
-						Date:        yesterday.In(l),
+						Date:        yesterday,
 						UsageSize:   21,
 						QuotaSize:   200,
 						UsageInodes: 2,
@@ -249,12 +248,74 @@ func TestBaseDirs(t *testing.T) {
 					So(len(history), ShouldEqual, 1)
 					So(history, ShouldResemble, []History{
 						{
-							Date:        yesterday.In(l),
+							Date:        yesterday,
 							UsageSize:   20,
 							QuotaSize:   300,
 							UsageInodes: 1,
 							QuotaInodes: 30,
 						},
+					})
+
+					dtrSize, dtrInode := DateQuotaFull(history)
+					So(dtrSize, ShouldEqual, time.Time{})
+					So(dtrInode, ShouldEqual, time.Time{})
+
+					err = bdr.Close()
+					So(err, ShouldBeNil)
+
+					Convey("Then you can add and retrieve a new day's usage and quota", func() {
+						_, files := testFiles()
+						files[0].NumFiles = 2
+						files = files[:len(files)-1]
+						tree = createTestTreeDB(t, files)
+
+						quotas.gids[1][0].quotaSize = 201
+						quotas.gids[1][0].quotaInode = 21
+
+						bd = NewCreator(dbPath, tree, quotas)
+						So(bd, ShouldNotBeNil)
+
+						today := time.Now().In(l)
+						err := bd.CreateDatabase(today)
+						So(err, ShouldBeNil)
+
+						bdr, err = NewReader(dbPath)
+						So(err, ShouldBeNil)
+
+						mainTable, err := bdr.GroupUsage()
+						So(err, ShouldBeNil)
+						So(len(mainTable), ShouldEqual, 4)
+						So(mainTable, ShouldResemble, []*Usage{
+							{GID: 1, BaseDir: projectA, UsageSize: 31, QuotaSize: 201,
+								UsageInodes: 3, QuotaInodes: 21, Mtime: expectedMtimeA},
+							{GID: 2, BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
+								UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
+							{GID: 2, BaseDir: projectB123, UsageSize: 30, QuotaSize: 400,
+								UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
+							{GID: 2, BaseDir: projectB125, UsageSize: 20, QuotaSize: 300,
+								UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
+						})
+
+						history, err := bdr.History(1, projectA)
+						So(err, ShouldBeNil)
+						So(len(history), ShouldEqual, 2)
+						So(history, ShouldResemble, []History{
+							expectedAHistory,
+							{
+								Date:        today,
+								UsageSize:   31,
+								QuotaSize:   201,
+								UsageInodes: 3,
+								QuotaInodes: 21,
+							},
+						})
+
+						expectedUntilSize := today.Add(secondsInDay * 17).Unix()
+						expectedUntilInode := today.Add(secondsInDay * 18).Unix()
+
+						dtrSize, dtrInode := DateQuotaFull(history)
+						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-2, expectedUntilSize+2)
+						So(dtrInode.Unix(), ShouldBeBetween, expectedUntilInode-2, expectedUntilInode+2)
 					})
 				})
 			})

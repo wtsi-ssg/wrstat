@@ -57,6 +57,12 @@ func TestTree(t *testing.T) {
 func baseDirsTree(t *testing.T) (*dgut.Tree, []string) {
 	t.Helper()
 
+	dirs, files := testFiles()
+
+	return createTestTreeDB(t, files), dirs
+}
+
+func testFiles() ([]string, []internaldata.TestFile) {
 	projectA := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "A")
 	projectB125 := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "B")
 	projectB123 := filepath.Join("/", "lustre", "scratch123", "hgi", "mdt1", "projects", "B")
@@ -129,6 +135,12 @@ func baseDirsTree(t *testing.T) (*dgut.Tree, []string) {
 		},
 	}
 
+	return []string{projectA, projectB125, projectB123, projectC1, projectC2, user2}, files
+}
+
+func createTestTreeDB(t *testing.T, files []internaldata.TestFile) *dgut.Tree {
+	t.Helper()
+
 	dgutData := internaldata.TestDGUTData(t, files)
 
 	dbPath, err := internaldb.CreateCustomDB(t, dgutData)
@@ -140,5 +152,5 @@ func baseDirsTree(t *testing.T) (*dgut.Tree, []string) {
 	So(err, ShouldBeNil)
 	So(tree, ShouldNotBeNil)
 
-	return tree, []string{projectA, projectB125, projectB123, projectC1, projectC2, user2}
+	return tree
 }

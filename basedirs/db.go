@@ -28,6 +28,7 @@
 package basedirs
 
 import (
+	"errors"
 	"strconv"
 	"time"
 
@@ -89,6 +90,10 @@ func (b *BaseDirs) CreateDatabase(historyDate time.Time) error {
 
 func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
+		if err := clearUsageBuckets(tx); err != nil {
+			return err
+		}
+
 		if err := createBucketsIfNotExist(tx); err != nil {
 			return err
 		}
@@ -104,6 +109,18 @@ func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) fu
 
 		return b.updateHistories(tx, historyDate, gidBase)
 	}
+}
+
+func clearUsageBuckets(tx *bolt.Tx) error {
+	if err := tx.DeleteBucket([]byte(groupUsageBucket)); err != nil && !errors.Is(err, bolt.ErrBucketNotFound) {
+		return err
+	}
+
+	if err := tx.DeleteBucket([]byte(userUsageBucket)); err != nil && !errors.Is(err, bolt.ErrBucketNotFound) {
+		return err
+	}
+
+	return nil
 }
 
 func createBucketsIfNotExist(tx *bolt.Tx) error {
