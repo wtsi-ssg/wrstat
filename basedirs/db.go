@@ -223,13 +223,10 @@ func (b *BaseDirs) updateHistories(tx *bolt.Tx, historyDate time.Time,
 	gidBase map[uint32]dgut.DCSs) error {
 	ghb := tx.Bucket([]byte(groupHistoricalBucket))
 
-	gidMounts, err := b.gidsToMountpoints(gidBase)
-	if err != nil {
-		return err
-	}
+	gidMounts := b.gidsToMountpoints(gidBase)
 
 	for gid, mounts := range gidMounts {
-		if err = b.updateGroupHistories(ghb, gid, mounts, historyDate); err != nil {
+		if err := b.updateGroupHistories(ghb, gid, mounts, historyDate); err != nil {
 			return err
 		}
 	}
@@ -239,19 +236,14 @@ func (b *BaseDirs) updateHistories(tx *bolt.Tx, historyDate time.Time,
 
 type gidMountsMap map[uint32]map[string]dgut.DirSummary
 
-func (b *BaseDirs) gidsToMountpoints(gidBase map[uint32]dgut.DCSs) (gidMountsMap, error) {
+func (b *BaseDirs) gidsToMountpoints(gidBase map[uint32]dgut.DCSs) gidMountsMap {
 	gidMounts := make(gidMountsMap, len(gidBase))
-
-	mps, err := getMountPoints()
-	if err != nil {
-		return nil, err
-	}
 
 	for gid, dcss := range gidBase {
 		mounts := make(map[string]dgut.DirSummary)
 
 		for _, dcs := range dcss {
-			mp := mps.prefixOf(dcs.Dir)
+			mp := b.mountPoints.prefixOf(dcs.Dir)
 			if mp != "" {
 				ds := mounts[mp]
 
@@ -265,7 +257,7 @@ func (b *BaseDirs) gidsToMountpoints(gidBase map[uint32]dgut.DCSs) (gidMountsMap
 		gidMounts[gid] = mounts
 	}
 
-	return gidMounts, nil
+	return gidMounts
 }
 
 func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,

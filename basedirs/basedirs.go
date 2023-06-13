@@ -50,21 +50,28 @@ var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
 // BaseDirs is used to summarise disk usage information by base directory and
 // group or user.
 type BaseDirs struct {
-	dir    string
-	tree   *dgut.Tree
-	quotas *Quotas
-	ch     codec.Handle
+	dir         string
+	tree        *dgut.Tree
+	quotas      *Quotas
+	ch          codec.Handle
+	mountPoints mountPoints
 }
 
 // NewCreator returns a BaseDirs that lets you create a database summarising
 // usage information by base directory, taken from the given tree and quotas.
-func NewCreator(dir string, tree *dgut.Tree, quotas *Quotas) *BaseDirs {
-	return &BaseDirs{
-		dir:    dir,
-		tree:   tree,
-		quotas: quotas,
-		ch:     new(codec.BincHandle),
+func NewCreator(dir string, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
+	mp, err := getMountPoints()
+	if err != nil {
+		return nil, err
 	}
+
+	return &BaseDirs{
+		dir:         dir,
+		tree:        tree,
+		quotas:      quotas,
+		ch:          new(codec.BincHandle),
+		mountPoints: mp,
+	}, nil
 }
 
 // CalculateForGroup calculates all the base directories for the given group.

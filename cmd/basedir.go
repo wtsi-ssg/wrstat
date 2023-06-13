@@ -111,7 +111,10 @@ the latest summary information.`,
 
 		dbDir := filepath.Join(args[0], basedirBasename)
 
-		bd := basedirs.NewCreator(dbDir, tree, quotas)
+		bd, err := basedirs.NewCreator(dbDir, tree, quotas)
+		if err != nil {
+			die("failed to create base directories database: %s", err)
+		}
 
 		t = time.Now()
 		err = bd.CreateDatabase(time.Now())

@@ -60,8 +60,14 @@ func TestBaseDirs(t *testing.T) {
 		dir := t.TempDir()
 		dbPath := filepath.Join(dir, "basedir.db")
 
-		bd := NewCreator(dbPath, tree, quotas)
+		bd, err := NewCreator(dbPath, tree, quotas)
+		So(err, ShouldBeNil)
 		So(bd, ShouldNotBeNil)
+
+		bd.mountPoints = mountPoints{
+			"/lustre/scratch123/",
+			"/lustre/scratch125/",
+		}
 
 		Convey("With which you can calculate base directories", func() {
 			expectedAtime := time.Unix(50, 0)
@@ -186,6 +192,8 @@ func TestBaseDirs(t *testing.T) {
 				bdr, err := NewReader(dbPath)
 				So(err, ShouldBeNil)
 
+				bdr.mountPoints = bd.mountPoints
+
 				expectedMtime := fixtimes.FixTime(time.Unix(50, 0))
 				expectedMtimeA := fixtimes.FixTime(time.Unix(100, 0))
 
@@ -281,7 +289,8 @@ func TestBaseDirs(t *testing.T) {
 						quotas.gids[1][0].quotaSize = 201
 						quotas.gids[1][0].quotaInode = 21
 
-						bd = NewCreator(dbPath, tree, quotas)
+						bd, err = NewCreator(dbPath, tree, quotas)
+						So(err, ShouldBeNil)
 						So(bd, ShouldNotBeNil)
 
 						today := fixtimes.FixTime(time.Now())
@@ -290,6 +299,8 @@ func TestBaseDirs(t *testing.T) {
 
 						bdr, err = NewReader(dbPath)
 						So(err, ShouldBeNil)
+
+						bdr.mountPoints = bd.mountPoints
 
 						mainTable, err := bdr.GroupUsage()
 						fixUsageTimes(mainTable)
