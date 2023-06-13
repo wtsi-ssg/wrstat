@@ -35,6 +35,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
@@ -174,9 +175,7 @@ func TestBaseDirs(t *testing.T) {
 		})
 
 		Convey("With which you can store group and user summary info in a database", func() {
-			_, offset := time.Now().Zone()
-			l := time.FixedZone("", offset)
-			yesterday := time.Now().Add(-24 * time.Hour).In(l)
+			yesterday := fixtimes.FixTime(time.Now().Add(-24 * time.Hour))
 			err := bd.CreateDatabase(yesterday)
 			So(err, ShouldBeNil)
 
@@ -187,11 +186,13 @@ func TestBaseDirs(t *testing.T) {
 				bdr, err := NewReader(dbPath)
 				So(err, ShouldBeNil)
 
-				expectedMtime := time.Unix(50, 0).In(l)
-				expectedMtimeA := time.Unix(100, 0).In(l)
+				expectedMtime := fixtimes.FixTime(time.Unix(50, 0))
+				expectedMtimeA := fixtimes.FixTime(time.Unix(100, 0))
 
 				Convey("getting group and user usage info", func() {
 					mainTable, err := bdr.GroupUsage()
+					fixUsageTimes(mainTable)
+
 					So(err, ShouldBeNil)
 					So(len(mainTable), ShouldEqual, 5)
 					So(mainTable, ShouldResemble, []*Usage{
@@ -208,6 +209,8 @@ func TestBaseDirs(t *testing.T) {
 					})
 
 					mainTable, err = bdr.UserUsage()
+					fixUsageTimes(mainTable)
+
 					So(err, ShouldBeNil)
 					So(len(mainTable), ShouldEqual, 5)
 					So(mainTable, ShouldResemble, []*Usage{
@@ -234,16 +237,22 @@ func TestBaseDirs(t *testing.T) {
 					}
 
 					history, err := bdr.History(1, projectA)
+					fixHistoryTimes(history)
+
 					So(err, ShouldBeNil)
 					So(len(history), ShouldEqual, 1)
 					So(history, ShouldResemble, []History{expectedAHistory})
 
 					history, err = bdr.History(1, filepath.Join(projectA, "newsub"))
+					fixHistoryTimes(history)
+
 					So(err, ShouldBeNil)
 					So(len(history), ShouldEqual, 1)
 					So(history, ShouldResemble, []History{expectedAHistory})
 
 					history, err = bdr.History(2, projectB125)
+					fixHistoryTimes(history)
+
 					So(err, ShouldBeNil)
 					So(len(history), ShouldEqual, 1)
 					So(history, ShouldResemble, []History{
@@ -275,7 +284,7 @@ func TestBaseDirs(t *testing.T) {
 						bd = NewCreator(dbPath, tree, quotas)
 						So(bd, ShouldNotBeNil)
 
-						today := time.Now().In(l)
+						today := fixtimes.FixTime(time.Now())
 						err := bd.CreateDatabase(today)
 						So(err, ShouldBeNil)
 
@@ -283,6 +292,8 @@ func TestBaseDirs(t *testing.T) {
 						So(err, ShouldBeNil)
 
 						mainTable, err := bdr.GroupUsage()
+						fixUsageTimes(mainTable)
+
 						So(err, ShouldBeNil)
 						So(len(mainTable), ShouldEqual, 4)
 						So(mainTable, ShouldResemble, []*Usage{
@@ -297,6 +308,8 @@ func TestBaseDirs(t *testing.T) {
 						})
 
 						history, err := bdr.History(1, projectA)
+						fixHistoryTimes(history)
+
 						So(err, ShouldBeNil)
 						So(len(history), ShouldEqual, 2)
 						So(history, ShouldResemble, []History{
@@ -321,4 +334,16 @@ func TestBaseDirs(t *testing.T) {
 			})
 		})
 	})
+}
+
+func fixUsageTimes(mt []*Usage) {
+	for _, u := range mt {
+		u.Mtime = fixtimes.FixTime(u.Mtime)
+	}
+}
+
+func fixHistoryTimes(history []History) {
+	for n := range history {
+		history[n].Date = fixtimes.FixTime(history[n].Date)
+	}
 }

@@ -46,6 +46,7 @@ import (
 	gas "github.com/wtsi-hgi/go-authserver"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
+	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
 )
 
 const dirPerms = 0755
@@ -192,6 +193,8 @@ func TestServer(t *testing.T) {
 				So(err, ShouldBeNil)
 
 				expected := s.dcssToSummaries(expectedRaw)
+
+				fixDirSummaryTimes(expected)
 
 				expectedNonRoot, expectedGroupsRoot := adjustedExpectations(expected, groupA, groupB)
 
@@ -369,6 +372,7 @@ func TestServer(t *testing.T) {
 						response, err = queryWhere(s, "")
 						So(err, ShouldBeNil)
 						result, err = decodeWhereResult(response)
+
 						So(err, ShouldBeNil)
 						So(result, ShouldResemble, expected)
 
@@ -521,6 +525,13 @@ func getExampleGIDs(gids []string) []string {
 	}
 
 	return exampleGIDs
+}
+
+func fixDirSummaryTimes(summaries []*DirSummary) {
+	for _, dcss := range summaries {
+		dcss.Atime = fixtimes.FixTime(dcss.Atime)
+		dcss.Mtime = fixtimes.FixTime(dcss.Mtime)
+	}
 }
 
 // testClientsOnRealServer tests our client method GetWhereDataIs and the tree
@@ -826,9 +837,7 @@ func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, erro
 	var result []*DirSummary
 	err := json.NewDecoder(response.Body).Decode(&result)
 
-	for _, ds := range result {
-		ds.Atime = ds.Atime.Local()
-	}
+	fixDirSummaryTimes(result)
 
 	return result, err
 }
@@ -995,6 +1004,8 @@ func runMapMatrixTest(t *testing.T, matrix []*matrixElement, s *Server) {
 	t.Helper()
 
 	for _, m := range matrix {
+		fixDirSummaryTimes(m.dss)
+
 		response, err := queryWhere(s, m.filter)
 		So(err, ShouldBeNil)
 		So(response.Code, ShouldEqual, http.StatusOK)
