@@ -107,7 +107,7 @@ It might produce:
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
-The base.*.dirs file gets made by calling 'wrstat basedirs' after the 'combine'
+The basedirs.* file gets made by calling 'wrstat basedirs' after the 'combine'
 step.
 
 Finally, the unique subdirectory of --working_directory that was created is

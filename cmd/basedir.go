@@ -1,7 +1,9 @@
 /*******************************************************************************
  * Copyright (c) 2022, 2023 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *   Sendu Bala <sb10@sanger.ac.uk>
+ *   Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -27,6 +29,8 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -37,11 +41,13 @@ import (
 )
 
 const (
-	basedirBasename        = "base.dirs"
+	basedirBasename        = "basedirs.db"
 	basedirSplits          = 4
 	basedirMinDirs         = 4
 	basedirMinDirsHumgen   = basedirMinDirs + 1
 	basedirMinDirsMDTExtra = 1
+	groupUsageBasename     = "basedirs.groupusage.tsv"
+	userUsageBasename      = "basedirs.userusage.tsv"
 )
 
 // options for this cmd.
@@ -109,9 +115,9 @@ the latest summary information.`,
 		}
 		info("opening databases took %s", time.Since(t))
 
-		dbDir := filepath.Join(args[0], basedirBasename)
+		dbPath := filepath.Join(args[0], basedirBasename)
 
-		bd, err := basedirs.NewCreator(dbDir, tree, quotas)
+		bd, err := basedirs.NewCreator(dbPath, tree, quotas)
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}
@@ -121,7 +127,38 @@ the latest summary information.`,
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}
+
 		info("creating base dirs took %s", time.Since(t))
+
+		t = time.Now()
+		bdr, err := basedirs.NewReader(dbPath)
+		if err != nil {
+			die("failed to create base directories database: %s", err)
+		}
+
+		gut, err := bdr.GroupUsageTable()
+		if err != nil {
+			die("failed to get group usage table: %s", err)
+		}
+
+		if err = writeFile(filepath.Join(args[0], groupUsageBasename), gut); err != nil {
+			die("failed to write group usage table: %s", err)
+		}
+
+		uut, err := bdr.UserUsageTable()
+		if err != nil {
+			die("failed to get group usage table: %s", err)
+		}
+
+		if err = writeFile(filepath.Join(args[0], userUsageBasename), uut); err != nil {
+			die("failed to write group usage table: %s", err)
+		}
+
+		if err = bdr.Close(); err != nil {
+			die("failed to close basedirs database reader: %s", err)
+		}
+
+		info("reading base dirs took %s", time.Since(t))
 	},
 }
 
@@ -144,4 +181,17 @@ func dgutDBCombinePaths(dir string) []string {
 	info("%+v", paths)
 
 	return paths
+}
+
+func writeFile(path, contents string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.WriteString(f, contents); err != nil {
+		return err
+	}
+
+	return f.Close()
 }
