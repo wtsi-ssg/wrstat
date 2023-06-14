@@ -29,11 +29,13 @@ package basedirs
 
 import (
 	"errors"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -88,7 +90,7 @@ func (b *BaseDirs) CreateDatabase(historyDate time.Time) error {
 	return db.Close()
 }
 
-func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) func(*bolt.Tx) error {
+func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) func(*bolt.Tx) error { //nolint:gocognit
 	return func(tx *bolt.Tx) error {
 		if err := clearUsageBuckets(tx); err != nil {
 			return err
@@ -103,11 +105,15 @@ func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) fu
 			return err
 		}
 
-		if errc := b.updateUsage(tx, gidBase, uids); errc != nil {
+		if errc := b.calculateUsage(tx, gidBase, uids); errc != nil {
 			return errc
 		}
 
-		return b.updateHistories(tx, historyDate, gidBase)
+		if errc := b.updateHistories(tx, historyDate, gidBase); errc != nil {
+			return errc
+		}
+
+		return b.calculateSubdirUsage(tx, gidBase, uids)
 	}
 }
 
@@ -149,7 +155,7 @@ func (b *BaseDirs) gidsToBaseDirs(gids []uint32) (map[uint32]dgut.DCSs, error) {
 	return gidBase, nil
 }
 
-func (b *BaseDirs) updateUsage(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs, uids []uint32) error {
+func (b *BaseDirs) calculateUsage(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs, uids []uint32) error {
 	if errc := b.storeGIDBaseDirs(tx, gidBase); errc != nil {
 		return errc
 	}
@@ -162,7 +168,6 @@ func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) e
 
 	for gid, dcss := range gidBase {
 		for _, dcs := range dcss {
-			keyName := strconv.FormatUint(uint64(gid), 10) + bucketKeySeparator + dcs.Dir
 			quotaSize, quotaInode := b.quotas.Get(gid, dcs.Dir)
 			uwm := &Usage{
 				GID:         gid,
@@ -174,13 +179,17 @@ func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) e
 				Mtime:       dcs.Mtime,
 			}
 
-			if err := gub.Put([]byte(keyName), b.encodeToBytes(uwm)); err != nil {
+			if err := gub.Put(keyName(gid, dcs.Dir), b.encodeToBytes(uwm)); err != nil {
 				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+func keyName(id uint32, path string) []byte {
+	return []byte(strconv.FormatUint(uint64(id), 10) + bucketKeySeparator + path)
 }
 
 func (b *BaseDirs) encodeToBytes(data any) []byte {
@@ -201,7 +210,6 @@ func (b *BaseDirs) storeUIDBaseDirs(tx *bolt.Tx, uids []uint32) error {
 		}
 
 		for _, dcs := range dcss {
-			keyName := strconv.FormatUint(uint64(uid), 10) + bucketKeySeparator + dcs.Dir
 			uwm := &Usage{
 				UID:         uid,
 				BaseDir:     dcs.Dir,
@@ -210,7 +218,7 @@ func (b *BaseDirs) storeUIDBaseDirs(tx *bolt.Tx, uids []uint32) error {
 				Mtime:       dcs.Mtime,
 			}
 
-			if err := uub.Put([]byte(keyName), b.encodeToBytes(uwm)); err != nil {
+			if err := uub.Put(keyName(uid, dcs.Dir), b.encodeToBytes(uwm)); err != nil {
 				return err
 			}
 		}
@@ -265,7 +273,7 @@ func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,
 	for mount, ds := range mounts {
 		quotaSize, quotaInode := b.quotas.Get(gid, mount)
 
-		key := []byte(strconv.FormatUint(uint64(gid), 10) + bucketKeySeparator + mount)
+		key := keyName(gid, mount)
 
 		existing := ghb.Get(key)
 
@@ -307,42 +315,152 @@ func (b *BaseDirs) decodeFromBytes(encoded []byte, data any) error {
 	return codec.NewDecoderBytes(encoded, b.ch).Decode(data)
 }
 
-// GroupUsage returns the usage for every GID-BaseDir combination in the
-// database.
-func (b *BaseDirReader) GroupUsage() ([]*Usage, error) {
-	return b.usage(groupUsageBucket)
+// UsageBreakdownByType is a map of file type to total size of files in bytes
+// with that type.
+type UsageBreakdownByType map[summary.DirGUTFileType]uint64
+
+// SubDir contains information about a sub-directory of a base directory.
+type SubDir struct {
+	SubDir       string
+	NumFiles     uint64
+	SizeFiles    uint64
+	LastModified time.Time
+	FileUsage    UsageBreakdownByType
 }
 
-func (b *BaseDirReader) usage(bucket string) ([]*Usage, error) {
-	var uwms []*Usage
-
-	if err := b.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucket))
-
-		return bucket.ForEach(func(_, data []byte) error {
-			uwm := new(Usage)
-
-			if err := b.decodeFromBytes(data, uwm); err != nil {
-				return err
-			}
-
-			uwms = append(uwms, uwm)
-
-			return nil
-		})
-	}); err != nil {
-		return nil, err
+func (b *BaseDirs) calculateSubdirUsage(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs, uids []uint32) error {
+	if errc := b.storeGIDSubdirs(tx, gidBase); errc != nil {
+		return errc
 	}
 
-	return uwms, nil
+	return b.storeUIDSubdirs(tx, uids)
 }
 
-func (b *BaseDirReader) decodeFromBytes(encoded []byte, data any) error {
-	return codec.NewDecoderBytes(encoded, b.ch).Decode(data)
+func (b *BaseDirs) storeGIDSubdirs(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) error {
+	bucket := tx.Bucket([]byte(groupSubDirsBucket))
+
+	for gid, dcss := range gidBase {
+		for _, dcs := range dcss {
+			if err := b.storeSubdirs(bucket, dcs, gid, dgut.Filter{GIDs: []uint32{gid}}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
-// UserUsage returns the usage for every UID-BaseDir combination in the
-// database.
-func (b *BaseDirReader) UserUsage() ([]*Usage, error) {
-	return b.usage(userUsageBucket)
+func (b *BaseDirs) storeSubdirs(bucket *bolt.Bucket, dcs *dgut.DirSummary, id uint32, filter dgut.Filter) error {
+	filter.FTs = summary.AllTypesExceptDirectories
+
+	info, err := b.tree.DirInfo(dcs.Dir, &filter)
+	if err != nil {
+		return err
+	}
+
+	parentTypes, childToTypes, err := b.dirAndSubDirTypes(info, filter, dcs.Dir)
+	if err != nil {
+		return err
+	}
+
+	subDirs := makeSubDirs(info, parentTypes, childToTypes)
+
+	return bucket.Put(keyName(id, dcs.Dir), b.encodeToBytes(subDirs))
+}
+
+func (b *BaseDirs) dirAndSubDirTypes(info *dgut.DirInfo, filter dgut.Filter,
+	dir string) (UsageBreakdownByType, map[string]UsageBreakdownByType, error) {
+	childToTypes := make(map[string]UsageBreakdownByType)
+	parentTypes := make(UsageBreakdownByType)
+
+	for _, ft := range info.Current.FTs {
+		filter.FTs = []summary.DirGUTFileType{ft}
+
+		typedInfo, err := b.tree.DirInfo(dir, &filter)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		childrenTypeSize := collateSubDirFileTypeSizes(typedInfo.Children, childToTypes, ft)
+
+		if parentTypeSize := typedInfo.Current.Size - childrenTypeSize; parentTypeSize > 0 {
+			parentTypes[ft] = parentTypeSize
+		}
+	}
+
+	return parentTypes, childToTypes, nil
+}
+
+func collateSubDirFileTypeSizes(children []*dgut.DirSummary,
+	childToTypes map[string]UsageBreakdownByType, ft summary.DirGUTFileType) uint64 {
+	var fileTypeSize uint64
+
+	for _, child := range children {
+		ubbt, ok := childToTypes[child.Dir]
+		if !ok {
+			ubbt = make(UsageBreakdownByType)
+		}
+
+		ubbt[ft] = child.Size
+		childToTypes[child.Dir] = ubbt
+		fileTypeSize += child.Size
+	}
+
+	return fileTypeSize
+}
+
+func makeSubDirs(info *dgut.DirInfo, parentTypes UsageBreakdownByType, //nolint:funlen
+	childToTypes map[string]UsageBreakdownByType) []*SubDir {
+	subDirs := make([]*SubDir, len(info.Children)+1)
+
+	var (
+		totalCount uint64
+		totalSize  uint64
+	)
+
+	for i, child := range info.Children {
+		subDirs[i+1] = &SubDir{
+			SubDir:       filepath.Base(child.Dir),
+			NumFiles:     child.Count,
+			SizeFiles:    child.Size,
+			LastModified: child.Mtime,
+			FileUsage:    childToTypes[child.Dir],
+		}
+
+		totalCount += child.Count
+		totalSize += child.Size
+	}
+
+	if totalCount == info.Current.Count {
+		return subDirs[1:]
+	}
+
+	subDirs[0] = &SubDir{
+		SubDir:       ".",
+		NumFiles:     info.Current.Count - totalCount,
+		SizeFiles:    info.Current.Size - totalSize,
+		LastModified: info.Current.Mtime,
+		FileUsage:    parentTypes,
+	}
+
+	return subDirs
+}
+
+func (b *BaseDirs) storeUIDSubdirs(tx *bolt.Tx, uids []uint32) error {
+	bucket := tx.Bucket([]byte(userSubDirsBucket))
+
+	for _, uid := range uids {
+		dcss, err := b.CalculateForUser(uid)
+		if err != nil {
+			return err
+		}
+
+		for _, dcs := range dcss {
+			if err := b.storeSubdirs(bucket, dcs, uid, dgut.Filter{UIDs: []uint32{uid}}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

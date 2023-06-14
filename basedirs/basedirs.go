@@ -36,8 +36,6 @@ import (
 
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	"github.com/wtsi-ssg/wrstat/v4/summary"
-	bolt "go.etcd.io/bbolt"
 )
 
 const (
@@ -144,58 +142,4 @@ func (b *BaseDirs) CalculateForUser(uid uint32) (dgut.DCSs, error) {
 	}
 
 	return dcss, nil
-}
-
-// BaseDirReader is used to read the information stored in a BaseDir database.
-type BaseDirReader struct {
-	db          *bolt.DB
-	ch          codec.Handle
-	mountPoints mountPoints
-}
-
-// NewReader returns a BaseDirReader that can return the summary information
-// stored in a BaseDir database.
-func NewReader(path string) (*BaseDirReader, error) {
-	db, err := bolt.Open(path, dbOpenMode, &bolt.Options{
-		ReadOnly: true,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	mp, err := getMountPoints()
-	if err != nil {
-		return nil, err
-	}
-
-	return &BaseDirReader{
-		db:          db,
-		ch:          new(codec.BincHandle),
-		mountPoints: mp,
-	}, nil
-}
-
-func (b *BaseDirReader) Close() error {
-	return b.db.Close()
-}
-
-type SubDir struct {
-	Project               string
-	Path                  string
-	NumFiles              uint64
-	SizeFiles             uint64
-	DaysSinceLastModified uint64
-	FileUsage             map[summary.DirGUTFileType]uint64
-}
-
-func (b *BaseDirReader) SubDirs(gid uint32, basedir string) ([]SubDir, error) {
-	return nil, nil
-}
-
-func (b *BaseDirReader) WeaverBasedirOutput() (string, error) {
-	return "", nil
-}
-
-func (b *BaseDirReader) WeaverSubdirOutput(gid uint32, basedir string) (string, error) {
-	return "", nil
 }
