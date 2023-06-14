@@ -29,6 +29,7 @@ package basedirs
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -64,13 +65,34 @@ func TestBaseDirs(t *testing.T) {
 		projectDSub1 := filepath.Join(projectD, "sub1")
 		projectDSub2 := filepath.Join(projectD, "sub2")
 
+		u, err := user.Current()
+		So(err, ShouldBeNil)
+
+		username := u.Username
+
+		uid64, err := strconv.ParseUint(u.Uid, 10, 64)
+		So(err, ShouldBeNil)
+
+		groups, err := u.GroupIds()
+		So(err, ShouldBeNil)
+		So(len(groups), ShouldBeGreaterThan, 0)
+
+		gid64, err := strconv.ParseUint(groups[0], 10, 64)
+		So(err, ShouldBeNil)
+
+		group, err := user.LookupGroupId(groups[0])
+		So(err, ShouldBeNil)
+
+		uid := int(uid64)
+		gid := int(gid64)
+
 		files = append(files,
 			internaldata.TestFile{
 				Path:           filepath.Join(projectDSub1, "a.bam"),
 				NumFiles:       1,
 				SizeOfEachFile: 1,
-				GID:            4,
-				UID:            104,
+				GID:            gid,
+				UID:            uid,
 				ATime:          50,
 				MTime:          50,
 			},
@@ -78,8 +100,8 @@ func TestBaseDirs(t *testing.T) {
 				Path:           filepath.Join(projectDSub1, "temp", "a.sam"),
 				NumFiles:       1,
 				SizeOfEachFile: 2,
-				GID:            4,
-				UID:            104,
+				GID:            gid,
+				UID:            uid,
 				ATime:          50,
 				MTime:          50,
 			},
@@ -87,8 +109,8 @@ func TestBaseDirs(t *testing.T) {
 				Path:           filepath.Join(projectDSub1, "a.cram"),
 				NumFiles:       1,
 				SizeOfEachFile: 3,
-				GID:            4,
-				UID:            104,
+				GID:            gid,
+				UID:            uid,
 				ATime:          50,
 				MTime:          50,
 			},
@@ -96,8 +118,8 @@ func TestBaseDirs(t *testing.T) {
 				Path:           filepath.Join(projectDSub2, "a.bed"),
 				NumFiles:       1,
 				SizeOfEachFile: 4,
-				GID:            4,
-				UID:            104,
+				GID:            gid,
+				UID:            uid,
 				ATime:          50,
 				MTime:          50,
 			},
@@ -105,8 +127,8 @@ func TestBaseDirs(t *testing.T) {
 				Path:           filepath.Join(projectDSub2, "b.bed"),
 				NumFiles:       1,
 				SizeOfEachFile: 5,
-				GID:            4,
-				UID:            104,
+				GID:            gid,
+				UID:            uid,
 				ATime:          50,
 				MTime:          50,
 			},
@@ -271,6 +293,8 @@ func TestBaseDirs(t *testing.T) {
 					So(mainTable, ShouldResemble, []*Usage{
 						{GID: 1, BaseDir: projectA, UsageSize: halfGig + twoGig, QuotaSize: 4000000000,
 							UsageInodes: 2, QuotaInodes: 20, Mtime: expectedMtimeA},
+						{GID: uint32(gid), BaseDir: projectD, UsageSize: 15, QuotaSize: 0,
+							UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime},
 						{GID: 2, BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
 							UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
 						{GID: 2, BaseDir: projectB123, UsageSize: 30, QuotaSize: 400,
@@ -279,8 +303,6 @@ func TestBaseDirs(t *testing.T) {
 							UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
 						{GID: 3, BaseDir: user2, UsageSize: 60, QuotaSize: 500,
 							UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime},
-						{GID: 4, BaseDir: projectD, UsageSize: 15, QuotaSize: 0,
-							UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime},
 					})
 
 					mainTable, err = bdr.UserUsage()
@@ -299,7 +321,7 @@ func TestBaseDirs(t *testing.T) {
 							Mtime: expectedMtime},
 						{UID: 103, BaseDir: projectC1, UsageSize: 40, UsageInodes: 1,
 							Mtime: expectedMtime},
-						{UID: 104, BaseDir: projectD, UsageSize: 15, UsageInodes: 5,
+						{UID: uint32(uid), BaseDir: projectD, UsageSize: 15, UsageInodes: 5,
 							Mtime: expectedMtime},
 					})
 				})
@@ -417,10 +439,6 @@ func TestBaseDirs(t *testing.T) {
 					})
 				})
 
-				daysSince := func(mtime time.Time) uint64 {
-					return uint64(time.Since(mtime) / secondsInDay)
-				}
-
 				expectedProjectASubDirs := []*SubDir{
 					{
 						SubDir:    ".",
@@ -499,7 +517,7 @@ func TestBaseDirs(t *testing.T) {
 						},
 					})
 
-					subdirsD, err := bdr.UserSubDirs(104, projectD)
+					subdirsD, err := bdr.UserSubDirs(uint32(uid), projectD)
 					So(err, ShouldBeNil)
 					So(subdirsD, ShouldResemble, []*SubDir{
 						{
@@ -527,7 +545,7 @@ func TestBaseDirs(t *testing.T) {
 				})
 
 				joinWithNewLines := func(rows ...string) string {
-					return strings.Join(rows, "\n")
+					return strings.Join(rows, "\n") + "\n"
 				}
 
 				joinWithTabs := func(cols ...string) string {
@@ -540,25 +558,33 @@ func TestBaseDirs(t *testing.T) {
 
 				expectedDaysSince := daysSinceString(expectedMtime)
 
-				SkipConvey("getting weaver-like output for base-dirs", func() {
-					// used
-					// quota
-					// last_modified
-					// directory_path
-					// warning
-					// pi_name
-					// group_name
-					wbo, err := bdr.WeaverBasedirOutput()
+				Convey("getting weaver-like output for group base-dirs", func() {
+					bdr.groupCache = GroupCache{
+						1: "A",
+						2: "2",
+						3: "3",
+					}
+
+					wbo, err := bdr.GroupUsageTable()
 					So(err, ShouldBeNil)
 					So(wbo, ShouldEqual, joinWithNewLines(
 						joinWithTabs(
 							"2684354560",
-							"5368709120",
+							"4000000000",
 							expectedDaysSince,
 							projectA,
 							"OK",
 							"",
 							"A",
+						),
+						joinWithTabs(
+							"15",
+							"0",
+							expectedDaysSince,
+							projectD,
+							"OK",
+							"",
+							group.Name,
 						),
 						joinWithTabs(
 							"40",
@@ -599,42 +625,119 @@ func TestBaseDirs(t *testing.T) {
 					))
 				})
 
-				SkipConvey("getting weaver-like output for sub-dirs", func() {
-					// base_directory_path
-					// sub_directory
-					// num_files
-					// size
-					// last_modified
-					// filetypes
+				Convey("getting weaver-like output for user base-dirs", func() {
+					bdr.userCache = UserCache{
+						101: "A",
+						102: "2",
+						103: "3",
+					}
 
-					unknown, err := bdr.WeaverSubdirOutput(1, "unknown")
+					wbo, err := bdr.UserUsageTable()
+					So(err, ShouldBeNil)
+					So(wbo, ShouldEqual, joinWithNewLines(
+						joinWithTabs(
+							"2684354560",
+							"0",
+							expectedDaysSince,
+							projectA,
+							"OK",
+							"",
+							"A",
+						),
+
+						joinWithTabs(
+							"30",
+							"0",
+							expectedDaysSince,
+							projectB123,
+							"OK",
+							"",
+							"2",
+						),
+						joinWithTabs(
+							"20",
+							"0",
+							expectedDaysSince,
+							projectB125,
+							"OK",
+							"",
+							"2",
+						),
+						joinWithTabs(
+							"60",
+							"0",
+							expectedDaysSince,
+							user2,
+							"OK",
+							"",
+							"2",
+						),
+						joinWithTabs(
+							"40",
+							"0",
+							expectedDaysSince,
+							projectC1,
+							"OK",
+							"",
+							"3",
+						),
+						joinWithTabs(
+							"15",
+							"0",
+							expectedDaysSince,
+							projectD,
+							"OK",
+							"",
+							username,
+						),
+					))
+				})
+
+				expectedProjectASubDirUsage := joinWithNewLines(
+					joinWithTabs(
+						projectA,
+						".",
+						"1",
+						"536870912",
+						expectedDaysSince,
+						"bam: 0.50",
+					),
+					joinWithTabs(
+						projectA,
+						"sub",
+						"1",
+						"2147483648",
+						expectedDaysSince,
+						"bam: 2.00",
+					),
+				)
+
+				Convey("getting weaver-like output for group sub-dirs", func() {
+					unknown, err := bdr.GroupSubDirUsageTable(1, "unknown")
 					So(err, ShouldBeNil)
 					So(unknown, ShouldBeEmpty)
 
-					badgroup, err := bdr.WeaverSubdirOutput(999, projectA)
+					badgroup, err := bdr.GroupSubDirUsageTable(999, projectA)
 					So(err, ShouldBeNil)
 					So(badgroup, ShouldBeEmpty)
 
-					wso, err := bdr.WeaverSubdirOutput(1, projectA)
+					wso, err := bdr.GroupSubDirUsageTable(1, projectA)
 					So(err, ShouldBeNil)
-					So(wso, ShouldEqual, joinWithNewLines(
-						joinWithTabs(
-							projectA,
-							".",
-							"1",
-							"536870912",
-							expectedDaysSince,
-							"BAM: 0.50",
-						),
-						joinWithTabs(
-							projectA,
-							"sub",
-							"1",
-							"2147483648",
-							expectedDaysSince,
-							"BAM: 2.00",
-						),
-					))
+					So(wso, ShouldEqual, expectedProjectASubDirUsage)
+				})
+
+				Convey("getting weaver-like output for user sub-dirs", func() {
+					unknown, err := bdr.UserSubDirUsageTable(1, "unknown")
+					So(err, ShouldBeNil)
+					So(unknown, ShouldBeEmpty)
+
+					badgroup, err := bdr.UserSubDirUsageTable(999, projectA)
+					So(err, ShouldBeNil)
+					So(badgroup, ShouldBeEmpty)
+
+					wso, err := bdr.UserSubDirUsageTable(101, projectA)
+					So(err, ShouldBeNil)
+					So(wso, ShouldEqual, expectedProjectASubDirUsage)
 				})
 			})
 		})

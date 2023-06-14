@@ -28,15 +28,23 @@
 package basedirs
 
 import (
+	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ugorji/go/codec"
 	bolt "go.etcd.io/bbolt"
 )
+
+const secondsInDay = time.Hour * 24
 
 // BaseDirReader is used to read the information stored in a BaseDir database.
 type BaseDirReader struct {
 	db          *bolt.DB
 	ch          codec.Handle
 	mountPoints mountPoints
+	groupCache  GroupCache
+	userCache   UserCache
 }
 
 // NewReader returns a BaseDirReader that can return the summary information
@@ -58,6 +66,8 @@ func NewReader(path string) (*BaseDirReader, error) {
 		db:          db,
 		ch:          new(codec.BincHandle),
 		mountPoints: mp,
+		groupCache:  make(GroupCache),
+		userCache:   make(UserCache),
 	}, nil
 }
 
@@ -138,10 +148,135 @@ func (b *BaseDirReader) UserSubDirs(uid uint32, basedir string) ([]*SubDir, erro
 	return b.subDirs(userSubDirsBucket, uid, basedir)
 }
 
-func (b *BaseDirReader) WeaverBasedirOutput() (string, error) {
-	return "", nil
+// GroupUsageTable returns GroupUsage() information formatted with the following
+// tab separated columns:
+//
+// used
+// quota
+// last_modified
+// directory_path
+// warning
+// pi_name
+// group_name
+//
+// Any error returned is from GroupUsage().
+func (b *BaseDirReader) GroupUsageTable() (string, error) {
+	gu, err := b.GroupUsage()
+	if err != nil {
+		return "", err
+	}
+
+	return usageTable(gu, func(u *Usage) string {
+		return b.groupCache.GroupName(u.GID)
+	}), nil
 }
 
-func (b *BaseDirReader) WeaverSubdirOutput(gid uint32, basedir string) (string, error) {
-	return "", nil
+func usageTable(usage []*Usage, nameCB func(*Usage) string) string {
+	var sb strings.Builder
+
+	for _, u := range usage {
+		fmt.Fprintf(&sb, "%d\t%d\t%d\t%s\t%s\t%s\t%s\n",
+			u.UsageSize,
+			u.QuotaSize,
+			daysSince(u.Mtime),
+			u.BaseDir,
+			usageStatus(u),
+			"",
+			nameCB(u),
+		)
+	}
+
+	return sb.String()
+}
+
+func usageStatus(u *Usage) string {
+	if u.QuotaInodes > 0 && u.UsageInodes > u.QuotaInodes || u.QuotaSize > 0 && u.UsageSize > u.QuotaSize {
+		return "Not OK"
+	}
+
+	return "OK"
+}
+
+// UserUsageTable returns UserUsage() information formatted with the following
+// tab separated columns:
+//
+// used
+// quota (currently always zero)
+// last_modified
+// directory_path
+// warning
+// pi_name
+// user_name
+//
+// Any error returned is from UserUsage().
+func (b *BaseDirReader) UserUsageTable() (string, error) {
+	uu, err := b.UserUsage()
+	if err != nil {
+		return "", err
+	}
+
+	return usageTable(uu, func(u *Usage) string {
+		return b.userCache.UserName(u.UID)
+	}), nil
+}
+
+func daysSince(mtime time.Time) uint64 {
+	return uint64(time.Since(mtime) / secondsInDay)
+}
+
+// GroupSubDirUsageTable returns GroupSubDirs() information formatted with the
+// following tab separated columns:
+//
+// base_directory_path
+// sub_directory
+// num_files
+// size
+// last_modified
+// filetypes
+//
+// Any error returned is from GroupSubDirs().
+func (b *BaseDirReader) GroupSubDirUsageTable(gid uint32, basedir string) (string, error) {
+	gsdut, err := b.GroupSubDirs(gid, basedir)
+	if err != nil {
+		return "", err
+	}
+
+	return subDirUsageTable(basedir, gsdut), nil
+}
+
+func subDirUsageTable(basedir string, subdirs []*SubDir) string {
+	var sb strings.Builder
+
+	for _, subdir := range subdirs {
+		fmt.Fprintf(&sb, "%s\t%s\t%d\t%d\t%d\t%s\n",
+			basedir,
+			subdir.SubDir,
+			subdir.NumFiles,
+			subdir.SizeFiles,
+			daysSince(subdir.LastModified),
+			subdir.FileUsage,
+		)
+	}
+
+	return sb.String()
+}
+
+// UserSubDirUsageTable returns UserSubDirs() information formatted with the
+// following tab separated columns:
+//
+// base_directory_path
+// sub_directory
+// num_files
+// size
+// last_modified
+// filetypes
+//
+// Any error returned is from UserSubDirUsageTable().
+func (b *BaseDirReader) UserSubDirUsageTable(uid uint32, basedir string) (string, error) {
+	usdut, err := b.UserSubDirs(uid, basedir)
+	if err != nil {
+		return "", err
+	}
+
+	return subDirUsageTable(basedir, usdut), nil
 }

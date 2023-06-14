@@ -29,8 +29,11 @@ package basedirs
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ugorji/go/codec"
@@ -41,6 +44,7 @@ import (
 
 const dbOpenMode = 0600
 const bucketKeySeparator = "-"
+const gBytes = 1024 * 1024 * 1024
 
 const (
 	groupUsageBucket      = "groupUsage"
@@ -113,7 +117,7 @@ func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) fu
 			return errc
 		}
 
-		return b.calculateSubdirUsage(tx, gidBase, uids)
+		return b.calculateSubDirUsage(tx, gidBase, uids)
 	}
 }
 
@@ -319,6 +323,30 @@ func (b *BaseDirs) decodeFromBytes(encoded []byte, data any) error {
 // with that type.
 type UsageBreakdownByType map[summary.DirGUTFileType]uint64
 
+func (u UsageBreakdownByType) String() string {
+	var sb strings.Builder
+
+	types := make([]summary.DirGUTFileType, 0, len(u))
+
+	for ft := range u {
+		types = append(types, ft)
+	}
+
+	sort.Slice(types, func(i, j int) bool {
+		return types[i] < types[j]
+	})
+
+	for n, ft := range types {
+		if n > 0 {
+			sb.WriteByte(' ')
+		}
+
+		fmt.Fprintf(&sb, "%s: %.2f", ft, float64(u[ft])/gBytes)
+	}
+
+	return sb.String()
+}
+
 // SubDir contains information about a sub-directory of a base directory.
 type SubDir struct {
 	SubDir       string
@@ -328,20 +356,20 @@ type SubDir struct {
 	FileUsage    UsageBreakdownByType
 }
 
-func (b *BaseDirs) calculateSubdirUsage(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs, uids []uint32) error {
-	if errc := b.storeGIDSubdirs(tx, gidBase); errc != nil {
+func (b *BaseDirs) calculateSubDirUsage(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs, uids []uint32) error {
+	if errc := b.storeGIDSubDirs(tx, gidBase); errc != nil {
 		return errc
 	}
 
-	return b.storeUIDSubdirs(tx, uids)
+	return b.storeUIDSubDirs(tx, uids)
 }
 
-func (b *BaseDirs) storeGIDSubdirs(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) error {
+func (b *BaseDirs) storeGIDSubDirs(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) error {
 	bucket := tx.Bucket([]byte(groupSubDirsBucket))
 
 	for gid, dcss := range gidBase {
 		for _, dcs := range dcss {
-			if err := b.storeSubdirs(bucket, dcs, gid, dgut.Filter{GIDs: []uint32{gid}}); err != nil {
+			if err := b.storeSubDirs(bucket, dcs, gid, dgut.Filter{GIDs: []uint32{gid}}); err != nil {
 				return err
 			}
 		}
@@ -350,7 +378,7 @@ func (b *BaseDirs) storeGIDSubdirs(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) er
 	return nil
 }
 
-func (b *BaseDirs) storeSubdirs(bucket *bolt.Bucket, dcs *dgut.DirSummary, id uint32, filter dgut.Filter) error {
+func (b *BaseDirs) storeSubDirs(bucket *bolt.Bucket, dcs *dgut.DirSummary, id uint32, filter dgut.Filter) error {
 	filter.FTs = summary.AllTypesExceptDirectories
 
 	info, err := b.tree.DirInfo(dcs.Dir, &filter)
@@ -446,7 +474,7 @@ func makeSubDirs(info *dgut.DirInfo, parentTypes UsageBreakdownByType, //nolint:
 	return subDirs
 }
 
-func (b *BaseDirs) storeUIDSubdirs(tx *bolt.Tx, uids []uint32) error {
+func (b *BaseDirs) storeUIDSubDirs(tx *bolt.Tx, uids []uint32) error {
 	bucket := tx.Bucket([]byte(userSubDirsBucket))
 
 	for _, uid := range uids {
@@ -456,7 +484,7 @@ func (b *BaseDirs) storeUIDSubdirs(tx *bolt.Tx, uids []uint32) error {
 		}
 
 		for _, dcs := range dcss {
-			if err := b.storeSubdirs(bucket, dcs, uid, dgut.Filter{UIDs: []uint32{uid}}); err != nil {
+			if err := b.storeSubDirs(bucket, dcs, uid, dgut.Filter{UIDs: []uint32{uid}}); err != nil {
 				return err
 			}
 		}
