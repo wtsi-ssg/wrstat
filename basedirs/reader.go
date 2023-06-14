@@ -37,6 +37,9 @@ import (
 )
 
 const secondsInDay = time.Hour * 24
+const threeDays = 3 * secondsInDay
+const quotaStatusOK = "OK"
+const quotaStatusNotOK = "Not OK"
 
 // BaseDirReader is used to read the information stored in a BaseDir database.
 type BaseDirReader struct {
@@ -166,35 +169,48 @@ func (b *BaseDirReader) GroupUsageTable() (string, error) {
 		return "", err
 	}
 
-	return usageTable(gu, func(u *Usage) string {
+	return usageTable(gu, b.History, func(u *Usage) string {
 		return b.groupCache.GroupName(u.GID)
-	}), nil
+	})
 }
 
-func usageTable(usage []*Usage, nameCB func(*Usage) string) string {
+func usageTable(usage []*Usage, historyCB func(gid uint32, path string) ([]History, error),
+	nameCB func(*Usage) string) (string, error) {
 	var sb strings.Builder
 
 	for _, u := range usage {
+		h, err := historyCB(u.GID, u.BaseDir)
+		if err != nil {
+			return "", err
+		}
+
 		fmt.Fprintf(&sb, "%d\t%d\t%d\t%s\t%s\t%s\t%s\n",
 			u.UsageSize,
 			u.QuotaSize,
 			daysSince(u.Mtime),
 			u.BaseDir,
-			usageStatus(u),
+			usageStatus(h),
 			"",
 			nameCB(u),
 		)
 	}
 
-	return sb.String()
+	return sb.String(), nil
 }
 
-func usageStatus(u *Usage) string {
-	if u.QuotaInodes > 0 && u.UsageInodes > u.QuotaInodes || u.QuotaSize > 0 && u.UsageSize > u.QuotaSize {
-		return "Not OK"
+func usageStatus(h []History) string {
+	sizeExceedDate, inodeExceedDate := DateQuotaFull(h)
+	threeDaysFromNow := time.Now().Add(threeDays)
+
+	if !sizeExceedDate.IsZero() && threeDaysFromNow.After(sizeExceedDate) {
+		return quotaStatusNotOK
 	}
 
-	return "OK"
+	if !inodeExceedDate.IsZero() && threeDaysFromNow.After(inodeExceedDate) {
+		return quotaStatusNotOK
+	}
+
+	return quotaStatusOK
 }
 
 // UserUsageTable returns UserUsage() information formatted with the following
@@ -215,9 +231,11 @@ func (b *BaseDirReader) UserUsageTable() (string, error) {
 		return "", err
 	}
 
-	return usageTable(uu, func(u *Usage) string {
+	return usageTable(uu, func(_ uint32, _ string) ([]History, error) {
+		return nil, nil
+	}, func(u *Usage) string {
 		return b.userCache.UserName(u.UID)
-	}), nil
+	})
 }
 
 func daysSince(mtime time.Time) uint64 {
