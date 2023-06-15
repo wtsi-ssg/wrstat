@@ -48,12 +48,13 @@ type BaseDirReader struct {
 	mountPoints mountPoints
 	groupCache  GroupCache
 	userCache   UserCache
+	owners      map[uint32]string
 }
 
 // NewReader returns a BaseDirReader that can return the summary information
 // stored in a BaseDir database.
-func NewReader(path string) (*BaseDirReader, error) {
-	db, err := bolt.Open(path, dbOpenMode, &bolt.Options{
+func NewReader(dbPath, ownersPath string) (*BaseDirReader, error) {
+	db, err := bolt.Open(dbPath, dbOpenMode, &bolt.Options{
 		ReadOnly: true,
 	})
 	if err != nil {
@@ -65,12 +66,18 @@ func NewReader(path string) (*BaseDirReader, error) {
 		return nil, err
 	}
 
+	owners, err := parseOwners(ownersPath)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BaseDirReader{
 		db:          db,
 		ch:          new(codec.BincHandle),
 		mountPoints: mp,
 		groupCache:  make(GroupCache),
 		userCache:   make(UserCache),
+		owners:      owners,
 	}, nil
 }
 
@@ -96,6 +103,8 @@ func (b *BaseDirReader) usage(bucket string) ([]*Usage, error) {
 			if err := b.decodeFromBytes(data, uwm); err != nil {
 				return err
 			}
+
+			uwm.Owner = b.owners[uwm.GID]
 
 			uwms = append(uwms, uwm)
 
@@ -169,12 +178,12 @@ func (b *BaseDirReader) GroupUsageTable() (string, error) {
 		return "", err
 	}
 
-	return usageTable(gu, b.History, func(u *Usage) string {
+	return b.usageTable(gu, b.History, func(u *Usage) string {
 		return b.groupCache.GroupName(u.GID)
 	})
 }
 
-func usageTable(usage []*Usage, historyCB func(gid uint32, path string) ([]History, error),
+func (b *BaseDirReader) usageTable(usage []*Usage, historyCB func(gid uint32, path string) ([]History, error),
 	nameCB func(*Usage) string) (string, error) {
 	var sb strings.Builder
 
@@ -190,7 +199,7 @@ func usageTable(usage []*Usage, historyCB func(gid uint32, path string) ([]Histo
 			daysSince(u.Mtime),
 			u.BaseDir,
 			usageStatus(h),
-			"",
+			b.owners[u.GID],
 			nameCB(u),
 		)
 	}
@@ -231,7 +240,7 @@ func (b *BaseDirReader) UserUsageTable() (string, error) {
 		return "", err
 	}
 
-	return usageTable(uu, func(_ uint32, _ string) ([]History, error) {
+	return b.usageTable(uu, func(_ uint32, _ string) ([]History, error) {
 		return nil, nil
 	}, func(u *Usage) string {
 		return b.userCache.UserName(u.UID)

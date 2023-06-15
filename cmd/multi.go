@@ -108,9 +108,14 @@ The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
 The basedirs.* file gets made by calling 'wrstat basedirs' after the 'combine'
-step. This requires you provide a --quota file, so that the current max quota
+step.
+
+This requires you provide a --quota file, so that the current max quota
 of each group can be recorded. The quota file is a csv of:
 gid,disk,size_quota,inode_quota 
+
+This also requires you provide a --owners file, so that the owners of groups can
+be recorded. The file format is a csv of gid,owner_name.
 
 Finally, the unique subdirectory of --working_directory that was created is
 deleted.
@@ -138,6 +143,7 @@ func init() {
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
+	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -152,6 +158,10 @@ func checkMultiArgs(args []string) {
 
 	if quota == "" {
 		die("--quota is required")
+	}
+
+	if ownersPath == "" {
+		die("--owners is required")
 	}
 
 	if len(args) == 0 {
@@ -254,7 +264,7 @@ func combineRepGrp(dir, unique string) string {
 // scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
 // from the combined dgut.dbs folders.
 func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob(fmt.Sprintf("%s basedir -q %s %s", s.Executable(), quota, outputRoot),
+	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q %q", s.Executable(), quota, ownersPath, outputRoot),
 		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

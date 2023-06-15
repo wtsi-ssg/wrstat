@@ -28,6 +28,7 @@
 package basedirs
 
 import (
+	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -276,7 +277,9 @@ func TestBaseDirs(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("and then read the database", func() {
-				bdr, err := NewReader(dbPath)
+				ownersPath := createOwnersFile(dir)
+
+				bdr, err := NewReader(dbPath, ownersPath)
 				So(err, ShouldBeNil)
 
 				bdr.mountPoints = bd.mountPoints
@@ -291,17 +294,17 @@ func TestBaseDirs(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(len(mainTable), ShouldEqual, 6)
 					So(mainTable, ShouldResemble, []*Usage{
-						{GID: 1, BaseDir: projectA, UsageSize: halfGig + twoGig, QuotaSize: 4000000000,
+						{GID: 1, Owner: "Alan", BaseDir: projectA, UsageSize: halfGig + twoGig, QuotaSize: 4000000000,
 							UsageInodes: 2, QuotaInodes: 20, Mtime: expectedMtimeA},
 						{GID: uint32(gid), BaseDir: projectD, UsageSize: 15, QuotaSize: 0,
 							UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime},
-						{GID: 2, BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
+						{GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
 							UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-						{GID: 2, BaseDir: projectB123, UsageSize: 30, QuotaSize: 400,
+						{GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30, QuotaSize: 400,
 							UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-						{GID: 2, BaseDir: projectB125, UsageSize: 20, QuotaSize: 300,
+						{GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20, QuotaSize: 300,
 							UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
-						{GID: 3, BaseDir: user2, UsageSize: 60, QuotaSize: 500,
+						{GID: 3, Owner: "Charles", BaseDir: user2, UsageSize: 60, QuotaSize: 500,
 							UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime},
 					})
 
@@ -393,7 +396,7 @@ func TestBaseDirs(t *testing.T) {
 						err := bd.CreateDatabase(today)
 						So(err, ShouldBeNil)
 
-						bdr, err = NewReader(dbPath)
+						bdr, err = NewReader(dbPath, ownersPath)
 						So(err, ShouldBeNil)
 
 						bdr.mountPoints = bd.mountPoints
@@ -404,13 +407,13 @@ func TestBaseDirs(t *testing.T) {
 						So(err, ShouldBeNil)
 						So(len(mainTable), ShouldEqual, 4)
 						So(mainTable, ShouldResemble, []*Usage{
-							{GID: 1, BaseDir: projectA, UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
+							{GID: 1, Owner: "Alan", BaseDir: projectA, UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
 								UsageInodes: 3, QuotaInodes: 21, Mtime: expectedMtimeA},
-							{GID: 2, BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
+							{GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
 								UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-							{GID: 2, BaseDir: projectB123, UsageSize: 30, QuotaSize: 400,
+							{GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30, QuotaSize: 400,
 								UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-							{GID: 2, BaseDir: projectB125, UsageSize: 20, QuotaSize: 300,
+							{GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20, QuotaSize: 300,
 								UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
 						})
 
@@ -574,7 +577,7 @@ func TestBaseDirs(t *testing.T) {
 							expectedDaysSince,
 							projectA,
 							quotaStatusOK,
-							"",
+							"Alan",
 							"A",
 						),
 						joinWithTabs(
@@ -592,7 +595,7 @@ func TestBaseDirs(t *testing.T) {
 							expectedDaysSince,
 							projectC1,
 							quotaStatusOK,
-							"",
+							"Barbara",
 							"2",
 						),
 						joinWithTabs(
@@ -601,7 +604,7 @@ func TestBaseDirs(t *testing.T) {
 							expectedDaysSince,
 							projectB123,
 							quotaStatusOK,
-							"",
+							"Barbara",
 							"2",
 						),
 						joinWithTabs(
@@ -610,7 +613,7 @@ func TestBaseDirs(t *testing.T) {
 							expectedDaysSince,
 							projectB125,
 							quotaStatusOK,
-							"",
+							"Barbara",
 							"2",
 						),
 						joinWithTabs(
@@ -619,7 +622,7 @@ func TestBaseDirs(t *testing.T) {
 							expectedDaysSince,
 							user2,
 							quotaStatusOK,
-							"",
+							"Charles",
 							"3",
 						),
 					))
@@ -744,6 +747,23 @@ func TestBaseDirs(t *testing.T) {
 	})
 }
 
+func TestOwners(t *testing.T) {
+	Convey("Given an owners tsv you can parse it", t, func() {
+		dir := t.TempDir()
+
+		ownersPath := createOwnersFile(dir)
+
+		owners, err := parseOwners(ownersPath)
+		So(err, ShouldBeNil)
+		So(owners, ShouldResemble, map[uint32]string{
+			1: "Alan",
+			2: "Barbara",
+			3: "Charles",
+			4: "Dellilah",
+		})
+	})
+}
+
 func fixUsageTimes(mt []*Usage) {
 	for _, u := range mt {
 		u.Mtime = fixtimes.FixTime(u.Mtime)
@@ -754,4 +774,26 @@ func fixHistoryTimes(history []History) {
 	for n := range history {
 		history[n].Date = fixtimes.FixTime(history[n].Date)
 	}
+}
+
+func createOwnersFile(dir string) string {
+	ownersPath := filepath.Join(dir, "owners.csv")
+
+	writeFile(ownersPath, `1,Alan
+2,Barbara
+3,Charles
+4,Dellilah`)
+
+	return ownersPath
+}
+
+func writeFile(path, contents string) {
+	f, err := os.Create(path)
+	So(err, ShouldBeNil)
+
+	_, err = io.WriteString(f, contents)
+	So(err, ShouldBeNil)
+
+	err = f.Close()
+	So(err, ShouldBeNil)
 }

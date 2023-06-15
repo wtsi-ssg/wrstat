@@ -101,6 +101,7 @@ func init() {
 	cronCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	cronCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	cronCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
+	cronCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	cronCmd.Flags().StringVarP(&crontab, "crontab", "c",
 		"0 17 * * *",
 		"crontab describing when to run, first 5 columns only")

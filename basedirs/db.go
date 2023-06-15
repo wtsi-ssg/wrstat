@@ -58,6 +58,7 @@ const (
 type Usage struct {
 	GID         uint32
 	UID         uint32
+	Owner       string
 	BaseDir     string
 	UsageSize   uint64
 	QuotaSize   uint64

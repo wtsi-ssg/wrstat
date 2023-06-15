@@ -52,6 +52,7 @@ const (
 
 // options for this cmd.
 var quotaPath string
+var ownersPath string
 var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
 var basedirHumgenRegexp = regexp.MustCompile(`\/lustre\/scratch\d\d\d\/(humgen|hgi|tol|pam|opentargets)`)
 
@@ -62,10 +63,14 @@ var basedirCmd = &cobra.Command{
 	Long: `Create a database that summarises disk usage by unix group and base directory.
 
 Provide the unique subdirectory of your 'wrstat multi -w' directory as an unamed
-argument to this command. You must also provide a csv file of gid,disk,
-size_quota,inode_quota via the --quota option (where size_quota is the maximum
-disk usage allowed for that group on that disk in bytes, and inode_quota is the
-maximum number of files they can have).
+argument to this command.
+
+You must also provide a csv file of gid,disk,size_quota,inode_quota via the
+--quota option (where size_quota is the maximum disk usage allowed for that
+group on that disk in bytes, and inode_quota is the maximum number of file they
+can have).
+
+You must also provide a csv file of gid,owner_name via the --owners option.
 
 This is called by 'wrstat multi' after the combine step has completed. It does
 some 'wrstat where'-type calls for every unix group to come up with hopefully
@@ -103,6 +108,10 @@ the latest summary information.`,
 			die("you must supply --quota")
 		}
 
+		if ownersPath == "" {
+			die("you must supply --owners")
+		}
+
 		quotas, err := basedirs.ParseQuotas(quotaPath)
 		if err != nil {
 			die("failed to parse quota information: %s", err)
@@ -131,7 +140,7 @@ the latest summary information.`,
 		info("creating base dirs took %s", time.Since(t))
 
 		t = time.Now()
-		bdr, err := basedirs.NewReader(dbPath)
+		bdr, err := basedirs.NewReader(dbPath, ownersPath)
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}
@@ -166,7 +175,8 @@ func init() {
 	RootCmd.AddCommand(basedirCmd)
 
 	// flags specific to this sub-command
-	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "group,disk,size_quota,inode_quota csv file")
+	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "gid,disk,size_quota,inode_quota csv file")
+	basedirCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 }
 
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
