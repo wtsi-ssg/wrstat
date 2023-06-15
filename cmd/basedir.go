@@ -28,6 +28,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,6 +39,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	ifs "github.com/wtsi-ssg/wrstat/v4/internal/fs"
 )
 
 const (
@@ -48,6 +50,7 @@ const (
 	basedirMinDirsMDTExtra = 1
 	groupUsageBasename     = "basedirs.groupusage.tsv"
 	userUsageBasename      = "basedirs.userusage.tsv"
+	numBasedirArgs         = 2
 )
 
 // options for this cmd.
@@ -119,8 +122,9 @@ quota will always be 0, warning will always be "OK", owner_name will always
 be blank), and the first column will be user_name instead of group_name.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			die("you must supply the path to your unique subdir of your 'wrstat multi -w' working directory, and the multi -f output directory")
+		if len(args) != numBasedirArgs {
+			die("you must supply the path to your unique subdir of your 'wrstat multi -w' working directory, " +
+				"and the multi -f output directory")
 		}
 
 		if quotaPath == "" {
@@ -143,9 +147,11 @@ be blank), and the first column will be user_name instead of group_name.
 		}
 		info("opening databases took %s", time.Since(t))
 
-		copyExistingBaseDirsDB(args[1])
-
 		dbPath := filepath.Join(args[0], basedirBasename)
+
+		if err = copyExistingBaseDirsDB(args[1], dbPath); err != nil {
+			die("failed to get existing base directories database: %s", err)
+		}
 
 		bd, err := basedirs.NewCreator(dbPath, tree, quotas)
 		if err != nil {
@@ -214,8 +220,36 @@ func dgutDBCombinePaths(dir string) []string {
 	return paths
 }
 
-func copyExistingBaseDirsDB(path string) {
+func copyExistingBaseDirsDB(existingDir, newDBPath string) error {
+	existingDBPath, err := ifs.FindLatestDirectoryEntry(existingDir, basedirBasename)
+	if err != nil && !errors.Is(err, ifs.ErrNoDirEntryFound) {
+		return err
+	}
 
+	if existingDBPath == "" {
+		return nil
+	}
+
+	fr, err := os.Open(existingDBPath)
+	if err != nil {
+		return err
+	}
+
+	defer fr.Close()
+
+	fw, err := os.Create(newDBPath)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(fw, fr)
+
+	errc := fw.Close()
+	if err == nil {
+		err = errc
+	}
+
+	return err
 }
 
 func writeFile(path, contents string) error {
