@@ -47,6 +47,7 @@ import (
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
+	ifs "github.com/wtsi-ssg/wrstat/v4/internal/fs"
 )
 
 const dirPerms = 0755
@@ -500,7 +501,7 @@ func TestServer(t *testing.T) {
 						})
 
 						Convey("when there's an issue with getting dir mtime, it is ignored", func() {
-							t := dirEntryModTime(&mockDirEntry{})
+							t := ifs.DirEntryModTime(&mockDirEntry{})
 							So(t.IsZero(), ShouldBeTrue)
 						})
 					})

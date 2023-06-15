@@ -63,7 +63,8 @@ var basedirCmd = &cobra.Command{
 	Long: `Create a database that summarises disk usage by unix group and base directory.
 
 Provide the unique subdirectory of your 'wrstat multi -w' directory as an unamed
-argument to this command.
+argument to this command, along with the multi -f directory used for the last
+time this was run (or the current -f directory for a first run).
 
 You must also provide a csv file of gid,disk,size_quota,inode_quota via the
 --quota option (where size_quota is the maximum disk usage allowed for that
@@ -118,8 +119,8 @@ quota will always be 0, warning will always be "OK", owner_name will always
 be blank), and the first column will be user_name instead of group_name.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			die("you must supply the path to your unique subdir of your 'wrstat multi -w' working directory")
+		if len(args) != 2 {
+			die("you must supply the path to your unique subdir of your 'wrstat multi -w' working directory, and the multi -f output directory")
 		}
 
 		if quotaPath == "" {
@@ -141,6 +142,8 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to load dgut databases: %s", err)
 		}
 		info("opening databases took %s", time.Since(t))
+
+		copyExistingBaseDirsDB(args[1])
 
 		dbPath := filepath.Join(args[0], basedirBasename)
 
@@ -209,6 +212,10 @@ func dgutDBCombinePaths(dir string) []string {
 	info("%+v", paths)
 
 	return paths
+}
+
+func copyExistingBaseDirsDB(path string) {
+
 }
 
 func writeFile(path, contents string) error {
