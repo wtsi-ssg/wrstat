@@ -89,16 +89,34 @@ least 4 sub directories are returned. Paths that are subdirectories of other
 results are ignored. As a special case, if a path contains 'mdt[n]' as a
 directory, where n is a number, then 5 sub directories are required.
 
-Disk usage summaries are stored in database files keyed on the group/user and
-base directories. The summaries include quota information for groups, taking
+Disk usage summaries are stored in database keyed on the group/user and base
+directories. The summaries include quota information for groups, taking
 that information from the given --quota file. Eg. if the csv has the line:
 foo,/mount/a,1024
 Then the summary of group foo's data in a base directory /mount/a/groups/foo
 would say the quota for that location was 1KB.
+The summaries also include the owner of each group, taken from the --ownersfile.
 
-The output directory has the name 'basedir.db' in the given directory. If it
-already exists with database files inside, those database files are updated with
-the latest summary information.`,
+The output is a database named 'basedirs.db' in the given directory. If the file
+already exists, that database will be updated with the latest summary
+information.
+
+In addition to the database file, it also outputs basedirs.groupusage.tsv which
+is a tsv file with these columns:
+group_name
+owner_name
+directory_path
+last_modified (number of days ago)
+used size (used bytes)
+quota size (maximum allowed bytes)
+used inodes (number of files)
+quota inodes (maximum allowed number of bytes)
+warning ("OK" or "Not OK" if quota is estimated to have run out in 3 days)
+
+There's also a similar basedirs.userusage.tsv file with the same columns (but
+quota will always be 0, warning will always be "OK", owner_name will always
+be blank), and the first column will be user_name instead of group_name.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			die("you must supply the path to your unique subdir of your 'wrstat multi -w' working directory")

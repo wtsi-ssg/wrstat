@@ -163,13 +163,15 @@ func (b *BaseDirReader) UserSubDirs(uid uint32, basedir string) ([]*SubDir, erro
 // GroupUsageTable returns GroupUsage() information formatted with the following
 // tab separated columns:
 //
-// used
-// quota
-// last_modified
-// directory_path
-// warning
-// pi_name
 // group_name
+// owner_name
+// directory_path
+// last_modified (number of days ago)
+// used size (used bytes)
+// quota size (maximum allowed bytes)
+// used inodes (number of files)
+// quota inodes (maximum allowed number of bytes)
+// warning ("OK" or "Not OK" if quota is estimated to have run out in 3 days)
 //
 // Any error returned is from GroupUsage().
 func (b *BaseDirReader) GroupUsageTable() (string, error) {
@@ -225,13 +227,15 @@ func usageStatus(h []History) string {
 // UserUsageTable returns UserUsage() information formatted with the following
 // tab separated columns:
 //
-// used
-// quota (currently always zero)
-// last_modified
-// directory_path
-// warning
-// pi_name
 // user_name
+// owner_name (always blank)
+// directory_path
+// last_modified (number of days ago)
+// used size (used bytes)
+// quota size (always 0)
+// used inodes (number of files)
+// quota inodes (always 0)
+// warning (always "OK")
 //
 // Any error returned is from UserUsage().
 func (b *BaseDirReader) UserUsageTable() (string, error) {
