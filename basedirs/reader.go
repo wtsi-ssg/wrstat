@@ -195,14 +195,16 @@ func (b *BaseDirReader) usageTable(usage []*Usage, historyCB func(gid uint32, pa
 			return "", err
 		}
 
-		fmt.Fprintf(&sb, "%d\t%d\t%d\t%s\t%s\t%s\t%s\n",
+		fmt.Fprintf(&sb, "%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\n",
+			nameCB(u),
+			b.owners[u.GID],
+			u.BaseDir,
+			daysSince(u.Mtime),
 			u.UsageSize,
 			u.QuotaSize,
-			daysSince(u.Mtime),
-			u.BaseDir,
+			u.UsageInodes,
+			u.QuotaInodes,
 			usageStatus(h),
-			b.owners[u.GID],
-			nameCB(u),
 		)
 	}
 

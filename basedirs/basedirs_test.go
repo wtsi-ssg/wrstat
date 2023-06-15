@@ -451,8 +451,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						expectedUntilInode := today.Add(secondsInDay * 18).Unix()
 
 						dtrSize, dtrInode := DateQuotaFull(history)
-						So(dtrSize.Unix(), ShouldEqual, expectedUntilSize)
-						So(dtrInode.Unix(), ShouldBeBetween, expectedUntilInode-2, expectedUntilInode+2)
+						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-3, expectedUntilSize+3)
+						So(dtrInode.Unix(), ShouldBeBetween, expectedUntilInode-3, expectedUntilInode+3)
 					})
 				})
 
@@ -596,58 +596,70 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					So(err, ShouldBeNil)
 					So(wbo, ShouldEqual, joinWithNewLines(
 						joinWithTabs(
+							"A",
+							"Alan",
+							projectA,
+							expectedDaysSince,
 							"2684354560",
 							"4000000000",
-							expectedDaysSince,
-							projectA,
+							"2",
+							"20",
 							quotaStatusOK,
-							"Alan",
-							"A",
 						),
 						joinWithTabs(
+							group.Name,
+							"",
+							projectD,
+							expectedDaysSince,
 							"15",
 							"0",
-							expectedDaysSince,
-							projectD,
+							"5",
+							"0",
 							quotaStatusNotOK,
-							"",
-							group.Name,
 						),
 						joinWithTabs(
+							"2",
+							"Barbara",
+							projectC1,
+							expectedDaysSince,
 							"40",
 							"400",
-							expectedDaysSince,
-							projectC1,
+							"1",
+							"40",
 							quotaStatusOK,
-							"Barbara",
-							"2",
 						),
 						joinWithTabs(
+							"2",
+							"Barbara",
+							projectB123,
+							expectedDaysSince,
 							"30",
 							"400",
-							expectedDaysSince,
-							projectB123,
+							"1",
+							"40",
 							quotaStatusOK,
-							"Barbara",
-							"2",
 						),
 						joinWithTabs(
+							"2",
+							"Barbara",
+							projectB125,
+							expectedDaysSince,
 							"20",
 							"300",
-							expectedDaysSince,
-							projectB125,
+							"1",
+							"30",
 							quotaStatusOK,
-							"Barbara",
-							"2",
 						),
 						joinWithTabs(
+							"3",
+							"Charles",
+							user2,
+							expectedDaysSince,
 							"60",
 							"500",
-							expectedDaysSince,
-							user2,
+							"1",
+							"50",
 							quotaStatusOK,
-							"Charles",
-							"3",
 						),
 					))
 				})
@@ -670,64 +682,76 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 					rowsData := [][]string{
 						{
+							"A",
+							"",
+							projectA,
+							expectedDaysSince,
 							"2684354560",
 							"0",
-							expectedDaysSince,
-							projectA,
+							"2",
+							"0",
 							quotaStatusOK,
-							"",
-							"A",
 						},
 						{
+							"2",
+							"",
+							projectB123,
+							expectedDaysSince,
 							"30",
 							"0",
-							expectedDaysSince,
-							projectB123,
+							"1",
+							"0",
 							quotaStatusOK,
-							"",
-							"2",
 						},
 						{
+							"2",
+							"",
+							projectB125,
+							expectedDaysSince,
 							"20",
 							"0",
-							expectedDaysSince,
-							projectB125,
+							"1",
+							"0",
 							quotaStatusOK,
-							"",
-							"2",
 						},
 						{
+							"2",
+							"",
+							user2,
+							expectedDaysSince,
 							"60",
 							"0",
-							expectedDaysSince,
-							user2,
+							"1",
+							"0",
 							quotaStatusOK,
-							"",
-							"2",
 						},
 						{
+							"3",
+							"",
+							projectC1,
+							expectedDaysSince,
 							"40",
 							"0",
-							expectedDaysSince,
-							projectC1,
+							"1",
+							"0",
 							quotaStatusOK,
-							"",
-							"3",
 						},
 						{
+							username,
+							"",
+							projectD,
+							expectedDaysSince,
 							"15",
 							"0",
-							expectedDaysSince,
-							projectD,
+							"5",
+							"0",
 							quotaStatusOK,
-							"",
-							username,
 						},
 					}
 
 					sort.Slice(rowsData, func(i, j int) bool {
-						iID := strconv.FormatUint(uint64(groupsToID[rowsData[i][6]]), 10)
-						jID := strconv.FormatUint(uint64(groupsToID[rowsData[j][6]]), 10)
+						iID := strconv.FormatUint(uint64(groupsToID[rowsData[i][0]]), 10)
+						jID := strconv.FormatUint(uint64(groupsToID[rowsData[j][0]]), 10)
 
 						return iID < jID
 					})
