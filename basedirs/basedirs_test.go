@@ -32,6 +32,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -44,7 +45,7 @@ import (
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
-func TestBaseDirs(t *testing.T) {
+func TestBaseDirs(t *testing.T) { //nolint:gocognit
 	csvPath := makeQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
 2,/lustre/scratch125,300,30
 2,/lustre/scratch123,400,40
@@ -311,9 +312,7 @@ func TestBaseDirs(t *testing.T) {
 					mainTable, err = bdr.UserUsage()
 					fixUsageTimes(mainTable)
 
-					So(err, ShouldBeNil)
-					So(len(mainTable), ShouldEqual, 6)
-					So(mainTable, ShouldResemble, []*Usage{
+					expectedMainTable := []*Usage{
 						{UID: 101, BaseDir: projectA, UsageSize: halfGig + twoGig, UsageInodes: 2,
 							Mtime: expectedMtimeA},
 						{UID: 102, BaseDir: projectB123, UsageSize: 30, UsageInodes: 1,
@@ -326,7 +325,18 @@ func TestBaseDirs(t *testing.T) {
 							Mtime: expectedMtime},
 						{UID: uint32(uid), BaseDir: projectD, UsageSize: 15, UsageInodes: 5,
 							Mtime: expectedMtime},
+					}
+
+					sort.Slice(expectedMainTable, func(i, j int) bool {
+						iID := strconv.FormatUint(uint64(expectedMainTable[i].UID), 10)
+						jID := strconv.FormatUint(uint64(expectedMainTable[j].UID), 10)
+
+						return iID < jID
 					})
+
+					So(err, ShouldBeNil)
+					So(len(mainTable), ShouldEqual, 6)
+					So(mainTable, ShouldResemble, expectedMainTable)
 				})
 
 				Convey("getting group historical quota", func() {
@@ -388,9 +398,13 @@ func TestBaseDirs(t *testing.T) {
 						quotas.gids[1][0].quotaSize = fiveGig
 						quotas.gids[1][0].quotaInode = 21
 
+						mp := bd.mountPoints
+
 						bd, err = NewCreator(dbPath, tree, quotas)
 						So(err, ShouldBeNil)
 						So(bd, ShouldNotBeNil)
+
+						bd.mountPoints = mp
 
 						today := fixtimes.FixTime(time.Now())
 						err := bd.CreateDatabase(today)
@@ -476,6 +490,8 @@ func TestBaseDirs(t *testing.T) {
 
 					subdirsA1, err := bdr.GroupSubDirs(1, projectA)
 					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsA1)
 					So(subdirsA1, ShouldResemble, expectedProjectASubDirs)
 				})
 
@@ -490,10 +506,14 @@ func TestBaseDirs(t *testing.T) {
 
 					subdirsA1, err := bdr.UserSubDirs(101, projectA)
 					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsA1)
 					So(subdirsA1, ShouldResemble, expectedProjectASubDirs)
 
 					subdirsB125, err := bdr.UserSubDirs(102, projectB125)
 					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsB125)
 					So(subdirsB125, ShouldResemble, []*SubDir{
 						{
 							SubDir:       ".",
@@ -508,6 +528,8 @@ func TestBaseDirs(t *testing.T) {
 
 					subdirsB123, err := bdr.UserSubDirs(102, projectB123)
 					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsB123)
 					So(subdirsB123, ShouldResemble, []*SubDir{
 						{
 							SubDir:       ".",
@@ -522,6 +544,8 @@ func TestBaseDirs(t *testing.T) {
 
 					subdirsD, err := bdr.UserSubDirs(uint32(uid), projectD)
 					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsD)
 					So(subdirsD, ShouldResemble, []*SubDir{
 						{
 							SubDir:       "sub1",
@@ -637,8 +661,15 @@ func TestBaseDirs(t *testing.T) {
 
 					wbo, err := bdr.UserUsageTable()
 					So(err, ShouldBeNil)
-					So(wbo, ShouldEqual, joinWithNewLines(
-						joinWithTabs(
+
+					groupsToID := make(map[string]uint32, len(bdr.userCache))
+
+					for uid, name := range bdr.userCache {
+						groupsToID[name] = uid
+					}
+
+					rowsData := [][]string{
+						{
 							"2684354560",
 							"0",
 							expectedDaysSince,
@@ -646,9 +677,8 @@ func TestBaseDirs(t *testing.T) {
 							quotaStatusOK,
 							"",
 							"A",
-						),
-
-						joinWithTabs(
+						},
+						{
 							"30",
 							"0",
 							expectedDaysSince,
@@ -656,8 +686,8 @@ func TestBaseDirs(t *testing.T) {
 							quotaStatusOK,
 							"",
 							"2",
-						),
-						joinWithTabs(
+						},
+						{
 							"20",
 							"0",
 							expectedDaysSince,
@@ -665,8 +695,8 @@ func TestBaseDirs(t *testing.T) {
 							quotaStatusOK,
 							"",
 							"2",
-						),
-						joinWithTabs(
+						},
+						{
 							"60",
 							"0",
 							expectedDaysSince,
@@ -674,8 +704,8 @@ func TestBaseDirs(t *testing.T) {
 							quotaStatusOK,
 							"",
 							"2",
-						),
-						joinWithTabs(
+						},
+						{
 							"40",
 							"0",
 							expectedDaysSince,
@@ -683,8 +713,8 @@ func TestBaseDirs(t *testing.T) {
 							quotaStatusOK,
 							"",
 							"3",
-						),
-						joinWithTabs(
+						},
+						{
 							"15",
 							"0",
 							expectedDaysSince,
@@ -692,8 +722,22 @@ func TestBaseDirs(t *testing.T) {
 							quotaStatusOK,
 							"",
 							username,
-						),
-					))
+						},
+					}
+
+					sort.Slice(rowsData, func(i, j int) bool {
+						iID := strconv.FormatUint(uint64(groupsToID[rowsData[i][6]]), 10)
+						jID := strconv.FormatUint(uint64(groupsToID[rowsData[j][6]]), 10)
+
+						return iID < jID
+					})
+
+					rows := make([]string, len(rowsData))
+					for n, r := range rowsData {
+						rows[n] = joinWithTabs(r...)
+					}
+
+					So(wbo, ShouldEqual, joinWithNewLines(rows...))
 				})
 
 				expectedProjectASubDirUsage := joinWithNewLines(
@@ -773,6 +817,12 @@ func fixUsageTimes(mt []*Usage) {
 func fixHistoryTimes(history []History) {
 	for n := range history {
 		history[n].Date = fixtimes.FixTime(history[n].Date)
+	}
+}
+
+func fixSubDirTimes(sds []*SubDir) {
+	for n := range sds {
+		sds[n].LastModified = fixtimes.FixTime(sds[n].LastModified)
 	}
 }
 
