@@ -62,7 +62,7 @@ var basedirCmd = &cobra.Command{
 	Long: `Create a database that summarises disk usage by unix group and base directory.
 
 Provide the unique subdirectory of your 'wrstat multi -w' directory as an unamed
-argument to this command. You must also provide a csv file of group,disk,
+argument to this command. You must also provide a csv file of gid,disk,
 size_quota,inode_quota via the --quota option (where size_quota is the maximum
 disk usage allowed for that group on that disk in bytes, and inode_quota is the
 maximum number of files they can have).

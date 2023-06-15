@@ -108,7 +108,9 @@ The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
 The basedirs.* file gets made by calling 'wrstat basedirs' after the 'combine'
-step.
+step. This requires you provide a --quota file, so that the current max quota
+of each group can be recorded. The quota file is a csv of:
+gid,disk,size_quota,inode_quota 
 
 Finally, the unique subdirectory of --working_directory that was created is
 deleted.
@@ -135,7 +137,7 @@ func init() {
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
-	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of group,disk,size_quota,inode_quota")
+	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
