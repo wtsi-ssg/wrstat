@@ -457,7 +457,7 @@ func TestServer(t *testing.T) {
 						}
 
 						Convey("when the directory doesn't contain the suffix", func() {
-							testReloadFail(".", "dgut database directory not found")
+							testReloadFail(".", "file not found in directory")
 						})
 
 						Convey("when the directory doesn't exist", func() {
@@ -476,7 +476,7 @@ func TestServer(t *testing.T) {
 						Convey("when the directory contains no subdirs", func() {
 							makeTestPath()
 
-							testReloadFail(grandparentDir, "dgut database directory not found")
+							testReloadFail(grandparentDir, "file not found in directory")
 						})
 
 						Convey("when the new database path is invalid", func() {
