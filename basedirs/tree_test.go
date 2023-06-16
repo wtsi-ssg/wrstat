@@ -44,7 +44,7 @@ func TestTree(t *testing.T) {
 		Convey("You can get all the gids and uids in it", func() {
 			gids, uids, err := getAllGIDsandUIDsInTree(tree)
 			expectedGIDs := []uint32{1, 2, 3}
-			expectedUIDs := []uint32{101, 102, 103}
+			expectedUIDs := []uint32{101, 102, 88888}
 			So(err, ShouldBeNil)
 			So(gids, ShouldResemble, expectedGIDs)
 			So(uids, ShouldResemble, expectedUIDs)
@@ -111,7 +111,7 @@ func testFiles() ([]string, []internaldata.TestFile) {
 			NumFiles:       1,
 			SizeOfEachFile: 40,
 			GID:            2,
-			UID:            103,
+			UID:            88888,
 			ATime:          50,
 			MTime:          50,
 		},
@@ -120,7 +120,7 @@ func testFiles() ([]string, []internaldata.TestFile) {
 			NumFiles:       1,
 			SizeOfEachFile: 40,
 			GID:            2,
-			UID:            103,
+			UID:            88888,
 			ATime:          50,
 			MTime:          50,
 		},

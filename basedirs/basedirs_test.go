@@ -190,7 +190,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						Atime: expectedAtime,
 						Mtime: expectedMtime,
 						GIDs:  []uint32{2},
-						UIDs:  []uint32{103},
+						UIDs:  []uint32{88888},
 						FTs:   expectedFTsBam,
 					},
 					{
@@ -321,7 +321,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							Mtime: expectedMtime},
 						{UID: 102, BaseDir: user2, UsageSize: 60, UsageInodes: 1,
 							Mtime: expectedMtime},
-						{UID: 103, BaseDir: projectC1, UsageSize: 40, UsageInodes: 1,
+						{UID: 88888, BaseDir: projectC1, UsageSize: 40, UsageInodes: 1,
 							Mtime: expectedMtime},
 						{UID: uint32(uid), BaseDir: projectD, UsageSize: 15, UsageInodes: 5,
 							Mtime: expectedMtime},
@@ -668,7 +668,6 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					bdr.userCache = UserCache{
 						101: "A",
 						102: "2",
-						103: "3",
 					}
 
 					wbo, err := bdr.UserUsageTable()
@@ -726,7 +725,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusOK,
 						},
 						{
-							"3",
+							"88888",
 							"",
 							projectC1,
 							expectedDaysSince,

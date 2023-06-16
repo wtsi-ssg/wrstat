@@ -60,14 +60,14 @@ func (u UserCache) UserName(uid uint32) string {
 		return userName
 	}
 
-	uidStr := strconv.FormatUint(uint64(uid), 10)
+	userStr := strconv.FormatUint(uint64(uid), 10)
 
-	user, err := user.LookupId(uidStr)
-	if err != nil {
-		user.Name = uidStr
+	uu, err := user.LookupId(userStr)
+	if err == nil {
+		userStr = uu.Username
 	}
 
-	u[uid] = user.Username
+	u[uid] = userStr
 
-	return user.Username
+	return userStr
 }
