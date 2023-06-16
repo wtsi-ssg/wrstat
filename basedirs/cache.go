@@ -40,16 +40,16 @@ func (g GroupCache) GroupName(gid uint32) string {
 		return groupName
 	}
 
-	gidStr := strconv.FormatUint(uint64(gid), 10)
+	groupStr := strconv.FormatUint(uint64(gid), 10)
 
-	group, err := user.LookupGroupId(gidStr)
-	if err != nil {
-		group.Name = gidStr
+	group, err := user.LookupGroupId(groupStr)
+	if err == nil {
+		groupStr = group.Name
 	}
 
-	g[gid] = group.Name
+	g[gid] = groupStr
 
-	return group.Name
+	return groupStr
 }
 
 type UserCache map[uint32]string

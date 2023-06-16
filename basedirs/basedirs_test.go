@@ -49,7 +49,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 	csvPath := makeQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
 2,/lustre/scratch125,300,30
 2,/lustre/scratch123,400,40
-3,/lustre/scratch125,500,50
+77777,/lustre/scratch125,500,50
 `)
 
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
@@ -261,7 +261,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						Size:  60,
 						Atime: expectedAtime,
 						Mtime: expectedMtime,
-						GIDs:  []uint32{3},
+						GIDs:  []uint32{77777},
 						UIDs:  []uint32{102},
 						FTs:   expectedFTsBam,
 					},
@@ -305,7 +305,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
 						{GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20, QuotaSize: 300,
 							UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
-						{GID: 3, Owner: "Charles", BaseDir: user2, UsageSize: 60, QuotaSize: 500,
+						{GID: 77777, Owner: "", BaseDir: user2, UsageSize: 60, QuotaSize: 500,
 							UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime},
 					})
 
@@ -589,7 +589,6 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					bdr.groupCache = GroupCache{
 						1: "A",
 						2: "2",
-						3: "3",
 					}
 
 					wbo, err := bdr.GroupUsageTable()
@@ -651,8 +650,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusOK,
 						),
 						joinWithTabs(
-							"3",
-							"Charles",
+							"77777",
+							"",
 							user2,
 							expectedDaysSince,
 							"60",
@@ -825,7 +824,6 @@ func TestOwners(t *testing.T) {
 		So(owners, ShouldResemble, map[uint32]string{
 			1: "Alan",
 			2: "Barbara",
-			3: "Charles",
 			4: "Dellilah",
 		})
 	})
@@ -854,7 +852,6 @@ func createOwnersFile(dir string) string {
 
 	writeFile(ownersPath, `1,Alan
 2,Barbara
-3,Charles
 4,Dellilah`)
 
 	return ownersPath
