@@ -1,7 +1,9 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2023 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *   Sendu Bala <sb10@sanger.ac.uk>
+ *   Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,42 +25,48 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-// package summary lets you summarise file stats.
+package basedirs
 
-package summary
+import (
+	"bufio"
+	"errors"
+	"os"
+	"strconv"
+	"strings"
+)
 
-// summary holds count and size and lets you accumulate count and size as you
-// add more things with a size.
-type summary struct {
-	count int64
-	size  int64
-}
+const colsInOwnersFile = 2
 
-// add will increment our count and add the given size to our size.
-func (s *summary) add(size int64) {
-	s.count++
-	s.size += size
-}
+var ErrInvalidOwnersFile = errors.New("invalid owners file format")
 
-// summaryWithAtime is like summary, but also holds the oldest atime and
-// newest mtime add()ed.
-type summaryWithAtime struct {
-	summary
-	atime int64 // seconds since Unix epoch
-	mtime int64 // seconds since Unix epoch
-}
-
-// add will increment our count and add the given size to our size. It also
-// stores the given atime if it is older than our current one, and the given
-// mtime if it is newer than our current one.
-func (s *summaryWithAtime) add(size int64, atime int64, mtime int64) {
-	s.summary.add(size)
-
-	if s.atime == 0 || atime < s.atime {
-		s.atime = atime
+func parseOwners(path string) (map[uint32]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
 	}
 
-	if s.mtime == 0 || mtime > s.mtime {
-		s.mtime = mtime
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Split(bufio.ScanLines)
+
+	owners := make(map[uint32]string)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		cols := strings.Split(line, ",")
+		if len(cols) != colsInOwnersFile {
+			return nil, ErrInvalidOwnersFile
+		}
+
+		gid, err := strconv.ParseUint(cols[0], 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		owners[uint32(gid)] = cols[1]
 	}
+
+	return owners, nil
 }

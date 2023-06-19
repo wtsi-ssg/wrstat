@@ -64,11 +64,11 @@ func decodeDGUTbytes(ch codec.Handle, dir, encoded []byte) *DGUT {
 }
 
 // Summary sums the count and size of all our GUTs and returns the results,
-// along with the oldest atime (seconds since Unix epoch) and unique set of
-// UIDs, GIDs abd FTs in all our GUTs.
+// along with the oldest atime and newset mtime (seconds since Unix epoch) and
+// unique set of UIDs, GIDs abd FTs in all our GUTs.
 //
 // See GUTs.Summary for an explanation of the filter.
-func (d *DGUT) Summary(filter *Filter) (uint64, uint64, int64, []uint32, []uint32, []summary.DirGUTFileType) {
+func (d *DGUT) Summary(filter *Filter) (uint64, uint64, int64, int64, []uint32, []uint32, []summary.DirGUTFileType) {
 	return d.GUTs.Summary(filter)
 }
 

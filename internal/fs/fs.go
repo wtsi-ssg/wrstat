@@ -1,7 +1,9 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2023 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *	- Sendu Bala <sb10@sanger.ac.uk>
+ *	- Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,42 +25,48 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-// package summary lets you summarise file stats.
+package fs
 
-package summary
+import (
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
 
-// summary holds count and size and lets you accumulate count and size as you
-// add more things with a size.
-type summary struct {
-	count int64
-	size  int64
-}
+	gas "github.com/wtsi-hgi/go-authserver"
+)
 
-// add will increment our count and add the given size to our size.
-func (s *summary) add(size int64) {
-	s.count++
-	s.size += size
-}
+const ErrNoDirEntryFound = gas.Error("file not found in directory")
 
-// summaryWithAtime is like summary, but also holds the oldest atime and
-// newest mtime add()ed.
-type summaryWithAtime struct {
-	summary
-	atime int64 // seconds since Unix epoch
-	mtime int64 // seconds since Unix epoch
-}
-
-// add will increment our count and add the given size to our size. It also
-// stores the given atime if it is older than our current one, and the given
-// mtime if it is newer than our current one.
-func (s *summaryWithAtime) add(size int64, atime int64, mtime int64) {
-	s.summary.add(size)
-
-	if s.atime == 0 || atime < s.atime {
-		s.atime = atime
+// FindLatestDirectoryEntry finds the latest entry in dir that has the given
+// suffix and returns its path.
+func FindLatestDirectoryEntry(dir, suffix string) (string, error) {
+	des, err := os.ReadDir(dir)
+	if err != nil {
+		return "", err
 	}
 
-	if s.mtime == 0 || mtime > s.mtime {
-		s.mtime = mtime
+	sort.Slice(des, func(i, j int) bool {
+		return DirEntryModTime(des[i]).After(DirEntryModTime(des[j]))
+	})
+
+	for _, de := range des {
+		if strings.HasSuffix(de.Name(), "."+suffix) {
+			return filepath.Join(dir, de.Name()), nil
+		}
 	}
+
+	return "", ErrNoDirEntryFound
+}
+
+// DirEntryModTime returns the ModTime of the given DirEntry, treating errors as
+// time 0.
+func DirEntryModTime(de os.DirEntry) time.Time {
+	info, err := de.Info()
+	if err != nil {
+		return time.Time{}
+	}
+
+	return info.ModTime()
 }

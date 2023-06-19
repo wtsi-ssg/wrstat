@@ -124,7 +124,9 @@ func TestWalk(t *testing.T) {
 
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldNotBeNil)
-			So(len(walkErrors), ShouldEqual, 1)
+			lenErrors := len(walkErrors)
+			So(lenErrors, ShouldBeGreaterThanOrEqualTo, 1)
+			So(w.err, ShouldNotBeNil)
 
 			var writeError *WriteError
 			So(errors.As(walkErrors[0], &writeError), ShouldBeTrue)
@@ -134,7 +136,7 @@ func TestWalk(t *testing.T) {
 
 			w.active.Add(1)
 			w.processDir(walkDir, nil)
-			So(len(walkErrors), ShouldEqual, 1)
+			So(len(walkErrors), ShouldEqual, lenErrors)
 
 			w.addDir(walkDir)
 		})

@@ -137,7 +137,7 @@ func TestUsergroup(t *testing.T) {
 // byColumnAdder describes one of our New* types.
 type byColumnAdder interface {
 	Add(string, fs.FileInfo) error
-	Output(output *os.File) error
+	Output(output StringCloser) error
 }
 
 func addTestData(a byColumnAdder, cuid uint32) {

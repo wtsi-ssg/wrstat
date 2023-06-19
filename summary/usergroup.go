@@ -28,7 +28,6 @@ package summary
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"os/user"
 	"path/filepath"
 	"sort"
@@ -292,7 +291,7 @@ func (u *Usergroup) Add(path string, info fs.FileInfo) error {
 // Returns an error on failure to write, or if username or group can't be
 // determined from the uids and gids in the added file info. output is closed
 // on completion.
-func (u *Usergroup) Output(output *os.File) error {
+func (u *Usergroup) Output(output StringCloser) error {
 	users, gStores := u.store.sort()
 
 	gidLookupCache := make(map[uint32]string)
@@ -308,7 +307,7 @@ func (u *Usergroup) Output(output *os.File) error {
 
 // outputGroupDirectorySummariesForUser sortes the groups for this user and
 // calls outputDirectorySummariesForGroup.
-func outputGroupDirectorySummariesForUser(output *os.File, username string,
+func outputGroupDirectorySummariesForUser(output StringCloser, username string,
 	gStore groupStore, gidLookupCache map[uint32]string) error {
 	groupnames, dStores := gStore.sort(gidLookupCache)
 
@@ -323,7 +322,7 @@ func outputGroupDirectorySummariesForUser(output *os.File, username string,
 
 // outputDirectorySummariesForGroup sorts the directories for this group and
 // does the actual output of all the summary information.
-func outputDirectorySummariesForGroup(output *os.File, username, groupname string, dStore dirStore) error {
+func outputDirectorySummariesForGroup(output StringCloser, username, groupname string, dStore dirStore) error {
 	dirs, summaries := dStore.sort()
 
 	for i, s := range summaries {

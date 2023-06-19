@@ -129,6 +129,7 @@ Likewise, it produces a similar file that also shows nested numbers, with these
 5. number of files nested under 1 belonging to 2 and 3 and having filetype in 4.
 6. total file size in bytes of the files in 5.
 7. the oldest access time of the files in 5, in seconds since Unix epoch.
+8. the newest modified time of the files in 5, in seconds since Unix epoch.
 
 (Note that files can be both "temp" and one of the other types, so ignore lines
 where column 4 is 1 if summing up columns 5 and 6 for a given 1+2+3 for an
@@ -310,7 +311,7 @@ func addUserGroupSummaryOperation(input string, p *stat.Paths) (func() error, er
 // outputOperators are types returned by summary.New*().
 type outputOperator interface {
 	Add(path string, info fs.FileInfo) error
-	Output(output *os.File) error
+	Output(output summary.StringCloser) error
 }
 
 // addSummaryOperator adds the operation method of o to p after creating an

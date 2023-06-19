@@ -1,7 +1,9 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2023 Genome Research Ltd.
  *
- * Author: Sendu Bala <sb10@sanger.ac.uk>
+ * Authors:
+ *   Sendu Bala <sb10@sanger.ac.uk>
+ *   Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,42 +25,49 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-// package summary lets you summarise file stats.
+package basedirs
 
-package summary
+import (
+	"os/user"
+	"strconv"
+)
 
-// summary holds count and size and lets you accumulate count and size as you
-// add more things with a size.
-type summary struct {
-	count int64
-	size  int64
-}
+type GroupCache map[uint32]string
 
-// add will increment our count and add the given size to our size.
-func (s *summary) add(size int64) {
-	s.count++
-	s.size += size
-}
-
-// summaryWithAtime is like summary, but also holds the oldest atime and
-// newest mtime add()ed.
-type summaryWithAtime struct {
-	summary
-	atime int64 // seconds since Unix epoch
-	mtime int64 // seconds since Unix epoch
-}
-
-// add will increment our count and add the given size to our size. It also
-// stores the given atime if it is older than our current one, and the given
-// mtime if it is newer than our current one.
-func (s *summaryWithAtime) add(size int64, atime int64, mtime int64) {
-	s.summary.add(size)
-
-	if s.atime == 0 || atime < s.atime {
-		s.atime = atime
+func (g GroupCache) GroupName(gid uint32) string {
+	groupName, ok := g[gid]
+	if ok {
+		return groupName
 	}
 
-	if s.mtime == 0 || mtime > s.mtime {
-		s.mtime = mtime
+	groupStr := strconv.FormatUint(uint64(gid), 10)
+
+	group, err := user.LookupGroupId(groupStr)
+	if err == nil {
+		groupStr = group.Name
 	}
+
+	g[gid] = groupStr
+
+	return groupStr
+}
+
+type UserCache map[uint32]string
+
+func (u UserCache) UserName(uid uint32) string {
+	userName, ok := u[uid]
+	if ok {
+		return userName
+	}
+
+	userStr := strconv.FormatUint(uint64(uid), 10)
+
+	uu, err := user.LookupId(userStr)
+	if err == nil {
+		userStr = uu.Username
+	}
+
+	u[uid] = userStr
+
+	return userStr
 }

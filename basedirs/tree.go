@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Genome Research Ltd.
+ * Copyright (c) 2022 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -23,42 +23,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-// package summary lets you summarise file stats.
+package basedirs
 
-package summary
+import (
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
+)
 
-// summary holds count and size and lets you accumulate count and size as you
-// add more things with a size.
-type summary struct {
-	count int64
-	size  int64
-}
-
-// add will increment our count and add the given size to our size.
-func (s *summary) add(size int64) {
-	s.count++
-	s.size += size
-}
-
-// summaryWithAtime is like summary, but also holds the oldest atime and
-// newest mtime add()ed.
-type summaryWithAtime struct {
-	summary
-	atime int64 // seconds since Unix epoch
-	mtime int64 // seconds since Unix epoch
-}
-
-// add will increment our count and add the given size to our size. It also
-// stores the given atime if it is older than our current one, and the given
-// mtime if it is newer than our current one.
-func (s *summaryWithAtime) add(size int64, atime int64, mtime int64) {
-	s.summary.add(size)
-
-	if s.atime == 0 || atime < s.atime {
-		s.atime = atime
+// getAllGIDsandUIDsInTree gets all the unix group and user IDs that own files
+// in the given file tree.
+func getAllGIDsandUIDsInTree(tree *dgut.Tree) ([]uint32, []uint32, error) {
+	di, err := tree.DirInfo("/", nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if s.mtime == 0 || mtime > s.mtime {
-		s.mtime = mtime
-	}
+	return di.Current.GIDs, di.Current.UIDs, nil
 }

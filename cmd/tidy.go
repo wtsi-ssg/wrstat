@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021-2022 Genome Research Ltd.
+ * Copyright (c) 2021-2023 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  * Author: Kyle Mace <km34@sanger.ac.uk>
@@ -69,8 +69,9 @@ Final output files are named to include the given --date as follows:
 
 Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
 
-The base.dirs file directly inside the given "multi unique" directory is named:
-[date]_[multi unique].basedirs
+The basedirs.* files directly inside the given "multi unique" directory is
+named:
+[date]_[multi unique].basedirs.*
 
 It also moves the combine.dgut.db directories to inside a directory named:
 [date]_[multi unique].dgut.dbs
@@ -120,13 +121,18 @@ through; it won't clobber final outputs already moved.`,
 				combineStatsOutputFileBasename:     "stats.gz",
 				combineUserGroupOutputFileBasename: "byusergroup.gz",
 				combineGroupOutputFileBasename:     "bygroup",
-				combineLogOutputFileBasename:       "logs.gz"},
+				combineLogOutputFileBasename:       "logs.gz",
+			},
 
 			DBFileSuffixes: map[string]string{
-				combineDGUTOutputFileBasename: "dgut.dbs"},
+				combineDGUTOutputFileBasename: "dgut.dbs",
+			},
 
 			BaseFileSuffixes: map[string]string{
-				basedirBasename: "basedirs"},
+				basedirBasename:    basedirBasename,
+				groupUsageBasename: groupUsageBasename,
+				userUsageBasename:  userUsageBasename,
+			},
 
 			CombineFileGlobPattern:  "%s/*/*/%s",
 			DBFileGlobPattern:       "%s/*/*/%s",
