@@ -285,6 +285,17 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 				bdr.mountPoints = bd.mountPoints
 
+				groupCache := GroupCache{
+					1: "group1",
+					2: "group2",
+				}
+				bdr.groupCache = groupCache
+
+				bdr.userCache = UserCache{
+					101: "user101",
+					102: "user102",
+				}
+
 				expectedMtime := fixtimes.FixTime(time.Unix(50, 0))
 				expectedMtimeA := fixtimes.FixTime(time.Unix(100, 0))
 
@@ -295,17 +306,17 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					So(err, ShouldBeNil)
 					So(len(mainTable), ShouldEqual, 6)
 					So(mainTable, ShouldResemble, []*Usage{
-						{GID: 1, Owner: "Alan", BaseDir: projectA, UsageSize: halfGig + twoGig, QuotaSize: 4000000000,
-							UsageInodes: 2, QuotaInodes: 20, Mtime: expectedMtimeA},
-						{GID: uint32(gid), BaseDir: projectD, UsageSize: 15, QuotaSize: 0,
+						{Name: "group1", GID: 1, Owner: "Alan", BaseDir: projectA, UsageSize: halfGig + twoGig,
+							QuotaSize: 4000000000, UsageInodes: 2, QuotaInodes: 20, Mtime: expectedMtimeA},
+						{Name: group.Name, GID: uint32(gid), BaseDir: projectD, UsageSize: 15, QuotaSize: 0,
 							UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime},
-						{GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
-							UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-						{GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30, QuotaSize: 400,
-							UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-						{GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20, QuotaSize: 300,
-							UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
-						{GID: 77777, Owner: "", BaseDir: user2, UsageSize: 60, QuotaSize: 500,
+						{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40,
+							QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
+						{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30,
+							QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
+						{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20,
+							QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
+						{Name: "77777", GID: 77777, Owner: "", BaseDir: user2, UsageSize: 60, QuotaSize: 500,
 							UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime},
 					})
 
@@ -313,17 +324,17 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					fixUsageTimes(mainTable)
 
 					expectedMainTable := []*Usage{
-						{UID: 101, BaseDir: projectA, UsageSize: halfGig + twoGig, UsageInodes: 2,
-							Mtime: expectedMtimeA},
-						{UID: 102, BaseDir: projectB123, UsageSize: 30, UsageInodes: 1,
+						{Name: "user101", UID: 101, BaseDir: projectA, UsageSize: halfGig + twoGig,
+							UsageInodes: 2, Mtime: expectedMtimeA},
+						{Name: "user102", UID: 102, BaseDir: projectB123, UsageSize: 30, UsageInodes: 1,
 							Mtime: expectedMtime},
-						{UID: 102, BaseDir: projectB125, UsageSize: 20, UsageInodes: 1,
+						{Name: "user102", UID: 102, BaseDir: projectB125, UsageSize: 20, UsageInodes: 1,
 							Mtime: expectedMtime},
-						{UID: 102, BaseDir: user2, UsageSize: 60, UsageInodes: 1,
+						{Name: "user102", UID: 102, BaseDir: user2, UsageSize: 60, UsageInodes: 1,
 							Mtime: expectedMtime},
-						{UID: 88888, BaseDir: projectC1, UsageSize: 40, UsageInodes: 1,
+						{Name: "88888", UID: 88888, BaseDir: projectC1, UsageSize: 40, UsageInodes: 1,
 							Mtime: expectedMtime},
-						{UID: uint32(uid), BaseDir: projectD, UsageSize: 15, UsageInodes: 5,
+						{Name: username, UID: uint32(uid), BaseDir: projectD, UsageSize: 15, UsageInodes: 5,
 							Mtime: expectedMtime},
 					}
 
@@ -414,6 +425,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						So(err, ShouldBeNil)
 
 						bdr.mountPoints = bd.mountPoints
+						bdr.groupCache = groupCache
 
 						mainTable, err := bdr.GroupUsage()
 						fixUsageTimes(mainTable)
@@ -421,14 +433,15 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						So(err, ShouldBeNil)
 						So(len(mainTable), ShouldEqual, 4)
 						So(mainTable, ShouldResemble, []*Usage{
-							{GID: 1, Owner: "Alan", BaseDir: projectA, UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
+							{Name: "group1", GID: 1, Owner: "Alan", BaseDir: projectA,
+								UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
 								UsageInodes: 3, QuotaInodes: 21, Mtime: expectedMtimeA},
-							{GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40, QuotaSize: 400,
-								UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-							{GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30, QuotaSize: 400,
-								UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-							{GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20, QuotaSize: 300,
-								UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
+							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40,
+								QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
+							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30,
+								QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
+							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20,
+								QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
 						})
 
 						history, err := bdr.History(1, projectA)
@@ -586,16 +599,11 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				expectedDaysSince := daysSinceString(expectedMtime)
 
 				Convey("getting weaver-like output for group base-dirs", func() {
-					bdr.groupCache = GroupCache{
-						1: "A",
-						2: "2",
-					}
-
 					wbo, err := bdr.GroupUsageTable()
 					So(err, ShouldBeNil)
 					So(wbo, ShouldEqual, joinWithNewLines(
 						joinWithTabs(
-							"A",
+							"group1",
 							"Alan",
 							projectA,
 							expectedDaysSince,
@@ -617,7 +625,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusNotOK,
 						),
 						joinWithTabs(
-							"2",
+							"group2",
 							"Barbara",
 							projectC1,
 							expectedDaysSince,
@@ -628,7 +636,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusOK,
 						),
 						joinWithTabs(
-							"2",
+							"group2",
 							"Barbara",
 							projectB123,
 							expectedDaysSince,
@@ -639,7 +647,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusOK,
 						),
 						joinWithTabs(
-							"2",
+							"group2",
 							"Barbara",
 							projectB125,
 							expectedDaysSince,
@@ -664,11 +672,6 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				})
 
 				Convey("getting weaver-like output for user base-dirs", func() {
-					bdr.userCache = UserCache{
-						101: "A",
-						102: "2",
-					}
-
 					wbo, err := bdr.UserUsageTable()
 					So(err, ShouldBeNil)
 
@@ -680,7 +683,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 					rowsData := [][]string{
 						{
-							"A",
+							"user101",
 							"",
 							projectA,
 							expectedDaysSince,
@@ -691,7 +694,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusOK,
 						},
 						{
-							"2",
+							"user102",
 							"",
 							projectB123,
 							expectedDaysSince,
@@ -702,7 +705,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusOK,
 						},
 						{
-							"2",
+							"user102",
 							"",
 							projectB125,
 							expectedDaysSince,
@@ -713,7 +716,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusOK,
 						},
 						{
-							"2",
+							"user102",
 							"",
 							user2,
 							expectedDaysSince,

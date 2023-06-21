@@ -91,11 +91,11 @@ func (b *BaseDirReader) GroupUsage() ([]*Usage, error) {
 	return b.usage(groupUsageBucket)
 }
 
-func (b *BaseDirReader) usage(bucket string) ([]*Usage, error) {
+func (b *BaseDirReader) usage(bucketName string) ([]*Usage, error) {
 	var uwms []*Usage
 
 	if err := b.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucket))
+		bucket := tx.Bucket([]byte(bucketName))
 
 		return bucket.ForEach(func(_, data []byte) error {
 			uwm := new(Usage)
@@ -105,6 +105,12 @@ func (b *BaseDirReader) usage(bucket string) ([]*Usage, error) {
 			}
 
 			uwm.Owner = b.owners[uwm.GID]
+
+			if bucketName == groupUsageBucket {
+				uwm.Name = b.groupCache.GroupName(uwm.GID)
+			} else {
+				uwm.Name = b.userCache.UserName(uwm.UID)
+			}
 
 			uwms = append(uwms, uwm)
 
@@ -180,13 +186,11 @@ func (b *BaseDirReader) GroupUsageTable() (string, error) {
 		return "", err
 	}
 
-	return b.usageTable(gu, b.History, func(u *Usage) string {
-		return b.groupCache.GroupName(u.GID)
-	})
+	return b.usageTable(gu, b.History)
 }
 
-func (b *BaseDirReader) usageTable(usage []*Usage, historyCB func(gid uint32, path string) ([]History, error),
-	nameCB func(*Usage) string) (string, error) {
+func (b *BaseDirReader) usageTable(usage []*Usage,
+	historyCB func(gid uint32, path string) ([]History, error)) (string, error) {
 	var sb strings.Builder
 
 	for _, u := range usage {
@@ -196,7 +200,7 @@ func (b *BaseDirReader) usageTable(usage []*Usage, historyCB func(gid uint32, pa
 		}
 
 		fmt.Fprintf(&sb, "%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\n",
-			nameCB(u),
+			u.Name,
 			b.owners[u.GID],
 			u.BaseDir,
 			daysSince(u.Mtime),
@@ -248,8 +252,6 @@ func (b *BaseDirReader) UserUsageTable() (string, error) {
 
 	return b.usageTable(uu, func(_ uint32, _ string) ([]History, error) {
 		return nil, nil
-	}, func(u *Usage) string {
-		return b.userCache.UserName(u.UID)
 	})
 }
 

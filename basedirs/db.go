@@ -55,9 +55,13 @@ const (
 )
 
 // Usage holds information summarising usage by a particular GID/UID-BaseDir.
+//
+// Only one of GID or UID will be set, and Owner will always be blank when UID
+// is set.
 type Usage struct {
 	GID         uint32
 	UID         uint32
+	Name        string // the group or user name
 	Owner       string
 	BaseDir     string
 	UsageSize   uint64
