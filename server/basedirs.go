@@ -70,10 +70,12 @@ func (s *Server) LoadBasedirsDB(dbPath, ownersPath string) error {
 		s.Router().GET(EndPointBasedirUsageGroup, s.getBasedirsGroupUsage)
 		s.Router().GET(EndPointBasedirUsageUser, s.getBasedirsUserUsage)
 		s.Router().GET(EndPointBasedirSubdirGroup, s.getBasedirsGroupSubdirs)
+		s.Router().GET(EndPointBasedirSubdirUser, s.getBasedirsUserSubdirs)
 	} else {
 		authGroup.GET(basedirsGroupUsagePath, s.getBasedirsGroupUsage)
 		authGroup.GET(basedirsUserUsagePath, s.getBasedirsUserUsage)
 		authGroup.GET(basedirsGroupSubdirPath, s.getBasedirsGroupSubdirs)
+		authGroup.GET(basedirsUserSubdirPath, s.getBasedirsUserSubdirs)
 	}
 
 	return nil
@@ -111,23 +113,43 @@ func (s *Server) getBasedirsUserUsage(c *gin.Context) {
 }
 
 func (s *Server) getBasedirsGroupSubdirs(c *gin.Context) {
+	id, basedir, ok := getSubdirsArgs(c)
+	if !ok {
+		return
+	}
+
+	s.getBasedirs(c, func() (any, error) {
+		return s.basedirs.GroupSubDirs(uint32(id), basedir)
+	})
+}
+
+func getSubdirsArgs(c *gin.Context) (int, string, bool) {
 	idStr := c.Query("id")
 	basedir := c.Query("basedir")
 
 	if idStr == "" || basedir == "" {
 		c.AbortWithError(http.StatusBadRequest, ErrBadBasedirsQuery) //nolint:errcheck
 
-		return
+		return 0, "", false
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, ErrBadBasedirsQuery) //nolint:errcheck
 
+		return 0, "", false
+	}
+
+	return id, basedir, true
+}
+
+func (s *Server) getBasedirsUserSubdirs(c *gin.Context) {
+	id, basedir, ok := getSubdirsArgs(c)
+	if !ok {
 		return
 	}
 
 	s.getBasedirs(c, func() (any, error) {
-		return s.basedirs.GroupSubDirs(uint32(id), basedir)
+		return s.basedirs.UserSubDirs(uint32(id), basedir)
 	})
 }

@@ -575,6 +575,19 @@ func TestServer(t *testing.T) {
 					So(len(subdirs), ShouldEqual, 2)
 					So(subdirs[0].SubDir, ShouldEqual, ".")
 					So(subdirs[1].SubDir, ShouldEqual, "sub")
+
+					response, err = query(s, EndPointBasedirSubdirUser,
+						fmt.Sprintf("?id=%d&basedir=%s", usageUser[0].UID, usageUser[0].BaseDir))
+					So(err, ShouldBeNil)
+					So(response.Code, ShouldEqual, http.StatusOK)
+					So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/basedirs/subdirs/user")
+					So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
+
+					subdirs, err = decodeSubdirResult(response)
+					So(err, ShouldBeNil)
+					So(len(subdirs), ShouldEqual, 2)
+					So(subdirs[0].SubDir, ShouldEqual, ".")
+					So(subdirs[1].SubDir, ShouldEqual, "sub")
 				})
 			})
 		})
