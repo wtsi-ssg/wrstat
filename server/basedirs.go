@@ -50,7 +50,7 @@ const ErrBadBasedirsQuery = gas.Error("bad query; check id and basedir")
 // available at /rest/v1/auth/basedirs/*.
 //
 // The subdir endpoints require id (gid or uid) and basedir parameters.
-// The history endpoint requires a gid and path (can be basedir, actually a
+// The history endpoint requires a gid and basedir (can be basedir, actually a
 // mountpoint) parameter.
 func (s *Server) LoadBasedirsDB(dbPath, ownersPath string) error {
 	s.basedirsMutex.Lock()
@@ -71,11 +71,13 @@ func (s *Server) LoadBasedirsDB(dbPath, ownersPath string) error {
 		s.Router().GET(EndPointBasedirUsageUser, s.getBasedirsUserUsage)
 		s.Router().GET(EndPointBasedirSubdirGroup, s.getBasedirsGroupSubdirs)
 		s.Router().GET(EndPointBasedirSubdirUser, s.getBasedirsUserSubdirs)
+		s.Router().GET(EndPointBasedirHistory, s.getBasedirsHistory)
 	} else {
 		authGroup.GET(basedirsGroupUsagePath, s.getBasedirsGroupUsage)
 		authGroup.GET(basedirsUserUsagePath, s.getBasedirsUserUsage)
 		authGroup.GET(basedirsGroupSubdirPath, s.getBasedirsGroupSubdirs)
 		authGroup.GET(basedirsUserSubdirPath, s.getBasedirsUserSubdirs)
+		authGroup.GET(basedirsHistoryPath, s.getBasedirsHistory)
 	}
 
 	return nil
@@ -151,5 +153,16 @@ func (s *Server) getBasedirsUserSubdirs(c *gin.Context) {
 
 	s.getBasedirs(c, func() (any, error) {
 		return s.basedirs.UserSubDirs(uint32(id), basedir)
+	})
+}
+
+func (s *Server) getBasedirsHistory(c *gin.Context) {
+	id, basedir, ok := getSubdirsArgs(c)
+	if !ok {
+		return
+	}
+
+	s.getBasedirs(c, func() (any, error) {
+		return s.basedirs.History(uint32(id), basedir)
 	})
 }

@@ -68,7 +68,7 @@ func TestServer(t *testing.T) {
 	exampleGIDs := getExampleGIDs(gids)
 	sentinelPollFrequency := 10 * time.Millisecond
 
-	FocusConvey("Given a Server", t, func() {
+	Convey("Given a Server", t, func() {
 		logWriter := gas.NewStringLogger()
 		s := New(logWriter)
 
@@ -517,7 +517,7 @@ func TestServer(t *testing.T) {
 			})
 		})
 
-		FocusConvey("You can query the basedirs endpoints", func() {
+		Convey("You can query the basedirs endpoints", func() {
 			response, err := query(s, EndPointBasedirUsageGroup, "")
 			So(err, ShouldBeNil)
 			So(response.Code, ShouldEqual, http.StatusNotFound)
@@ -525,11 +525,11 @@ func TestServer(t *testing.T) {
 			So(logWriter.String(), ShouldContainSubstring, "STATUS=404")
 			logWriter.Reset()
 
-			FocusConvey("And given a basedirs database", func() {
+			Convey("And given a basedirs database", func() {
 				dbPath, ownersPath, err := createExampleBasedirsDB(t)
 				So(err, ShouldBeNil)
 
-				FocusConvey("You can get results after calling LoadBasedirsDB", func() {
+				Convey("You can get results after calling LoadBasedirsDB", func() {
 					err = s.LoadBasedirsDB(dbPath, ownersPath)
 					So(err, ShouldBeNil)
 
@@ -588,6 +588,18 @@ func TestServer(t *testing.T) {
 					So(len(subdirs), ShouldEqual, 2)
 					So(subdirs[0].SubDir, ShouldEqual, ".")
 					So(subdirs[1].SubDir, ShouldEqual, "sub")
+
+					response, err = query(s, EndPointBasedirHistory,
+						fmt.Sprintf("?id=%d&basedir=%s", usageGroup[0].GID, usageGroup[0].BaseDir))
+					So(err, ShouldBeNil)
+					So(response.Code, ShouldEqual, http.StatusOK)
+					So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/basedirs/history")
+					So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
+
+					history, err := decodeHistoryResult(response)
+					So(err, ShouldBeNil)
+					So(len(history), ShouldEqual, 1)
+					So(history[0].UsageInodes, ShouldEqual, 2)
 				})
 			})
 		})
@@ -1215,6 +1227,13 @@ func decodeUsageResult(response *httptest.ResponseRecorder) ([]*basedirs.Usage, 
 // decodeSubdirResult decodes the result of a basedirs subdir query.
 func decodeSubdirResult(response *httptest.ResponseRecorder) ([]*basedirs.SubDir, error) {
 	var result []*basedirs.SubDir
+	err := json.NewDecoder(response.Body).Decode(&result)
+
+	return result, err
+}
+
+func decodeHistoryResult(response *httptest.ResponseRecorder) ([]basedirs.History, error) {
+	var result []basedirs.History
 	err := json.NewDecoder(response.Body).Decode(&result)
 
 	return result, err
