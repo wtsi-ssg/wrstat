@@ -532,15 +532,18 @@ func TestServer(t *testing.T) {
 					err = s.LoadBasedirsDB(dbPath, ownersPath)
 					So(err, ShouldBeNil)
 
-					// response, err := queryWhere(s, "")
-					// So(err, ShouldBeNil)
-					// So(response.Code, ShouldEqual, http.StatusOK)
-					// So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/where")
-					// So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
+					response, err := query(s, EndPointBasedirUsageGroup, "")
+					So(err, ShouldBeNil)
+					So(response.Code, ShouldEqual, http.StatusOK)
+					So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/basedirs/usage/groups")
+					So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
 
-					// result, err := decodeWhereResult(response)
-					// So(err, ShouldBeNil)
-					// So(result, ShouldResemble, expected)
+					result, err := decodeUsageResult(response)
+					So(err, ShouldBeNil)
+					So(len(result), ShouldEqual, 5)
+					So(result[0].Name, ShouldNotBeBlank)
+					So(result[0].Owner, ShouldEqual, "Alan")
+					So(result[0].BaseDir, ShouldEqual, "/lustre/scratch125/humgen/projects/A")
 				})
 			})
 		})
@@ -1155,4 +1158,12 @@ func createExampleBasedirsDB(t *testing.T) (string, string, error) {
 	ownersPath, err := internaldata.CreateOwnersCSV(t, internaldata.ExampleOwnersCSV)
 
 	return dbPath, ownersPath, err
+}
+
+// decodeUsageResult decodes the result of a basedirs usage query.
+func decodeUsageResult(response *httptest.ResponseRecorder) ([]*basedirs.Usage, error) {
+	var result []*basedirs.Usage
+	err := json.NewDecoder(response.Body).Decode(&result)
+
+	return result, err
 }

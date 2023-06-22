@@ -32,10 +32,6 @@ import (
 	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 )
 
-type router interface {
-	GET(relativePath string, handlers ...gin.HandlerFunc) gin.IRoutes
-}
-
 // LoadBasedirsDB loads the given basedirs.db file (as produced by
 // basedirs.CreateDatabase()) and makes use of the given owners file (a
 // gid,owner csv) and adds the following GET endpoints to the REST API:
@@ -66,15 +62,11 @@ func (s *Server) LoadBasedirsDB(dbPath, ownersPath string) error {
 
 	authGroup := s.AuthRouter()
 
-	var r router
-
 	if authGroup == nil {
-		r = s.Router()
+		s.Router().GET(EndPointBasedirUsageGroup, s.getBasedirs)
 	} else {
-		r = authGroup
+		authGroup.GET(basedirsGroupUsagePath, s.getBasedirs)
 	}
-
-	r.GET(EndPointWhere, s.getBasedirs)
 
 	return nil
 }
@@ -83,25 +75,15 @@ func (s *Server) LoadBasedirsDB(dbPath, ownersPath string) error {
 // This is called when there is a GET on /rest/v1/basedirs/* or
 // /rest/v1/authbasedirs/*.
 func (s *Server) getBasedirs(c *gin.Context) {
-	dir := c.DefaultQuery("dir", defaultDir)
-	splits := c.DefaultQuery("splits", defaultSplits)
+	s.basedirsMutex.RLock()
+	defer s.basedirsMutex.RUnlock()
 
-	filter, err := s.getFilter(c)
+	usage, err := s.basedirs.GroupUsage()
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
 
 		return
 	}
 
-	s.treeMutex.Lock()
-	defer s.treeMutex.Unlock()
-
-	dcss, err := s.tree.Where(dir, filter, convertSplitsValue(splits))
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
-
-		return
-	}
-
-	c.IndentedJSON(http.StatusOK, s.dcssToSummaries(dcss))
+	c.IndentedJSON(http.StatusOK, usage)
 }
