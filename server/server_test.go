@@ -27,6 +27,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -538,14 +539,14 @@ func TestServer(t *testing.T) {
 					So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/basedirs/usage/groups")
 					So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
 
-					result, err := decodeUsageResult(response)
+					usageGroup, err := decodeUsageResult(response)
 					So(err, ShouldBeNil)
-					So(len(result), ShouldEqual, 5)
-					So(result[0].GID, ShouldNotEqual, 0)
-					So(result[0].UID, ShouldEqual, 0)
-					So(result[0].Name, ShouldNotBeBlank)
-					So(result[0].Owner, ShouldNotBeBlank)
-					So(result[0].BaseDir, ShouldNotBeBlank)
+					So(len(usageGroup), ShouldEqual, 6)
+					So(usageGroup[0].GID, ShouldNotEqual, 0)
+					So(usageGroup[0].UID, ShouldEqual, 0)
+					So(usageGroup[0].Name, ShouldNotBeBlank)
+					So(usageGroup[0].Owner, ShouldNotBeBlank)
+					So(usageGroup[0].BaseDir, ShouldNotBeBlank)
 
 					response, err = query(s, EndPointBasedirUsageUser, "")
 					So(err, ShouldBeNil)
@@ -553,14 +554,27 @@ func TestServer(t *testing.T) {
 					So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/basedirs/usage/users")
 					So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
 
-					result, err = decodeUsageResult(response)
+					usageUser, err := decodeUsageResult(response)
 					So(err, ShouldBeNil)
-					So(len(result), ShouldEqual, 5)
-					So(result[0].GID, ShouldEqual, 0)
-					So(result[0].UID, ShouldNotEqual, 0)
-					So(result[0].Name, ShouldNotBeBlank)
-					So(result[0].Owner, ShouldBeBlank)
-					So(result[0].BaseDir, ShouldNotBeBlank)
+					So(len(usageUser), ShouldEqual, 6)
+					So(usageUser[0].GID, ShouldEqual, 0)
+					So(usageUser[0].UID, ShouldNotEqual, 0)
+					So(usageUser[0].Name, ShouldNotBeBlank)
+					So(usageUser[0].Owner, ShouldBeBlank)
+					So(usageUser[0].BaseDir, ShouldNotBeBlank)
+
+					response, err = query(s, EndPointBasedirSubdirGroup,
+						fmt.Sprintf("?id=%d&basedir=%s", usageGroup[0].GID, usageGroup[0].BaseDir))
+					So(err, ShouldBeNil)
+					So(response.Code, ShouldEqual, http.StatusOK)
+					So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/basedirs/subdirs/group")
+					So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
+
+					subdirs, err := decodeSubdirResult(response)
+					So(err, ShouldBeNil)
+					So(len(subdirs), ShouldEqual, 2)
+					So(subdirs[0].SubDir, ShouldEqual, ".")
+					So(subdirs[1].SubDir, ShouldEqual, "sub")
 				})
 			})
 		})
@@ -1180,6 +1194,14 @@ func createExampleBasedirsDB(t *testing.T) (string, string, error) {
 // decodeUsageResult decodes the result of a basedirs usage query.
 func decodeUsageResult(response *httptest.ResponseRecorder) ([]*basedirs.Usage, error) {
 	var result []*basedirs.Usage
+	err := json.NewDecoder(response.Body).Decode(&result)
+
+	return result, err
+}
+
+// decodeSubdirResult decodes the result of a basedirs subdir query.
+func decodeSubdirResult(response *httptest.ResponseRecorder) ([]*basedirs.SubDir, error) {
+	var result []*basedirs.SubDir
 	err := json.NewDecoder(response.Body).Decode(&result)
 
 	return result, err

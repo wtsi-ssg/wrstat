@@ -39,7 +39,12 @@ import (
 func CreateExampleDGUTDBForBasedirs(t *testing.T) (*dgut.Tree, []string, error) {
 	t.Helper()
 
-	dirs, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting()
+	gid, uid, _, _, err := internaldata.RealGIDAndUID()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dirs, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
 
 	tree, err := CreateDGUTDBFromFakeFiles(t, files)
 

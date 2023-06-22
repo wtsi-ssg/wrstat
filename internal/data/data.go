@@ -31,6 +31,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -240,13 +241,48 @@ func addTestDirInfo(t *testing.T, dgut *summary.DirGroupUserType, doneDirs map[s
 	}
 }
 
-func FakeFilesForDGUTDBForBasedirsTesting() ([]string, []TestFile) {
+// RealGIDAndUID returns the currently logged in user's gid and uid, and the
+// corresponding group and user names.
+func RealGIDAndUID() (int, int, string, string, error) {
+	u, err := user.Current()
+	if err != nil {
+		return 0, 0, "", "", err
+	}
+
+	uid64, err := strconv.ParseUint(u.Uid, 10, 64)
+	if err != nil {
+		return 0, 0, "", "", err
+	}
+
+	groups, err := u.GroupIds()
+	if err != nil || len(groups) == 0 {
+		return 0, 0, "", "", err
+	}
+
+	gid64, err := strconv.ParseUint(groups[0], 10, 64)
+	if err != nil {
+		return 0, 0, "", "", err
+	}
+
+	group, err := user.LookupGroupId(groups[0])
+	if err != nil {
+		return 0, 0, "", "", err
+	}
+
+	return int(gid64), int(uid64), group.Name, u.Username, nil
+}
+
+func FakeFilesForDGUTDBForBasedirsTesting(gid, uid int) ([]string, []TestFile) {
 	projectA := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "A")
 	projectB125 := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "B")
 	projectB123 := filepath.Join("/", "lustre", "scratch123", "hgi", "mdt1", "projects", "B")
 	projectC1 := filepath.Join("/", "lustre", "scratch123", "hgi", "m0")
 	projectC2 := filepath.Join("/", "lustre", "scratch123", "hgi", "mdt0")
 	user2 := filepath.Join("/", "lustre", "scratch125", "humgen", "teams", "102")
+	projectD := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "D")
+	projectDSub1 := filepath.Join(projectD, "sub1")
+	projectDSub2 := filepath.Join(projectD, "sub2")
+
 	files := []TestFile{
 		{
 			Path:           filepath.Join(projectA, "a.bam"),
@@ -313,7 +349,55 @@ func FakeFilesForDGUTDBForBasedirsTesting() ([]string, []TestFile) {
 		},
 	}
 
-	return []string{projectA, projectB125, projectB123, projectC1, projectC2, user2}, files
+	files = append(files,
+		TestFile{
+			Path:           filepath.Join(projectDSub1, "a.bam"),
+			NumFiles:       1,
+			SizeOfEachFile: 1,
+			GID:            gid,
+			UID:            uid,
+			ATime:          50,
+			MTime:          50,
+		},
+		TestFile{
+			Path:           filepath.Join(projectDSub1, "temp", "a.sam"),
+			NumFiles:       1,
+			SizeOfEachFile: 2,
+			GID:            gid,
+			UID:            uid,
+			ATime:          50,
+			MTime:          50,
+		},
+		TestFile{
+			Path:           filepath.Join(projectDSub1, "a.cram"),
+			NumFiles:       1,
+			SizeOfEachFile: 3,
+			GID:            gid,
+			UID:            uid,
+			ATime:          50,
+			MTime:          50,
+		},
+		TestFile{
+			Path:           filepath.Join(projectDSub2, "a.bed"),
+			NumFiles:       1,
+			SizeOfEachFile: 4,
+			GID:            gid,
+			UID:            uid,
+			ATime:          50,
+			MTime:          50,
+		},
+		TestFile{
+			Path:           filepath.Join(projectDSub2, "b.bed"),
+			NumFiles:       1,
+			SizeOfEachFile: 5,
+			GID:            gid,
+			UID:            uid,
+			ATime:          50,
+			MTime:          50,
+		},
+	)
+
+	return []string{projectA, projectB125, projectB123, projectC1, projectC2, user2, projectD}, files
 }
 
 const ExampleQuotaCSV = `1,/disk/1,10,20

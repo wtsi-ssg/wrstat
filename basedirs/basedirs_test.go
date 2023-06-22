@@ -29,7 +29,6 @@ package basedirs
 
 import (
 	"os"
-	"os/user"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -53,7 +52,10 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 `)
 
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
-		locDirs, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting()
+		gid, uid, groupName, username, err := internaldata.RealGIDAndUID()
+		So(err, ShouldBeNil)
+
+		locDirs, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
 
 		const (
 			halfGig = 1 << 29
@@ -63,79 +65,6 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 		files[0].SizeOfEachFile = halfGig
 		files[1].SizeOfEachFile = twoGig
 
-		projectD := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "D")
-		projectDSub1 := filepath.Join(projectD, "sub1")
-		projectDSub2 := filepath.Join(projectD, "sub2")
-
-		u, err := user.Current()
-		So(err, ShouldBeNil)
-
-		username := u.Username
-
-		uid64, err := strconv.ParseUint(u.Uid, 10, 64)
-		So(err, ShouldBeNil)
-
-		groups, err := u.GroupIds()
-		So(err, ShouldBeNil)
-		So(len(groups), ShouldBeGreaterThan, 0)
-
-		gid64, err := strconv.ParseUint(groups[0], 10, 64)
-		So(err, ShouldBeNil)
-
-		group, err := user.LookupGroupId(groups[0])
-		So(err, ShouldBeNil)
-
-		uid := int(uid64)
-		gid := int(gid64)
-
-		files = append(files,
-			internaldata.TestFile{
-				Path:           filepath.Join(projectDSub1, "a.bam"),
-				NumFiles:       1,
-				SizeOfEachFile: 1,
-				GID:            gid,
-				UID:            uid,
-				ATime:          50,
-				MTime:          50,
-			},
-			internaldata.TestFile{
-				Path:           filepath.Join(projectDSub1, "temp", "a.sam"),
-				NumFiles:       1,
-				SizeOfEachFile: 2,
-				GID:            gid,
-				UID:            uid,
-				ATime:          50,
-				MTime:          50,
-			},
-			internaldata.TestFile{
-				Path:           filepath.Join(projectDSub1, "a.cram"),
-				NumFiles:       1,
-				SizeOfEachFile: 3,
-				GID:            gid,
-				UID:            uid,
-				ATime:          50,
-				MTime:          50,
-			},
-			internaldata.TestFile{
-				Path:           filepath.Join(projectDSub2, "a.bed"),
-				NumFiles:       1,
-				SizeOfEachFile: 4,
-				GID:            gid,
-				UID:            uid,
-				ATime:          50,
-				MTime:          50,
-			},
-			internaldata.TestFile{
-				Path:           filepath.Join(projectDSub2, "b.bed"),
-				NumFiles:       1,
-				SizeOfEachFile: 5,
-				GID:            gid,
-				UID:            uid,
-				ATime:          50,
-				MTime:          50,
-			},
-		)
-
 		tree, err := internaldb.CreateDGUTDBFromFakeFiles(t, files)
 		So(err, ShouldBeNil)
 
@@ -144,6 +73,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 		projectB123 := locDirs[2]
 		projectC1 := locDirs[3]
 		user2 := locDirs[5]
+		projectD := locDirs[6]
 
 		quotas, err := ParseQuotas(csvPath)
 		So(err, ShouldBeNil)
@@ -311,7 +241,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					So(mainTable, ShouldResemble, []*Usage{
 						{Name: "group1", GID: 1, Owner: "Alan", BaseDir: projectA, UsageSize: halfGig + twoGig,
 							QuotaSize: 4000000000, UsageInodes: 2, QuotaInodes: 20, Mtime: expectedMtimeA},
-						{Name: group.Name, GID: uint32(gid), BaseDir: projectD, UsageSize: 15, QuotaSize: 0,
+						{Name: groupName, GID: uint32(gid), BaseDir: projectD, UsageSize: 15, QuotaSize: 0,
 							UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime},
 						{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40,
 							QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
@@ -399,7 +329,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					So(err, ShouldBeNil)
 
 					Convey("Then you can add and retrieve a new day's usage and quota", func() {
-						_, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting()
+						_, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
 						files[0].NumFiles = 2
 						files[0].SizeOfEachFile = halfGig
 						files[1].SizeOfEachFile = twoGig
@@ -435,17 +365,21 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						fixUsageTimes(mainTable)
 
 						So(err, ShouldBeNil)
-						So(len(mainTable), ShouldEqual, 4)
+						So(len(mainTable), ShouldEqual, 6)
 						So(mainTable, ShouldResemble, []*Usage{
 							{Name: "group1", GID: 1, Owner: "Alan", BaseDir: projectA,
 								UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
 								UsageInodes: 3, QuotaInodes: 21, Mtime: expectedMtimeA},
+							{Name: groupName, GID: uint32(gid), BaseDir: projectD, UsageSize: 10, QuotaSize: 0,
+								UsageInodes: 4, QuotaInodes: 0, Mtime: expectedMtime},
 							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40,
 								QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
 							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30,
 								QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
 							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20,
 								QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
+							{Name: "77777", GID: 77777, Owner: "", BaseDir: user2, UsageSize: 60, QuotaSize: 500,
+								UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime},
 						})
 
 						history, err := bdr.History(1, projectA)
@@ -618,7 +552,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							quotaStatusOK,
 						),
 						joinWithTabs(
-							group.Name,
+							groupName,
 							"",
 							projectD,
 							expectedDaysSince,

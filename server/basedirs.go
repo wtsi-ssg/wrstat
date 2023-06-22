@@ -27,10 +27,14 @@ package server
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	gas "github.com/wtsi-hgi/go-authserver"
 	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 )
+
+const ErrBadBasedirsQuery = gas.Error("bad query; check id and basedir")
 
 // LoadBasedirsDB loads the given basedirs.db file (as produced by
 // basedirs.CreateDatabase()) and makes use of the given owners file (a
@@ -65,9 +69,11 @@ func (s *Server) LoadBasedirsDB(dbPath, ownersPath string) error {
 	if authGroup == nil {
 		s.Router().GET(EndPointBasedirUsageGroup, s.getBasedirsGroupUsage)
 		s.Router().GET(EndPointBasedirUsageUser, s.getBasedirsUserUsage)
+		s.Router().GET(EndPointBasedirSubdirGroup, s.getBasedirsGroupSubdirs)
 	} else {
 		authGroup.GET(basedirsGroupUsagePath, s.getBasedirsGroupUsage)
 		authGroup.GET(basedirsUserUsagePath, s.getBasedirsUserUsage)
+		authGroup.GET(basedirsGroupSubdirPath, s.getBasedirsGroupSubdirs)
 	}
 
 	return nil
@@ -101,5 +107,27 @@ func (s *Server) getBasedirs(c *gin.Context, cb func() (any, error)) {
 func (s *Server) getBasedirsUserUsage(c *gin.Context) {
 	s.getBasedirs(c, func() (any, error) {
 		return s.basedirs.UserUsage()
+	})
+}
+
+func (s *Server) getBasedirsGroupSubdirs(c *gin.Context) {
+	idStr := c.Query("id")
+	basedir := c.Query("basedir")
+
+	if idStr == "" || basedir == "" {
+		c.AbortWithError(http.StatusBadRequest, ErrBadBasedirsQuery) //nolint:errcheck
+
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, ErrBadBasedirsQuery) //nolint:errcheck
+
+		return
+	}
+
+	s.getBasedirs(c, func() (any, error) {
+		return s.basedirs.GroupSubDirs(uint32(id), basedir)
 	})
 }
