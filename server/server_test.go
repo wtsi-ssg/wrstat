@@ -44,7 +44,9 @@ import (
 	"github.com/go-resty/resty/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	gas "github.com/wtsi-hgi/go-authserver"
+	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
 	ifs "github.com/wtsi-ssg/wrstat/v4/internal/fs"
@@ -65,7 +67,7 @@ func TestServer(t *testing.T) {
 	exampleGIDs := getExampleGIDs(gids)
 	sentinelPollFrequency := 10 * time.Millisecond
 
-	Convey("Given a Server", t, func() {
+	FocusConvey("Given a Server", t, func() {
 		logWriter := gas.NewStringLogger()
 		s := New(logWriter)
 
@@ -182,7 +184,7 @@ func TestServer(t *testing.T) {
 			logWriter.Reset()
 
 			Convey("And given a dgut database", func() {
-				path, err := internaldb.CreateExampleDB(t, uid, gids[0], gids[1])
+				path, err := internaldb.CreateExampleDGUTDBCustomIDs(t, uid, gids[0], gids[1])
 				So(err, ShouldBeNil)
 				groupA := gidToGroup(t, gids[0])
 				groupB := gidToGroup(t, gids[1])
@@ -326,7 +328,7 @@ func TestServer(t *testing.T) {
 					})
 
 					Convey("And you can auto-reload a new database", func() {
-						pathNew, errc := internaldb.CreateExampleDB(t, uid, gids[1], gids[0])
+						pathNew, errc := internaldb.CreateExampleDGUTDBCustomIDs(t, uid, gids[1], gids[0])
 						So(errc, ShouldBeNil)
 
 						grandparentDir := filepath.Dir(filepath.Dir(path))
@@ -513,6 +515,35 @@ func TestServer(t *testing.T) {
 				So(err, ShouldNotBeNil)
 			})
 		})
+
+		FocusConvey("You can query the basedirs endpoints", func() {
+			response, err := query(s, EndPointBasedirUsageGroup, "")
+			So(err, ShouldBeNil)
+			So(response.Code, ShouldEqual, http.StatusNotFound)
+			So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/basedirs/usage/groups")
+			So(logWriter.String(), ShouldContainSubstring, "STATUS=404")
+			logWriter.Reset()
+
+			FocusConvey("And given a basedirs database", func() {
+				path, err := createExampleBasedirsDB(t)
+				So(err, ShouldBeNil)
+
+				FocusConvey("You can get results after calling LoadBasedirsDB", func() {
+					err = s.LoadBasedirsDB(path)
+					So(err, ShouldBeNil)
+
+					// response, err := queryWhere(s, "")
+					// So(err, ShouldBeNil)
+					// So(response.Code, ShouldEqual, http.StatusOK)
+					// So(logWriter.String(), ShouldContainSubstring, "[GET /rest/v1/where")
+					// So(logWriter.String(), ShouldContainSubstring, "STATUS=200")
+
+					// result, err := decodeWhereResult(response)
+					// So(err, ShouldBeNil)
+					// So(result, ShouldResemble, expected)
+				})
+			})
+		})
 	})
 }
 
@@ -551,7 +582,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 
-		path, err := internaldb.CreateExampleDB(t, uid, gids[0], gids[1])
+		path, err := internaldb.CreateExampleDGUTDBCustomIDs(t, uid, gids[0], gids[1])
 		So(err, ShouldBeNil)
 
 		Convey("You can't get where data is or add the tree page without auth", func() {
@@ -830,7 +861,11 @@ func getUserAndGroups(t *testing.T) (string, string, []string) {
 // queryWhere does a test GET of /rest/v1/where, with extra appended (start it
 // with ?).
 func queryWhere(s *Server, extra string) (*httptest.ResponseRecorder, error) {
-	return gas.QueryREST(s.Router(), EndPointWhere, extra)
+	return query(s, EndPointWhere, extra)
+}
+
+func query(s *Server, endpoint, extra string) (*httptest.ResponseRecorder, error) {
+	return gas.QueryREST(s.Router(), endpoint, extra)
 }
 
 // decodeWhereResult decodes the result of a Where query.
@@ -1080,4 +1115,42 @@ func (m *mockDirEntry) Type() fs.FileMode {
 
 func (m *mockDirEntry) Info() (fs.FileInfo, error) {
 	return nil, fs.ErrNotExist
+}
+
+// createExampleBasedirsDB creates a temporary basedirs.db and returns the path
+// to the database file.
+func createExampleBasedirsDB(t *testing.T) (string, error) {
+	t.Helper()
+
+	tree, _, err := internaldb.CreateExampleDGUTDBForBasedirs(t)
+	if err != nil {
+		return "", err
+	}
+
+	csvPath := internaldata.MakeQuotasCSV(t, internaldata.ExampleQuotaCSV)
+
+	quotas, err := basedirs.ParseQuotas(csvPath)
+	if err != nil {
+		return "", err
+	}
+
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "basedir.db")
+
+	bd, err := basedirs.NewCreator(dbPath, tree, quotas)
+	if err != nil {
+		return "", err
+	}
+
+	bd.SetMountPoints([]string{
+		"/lustre/scratch123/",
+		"/lustre/scratch125/",
+	})
+
+	err = bd.CreateDatabase(time.Now())
+	if err != nil {
+		return "", err
+	}
+
+	return dbPath, nil
 }

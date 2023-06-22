@@ -1,0 +1,107 @@
+/*******************************************************************************
+ * Copyright (c) 2023 Genome Research Ltd.
+ *
+ * Author: Sendu Bala <sb10@sanger.ac.uk>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ ******************************************************************************/
+
+package server
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
+)
+
+type router interface {
+	GET(relativePath string, handlers ...gin.HandlerFunc) gin.IRoutes
+}
+
+// LoadBasedirsDB loads the given basedirs.db file (as produced by
+// basedirs.CreateDatabase()) and adds the following GET endpoints to the REST
+// API:
+//
+// /rest/v1/basedirs/usage/groups
+// /rest/v1/basedirs/usage/users
+// /rest/v1/basedirs/subdirs/group
+// /rest/v1/basedirs/subdirs/user
+// /rest/v1/basedirs/history
+//
+// If you call EnableAuth() first, then this endpoint will be secured and be
+// available at /rest/v1/auth/basedirs/*.
+//
+// The subdir endpoints require id (gid or uid) and basedir parameters.
+// The history endpoint requires a gid and path (can be basedir, actually a
+// mountpoint) parameter.
+func (s *Server) LoadBasedirsDB(path string) error {
+	s.basedirsMutex.Lock()
+	defer s.basedirsMutex.Unlock()
+
+	tree, err := dgut.NewTree(path)
+	if err != nil {
+		return err
+	}
+
+	s.tree = tree
+	s.basedirsPath = path
+
+	authGroup := s.AuthRouter()
+
+	var r router
+
+	if authGroup == nil {
+		r = s.Router()
+	} else {
+		r = authGroup
+	}
+
+	r.GET(EndPointWhere, s.getBasedirs)
+
+	return nil
+}
+
+// getBasedirs responds TODO. LoadBasedirsDB() must already have been called.
+// This is called when there is a GET on /rest/v1/basedirs/* or
+// /rest/v1/authbasedirs/*.
+func (s *Server) getBasedirs(c *gin.Context) {
+	dir := c.DefaultQuery("dir", defaultDir)
+	splits := c.DefaultQuery("splits", defaultSplits)
+
+	filter, err := s.getFilter(c)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
+
+		return
+	}
+
+	s.treeMutex.Lock()
+	defer s.treeMutex.Unlock()
+
+	dcss, err := s.tree.Where(dir, filter, convertSplitsValue(splits))
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
+
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, s.dcssToSummaries(dcss))
+}

@@ -59,6 +59,31 @@ const (
 	// group areas are, which is available if authorization is implemented.
 	EndPointAuthGroupAreas = gas.EndPointAuth + groupAreasPaths
 
+	basedirsPath            = "/basedirs"
+	basedirsUsagePath       = basedirsPath + "/usage"
+	basedirsGroupUsagePath  = basedirsUsagePath + "/groups"
+	basedirsUserUsagePath   = basedirsUsagePath + "/users"
+	basedirsSubdirPath      = basedirsPath + "/subdirs"
+	basedirsGroupSubdirPath = basedirsSubdirPath + "/group"
+	basedirsUserSubdirPath  = basedirsSubdirPath + "/user"
+	basedirsHistoryPath     = basedirsPath + "/history"
+
+	// EndPointBasedir* are the endpoints for making base directory related
+	// queries if authorization isn't implemented.
+	EndPointBasedirUsageGroup  = gas.EndPointREST + basedirsGroupUsagePath
+	EndPointBasedirUsageUser   = gas.EndPointREST + basedirsUserUsagePath
+	EndPointBasedirSubdirGroup = gas.EndPointREST + basedirsGroupSubdirPath
+	EndPointBasedirSubdirUser  = gas.EndPointREST + basedirsUserSubdirPath
+	EndPointBasedirHistory     = gas.EndPointREST + basedirsHistoryPath
+
+	// EndPointAuthBasedir* are the endpoints for making base directory related
+	// queries if authorization is implemented.
+	EndPointAuthBasedirUsageGroup  = gas.EndPointAuth + basedirsGroupUsagePath
+	EndPointAuthBasedirUsageUser   = gas.EndPointAuth + basedirsUserUsagePath
+	EndPointAuthBasedirSubdirGroup = gas.EndPointAuth + basedirsGroupSubdirPath
+	EndPointAuthBasedirSubdirUser  = gas.EndPointAuth + basedirsUserSubdirPath
+	EndPointAuthBasedirHistory     = gas.EndPointAuth + basedirsHistoryPath
+
 	// TreePath is the path to the static tree website.
 	TreePath = "/tree"
 
@@ -85,6 +110,9 @@ type Server struct {
 	dgutWatcher    *watch.Watcher
 	dataTimeStamp  time.Time
 	areas          map[string][]string
+
+	basedirsMutex sync.RWMutex
+	basedirsPath  string
 }
 
 // New creates a Server which can serve a REST API and website.

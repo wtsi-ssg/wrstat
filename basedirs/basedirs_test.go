@@ -41,19 +41,20 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
+	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
 func TestBaseDirs(t *testing.T) { //nolint:gocognit
-	csvPath := makeQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
+	csvPath := internaldata.MakeQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
 2,/lustre/scratch125,300,30
 2,/lustre/scratch123,400,40
 77777,/lustre/scratch125,500,50
 `)
 
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
-		locDirs, files := testFiles()
+		locDirs, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting()
 
 		const (
 			halfGig = 1 << 29
@@ -136,7 +137,9 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 			},
 		)
 
-		tree := createTestTreeDB(t, files)
+		tree, err := internaldb.CreateDGUTDBFromFakeFiles(t, files)
+		So(err, ShouldBeNil)
+
 		projectA := locDirs[0]
 		projectB125 := locDirs[1]
 		projectB123 := locDirs[2]
@@ -396,13 +399,14 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					So(err, ShouldBeNil)
 
 					Convey("Then you can add and retrieve a new day's usage and quota", func() {
-						_, files := testFiles()
+						_, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting()
 						files[0].NumFiles = 2
 						files[0].SizeOfEachFile = halfGig
 						files[1].SizeOfEachFile = twoGig
 
 						files = files[:len(files)-1]
-						tree = createTestTreeDB(t, files)
+						tree, err = internaldb.CreateDGUTDBFromFakeFiles(t, files)
+						So(err, ShouldBeNil)
 
 						const fiveGig = 5 * (1 << 30)
 

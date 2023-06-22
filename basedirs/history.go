@@ -78,6 +78,12 @@ func (b *BaseDirReader) History(gid uint32, path string) ([]History, error) {
 
 type mountPoints []string
 
+// SetMountPoints can be used to manually set your mountpoints, if the automatic
+// discovery of mountpoints on your system doesn't work.
+func (b *BaseDirReader) SetMountPoints(mountpoints []string) {
+	b.mountPoints = mountpoints
+}
+
 func getMountPoints() (mountPoints, error) {
 	mounts, err := mountinfo.GetMounts(nil)
 	if err != nil {
