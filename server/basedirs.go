@@ -63,27 +63,43 @@ func (s *Server) LoadBasedirsDB(dbPath, ownersPath string) error {
 	authGroup := s.AuthRouter()
 
 	if authGroup == nil {
-		s.Router().GET(EndPointBasedirUsageGroup, s.getBasedirs)
+		s.Router().GET(EndPointBasedirUsageGroup, s.getBasedirsGroupUsage)
+		s.Router().GET(EndPointBasedirUsageUser, s.getBasedirsUserUsage)
 	} else {
-		authGroup.GET(basedirsGroupUsagePath, s.getBasedirs)
+		authGroup.GET(basedirsGroupUsagePath, s.getBasedirsGroupUsage)
+		authGroup.GET(basedirsUserUsagePath, s.getBasedirsUserUsage)
 	}
 
 	return nil
 }
 
-// getBasedirs responds TODO. LoadBasedirsDB() must already have been called.
+func (s *Server) getBasedirsGroupUsage(c *gin.Context) {
+	s.getBasedirs(c, func() (any, error) {
+		return s.basedirs.GroupUsage()
+	})
+}
+
+// getBasedirs responds with the output of your callback in JSON format.
+// LoadBasedirsDB() must already have been called.
+//
 // This is called when there is a GET on /rest/v1/basedirs/* or
 // /rest/v1/authbasedirs/*.
-func (s *Server) getBasedirs(c *gin.Context) {
+func (s *Server) getBasedirs(c *gin.Context, cb func() (any, error)) {
 	s.basedirsMutex.RLock()
 	defer s.basedirsMutex.RUnlock()
 
-	usage, err := s.basedirs.GroupUsage()
+	result, err := cb()
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err) //nolint:errcheck
 
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, usage)
+	c.IndentedJSON(http.StatusOK, result)
+}
+
+func (s *Server) getBasedirsUserUsage(c *gin.Context) {
+	s.getBasedirs(c, func() (any, error) {
+		return s.basedirs.UserUsage()
+	})
 }
