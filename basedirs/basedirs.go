@@ -73,6 +73,12 @@ func NewCreator(dir string, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) 
 	}, nil
 }
 
+// SetMountPoints can be used to manually set your mountpoints, if the automatic
+// discovery of mountpoints on your system doesn't work.
+func (b *BaseDirs) SetMountPoints(mountpoints []string) {
+	b.mountPoints = mountpoints
+}
+
 // CalculateForGroup calculates all the base directories for the given group.
 func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
 	var dcss dgut.DCSs
@@ -142,10 +148,4 @@ func (b *BaseDirs) CalculateForUser(uid uint32) (dgut.DCSs, error) {
 	}
 
 	return dcss, nil
-}
-
-// SetMountPoints can be used to manually set your mountpoints, if the automatic
-// discovery of mountpoints on your system doesn't work.
-func (b *BaseDirs) SetMountPoints(mountpoints []string) {
-	b.mountPoints = mountpoints
 }

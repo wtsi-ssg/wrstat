@@ -35,6 +35,7 @@ import (
 	"time"
 
 	gas "github.com/wtsi-hgi/go-authserver"
+	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	"github.com/wtsi-ssg/wrstat/v4/watch"
 )
@@ -112,6 +113,7 @@ type Server struct {
 	areas          map[string][]string
 
 	basedirsMutex sync.RWMutex
+	basedirs      *basedirs.BaseDirReader
 	basedirsPath  string
 }
 

@@ -28,7 +28,6 @@
 package basedirs
 
 import (
-	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -47,7 +46,7 @@ import (
 )
 
 func TestBaseDirs(t *testing.T) { //nolint:gocognit
-	csvPath := internaldata.MakeQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
+	csvPath := internaldata.CreateQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
 2,/lustre/scratch125,300,30
 2,/lustre/scratch123,400,40
 77777,/lustre/scratch125,500,50
@@ -281,7 +280,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 			So(err, ShouldBeNil)
 
 			Convey("and then read the database", func() {
-				ownersPath := createOwnersFile(dir)
+				ownersPath, err := internaldata.CreateOwnersCSV(t, internaldata.ExampleOwnersCSV)
+				So(err, ShouldBeNil)
 
 				bdr, err := NewReader(dbPath, ownersPath)
 				So(err, ShouldBeNil)
@@ -822,9 +822,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 func TestOwners(t *testing.T) {
 	Convey("Given an owners tsv you can parse it", t, func() {
-		dir := t.TempDir()
-
-		ownersPath := createOwnersFile(dir)
+		ownersPath, err := internaldata.CreateOwnersCSV(t, internaldata.ExampleOwnersCSV)
+		So(err, ShouldBeNil)
 
 		owners, err := parseOwners(ownersPath)
 		So(err, ShouldBeNil)
@@ -852,25 +851,4 @@ func fixSubDirTimes(sds []*SubDir) {
 	for n := range sds {
 		sds[n].LastModified = fixtimes.FixTime(sds[n].LastModified)
 	}
-}
-
-func createOwnersFile(dir string) string {
-	ownersPath := filepath.Join(dir, "owners.csv")
-
-	writeFile(ownersPath, `1,Alan
-2,Barbara
-4,Dellilah`)
-
-	return ownersPath
-}
-
-func writeFile(path, contents string) {
-	f, err := os.Create(path)
-	So(err, ShouldBeNil)
-
-	_, err = io.WriteString(f, contents)
-	So(err, ShouldBeNil)
-
-	err = f.Close()
-	So(err, ShouldBeNil)
 }

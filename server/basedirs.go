@@ -29,7 +29,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 )
 
 type router interface {
@@ -37,8 +37,8 @@ type router interface {
 }
 
 // LoadBasedirsDB loads the given basedirs.db file (as produced by
-// basedirs.CreateDatabase()) and adds the following GET endpoints to the REST
-// API:
+// basedirs.CreateDatabase()) and makes use of the given owners file (a
+// gid,owner csv) and adds the following GET endpoints to the REST API:
 //
 // /rest/v1/basedirs/usage/groups
 // /rest/v1/basedirs/usage/users
@@ -46,23 +46,23 @@ type router interface {
 // /rest/v1/basedirs/subdirs/user
 // /rest/v1/basedirs/history
 //
-// If you call EnableAuth() first, then this endpoint will be secured and be
+// If you call EnableAuth() first, then these endpoints will be secured and be
 // available at /rest/v1/auth/basedirs/*.
 //
 // The subdir endpoints require id (gid or uid) and basedir parameters.
 // The history endpoint requires a gid and path (can be basedir, actually a
 // mountpoint) parameter.
-func (s *Server) LoadBasedirsDB(path string) error {
+func (s *Server) LoadBasedirsDB(dbPath, ownersPath string) error {
 	s.basedirsMutex.Lock()
 	defer s.basedirsMutex.Unlock()
 
-	tree, err := dgut.NewTree(path)
+	bd, err := basedirs.NewReader(dbPath, ownersPath)
 	if err != nil {
 		return err
 	}
 
-	s.tree = tree
-	s.basedirsPath = path
+	s.basedirs = bd
+	s.basedirsPath = dbPath
 
 	authGroup := s.AuthRouter()
 

@@ -33,7 +33,7 @@ import (
 )
 
 func TestQuotas(t *testing.T) {
-	csvPath := internaldata.MakeQuotasCSV(t, internaldata.ExampleQuotaCSV)
+	csvPath := internaldata.CreateQuotasCSV(t, internaldata.ExampleQuotaCSV)
 
 	Convey("Given a valid quotas csv file you can parse it", t, func() {
 		quota, err := ParseQuotas(csvPath)
@@ -66,20 +66,20 @@ func TestQuotas(t *testing.T) {
 	})
 
 	Convey("Invalid quotas csv files can't be parsed", t, func() {
-		csvPath = internaldata.MakeQuotasCSV(t, `1,/disk/1`)
+		csvPath = internaldata.CreateQuotasCSV(t, `1,/disk/1`)
 		_, err := ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 		So(err, ShouldEqual, errBadQuotaCSVFile)
 
-		csvPath = internaldata.MakeQuotasCSV(t, `g,/disk/1,10,20`)
+		csvPath = internaldata.CreateQuotasCSV(t, `g,/disk/1,10,20`)
 		_, err = ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 
-		csvPath = internaldata.MakeQuotasCSV(t, `1,/disk/1,s,20`)
+		csvPath = internaldata.CreateQuotasCSV(t, `1,/disk/1,s,20`)
 		_, err = ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 
-		csvPath = internaldata.MakeQuotasCSV(t, `1,/disk/1,10,t`)
+		csvPath = internaldata.CreateQuotasCSV(t, `1,/disk/1,10,t`)
 		_, err = ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 

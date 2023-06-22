@@ -28,6 +28,7 @@
 package internaldata
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -320,9 +321,9 @@ const ExampleQuotaCSV = `1,/disk/1,10,20
 2,/disk/1,12,22
 `
 
-// MakeQuotasCSV creates a quotas csv file in a temp directory. Returns its
+// CreateQuotasCSV creates a quotas csv file in a temp directory. Returns its
 // path. You can use ExampleQuotaCSV as the csv data.
-func MakeQuotasCSV(t *testing.T, csv string) string {
+func CreateQuotasCSV(t *testing.T, csv string) string {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -333,4 +334,35 @@ func MakeQuotasCSV(t *testing.T, csv string) string {
 	}
 
 	return path
+}
+
+const ExampleOwnersCSV = `1,Alan
+2,Barbara
+4,Dellilah`
+
+// CreateOwnersCSV creates an owners csv files in a temp directory. Returns its
+// path. You can use ExampleOwnersCSV as the csv data.
+func CreateOwnersCSV(t *testing.T, csv string) (string, error) {
+	t.Helper()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "quotas.csv")
+
+	err := writeFile(path, csv)
+
+	return path, err
+}
+
+func writeFile(path, contents string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(f, contents)
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
 }

@@ -525,11 +525,11 @@ func TestServer(t *testing.T) {
 			logWriter.Reset()
 
 			FocusConvey("And given a basedirs database", func() {
-				path, err := createExampleBasedirsDB(t)
+				dbPath, ownersPath, err := createExampleBasedirsDB(t)
 				So(err, ShouldBeNil)
 
 				FocusConvey("You can get results after calling LoadBasedirsDB", func() {
-					err = s.LoadBasedirsDB(path)
+					err = s.LoadBasedirsDB(dbPath, ownersPath)
 					So(err, ShouldBeNil)
 
 					// response, err := queryWhere(s, "")
@@ -1119,19 +1119,19 @@ func (m *mockDirEntry) Info() (fs.FileInfo, error) {
 
 // createExampleBasedirsDB creates a temporary basedirs.db and returns the path
 // to the database file.
-func createExampleBasedirsDB(t *testing.T) (string, error) {
+func createExampleBasedirsDB(t *testing.T) (string, string, error) {
 	t.Helper()
 
 	tree, _, err := internaldb.CreateExampleDGUTDBForBasedirs(t)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	csvPath := internaldata.MakeQuotasCSV(t, internaldata.ExampleQuotaCSV)
+	csvPath := internaldata.CreateQuotasCSV(t, internaldata.ExampleQuotaCSV)
 
 	quotas, err := basedirs.ParseQuotas(csvPath)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	dir := t.TempDir()
@@ -1139,7 +1139,7 @@ func createExampleBasedirsDB(t *testing.T) (string, error) {
 
 	bd, err := basedirs.NewCreator(dbPath, tree, quotas)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	bd.SetMountPoints([]string{
@@ -1149,8 +1149,10 @@ func createExampleBasedirsDB(t *testing.T) (string, error) {
 
 	err = bd.CreateDatabase(time.Now())
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return dbPath, nil
+	ownersPath, err := internaldata.CreateOwnersCSV(t, internaldata.ExampleOwnersCSV)
+
+	return dbPath, ownersPath, err
 }
