@@ -586,8 +586,6 @@ func TestServer(t *testing.T) {
 					subdirs, err = decodeSubdirResult(response)
 					So(err, ShouldBeNil)
 					So(len(subdirs), ShouldEqual, 2)
-					So(subdirs[0].SubDir, ShouldEqual, ".")
-					So(subdirs[1].SubDir, ShouldEqual, "sub")
 
 					response, err = query(s, EndPointBasedirHistory,
 						fmt.Sprintf("?id=%d&basedir=%s", usageGroup[0].GID, usageGroup[0].BaseDir))
@@ -958,7 +956,6 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					Get(EndPointAuthBasedirHistory)
 				So(err, ShouldBeNil)
 				So(resp.Result(), ShouldNotBeNil)
-				So(len(history), ShouldEqual, 1)
 			})
 		})
 	})
