@@ -1,9 +1,8 @@
 /*******************************************************************************
- * Copyright (c) 2022, 2023 Genome Research Ltd.
+ * Copyright (c) 2023 Genome Research Ltd.
  *
  * Authors:
- *   Sendu Bala <sb10@sanger.ac.uk>
- *   Michael Woolnough <mw31@sanger.ac.uk>
+ *	- Sendu Bala <sb10@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -25,45 +24,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-package basedirs
+package internaldb
 
 import (
-	"sort"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
-	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 )
 
-func TestTree(t *testing.T) {
-	Convey("Given a Tree", t, func() {
-		tree, _, err := internaldb.CreateExampleDGUTDBForBasedirs(t)
-		So(err, ShouldBeNil)
+// CreateExampleDGUTDBForBasedirs makes a tree database with data useful for
+// testing basedirs, and returns it along with a slice of directories where the
+// data is.
+func CreateExampleDGUTDBForBasedirs(t *testing.T) (*dgut.Tree, []string, error) {
+	t.Helper()
 
-		Convey("You can get all the gids and uids in it", func() {
-			gids, uids, err := getAllGIDsandUIDsInTree(tree)
-			So(err, ShouldBeNil)
+	gid, uid, _, _, err := internaldata.RealGIDAndUID()
+	if err != nil {
+		return nil, nil, err
+	}
 
-			expectedGIDs := []uint32{1, 2, 77777}
-			expectedUIDs := []uint32{101, 102, 88888}
+	dirs, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
 
-			gid, uid, _, _, err := internaldata.RealGIDAndUID()
-			So(err, ShouldBeNil)
-			expectedGIDs = append(expectedGIDs, uint32(gid))
-			expectedUIDs = append(expectedUIDs, uint32(uid))
+	tree, err := CreateDGUTDBFromFakeFiles(t, files)
 
-			sort.Slice(expectedGIDs, func(i, j int) bool {
-				return expectedGIDs[i] < expectedGIDs[j]
-			})
-
-			sort.Slice(expectedUIDs, func(i, j int) bool {
-				return expectedUIDs[i] < expectedUIDs[j]
-			})
-
-			So(err, ShouldBeNil)
-			So(gids, ShouldResemble, expectedGIDs)
-			So(uids, ShouldResemble, expectedUIDs)
-		})
-	})
+	return tree, dirs, err
 }

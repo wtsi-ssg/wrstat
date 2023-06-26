@@ -26,22 +26,14 @@
 package basedirs
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 )
 
-const testFilePerms = 0644
-
-const exampleQuotaCSV = `1,/disk/1,10,20
-1,/disk/2,11,21
-2,/disk/1,12,22
-`
-
 func TestQuotas(t *testing.T) {
-	csvPath := makeQuotasCSV(t, exampleQuotaCSV)
+	csvPath := internaldata.CreateQuotasCSV(t, internaldata.ExampleQuotaCSV)
 
 	Convey("Given a valid quotas csv file you can parse it", t, func() {
 		quota, err := ParseQuotas(csvPath)
@@ -74,39 +66,24 @@ func TestQuotas(t *testing.T) {
 	})
 
 	Convey("Invalid quotas csv files can't be parsed", t, func() {
-		csvPath = makeQuotasCSV(t, `1,/disk/1`)
+		csvPath = internaldata.CreateQuotasCSV(t, `1,/disk/1`)
 		_, err := ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 		So(err, ShouldEqual, errBadQuotaCSVFile)
 
-		csvPath = makeQuotasCSV(t, `g,/disk/1,10,20`)
+		csvPath = internaldata.CreateQuotasCSV(t, `g,/disk/1,10,20`)
 		_, err = ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 
-		csvPath = makeQuotasCSV(t, `1,/disk/1,s,20`)
+		csvPath = internaldata.CreateQuotasCSV(t, `1,/disk/1,s,20`)
 		_, err = ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 
-		csvPath = makeQuotasCSV(t, `1,/disk/1,10,t`)
+		csvPath = internaldata.CreateQuotasCSV(t, `1,/disk/1,10,t`)
 		_, err = ParseQuotas(csvPath)
 		So(err, ShouldNotBeNil)
 
 		_, err = ParseQuotas("/foo")
 		So(err, ShouldNotBeNil)
 	})
-}
-
-// makeQuotasCSV creates a quotas csv file in a temp directory. Returns its
-// path.
-func makeQuotasCSV(t *testing.T, csv string) string {
-	t.Helper()
-
-	dir := t.TempDir()
-	path := filepath.Join(dir, "quotas.csv")
-
-	if err := os.WriteFile(path, []byte(csv), testFilePerms); err != nil {
-		t.Fatalf("could not write test csv file: %s", err)
-	}
-
-	return path
 }

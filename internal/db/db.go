@@ -32,21 +32,9 @@
 package internaldb
 
 import (
-	"os"
 	"os/user"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"testing"
-
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 )
-
-const DirPerms = 0755
-const ExampleDgutDirParentSuffix = "dgut.dbs"
-const minGIDsForExampleDgutDB = 2
-const exampleDBBatchSize = 20
 
 // GetUserAndGroups returns the current users username, uid and gids.
 func GetUserAndGroups(t *testing.T) (string, string, []string) {
@@ -67,79 +55,4 @@ func GetUserAndGroups(t *testing.T) (string, string, []string) {
 	}
 
 	return uu.Username, uu.Uid, gids
-}
-
-// CreateExampleDGUTDB creates a temporary dgut.db from some example data that
-// uses your uid and 2 of your gids, and returns the path to the database
-// directory. For use when testing something that needs a Tree.
-func CreateExampleDGUTDB(t *testing.T) (string, error) {
-	t.Helper()
-
-	_, uid, gids := GetUserAndGroups(t)
-	if len(gids) < minGIDsForExampleDgutDB {
-		gids = append(gids, "0")
-	}
-
-	return CreateExampleDB(t, uid, gids[0], gids[1])
-}
-
-// CreateExampleDB creates a temporary dgut.db from some example data that uses
-// the given uid and gids, and returns the path to the database directory.
-func CreateExampleDB(t *testing.T, uid, gidA, gidB string) (string, error) {
-	t.Helper()
-
-	dgutData := exampleDGUTData(t, uid, gidA, gidB)
-
-	return CreateCustomDB(t, dgutData)
-}
-
-func CreateCustomDB(t *testing.T, dgutData string) (string, error) {
-	t.Helper()
-
-	dir, err := createExampleDgutDir(t)
-	if err != nil {
-		return dir, err
-	}
-
-	data := strings.NewReader(dgutData)
-	db := dgut.NewDB(dir)
-
-	err = db.Store(data, exampleDBBatchSize)
-
-	return dir, err
-}
-
-// createExampleDgutDir creates a temp directory structure to hold dgut db files
-// in the same way that 'wrstat tidy' organises them.
-func createExampleDgutDir(t *testing.T) (string, error) {
-	t.Helper()
-
-	tdir := t.TempDir()
-	dir := filepath.Join(tdir, "orig."+ExampleDgutDirParentSuffix, "0")
-	err := os.MkdirAll(dir, DirPerms)
-
-	return dir, err
-}
-
-// exampleDGUTData is some example DGUT data that uses the given uid and gids,
-// along with root's uid.
-func exampleDGUTData(t *testing.T, uidStr, gidAStr, gidBStr string) string {
-	t.Helper()
-
-	uid, err := strconv.ParseUint(uidStr, 10, 64)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	gidA, err := strconv.ParseUint(gidAStr, 10, 64)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	gidB, err := strconv.ParseUint(gidBStr, 10, 64)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(int(gidA), int(gidB), 0, int(uid), 0))
 }
