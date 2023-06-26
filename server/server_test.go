@@ -637,11 +637,14 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 	g, errg := user.LookupGroupId(gids[0])
 	So(errg, ShouldBeNil)
 
-	Convey("Given a database", func() {
+	Convey("Given databases", func() {
 		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 
 		path, err := internaldb.CreateExampleDGUTDBCustomIDs(t, uid, gids[0], gids[1])
+		So(err, ShouldBeNil)
+
+		basedirsDBPath, ownersPath, err := createExampleBasedirsDB(t)
 		So(err, ShouldBeNil)
 
 		Convey("You can't get where data is or add the tree page without auth", func() {
@@ -732,6 +735,9 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			So(err, ShouldBeNil)
 
 			err = s.LoadDGUTDBs(path)
+			So(err, ShouldBeNil)
+
+			err = s.LoadBasedirsDB(basedirsDBPath, ownersPath)
 			So(err, ShouldBeNil)
 
 			err = s.AddTreePage()
@@ -891,6 +897,68 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 
 				_, err = GetGroupAreas(addr, cert, "foo")
 				So(err, ShouldNotBeNil)
+			})
+
+			Convey("You can access the secure basedirs endpoints after LoadBasedirsDB()", func() {
+				r := gas.NewAuthenticatedClientRequest(addr, cert, token)
+
+				var usage []*basedirs.Usage
+
+				resp, err := r.SetResult(&usage).
+					ForceContentType("application/json").
+					Get(EndPointAuthBasedirUsageUser)
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+				So(len(usage), ShouldEqual, 6)
+				So(usage[0].UID, ShouldNotEqual, 0)
+
+				userUsageUID := usage[0].UID
+				userUsageBasedir := usage[0].BaseDir
+
+				resp, err = r.SetResult(&usage).
+					ForceContentType("application/json").
+					Get(EndPointAuthBasedirUsageGroup)
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+				So(len(usage), ShouldEqual, 6)
+				So(usage[0].GID, ShouldNotEqual, 0)
+
+				var subdirs []*basedirs.SubDir
+
+				resp, err = r.SetResult(&subdirs).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"id":      fmt.Sprintf("%d", usage[0].GID),
+						"basedir": usage[0].BaseDir,
+					}).
+					Get(EndPointAuthBasedirSubdirGroup)
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+				So(len(subdirs), ShouldEqual, 2)
+
+				resp, err = r.SetResult(&subdirs).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"id":      fmt.Sprintf("%d", userUsageUID),
+						"basedir": userUsageBasedir,
+					}).
+					Get(EndPointAuthBasedirSubdirUser)
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+				So(len(subdirs), ShouldEqual, 2)
+
+				var history []basedirs.History
+
+				resp, err = r.SetResult(&history).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"id":      fmt.Sprintf("%d", usage[0].GID),
+						"basedir": usage[0].BaseDir,
+					}).
+					Get(EndPointAuthBasedirHistory)
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+				So(len(history), ShouldEqual, 1)
 			})
 		})
 	})
