@@ -533,6 +533,11 @@ func TestServer(t *testing.T) {
 					err = s.LoadBasedirsDB(dbPath, ownersPath)
 					So(err, ShouldBeNil)
 
+					s.basedirs.SetMountPoints([]string{
+						"/lustre/scratch123/",
+						"/lustre/scratch125/",
+					})
+
 					response, err := query(s, EndPointBasedirUsageGroup, "")
 					So(err, ShouldBeNil)
 					So(response.Code, ShouldEqual, http.StatusOK)
