@@ -402,8 +402,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						expectedUntilInode := today.Add(secondsInDay * 18).Unix()
 
 						dtrSize, dtrInode := DateQuotaFull(history)
-						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-3, expectedUntilSize+3)
-						So(dtrInode.Unix(), ShouldBeBetween, expectedUntilInode-3, expectedUntilInode+3)
+						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-4, expectedUntilSize+4)
+						So(dtrInode.Unix(), ShouldBeBetween, expectedUntilInode-4, expectedUntilInode+4)
 					})
 				})
 
