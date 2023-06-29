@@ -1,18 +1,6 @@
 import {useEffect, useState} from 'react';
-import {formatBytes, formatNumber} from './format';
+import {formatBytes, formatDate, formatNumber} from './format';
 import type {History} from './rpc';
-
-const formatDate = (dStr: string | number) => {
-	const d = new Date(dStr);
-
-	return `${
-		d.getFullYear()
-	}-${
-		(d.getMonth() + 1 + "").padStart(2, "0")
-	}-${
-		(d.getDate() + "").padStart(2, "0")
-	}`;
-}
 
 export default ({history, width, height}: {history: History[], width: number, height: number}) => {
 	const [infoBox, setInfoBox] = useState(-1);

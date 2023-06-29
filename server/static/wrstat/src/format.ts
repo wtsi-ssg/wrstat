@@ -27,4 +27,15 @@ formatBytes = (n: number) => {
 	return formatNumber(n) + " " + byteUnits[unit];
 },
 asGB = (num: number) => formatNumber(Math.round(num / (1024 * 1024 * 10.24)) / 100),
-asDaysAgo = (date: string) => formatNumber(Math.max(0, Math.round((now - new Date(date).valueOf()) / msInDay)));
+asDaysAgo = (date: string) => formatNumber(Math.max(0, Math.round((now - new Date(date).valueOf()) / msInDay))),
+formatDate = (dStr: string | number) => {
+	const d = new Date(dStr);
+
+	return `${
+		d.getFullYear()
+	}-${
+		(d.getMonth() + 1 + "").padStart(2, "0")
+	}-${
+		(d.getDate() + "").padStart(2, "0")
+	}`;
+};
