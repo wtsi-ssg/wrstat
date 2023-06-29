@@ -124,9 +124,9 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					<Header sort={4} name="Space Used" />
 					<Header sort={5} name="Space Quota" />
 					<Header sort={6} name="Space Usage (%)" />
-					<Header sort={7} name="Inodes Used" />
-					<Header sort={8} name="Inode Quota" />
-					<Header sort={9} name="Inode Usage (%)" />
+					<Header sort={7} name="Num. Files" />
+					<Header sort={8} name="Max Files" />
+					<Header sort={9} name="File Usage (%)" />
 					<Header sort={10} name="Last Modified (days)" />
 					<th>Status</th>
 				</tr>
