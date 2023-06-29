@@ -85,7 +85,7 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 				subdirs.map(row => <tr onClick={() => setPath(pathJoin(path, row.SubDir))}>
 						<td>{pathJoin(path, row.SubDir)}</td>
 						<td>{formatNumber(row.NumFiles)}</td>
-						<td>{formatBytes(row.SizeFiles)}</td>
+						<td title={formatNumber(row.SizeFiles)}>{formatBytes(row.SizeFiles)}</td>
 						<td>{asDaysAgo(row.LastModified)}</td>
 						<td>{Object.entries(row.FileUsage).sort((a, b) => b[1] - a[1]).map(e => `${fileTypes[parseInt(e[0])]}: ${formatBytes(e[1])}`).join(", ")}</td>
 				</tr>)
