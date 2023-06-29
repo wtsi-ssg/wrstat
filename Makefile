@@ -24,6 +24,7 @@ install:
 test: export CGO_ENABLED = 1
 test:
 	@go test -tags netgo --count 1 ./...
+	@cd server/static/wrstat; CI=1 npm test
 
 race: export CGO_ENABLED = 1
 race:
