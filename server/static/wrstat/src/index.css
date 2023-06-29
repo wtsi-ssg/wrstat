@@ -1,0 +1,243 @@
+#auth {
+  float: right;
+}
+
+.usageTable.user tr > :nth-child(1),
+.usageTable.user tr > :nth-child(5),
+.usageTable.user tr > :nth-child(6),
+.usageTable.user tr > :nth-child(8),
+.usageTable.user tr > :nth-child(9),
+.usageTable.user tr > :nth-child(11) {
+  display: none;
+}
+
+rect.hasClick {
+  cursor: pointer;
+}
+
+rect + text {
+  pointer-events: none;
+  font-family: Times;
+}
+
+#treeBreadcrumbs {
+  list-style: none;
+  padding: 0;
+}
+
+#treeBreadcrumbs li {
+  display: inline-block;
+}
+
+#treeBreadcrumbs li:first-child {
+  margin: 0 1em 0 0;
+}
+
+#treeBreadcrumbs li:first-child:after {
+  content: ":";
+  display: inline-block;
+}
+
+#treeBreadcrumbs button {
+  cursor: pointer;
+}
+
+#treeBreadcrumbs li:not(:first-child):not(:last-child):after {
+  display: inline-block;
+  margin: 0 1em;
+  content: "/";
+}
+
+.prettyTable {
+  clear: both;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.prettyTable thead th:not(:last-child) {
+  cursor: pointer;
+  padding-right: 1em;
+}
+
+.prettyTable thead th:not(:last-child):hover {
+    text-decoration: underline;
+}
+
+.prettyTable thead th {
+  border-bottom: 1px solid #000;
+}
+
+.prettyTable .sort {
+    background-repeat: no-repeat;
+    background-position: right 0 bottom 0;
+    background-size: 1em 1em;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M1,19 h38 l-19,-18 z' fill='%23f00' stroke='%23000' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
+}
+
+.prettyTable .sort.reverse {
+     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M1,1 h38 l-19,18 z' fill='%23f00' stroke='%23000' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
+}
+
+.prettyTable tbody {
+  cursor: pointer;
+}
+
+.prettyTable tbody tr td {
+  border-bottom: 1px solid #ddd;
+  padding: 0.5em 0.25em;
+}
+
+.prettyTable tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.prettyTable tbody tr:hover {
+  background-color: #c0cee9;
+}
+
+.prettyTable tbody tr.selected {
+  background-color: #b0bed9;
+}
+
+.usageTable tbody td:nth-child(4), .usageTable tbody td:nth-child(5), .usageTable tbody td:nth-child(6),
+.usageTable tbody td:nth-child(7), .usageTable tbody td:nth-child(8), .usageTable tbody td:nth-child(9),
+.usageTable tbody td:nth-child(10),
+.historyTable tbody td:nth-child(2), .historyTable tbody td:nth-child(3), .historyTable tbody td:nth-child(4) {
+  text-align: right;
+  padding-right: 1em;
+}
+
+.usageTable tbody td:nth-child(11) {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.historyTable {
+  margin-top: 2em;
+}
+
+.pagination {
+  float: right;
+  list-style: none;
+  padding: 0;
+  user-select: none;
+}
+
+.pagination > li {
+  display: inline-block;
+}
+
+.pagination > li:not(:first-child) {
+  margin-left: 1em;
+}
+
+.pagination_link {
+  cursor: pointer;
+}
+
+.pagination_selected {
+  font-weight: bold;
+}
+
+#perPage {
+  font-weight: bold;
+}
+
+#perPage select {
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  padding: 5px;
+  background-color: transparent;
+  padding: 4px;
+  font-weight: bold;
+}
+
+#details {
+  background-color: #ddd;
+  border: 1px solid #aaa;
+  border-radius: 8px;
+  padding: 1em 0.5em;
+  max-width: 100vw;
+}
+
+#details table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#details th {
+  text-align: left;
+  width: 4em;
+}
+
+#details td div {
+  white-space: nowrap;
+  overflow: auto;
+  scrollbar-gutter: stable both-edges;
+}
+
+.download {
+  background-repeat: no-repeat;
+  background-position: 1em 0.25em;
+  background-size: 1.5em 1.5em;
+  padding: 0.5em 1em 0.5em 3.5em;
+  margin-right: 1em;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M40,0 v35 h-20 l30,30 l30,-30 h-20 v-35 z M0,70 v25 h100 v-25 h-30 l-20,15 l-20,-15 z' fill='%23000' stroke-linejoin='round' stroke-width='5' stroke='%23000' /%3E%3C/svg%3E");
+}
+
+.minmax {
+  position: relative;
+  display: block;
+  margin: 1em;
+  height: calc(1em + 4px + 1em + 1px);
+}
+
+.minmax_min, .minmax_max, .minmax_minValue, .minmax_maxValue {
+  position: absolute;
+  top: 0;
+}
+
+
+.minmax_min, .minmax_max {
+  padding: 2px;
+}
+
+.minmax_min {
+  right: 100%;
+}
+
+.minmax_max {
+  left: 100%;
+}
+
+.minmax_line, .minmax_selLine {
+  position: absolute;
+  top: calc(1em + 4px + 0.5em - 5px);
+  bottom: 5px;
+}
+
+.minmax_line {
+  left: 0;
+  right: 0;
+  background-color: #aaa;
+  border-radius: 1em;
+}
+
+.minmax_selLine, .minmax_minValue, .minmax_maxValue {
+  color: #fff;
+  background-color: #48c;
+}
+
+.minmax_minValue, .minmax_maxValue {
+  padding: 2px;
+}
+
+.minmax_minSlider, .minmax_maxSlider {
+  position: absolute;
+  top: calc(1em + 2px);
+  width: 1em;
+  height: 1em;
+  border: 1px solid #000;
+  border-radius: 1em;
+  background-color: #888;
+}
