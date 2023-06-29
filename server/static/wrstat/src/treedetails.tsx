@@ -1,4 +1,4 @@
-import {formatBytes, formatNumber} from "./format";
+import {formatBytes, formatDate, formatNumber} from "./format";
 import type {Child} from "./rpc";
 
 export default ({details}: {details: Child}) => {
@@ -15,7 +15,7 @@ export default ({details}: {details: Child}) => {
 			</tr>
 			<tr>
 				<th>Accessed</th>
-				<td>{details.atime}</td>
+				<td>{formatDate(details.atime)}</td>
 			</tr>
 			<tr>
 				<th>Groups</th>
