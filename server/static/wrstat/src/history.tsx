@@ -92,7 +92,7 @@ export default ({history, width, height}: {history: History[], width: number, he
 		sizePath += `${x},${sizeY}`;
 
 		quotaPoints.push(<use href="#point" fill="#00c9cf" x={x} y={quotaY} onMouseOver={() => setInfoBox(quotaBox)} onMouseOut={() => setInfoBox(-1)} />)
-		sizePoints.push(<use href="#point" fill="#fb8c80" x={x} y={sizeY} onMouseOver={() => setInfoBox(sizeBox)} onMouseOut={() => setInfoBox(-1)}><title>{formatBytes(h.UsageSize) + "\n" + formatNumber(h.UsageSize) + " Bytes\n" + formatDate(h.Date)}</title></use>)
+		sizePoints.push(<use href="#point" fill="#fb8c80" x={x} y={sizeY} onMouseOver={() => setInfoBox(sizeBox)} onMouseOut={() => setInfoBox(-1)} />)
 
 		first = false;
 	}
