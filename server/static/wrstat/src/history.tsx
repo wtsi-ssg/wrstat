@@ -46,8 +46,13 @@ export default ({history, width, height}: {history: History[], width: number, he
 	minDate -= (maxDate - minDate) / 10;
 	maxDate += (maxDate - minDate) / 10;
 
-	const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxSize)), 1));
-	maxSize = order * Math.ceil(maxSize / order);
+	let num = maxSize;
+	maxSize = 100;
+
+	while (num >= 100) {
+		num /= 2;
+		maxSize *= 2;
+	}
 
 	const paddingXL = 80,
 	paddingXR = 10,
