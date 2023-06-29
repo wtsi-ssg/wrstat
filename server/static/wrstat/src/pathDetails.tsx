@@ -118,7 +118,7 @@ export default ({id, path, isUser, history}: {id: number, path: string; isUser: 
 		});
 
 		setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
-	}, [treePath, useMTime]);
+	}, [treePath, useMTime, useCount]);
 
 	return <>
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
