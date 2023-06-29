@@ -19,7 +19,7 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 formatBytes = (n: number) => {
 	let unit = 0;
 	
-	while (n > 1024) {
+	while (n >= 1024) {
 		unit++;
 		n = Math.round(n / 1024);
 	}
