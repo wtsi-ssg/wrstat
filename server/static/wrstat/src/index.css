@@ -241,3 +241,30 @@ rect + text {
   border-radius: 1em;
   background-color: #888;
 }
+
+#history {
+  z-index: 1;
+}
+
+#history use {
+  cursor: crosshair;
+}
+
+#historyInfo {
+  position: relative;
+  height: 0;
+}
+
+#historyInfo div {
+  display: none;
+  position: relative;
+  z-index: 2;
+  background-color: #fff;
+  border: 1px solid #000;
+  border-radius: 5px;
+  padding: 5px;
+}
+
+#historyInfo div:hover {
+  display: inline-block;
+}
