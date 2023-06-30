@@ -25,8 +25,8 @@ export type Child = {
 
 export type TreeFilter = {
 	byUser: boolean;
-	name: string;
-	owner: string;
+	name: string[];
+	owner: string[];
 }
 
 export type TreeData = {

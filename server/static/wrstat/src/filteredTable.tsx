@@ -38,11 +38,12 @@ reverseSorters = [
 	reverse(sorters[11])
 ],
 startReverse = [4, 5, 6, 7, 8, 9],
-getTableRows = (usage: Usage[], filter: TreeFilter, page: number, perPage: number) => usage.filter(e => (!filter.name || e.Name === filter.name) &&
-(!filter.owner || e.Owner === filter.owner)
+getTableRows = (usage: Usage[], filter: TreeFilter, page: number, perPage: number) => usage.filter(e => (!filter.name.length || filter.name.includes(e.Name)) &&
+(!filter.owner.length || filter.owner.includes(e.Owner))
 ).slice(page * perPage, (page + 1) * perPage);
 
 export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /*, history: Map<string, History[]>*/}) => {
+	console.log(filter);
 	const [selectedDir, setSelectedDir] = useState(""),
 	[selectedID, setSelectedID] = useState(-1),
 	[sortBy, setSortBy] = useState(0),
