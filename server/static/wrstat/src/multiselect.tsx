@@ -4,7 +4,7 @@ export default ({id, list, onchange}: {id: string; list: string[]; onchange: (li
 	const [selected, setSelected] = useState(new Set<string>()),
 	filterRef = useRef<HTMLInputElement>(null),
 	[filter, setFilter] = useState(""),
-	filteredList = list.filter(e => e.includes(filter));
+	filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase()));
 
 	return <div className="multiInput">
 		<ul>
