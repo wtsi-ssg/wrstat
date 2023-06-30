@@ -172,8 +172,11 @@ rect + text {
 
 #details td div {
   white-space: nowrap;
-  overflow: auto;
-  scrollbar-gutter: stable both-edges;
+  overflow-x: hidden;
+}
+
+#details td div:hover {
+  overflow-x: auto;
 }
 
 .download {
