@@ -271,3 +271,39 @@ rect + text {
 #historyInfo div:hover {
   display: inline-block;
 }
+
+.multiInput ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.multiInput > ul li {
+  display: inline-block;
+}
+
+.multiInput > ul li:not(:first-child) {
+  margin-left: 1em;
+  border: 1px solid #000;
+  padding: 0 0.5em;
+  cursor: cell;
+}
+
+.multiInput > div {
+  height: 0px;
+  position: relative;
+}
+
+.multiInput > div:not(:focus-within) {
+  overflow: hidden;
+}
+
+.multiInput > div > div {
+  position: absolute;
+  background-color: #fff;
+}
+
+.multiInput > div > div ul {
+  max-height: 20em;
+  overflow-y: scroll;
+}
