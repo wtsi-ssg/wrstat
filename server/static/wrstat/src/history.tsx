@@ -2,6 +2,8 @@ import {useEffect, useState} from 'react';
 import {formatBytes, formatDate, formatNumber} from './format';
 import type {History} from './rpc';
 
+const month = 30 * 86_400_000;
+
 export default ({history, width, height}: {history: History[], width: number, height: number}) => {
 	const [infoBox, setInfoBox] = useState(-1);
 
@@ -41,8 +43,7 @@ export default ({history, width, height}: {history: History[], width: number, he
 		}
 	}
 
-	let first = true;
-
+	maxDate += month;
 	minDate -= (maxDate - minDate) / 10;
 	maxDate += (maxDate - minDate) / 10;
 
@@ -62,6 +63,8 @@ export default ({history, width, height}: {history: History[], width: number, he
 	xScale = (width - paddingXL - paddingXR) / dateDiff,
 	yScale = (height - paddingYT - paddingYB) / maxSize,
 	maxY = maxSize * yScale;
+
+	let first = true;
 
 	for (const h of history) {
 		const d = new Date(h.Date).valueOf(),
@@ -97,6 +100,27 @@ export default ({history, width, height}: {history: History[], width: number, he
 		first = false;
 	}
 
+	const previousHistory = history.at(-3) ?? history.at(0)!,
+	latestHistory = history.at(-1)!,
+	previousDate = new Date(previousHistory.Date).valueOf(),
+	latestDate = new Date(latestHistory.Date).valueOf(),
+	dt = latestDate - previousDate,
+	dy = latestHistory.UsageSize - previousHistory.UsageSize,
+	m = dy / (dt || 1),
+	c = latestHistory.UsageSize - latestDate * m,
+	sx = latestDate + month;
+
+	let x = sx,
+	y = m * sx + c;
+
+	if (y < 0) {
+		x = -c / m;
+		y = 0;
+	} else if (y > maxSize) {
+		x = (maxSize - c) / m;
+		y = maxSize;
+	}
+
 	return <>
 		<div id="historyInfo">
 			{infoBoxes}
@@ -119,7 +143,9 @@ export default ({history, width, height}: {history: History[], width: number, he
 				Array.from({length: 6}, (_, n) => <text x={paddingXL + xScale * n * dateDiff / 5} y={height - paddingYB + 15} fill="#000" text-anchor={n === 0 ? "start" : n === 5 ? "end" : "middle"}>{formatDate(minDate + dateDiff * n / 5)}</text>)
 			}
 			<path d={quotaPath} stroke="#00c9cf" fill="none" />
+			<path d={`M${paddingXL + (latestDate - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale} L${paddingXL + (sx - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale}`} stroke="#00c9cf" fill="none" stroke-width="3" stroke-dasharray="3" />
 			<path d={sizePath} stroke="#fb8c80" fill="none" />
+			<path d={`M${paddingXL + (latestDate - minDate) * xScale},${paddingYT + maxY - latestHistory.UsageSize * yScale} L${paddingXL + (x - minDate) * xScale},${paddingYT + maxY - y * yScale}`} stroke="#fb8c80" fill="none" stroke-width="3" stroke-dasharray="3" />
 			{quotaPoints}
 			{sizePoints}
 		</svg>
