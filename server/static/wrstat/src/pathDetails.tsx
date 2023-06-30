@@ -69,6 +69,21 @@ makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
 	breadcrumbs.push(<span>{path.slice(last+1) || "/"}</span>);
 
 	return breadcrumbs;
+},
+widthStopMin = 400,
+widthStopMax = 960,
+determineTreeWidth = () => {
+	const width = window.innerWidth;
+
+	let mul = 1;
+
+	if (width > widthStopMax) {
+		mul = 0.6;
+	} else if (width > widthStopMin) {
+		mul = 1 - 0.4 * (width - widthStopMin) / (widthStopMax - widthStopMin);
+	}
+
+	return width * mul;
 };
 
 export default ({id, path, isUser, history}: {id: number, path: string; isUser: boolean; history: History[]}) => {
@@ -91,7 +106,10 @@ export default ({id, path, isUser, history}: {id: number, path: string; isUser: 
 	}),
 	[dirDetails, setDirDetails] = useState<Child>(childDetails),
 	[useMTime, setUseMTime] = useState(false),
-	[useCount, setUseCount] = useState(false);
+	[useCount, setUseCount] = useState(false),
+	[treeWidth, setTreeWidth] = useState(determineTreeWidth());
+
+	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())));
 
 	useEffect(() => setTreePath(path || "/"), [path]);
 
@@ -122,7 +140,7 @@ export default ({id, path, isUser, history}: {id: number, path: string; isUser: 
 
 	return <>
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
-		<Treemap table={treeMapData} width={960} height={500} onmouseout={() => setChildDetails(dirDetails)} />
+		<Treemap table={treeMapData} width={treeWidth} height={500} onmouseout={() => setChildDetails(dirDetails)} />
 		<br />
 		<label htmlFor="timeToggle">Use MTime: </label><input type="checkbox" id="timeToggle" checked={useMTime} onChange={e => setUseMTime(e.target.checked)} />
 		<br />
