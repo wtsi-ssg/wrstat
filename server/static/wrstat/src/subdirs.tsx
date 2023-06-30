@@ -53,6 +53,8 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 
 	useEffect(() => {
 		if (id === -1) {
+			setSubdirs([]);
+
 			return;
 		}
 
