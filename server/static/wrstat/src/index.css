@@ -316,3 +316,7 @@ rect + text {
   max-height: 20em;
   overflow-y: scroll;
 }
+
+summary {
+  cursor: pointer;
+}
