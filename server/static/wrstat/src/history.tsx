@@ -2,8 +2,7 @@ import {useEffect, useState} from 'react';
 import {formatBytes, formatDate, formatNumber} from './format';
 import type {History} from './rpc';
 
-const month = 30 * 86_400_000,
-log2Of100 = Math.log2(100);
+const log2Of100 = Math.log2(100);
 
 export default ({history, width, height}: {history: History[], width: number, height: number}) => {
 	const [infoBox, setInfoBox] = useState(-1);
@@ -44,7 +43,8 @@ export default ({history, width, height}: {history: History[], width: number, he
 		}
 	}
 
-	maxDate += month;
+	const projectDate = maxDate = maxDate += (maxDate - minDate) / 5;
+
 	minDate -= (maxDate - minDate) / 10;
 	maxDate += (maxDate - minDate) / 10;
 
@@ -102,18 +102,21 @@ export default ({history, width, height}: {history: History[], width: number, he
 	dt = latestDate - previousDate,
 	dy = latestHistory.UsageSize - previousHistory.UsageSize,
 	m = dy / (dt || 1),
-	c = latestHistory.UsageSize - latestDate * m,
-	sx = latestDate + month;
+	c = latestHistory.UsageSize - latestDate * m;
 
-	let x = sx,
-	y = m * sx + c;
+	let x = projectDate,
+	y = m * projectDate + c;
 
 	if (y < 0) {
 		x = -c / m;
 		y = 0;
-	} else if (y > maxSize) {
-		x = (maxSize - c) / m;
-		y = maxSize;
+	} else if (y > latestHistory.QuotaSize) {
+		x = (latestHistory.QuotaSize - c) / m;
+		y = latestHistory.QuotaSize;
+
+		infoBoxes.push(<div style={{left: paddingXL + (x - minDate) * xScale + "px", top: paddingYT + maxY - y * yScale + "px", display: infoBoxes.length === infoBox ? "inline-block" : ""}}>
+			Fill Quota Data: {formatDate(x)}
+		</div>)
 	}
 
 	return <>
@@ -138,11 +141,14 @@ export default ({history, width, height}: {history: History[], width: number, he
 				Array.from({length: 6}, (_, n) => <text x={paddingXL + xScale * n * dateDiff / 5} y={height - paddingYB + 15} fill="#000" text-anchor={n === 0 ? "start" : n === 5 ? "end" : "middle"}>{formatDate(minDate + dateDiff * n / 5)}</text>)
 			}
 			<path d={quotaPath} stroke="#00c9cf" fill="none" />
-			<path d={`M${paddingXL + (latestDate - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale} L${paddingXL + (sx - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale}`} stroke="#00c9cf" fill="none" stroke-width="3" stroke-dasharray="3" />
+			<path d={`M${paddingXL + (latestDate - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale} L${paddingXL + (projectDate - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale}`} stroke="#00c9cf" fill="none" stroke-width="3" stroke-dasharray="3" />
 			<path d={sizePath} stroke="#fb8c80" fill="none" />
 			<path d={`M${paddingXL + (latestDate - minDate) * xScale},${paddingYT + maxY - latestHistory.UsageSize * yScale} L${paddingXL + (x - minDate) * xScale},${paddingYT + maxY - y * yScale}`} stroke="#fb8c80" fill="none" stroke-width="3" stroke-dasharray="3" />
 			{quotaPoints}
 			{sizePoints}
+			{
+				y === latestHistory.QuotaSize ? <path d="M5,5 L-5,-5 M-5,5 L5,-5" stroke="#f00" stroke-width={2} transform={`translate(${paddingXL + (x - minDate) * xScale} ${paddingYT + maxY - y * yScale})`} onMouseOver={() => setInfoBox(infoBoxes.length -1)} onMouseOut={() => setInfoBox(-1)} /> : []
+			}
 		</svg>
 	</>
 }
