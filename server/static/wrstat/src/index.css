@@ -303,9 +303,15 @@ rect + text {
   background-color: #fff;
 }
 
+.multiInput > div > div > input {
+  box-sizing: border-box;
+  width: 100%;
+}
+
 .multiInput > div > div ul {
   max-height: 20em;
   overflow-y: scroll;
+  border: 0 1px 1px 1px solid #000;
 }
 
 summary {
