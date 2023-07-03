@@ -1,4 +1,4 @@
-import type {Child, History} from './rpc';
+import type {Child, History, TreeFilter} from './rpc';
 import type {Entry} from './treemap';
 import {useEffect, useState, type ReactNode} from "react"
 import HistoryGraph from './history';
@@ -84,9 +84,15 @@ determineTreeWidth = () => {
 	}
 
 	return width * mul;
+},
+makeFilter = (path: string, isUser: boolean, filter: TreeFilter) => {
+	return {
+		path,
+		[isUser ? "users" : "groups"]: filter.name.join(",")
+	};
 };
 
-export default ({id, path, isUser, history}: {id: number, path: string; isUser: boolean; history: History[]}) => {
+export default ({id, path, isUser, history, filter}: {id: number, path: string; isUser: boolean; history: History[], filter: TreeFilter}) => {
 	const [treePath, setTreePath] = useState(path || "/"),
 	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 	[breadcrumbs, setBreadcrumbs] = useState<ReactNode[]>([]),
@@ -101,7 +107,7 @@ export default ({id, path, isUser, history}: {id: number, path: string; isUser: 
 	useEffect(() => setTreePath(path || "/"), [path]);
 
 	useEffect(() => {
-		rpc.getChildren({"path": treePath})
+		rpc.getChildren(makeFilter(treePath, isUser, filter))
 		.then(children => {
 			if (children.users.length === 0) {
 				setTreeMapData(null);
@@ -131,7 +137,7 @@ export default ({id, path, isUser, history}: {id: number, path: string; isUser: 
 		});
 
 		setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
-	}, [treePath, useMTime, useCount]);
+	}, [treePath, useMTime, useCount, JSON.stringify(filter)]);
 
 	return <>
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>

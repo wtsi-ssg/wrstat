@@ -164,6 +164,6 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 			<button className="download" onClick={() => (filter.byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 			<button className="download" onClick={() => (filter.byUser ? downloadUsers : downloadGroups)(getTableRows(usage, filter, 0, Infinity))}>Download Filtered Table</button>
 		</details>
-		<PathDetails id={selectedID} path={selectedDir} isUser={filter.byUser} history={filter.byUser ? [] : history.get(selectedID + "|" + selectedDir) ?? []} />
+		<PathDetails id={selectedID} path={selectedDir} isUser={filter.byUser} filter={filter} history={filter.byUser ? [] : history.get(selectedID + "|" + selectedDir) ?? []} />
 	</>
 }
