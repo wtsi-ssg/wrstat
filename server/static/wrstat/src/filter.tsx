@@ -13,32 +13,27 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 	const [owners, setOwners] = useState<string[]>([]);
 
 	return <>
-		<table id="usageFilter">
-			<tr>
-				<td><label htmlFor="byGroup">By Group</label></td>
-				<td><input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} /></td>
-			</tr>
-			<tr>
-				<td><label htmlFor="byUser">By User</label></td>
-				<td><input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} /></td>
-			</tr>
-			<tr style={byUser ? {} : {display: "none"}}>
-				<td><label htmlFor="username">Username</label></td>
-				<td><MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setUsers} /></td>
-			</tr>
-			<tr style={byUser ? {display: "none"} : {}}>
-				<td><label htmlFor="owners">Owners</label></td>
-				<td><MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} /></td>
-			</tr>
-			<tr style={byUser ? {display: "none"} : {}}>
-				<td><label htmlFor="unix">Unix Group</label></td>
-				<td><MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setGroups} /></td>
-			</tr>
-			<tr style={byUser ? {display: "none"} : {}}>
-				<td><label htmlFor="bom">Group Areas</label></td>
-				<td><MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} /></td>
-			</tr>
-		</table>
+		<div className="treeFilter">
+			<label htmlFor="byGroup">By Group</label>
+			<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
+			<label htmlFor="byUser">By User</label>
+			<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
+			<br />
+			{!byUser ? [] : <>
+				<label htmlFor="username">Username</label>
+				<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setUsers} />
+			</>}
+			{byUser ? [] : <>
+				<label htmlFor="owners">Owners</label>
+				<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
+
+				<label htmlFor="unix">Unix Group</label>
+				<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setGroups} />
+
+				<label htmlFor="bom">Group Areas</label>
+				<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
+			</>}
+		</div>
 		<FilteredTable usage={byUser ? userUsage : groupUsage} byUser={byUser} name={byUser ? users : groups.concat(boms.map(b => areas[b]).flat())} owner={owners} /*history={history}*/ />
 	</>
 }

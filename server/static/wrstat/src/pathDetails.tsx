@@ -138,12 +138,12 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 	}, [treePath, useMTime, useCount, filterFileTypes, JSON.stringify(filter)]);
 
 	return <>
-		<div id="treeFilter">
-			<label htmlFor="aTime">Use ATime: </label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
-			<label htmlFor="mTime">Use MTime: </label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
+		<div className="treeFilter">
+			<label htmlFor="aTime">Use ATime</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
+			<label htmlFor="mTime">Use MTime</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
 			<br />
-			<label htmlFor="useSize">Use Size: </label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
-			<label htmlFor="useCount">Use Count: </label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
+			<label htmlFor="useSize">Use Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
+			<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
 			<br />
 			<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
 		</div>	

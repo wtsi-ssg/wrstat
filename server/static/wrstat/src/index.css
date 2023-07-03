@@ -2,15 +2,6 @@
   float: right;
 }
 
-#usageFilter td:first-child {
-  text-align: right;
-}
-
-#usageFilter td:first-child label:after {
-  content: ":";
-  margin-right: 0.25em;
-}
-
 .usageTable.user tr > :nth-child(1),
 .usageTable.user tr > :nth-child(5),
 .usageTable.user tr > :nth-child(6),
@@ -321,7 +312,7 @@ summary {
   cursor: pointer;
 }
 
-#treeFilter {
+.treeFilter {
   margin-top: 1em;
   display: grid;
   width: 100%;
@@ -329,11 +320,15 @@ summary {
   grid-template-columns: min-content min-content min-content min-content auto;
 }
 
-#treeFilter label {
+.treeFilter label {
   white-space: nowrap;
   text-align: right;
 }
 
-#treeFilter .multiInput {
+.treeFilter > label:after {
+  content: ":";
+}
+
+.treeFilter .multiInput {
   grid-column: 2 / span 4;
 }
