@@ -109,14 +109,6 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, isUser, filter))
 		.then(children => {
-			if (children.users.length === 0) {
-				setTreeMapData(null);
-				setChildDetails(null);
-				setDirDetails(null);
-
-				return;
-			}
-
 			const entries: Entry[] = [];
 
 			for (const child of children.children ?? []) {
