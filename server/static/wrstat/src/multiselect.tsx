@@ -1,6 +1,6 @@
 import {useRef, useState} from "react";
 
-export default ({id, list, onchange}: {id: string; list: string[]; onchange: (list: string[]) => void}) => {
+export default ({id, list, onchange}: {id: string; list: readonly string[]; onchange: (list: string[]) => void}) => {
 	const [selected, setSelected] = useState(new Set<string>()),
 	filterRef = useRef<HTMLInputElement>(null),
 	[filter, setFilter] = useState(""),

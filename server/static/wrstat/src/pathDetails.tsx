@@ -2,6 +2,7 @@ import type {Child, History, TreeFilter} from './rpc';
 import type {Entry} from './treemap';
 import {useEffect, useState, type ReactNode} from "react"
 import HistoryGraph from './history';
+import MultiSelect from './multiselect';
 import SubDirs from './subdirs';
 import Treemap from "./treemap";
 import TreeDetails from "./treedetails";
@@ -85,12 +86,16 @@ determineTreeWidth = () => {
 
 	return width * mul;
 },
-makeFilter = (path: string, isUser: boolean, filter: TreeFilter) => {
+makeFilter = (path: string, isUser: boolean, filter: TreeFilter, filetypes: string[]) => {
 	return {
 		path,
-		[isUser ? "users" : "groups"]: filter.name.join(",")
+		[isUser ? "users" : "groups"]: filter.name.join(","),
+		"types": filetypes.join(",")
 	};
-};
+},
+fileTypes = ["other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
+"cram", "fasta", "fastq", "fastq.gz", "ped/bed", "compressed", "text",
+"log", "dir"] as const;
 
 export default ({id, path, isUser, history, filter}: {id: number, path: string; isUser: boolean; history: History[], filter: TreeFilter}) => {
 	const [treePath, setTreePath] = useState(path || "/"),
@@ -100,14 +105,15 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 	[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
 	[useMTime, setUseMTime] = useState(false),
 	[useCount, setUseCount] = useState(false),
-	[treeWidth, setTreeWidth] = useState(determineTreeWidth());
+	[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
+	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]);
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())));
 
 	useEffect(() => setTreePath(path || "/"), [path]);
 
 	useEffect(() => {
-		rpc.getChildren(makeFilter(treePath, isUser, filter))
+		rpc.getChildren(makeFilter(treePath, isUser, filter, filterFileTypes))
 		.then(children => {
 			const entries: Entry[] = [];
 
@@ -129,15 +135,20 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 		});
 
 		setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
-	}, [treePath, useMTime, useCount, JSON.stringify(filter)]);
+	}, [treePath, useMTime, useCount, filterFileTypes, JSON.stringify(filter)]);
 
 	return <>
+		<div id="treeFilter">
+			<label htmlFor="aTime">Use ATime: </label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
+			<label htmlFor="mTime">Use MTime: </label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
+			<br />
+			<label htmlFor="useSize">Use Size: </label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
+			<label htmlFor="useCount">Use Count: </label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
+			<br />
+			<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
+		</div>	
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 		<Treemap table={treeMapData} width={treeWidth} height={500} onmouseout={() => setChildDetails(dirDetails)} />
-		<br />
-		<label htmlFor="timeToggle">Use MTime: </label><input type="checkbox" id="timeToggle" checked={useMTime} onChange={e => setUseMTime(e.target.checked)} />
-		<br />
-		<label htmlFor="countToggle">Use Count: </label><input type="checkbox" id="countToggle" checked={useCount} onChange={e => setUseCount(e.target.checked)} />
 		<TreeDetails details={childDetails} />
 		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
 		<HistoryGraph history={history} width={960} height={500} />

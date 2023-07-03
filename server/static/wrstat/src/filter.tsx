@@ -39,7 +39,6 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 				<td><MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} /></td>
 			</tr>
 		</table>
-		<hr />
 		<FilteredTable usage={byUser ? userUsage : groupUsage} byUser={byUser} name={byUser ? users : groups.concat(boms.map(b => areas[b]).flat())} owner={owners} /*history={history}*/ />
 	</>
 }

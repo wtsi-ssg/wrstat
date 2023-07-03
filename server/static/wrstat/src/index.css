@@ -320,3 +320,20 @@ rect + text {
 summary {
   cursor: pointer;
 }
+
+#treeFilter {
+  margin-top: 1em;
+  display: grid;
+  width: 100%;
+  gap: 0.5em 1em;
+  grid-template-columns: min-content min-content min-content min-content auto;
+}
+
+#treeFilter label {
+  white-space: nowrap;
+  text-align: right;
+}
+
+#treeFilter .multiInput {
+  grid-column: 2 / span 4;
+}
