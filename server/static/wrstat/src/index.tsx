@@ -10,8 +10,9 @@ import RPC from './rpc';
 ready.then(Auth)
 .then(username => (username ? Promise.all([
 	RPC.getGroupUsageData(),
-	RPC.getUserUsageData()
-]) : Promise.resolve<[Usage[], Usage[]]>([[], []]))
+	RPC.getUserUsageData(),
+	RPC.getChildren({path: "/"})
+]) : Promise.resolve<[Usage[], Usage[], {areas: Record<string, string[]>}]>([[], [], {areas: {}}]))
 /*
 	.then(([groupUsage, userUsage]) => {
 		return new Promise<[Usage[], Usage[], Map<string, History[]>]>(successFn => {
@@ -43,9 +44,9 @@ ready.then(Auth)
 		});
 	})
 	*/
-	.then(([groupUsage, userUsage /*, history*/]) => ReactDOM.createRoot(document.body).render(
+	.then(([groupUsage, userUsage, {areas} /*, history*/]) => ReactDOM.createRoot(document.body).render(
 		<React.StrictMode>
-			<App username={username} groupUsage={groupUsage} userUsage={userUsage} /*history={history}*/ />
+			<App username={username} groupUsage={groupUsage} userUsage={userUsage} areas={areas} /*history={history}*/ />
 		</React.StrictMode>
 	))
 )

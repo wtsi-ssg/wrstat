@@ -11,7 +11,7 @@ const logout = () => {
   window.location.reload();
 };
 
-export default ({username, groupUsage, userUsage /*, history*/}: {username: string, groupUsage: Usage[], userUsage: Usage[] /*, history: Map<string, History[]>*/}) => {
+export default ({username, groupUsage, userUsage, areas /*, history*/}: {username: string, groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> /*, history: Map<string, History[]>*/}) => {
   if (!username) {
     return (
       <div><form action="/login"><input type="submit" value="Login" /></form></div>
@@ -21,7 +21,7 @@ export default ({username, groupUsage, userUsage /*, history*/}: {username: stri
   return (
     <div>
       <div id="auth">{username} - <button onClick={logout}>Logout</button></div>
-      <Filter groupUsage={groupUsage} userUsage={userUsage} /*history={history}*/ />
+      <Filter groupUsage={groupUsage} userUsage={userUsage} areas={areas} /*history={history}*/ />
     </div>
   );
 };

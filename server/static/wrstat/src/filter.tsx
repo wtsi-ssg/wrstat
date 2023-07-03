@@ -5,10 +5,11 @@ import MultiSelect from "./multiselect";
 
 const stringSort = new Intl.Collator().compare;
 
-export default ({groupUsage, userUsage /*, history*/}: {groupUsage: Usage[], userUsage: Usage[] /*, history: Map<string, History[]>*/}) => {
+export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> /*, history: Map<string, History[]>*/}) => {
 	const [byUser, setBy] = useState(false);
 	const [users, setUsers] = useState<string[]>([]);
 	const [groups, setGroups] = useState<string[]>([]);
+	const [boms, setBOMs] = useState<string[]>([]);
 	const [owners, setOwners] = useState<string[]>([]);
 
 	return <>
@@ -33,8 +34,12 @@ export default ({groupUsage, userUsage /*, history*/}: {groupUsage: Usage[], use
 				<td><label htmlFor="unix">Unix Group</label></td>
 				<td><MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setGroups} /></td>
 			</tr>
+			<tr style={byUser ? {display: "none"} : {}}>
+				<td><label htmlFor="unix">Group Areas</label></td>
+				<td><MultiSelect id="unix" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} /></td>
+			</tr>
 		</table>
 		<hr />
-		<FilteredTable usage={byUser ? userUsage : groupUsage} byUser={byUser} name={byUser ? users : groups} owner={owners} /*history={history}*/ />
+		<FilteredTable usage={byUser ? userUsage : groupUsage} byUser={byUser} name={byUser ? users : groups.concat(boms.map(b => areas[b]).flat())} owner={owners} /*history={history}*/ />
 	</>
 }
