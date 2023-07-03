@@ -43,7 +43,6 @@ getTableRows = (usage: Usage[], filter: TreeFilter, page: number, perPage: numbe
 ).slice(page * perPage, (page + 1) * perPage);
 
 export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /*, history: Map<string, History[]>*/}) => {
-	console.log(filter);
 	const [selectedDir, setSelectedDir] = useState(""),
 	[selectedID, setSelectedID] = useState(-1),
 	[sortBy, setSortBy] = useState(0),
