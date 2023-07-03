@@ -107,7 +107,11 @@ getTextBB = (() => {
 
 const maxTableEntries = 1000;
 
-export default ({table, width, height, onmouseout}: {table: Table; width: number; height: number; onmouseout?: MouseEventHandler}) => {
+export default ({table, width, height, onmouseout}: {table: Table | null; width: number; height: number; onmouseout?: MouseEventHandler}) => {
+	if (table === null) {
+		return <></>
+	}
+
 	const filteredTable: Table = [];
 
 	for (const entry of table) {

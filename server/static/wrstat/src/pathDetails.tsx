@@ -88,23 +88,10 @@ determineTreeWidth = () => {
 
 export default ({id, path, isUser, history}: {id: number, path: string; isUser: boolean; history: History[]}) => {
 	const [treePath, setTreePath] = useState(path || "/"),
-	[treeMapData, setTreeMapData] = useState<Entry[]>([]),
+	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 	[breadcrumbs, setBreadcrumbs] = useState<ReactNode[]>([]),
-	[childDetails, setChildDetails] = useState<Child>({
-		"name": "",
-		"path": "",
-		"count": 0,
-		"size": 0,
-		"atime": "",
-		"users": [],
-		"groups": [],
-		"filetypes": [],
-		"children": [],
-		"timestamp": "",
-		"areas": {},
-		"has_children": false
-	}),
-	[dirDetails, setDirDetails] = useState<Child>(childDetails),
+	[childDetails, setChildDetails] = useState<Child | null>(null),
+	[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
 	[useMTime, setUseMTime] = useState(false),
 	[useCount, setUseCount] = useState(false),
 	[treeWidth, setTreeWidth] = useState(determineTreeWidth());
@@ -116,6 +103,14 @@ export default ({id, path, isUser, history}: {id: number, path: string; isUser: 
 	useEffect(() => {
 		rpc.getChildren({"path": treePath})
 		.then(children => {
+			if (children.users.length === 0) {
+				setTreeMapData(null);
+				setChildDetails(null);
+				setDirDetails(null);
+
+				return;
+			}
+
 			const entries: Entry[] = [];
 
 			for (const child of children.children ?? []) {

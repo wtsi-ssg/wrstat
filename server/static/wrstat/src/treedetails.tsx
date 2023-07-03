@@ -1,7 +1,11 @@
 import {formatBytes, formatDate, formatNumber} from "./format";
 import type {Child} from "./rpc";
 
-export default ({details}: {details: Child}) => {
+export default ({details}: {details: Child | null}) => {
+	if (!details) {
+		return <></>
+	}
+
 	return <div id="details">
 		{details.path}
 		<table>
