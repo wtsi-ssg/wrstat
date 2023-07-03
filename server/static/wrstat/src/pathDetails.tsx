@@ -1,6 +1,6 @@
 import type {Child, History, TreeFilter} from './rpc';
 import type {Entry} from './treemap';
-import {useEffect, useState, type ReactNode} from "react"
+import {useEffect, useState} from "react"
 import HistoryGraph from './history';
 import MultiSelect from './multiselect';
 import SubDirs from './subdirs';
@@ -111,7 +111,7 @@ timesSinceAccess = [
 export default ({id, path, isUser, history, filter}: {id: number, path: string; isUser: boolean; history: History[], filter: TreeFilter}) => {
 	const [treePath, setTreePath] = useState(path || "/"),
 	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
-	[breadcrumbs, setBreadcrumbs] = useState<ReactNode[]>([]),
+	[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
 	[childDetails, setChildDetails] = useState<Child | null>(null),
 	[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
 	[useMTime, setUseMTime] = useState(false),
