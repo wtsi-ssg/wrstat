@@ -35,8 +35,8 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 				<td><MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setGroups} /></td>
 			</tr>
 			<tr style={byUser ? {display: "none"} : {}}>
-				<td><label htmlFor="unix">Group Areas</label></td>
-				<td><MultiSelect id="unix" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} /></td>
+				<td><label htmlFor="bom">Group Areas</label></td>
+				<td><MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} /></td>
 			</tr>
 		</table>
 		<hr />
