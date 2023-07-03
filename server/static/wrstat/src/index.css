@@ -334,5 +334,5 @@ summary {
 }
 
 .treeFilter > select {
-  grid-column: 2/ auto;
+  grid-column: 2 / span 2;
 }
