@@ -329,6 +329,10 @@ summary {
   content: ":";
 }
 
-.treeFilter .multiInput {
+.treeFilter > .multiInput {
   grid-column: 2 / span 4;
+}
+
+.treeFilter > select {
+  grid-column: 2/ auto;
 }

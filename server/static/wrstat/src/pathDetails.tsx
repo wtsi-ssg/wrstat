@@ -95,7 +95,18 @@ makeFilter = (path: string, isUser: boolean, filter: TreeFilter, filetypes: stri
 },
 fileTypes = ["other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
 "cram", "fasta", "fastq", "fastq.gz", "ped/bed", "compressed", "text",
-"log", "dir"] as const;
+"log", "dir"] as const,
+timesSinceAccess = [
+	["> 0 days", 0],
+	["> 1 month", 30],
+	["> 2 months", 60],
+	["> 3 months", 120],
+	["> 6 months", 180],
+	["> 8 months", 240],
+	["> 10 months", 300],
+	["> 1 year", 365],
+	["> 2 years", 730]
+] as const;
 
 export default ({id, path, isUser, history, filter}: {id: number, path: string; isUser: boolean; history: History[], filter: TreeFilter}) => {
 	const [treePath, setTreePath] = useState(path || "/"),
@@ -106,7 +117,8 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 	[useMTime, setUseMTime] = useState(false),
 	[useCount, setUseCount] = useState(false),
 	[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
-	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]);
+	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
+	[sinceLastAccess, setSinceLastAccess] = useState(0);
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())));
 
@@ -115,9 +127,14 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, isUser, filter, filterFileTypes))
 		.then(children => {
-			const entries: Entry[] = [];
+			const entries: Entry[] = [],
+			since = new Date(children.timestamp).valueOf() - sinceLastAccess * 86_400_000;
 
 			for (const child of children.children ?? []) {
+				if (new Date(child.atime).valueOf() > since) {
+					continue;
+				}
+
 				entries.push({
 					name: child.name,
 					value: useCount ? child.count : child.size,
@@ -135,7 +152,7 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 		});
 
 		setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
-	}, [treePath, useMTime, useCount, filterFileTypes, JSON.stringify(filter)]);
+	}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, JSON.stringify(filter)]);
 
 	return <>
 		<div className="treeFilter">
@@ -146,6 +163,10 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 			<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
 			<br />
 			<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
+			<label htmlFor="sinceAccess">Time Since Access</label>
+			<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
+				{timesSinceAccess.map(([l, t]) => <option selected={sinceLastAccess === t} value={t}>{l}</option>)}
+			</select>
 		</div>	
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 		<Treemap table={treeMapData} width={treeWidth} height={500} onmouseout={() => setChildDetails(dirDetails)} />
