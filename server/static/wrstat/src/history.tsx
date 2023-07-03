@@ -2,7 +2,8 @@ import {useEffect, useState} from 'react';
 import {formatBytes, formatDate, formatNumber} from './format';
 import type {History} from './rpc';
 
-const month = 30 * 86_400_000;
+const month = 30 * 86_400_000,
+log2Of100 = Math.log2(100);
 
 export default ({history, width, height}: {history: History[], width: number, height: number}) => {
 	const [infoBox, setInfoBox] = useState(-1);
@@ -47,13 +48,7 @@ export default ({history, width, height}: {history: History[], width: number, he
 	minDate -= (maxDate - minDate) / 10;
 	maxDate += (maxDate - minDate) / 10;
 
-	let num = maxSize;
-	maxSize = 100;
-
-	while (num >= 100) {
-		num /= 2;
-		maxSize *= 2;
-	}
+	maxSize = 100 * Math.pow(2, Math.ceil(Math.log2(maxSize) - log2Of100));
 
 	const paddingXL = 80,
 	paddingXR = 10,
