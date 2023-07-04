@@ -1,11 +1,11 @@
 import type {History, TreeFilter, Usage} from './rpc';
-import {useEffect, useState, type ChangeEvent} from "react";
+import {useState, type ChangeEvent, useEffect} from "react";
 import {downloadGroups, downloadUsers} from './download';
 import {asDaysAgo, formatBytes, formatNumber} from './format';
-import Pagination from './pagination';
 import PathDetails from './pathDetails';
 import fillQuotaSoon from './trend';
 import RPC from './rpc';
+import Table, {fitlerTableRows} from './table';
 
 const stringSort = new Intl.Collator().compare,
 sorters = [
@@ -36,79 +36,52 @@ reverseSorters = [
 	(a: Usage, b: Usage) => !a.QuotaInodes ? 1 : !b.QuotaInodes ? -1 : sorters[9](b, a),
 	reverse(sorters[10]),
 	reverse(sorters[11])
-],
-startReverse = [4, 5, 6, 7, 8, 9],
-getTableRows = (usage: Usage[], filter: TreeFilter, page: number, perPage: number) => usage.filter(e => (!filter.name.length || filter.name.includes(e.Name)) &&
-(!filter.owner.length || filter.owner.includes(e.Owner))
-).slice(page * perPage, (page + 1) * perPage);
+];
 
 export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /*, history: Map<string, History[]>*/}) => {
 	const [selectedDir, setSelectedDir] = useState(""),
-	[selectedID, setSelectedID] = useState(-1),
-	[sortBy, setSortBy] = useState(0),
-	[sortReverse, setSortReverse] = useState(false),
-	Header = ({sort, name}: {sort: number, name: string}) => <th className={sortBy === sort ? "sort" + (sortReverse ? " reverse" : "") : ""} onClick={() => {
-		if (sortBy === sort) {
-			setSortReverse(!sortReverse);
-		} else {
-			setSortBy(sort);
-			setSortReverse(startReverse.includes(sort));
-		}
-	}}>{name}</th>,
-	[page, setPage] = useState(0),
+    [selectedID, setSelectedID] = useState(-1),
 	[perPage, setPerPage] = useState(10),
-	[history, setHistory] = useState<Map<string, History[]>>(new Map());
-
-	useEffect(() => {
-		setSortBy(0);
-		setSortReverse(false);
-		setPage(0);
-	}, [filter.byUser, filter.name, filter.owner, perPage]);
-
-	useEffect(() => {
-		let changed = false,
-		q = Promise.resolve();
-
-		for (const row of getTableRows(usage, filter, page, perPage)) {
-			const gidBasename = row.GID + "|" + row.BaseDir;
-			if (history.has(gidBasename)) {
-				continue;
-			}
-
-			changed = true;
-
-			q = q.finally(() => RPC.getBasedirsHistory(row.GID, row.BaseDir)
-			.then(h => {
-				history.set(gidBasename, h);
-
-				switch(fillQuotaSoon(h)) {
-				case false:
-					row.status = "OK";
-
-					break;
-				case true:
-					row.status = "Not OK";
-
-					break;
-				default:
-					row.status = "Unknown"
-				}
-			}));
+	[history, setHistory] = useState<Map<string, History[]>>(new Map()),
+	statusFormatter = (_: any, row: Usage) => {
+		if (filter.byUser) {
+			return "";
 		}
 
-		q.finally(() => {
-			if (changed) {
-				setHistory(new Map(history));
+		const gidBasename = row.GID + "|" + row.BaseDir,
+		h = history.get(gidBasename);
+		if (h) {
+			switch (fillQuotaSoon(h)) {
+			case false:
+				return "OK";
+			case true:
+				return "Not OK";
+			default:
+				return "Unknown";
 			}
-		});
-	}, [filter.byUser, filter.name, filter.owner, page, perPage, sortBy, sortReverse]);
+		}
 
-	usage.sort(sortReverse ? reverseSorters[sortBy] : sorters[sortBy]);
+		RPC.getBasedirsHistory(row.GID, row.BaseDir)
+		.then(h => {
+			history.set(gidBasename, h);
+			setHistory(new Map(history));
+		})
+
+		return "Unknown";
+	},
+	rowFilter = {
+		Name: filter.name,
+		Owner: filter.owner
+	};
+
+	useEffect(() => {
+		setSelectedDir("");
+		setSelectedID(-1);
+	}, [filter.byUser]);
 
 	return <>
 		<details open>
 			<summary>Basedirs</summary>
-			<Pagination currentPage={page} onClick={e => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"))} totalPages={Math.ceil(getTableRows(usage, filter, 0, Infinity).length /perPage)} />
 			<span id="perPage">Show
 				<select onChange={(e: ChangeEvent<HTMLSelectElement>) => {setPerPage(parseInt(e.target.value) ?? 10)}}>
 					<option>10</option>
@@ -117,52 +90,98 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					<option>100</option>
 				</select>
 			Entries</span>
-			<table className={"prettyTable usageTable " + (filter.byUser ? "user" : "group")}>
-				<thead>
-					<tr>
-						<Header sort={1} name="PI" />
-						<Header sort={2} name={filter.byUser ? "User" : "Group"} />
-						<Header sort={3} name="Path" />
-						<Header sort={4} name="Space Used" />
-						<Header sort={5} name="Space Quota" />
-						<Header sort={6} name="Space Usage (%)" />
-						<Header sort={7} name="Num. Files" />
-						<Header sort={8} name="Max Files" />
-						<Header sort={9} name="File Usage (%)" />
-						<Header sort={10} name="Last Modified (days)" />
-						<th>Status</th>
-					</tr>
-				</thead>
-				<tbody>
-					{getTableRows(usage, filter, page, perPage).map(data => {
-						return (
-							<tr className={data.BaseDir === selectedDir && (filter.byUser ? data.UID : data.GID) == selectedID ? "selected" : ""} onClick={() => {
-								if (selectedDir === data.BaseDir && selectedID === (filter.byUser ? data.UID : data.GID)) {
-									setSelectedDir("");
-									setSelectedID(-1);
-								} else {
-									setSelectedDir(data.BaseDir);
-									setSelectedID(filter.byUser ? data.UID : data.GID);
-								}
-							}}>
-								<td>{data.Owner}</td>
-								<td>{data.Name}</td>
-								<td>{data.BaseDir}</td>
-								<td title={formatNumber(data.UsageSize) + " Bytes"}>{formatBytes(data.UsageSize)}</td>
-								<td title={formatNumber(data.QuotaSize) + " Bytes"}>{formatBytes(data.QuotaSize)}</td>
-								<td>{data.QuotaSize === 0 ? "" : formatNumber(Math.round(10000 * data.UsageSize / data.QuotaSize) / 100)}</td>
-								<td>{formatNumber(data.UsageInodes)}</td>
-								<td>{formatNumber(data.QuotaInodes)}</td>
-								<td>{data.QuotaInodes === 0 ? "" : formatNumber(Math.round(10000 * data.UsageInodes / data.QuotaInodes) / 100)}</td>
-								<td>{asDaysAgo(data.Mtime)}</td>
-								<td>{data.status ?? "Unknown"}</td>
-							</tr>
-						);
-					})}
-				</tbody>
-			</table>
+			<Table rowExtra={row => {
+				if ((filter.byUser ? row.UID : row.GID) === selectedID && row.BaseDir === selectedDir) {
+					return {"class": "selected"};
+				}
+
+				return {};
+			}} perPage={perPage} filter={rowFilter} onRowClick={(data: Usage) => {
+				if (selectedDir === data.BaseDir && selectedID === (filter.byUser ? data.UID : data.GID)) {
+						setSelectedDir("");
+						setSelectedID(-1);
+				} else {
+						setSelectedDir(data.BaseDir);
+						setSelectedID(filter.byUser ? data.UID : data.GID);
+				}
+			}} cols={[
+				{
+					title: "PI",
+					key: "Owner",
+					sortFn: sorters[1],
+					reverseFn: reverseSorters[1],
+				},
+				{
+					title: filter.byUser ? "User" : "Group",
+					key: "Name",
+					sortFn: sorters[2]
+				},
+				{
+					title: "Path",
+					key: "BaseDir",
+					sortFn: sorters[3]
+				},
+				{
+					title: "Space Used",
+					key: "UsageSize",
+					extra: used => ({title: formatNumber(used) + " Bytes"}),
+					sortFn: sorters[4],
+					startReverse: true,
+					formatter: formatBytes
+				},
+				{
+					title: "Space Quota",
+					key: "QuotaSize",
+					extra: quota => ({title: formatNumber(quota) + " Bytes"}),
+					sortFn: sorters[5],
+					startReverse: true,
+					formatter: formatBytes
+				},
+				{
+					title: "Space Usage (%)",
+					key: "percentSize",
+					sortFn: sorters[6],
+					reverseFn: reverseSorters[6],
+					startReverse: true,
+					formatter: (p: number | undefined) => p ? formatNumber(p) : ""
+				},
+				{
+					title: "Num. Files",
+					key: "UsageInodes",
+					sortFn: sorters[7],
+					startReverse: true,
+					formatter: formatNumber
+				},
+				{
+					title: "Max Files",
+					key: "QuotaInodes",
+					sortFn: sorters[8],
+					startReverse: true,
+					formatter: formatNumber
+				},
+				{
+					title: "File Usage (%)",
+					key: "percentSize",
+					sortFn: sorters[9],
+					reverseFn: reverseSorters[9],
+					startReverse: true,
+					formatter: (p: number | undefined) => p ? formatNumber(p) : ""
+				},
+				{
+					title: "Last Modified (days)",
+					key: "Mtime",
+					extra: title => ({title}),
+					sortFn: sorters[10],
+					formatter: asDaysAgo
+				},
+				{
+					title: "Status",
+					key: "status",
+					formatter: statusFormatter
+				}
+			]} table={usage} className={"prettyTable usageTable " + (filter.byUser ? "user" : "group")} />
 			<button className="download" onClick={() => (filter.byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
-			<button className="download" onClick={() => (filter.byUser ? downloadUsers : downloadGroups)(getTableRows(usage, filter, 0, Infinity))}>Download Filtered Table</button>
+			<button className="download" onClick={() => (filter.byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, rowFilter))}>Download Filtered Table</button>
 		</details>
 		<PathDetails id={selectedID} path={selectedDir} isUser={filter.byUser} filter={filter} history={filter.byUser ? [] : history.get(selectedID + "|" + selectedDir) ?? []} />
 	</>
