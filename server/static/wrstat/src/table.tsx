@@ -43,25 +43,20 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 	const toRet: T[] = [],
 	filterKeys = Object.keys(filter) as (keyof Filter<T>)[];
 
+	Filter:
 	for (const row of table) {
-		let add = true;
-
 		for (const f of filterKeys) {
 			const toFilter = filter[f];
 			if (toFilter) {
 				if (toFilter instanceof Array) {
-					if (toFilter.length && toFilter.includes(row[f])) {
-						add = false;
-
-						break;
+					if (toFilter.length && !toFilter.includes(row[f])) {
+						continue Filter;
 					}
 				}
 			}	
 		}
 
-		if (add) {
-			toRet.push(row);
-		}
+		toRet.push(row);
 	}
 
 	return toRet;
