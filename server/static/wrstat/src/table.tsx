@@ -1,10 +1,10 @@
-import {useState} from "react";
+import {useState, type CSSProperties} from "react";
 import Pagination from "./pagination";
 
 type Column<T> = { [K in Extract<keyof T, string>]-?: {
 	title: string;
 	key: K;
-	extra?: (data: T[K], row: T) => Record<any, any>;
+	extra?: (data: T[K], row: T) => Record<string, any>;
 	formatter?: (data: T[K], row: T) => JSX.Element | string;
 	sortFn?: (a: T, b: T) => number;
 	reverseFn?: (a: T, b: T) => number;
@@ -13,6 +13,18 @@ type Column<T> = { [K in Extract<keyof T, string>]-?: {
 
 type Filter<T> = {
 	[K in keyof T]?: T[K][];
+}
+
+type Params<T> = {
+	table: T[];
+	cols: Column<T>[];
+	perPage?: number;
+	filter?: Filter<T>;
+	rowExtra?: (row: T) => Record<string, any>;
+	onRowClick: (row: T) => void;
+	className?: string;
+	id?: string;
+	style?: CSSProperties;
 }
 
 const noopFormatter = (a: {toString(): string}) => a.toString(),
@@ -29,7 +41,7 @@ getSorter = <T extends Record<string, any>>(col: Column<T>, reverse = false) => 
 
 export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filter: Filter<T>) => {
 	const toRet: T[] = [],
-	filterKeys = Object.keys(filter) as (keyof Filter<T>)[]
+	filterKeys = Object.keys(filter) as (keyof Filter<T>)[];
 
 	for (const row of table) {
 		let add = true;
@@ -55,8 +67,7 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 	return toRet;
 };
 
-export default <T extends Record<string, any>>({table, cols, onRowClick, perPage = Infinity, filter = {}, rowExtra,...additional}:
-	{table: T[]; cols: Column<T>[]; perPage?: number; filter?: Filter<T>; rowExtra?: (row: T) => Record<any, any>; onRowClick: (row: T) => void} & Record<any, any>) => {
+export default <T extends Record<string, any>>({table, cols, onRowClick, perPage = Infinity, filter = {}, rowExtra,...additional}: Params<T>) => {
 	const [page, setPage] = useState(0),
 	[sortBy, setSortBy] = useState(-1),
 	[sortReverse, setSortReverse] = useState(false),
