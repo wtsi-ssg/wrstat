@@ -9,7 +9,14 @@ import RPC from './rpc';
 
 ready.then(Auth)
 .then(username => (username ? Promise.all([
-	RPC.getGroupUsageData(),
+	RPC.getGroupUsageData().then(gud => {
+		for (const d of gud) {
+			d.percentSize = Math.round(10000 * d.UsageSize / d.QuotaSize) / 100;
+			d.percentInodes = Math.round(10000 * d.UsageInodes / d.QuotaInodes) / 100;
+		}
+
+		return gud;
+	}),
 	RPC.getUserUsageData(),
 	RPC.getChildren({path: "/"})
 ]) : Promise.resolve<[Usage[], Usage[], {areas: Record<string, string[]>}]>([[], [], {areas: {}}]))

@@ -46,6 +46,8 @@ export type Usage = {
 	QuotaInodes: number;
 	Mtime: string;
 	status?: string;
+	percentSize?: number;
+	percentInodes?: number;
 }
 
 export type SubDir = {
