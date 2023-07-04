@@ -49,7 +49,7 @@ export default ({history, width, height}: {history: History[], width: number, he
 	maxSize = 100 * Math.pow(2, Math.ceil(Math.log2(maxSize / 100)));
 
 	const paddingXL = 80,
-	paddingXR = 10,
+	paddingXR = 80,
 	paddingYT = 10,
 	paddingYB = 40,
 	dateDiff = maxDate - minDate,
@@ -147,6 +147,11 @@ export default ({history, width, height}: {history: History[], width: number, he
 			{
 				y === latestHistory.QuotaSize ? <path d="M5,5 L-5,-5 M-5,5 L5,-5" stroke="#f00" stroke-width={2} transform={`translate(${paddingXL + (x - minDate) * xScale} ${paddingYT + maxY - y * yScale})`} onMouseOver={() => setInfoBox(infoBoxes.length -1)} onMouseOut={() => setInfoBox(-1)} /> : []
 			}
+			<rect x={width - 70} y={paddingYT + 10} width={65} height={43} stroke="#000" fill="none" />
+			<rect x={width - 65} y={paddingYT + 15} width={10} height={10} stroke="#000" fill="#00c9cf" />
+			<text x={width - 47} y={paddingYT + 25} fill="currentColor">Quota</text>
+			<rect x={width - 65} y={paddingYT + 35} width={10} height={10} stroke="#000" fill="#fb8c80" />
+			<text x={width - 47} y={paddingYT + 45} fill="currentColor">Usage</text>
 		</svg>
 	</>
 }
