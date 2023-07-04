@@ -1,6 +1,7 @@
 import type {SubDir} from "./rpc";
 import {useEffect, useState} from "react";
 import {asDaysAgo, formatBytes, formatNumber} from './format';
+import Table from './table';
 import RPC from './rpc';
 
 const pathJoin = (base: string, sub: string) => {
@@ -35,21 +36,10 @@ sorters = [
 	(a: SubDir, b: SubDir) => a.NumFiles - b.NumFiles,
 	(a: SubDir, b: SubDir) => a.SizeFiles - b.SizeFiles,
 	(a: SubDir, b: SubDir) => new Date(b.LastModified).valueOf() - new Date(a.LastModified).valueOf(),
-] as const,
-startReverse = [2, 3];
+] as const;
 
 export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: boolean; setPath: (path: string) => void}) => {
-	const [subdirs, setSubdirs] = useState<SubDir[]>([]),
-	[sortBy, setSortBy] = useState(0),
-	[sortReverse, setSortReverse] = useState(false),
-	Header = ({sort, name}: {sort: number, name: string}) => <th className={sortBy === sort ? "sort" + (sortReverse ? " reverse" : "") : ""} onClick={() => {
-		if (sortBy === sort) {
-			setSortReverse(!sortReverse);
-		} else {
-			setSortBy(sort);
-			setSortReverse(startReverse.includes(sort));
-		}
-	}}>{name}</th>;
+	const [subdirs, setSubdirs] = useState<SubDir[]>([]);
 
 	useEffect(() => {
 		if (id === -1) {
@@ -66,32 +56,40 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 		return <></>
 	}
 
-	subdirs.sort(sorters[sortBy]);
-	if (sortReverse) {
-		subdirs.reverse();
-	}
-
-
-	return <table className="prettyTable historyTable">
-		<thead>
-			<tr>
-				<Header sort={1} name="Path" />
-				<Header sort={2} name="Number of Files" />
-				<Header sort={3} name="Size" />
-				<Header sort={4} name="Last Modified (days)" />
-				<th>File Usage</th>
-			</tr>
-		</thead>
-		<tbody>
-			{
-				subdirs.map(row => <tr onClick={() => setPath(pathJoin(path, row.SubDir))}>
-						<td>{pathJoin(path, row.SubDir)}</td>
-						<td>{formatNumber(row.NumFiles)}</td>
-						<td title={formatNumber(row.SizeFiles)}>{formatBytes(row.SizeFiles)}</td>
-						<td>{asDaysAgo(row.LastModified)}</td>
-						<td>{Object.entries(row.FileUsage).sort((a, b) => b[1] - a[1]).map(e => `${fileTypes[parseInt(e[0])]}: ${formatBytes(e[1])}`).join(", ")}</td>
-				</tr>)
-			}
-		</tbody>
-	</table>
+	return <Table table={subdirs} className="prettyTable historyTable" onRowClick={(row: SubDir) => setPath(pathJoin(path, row.SubDir))} cols={[
+		{
+			title: "Path",
+			key: "SubDir",
+			sortFn: sorters[1],
+			formatter: (subdir: string) => pathJoin(path, subdir)
+		},
+		{
+			title: "Number of Files",
+			key: "NumFiles",
+			sortFn: sorters[2],
+			startReverse: true,
+			formatter: formatNumber
+		},
+		{
+			title: "Size",
+			key: "SizeFiles",
+			extra: size => ({title: formatNumber(size) + " Bytes"}),
+			sortFn: sorters[3],
+			startReverse: true,
+			formatter: formatBytes
+		},
+		{
+			title: "Last Modified (days)",
+			key: "LastModified",
+			extra: title => ({title}),
+			sortFn: sorters[4],
+			startReverse: true,
+			formatter: asDaysAgo
+		},
+		{
+			title: "File Usage",
+			key: "FileUsage",
+			formatter: (files: Record<number, number>) => Object.entries(files).sort((a, b) => b[1] - a[1]).map(e => `${fileTypes[parseInt(e[0])]}: ${formatBytes(e[1])}`).join(", ")
+		}
+	]} />
 }
