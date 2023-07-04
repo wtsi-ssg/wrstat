@@ -63,10 +63,6 @@ rect + text {
     text-decoration: underline;
 }
 
-.prettyTable thead th {
-  border-bottom: 1px solid #000;
-}
-
 .prettyTable .sort {
     background-repeat: no-repeat;
     background-position: right 0 bottom 0;
@@ -83,20 +79,7 @@ rect + text {
 }
 
 .prettyTable tbody tr td {
-  border-bottom: 1px solid #ddd;
   padding: 0.5em 0.25em;
-}
-
-.prettyTable tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
-.prettyTable tbody tr:hover {
-  background-color: #c0cee9;
-}
-
-.prettyTable tbody tr.selected {
-  background-color: #b0bed9;
 }
 
 .usageTable tbody td:nth-child(4), .usageTable tbody td:nth-child(5), .usageTable tbody td:nth-child(6),
@@ -144,7 +127,6 @@ rect + text {
 }
 
 #perPage select {
-  border: 1px solid #aaa;
   border-radius: 3px;
   padding: 5px;
   background-color: transparent;
@@ -153,8 +135,6 @@ rect + text {
 }
 
 #details {
-  background-color: #ddd;
-  border: 1px solid #aaa;
   border-radius: 8px;
   padding: 1em 0.5em;
   max-width: 100vw;
@@ -222,13 +202,7 @@ rect + text {
 .minmax_line {
   left: 0;
   right: 0;
-  background-color: #aaa;
   border-radius: 1em;
-}
-
-.minmax_selLine, .minmax_minValue, .minmax_maxValue {
-  color: #fff;
-  background-color: #48c;
 }
 
 .minmax_minValue, .minmax_maxValue {
@@ -240,9 +214,7 @@ rect + text {
   top: calc(1em + 2px);
   width: 1em;
   height: 1em;
-  border: 1px solid #000;
   border-radius: 1em;
-  background-color: #888;
 }
 
 #history {
@@ -262,8 +234,6 @@ rect + text {
   display: none;
   position: relative;
   z-index: 2;
-  background-color: #fff;
-  border: 1px solid #000;
   border-radius: 5px;
   padding: 5px;
 }
@@ -284,7 +254,6 @@ rect + text {
 
 .multiInput > ul li:not(:first-child) {
   margin-left: 1em;
-  border: 1px solid #000;
   padding: 0 0.5em;
   cursor: cell;
 }
@@ -300,7 +269,6 @@ rect + text {
 
 .multiInput > div > div {
   position: absolute;
-  background-color: #fff;
 }
 
 .multiInput > div > div > input {
@@ -311,7 +279,6 @@ rect + text {
 .multiInput > div > div ul {
   max-height: 20em;
   overflow-y: scroll;
-  border: 0 1px 1px 1px solid #000;
 }
 
 summary {
@@ -394,4 +361,133 @@ summary {
   padding: 5px;
   border-radius: 8px;
   margin-right: 0.5em;
+}
+
+@media (prefers-color-scheme: light) {
+  html, body {
+    color: #000;
+    background-color: #fff;
+  }
+
+  .prettyTable thead th {
+    border-bottom: 1px solid #000;
+  }
+
+  .prettyTable tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  .prettyTable tbody tr:hover {
+    background-color: #c0cee9;
+  }
+
+  .prettyTable tbody tr.selected {
+    background-color: #b0bed9;
+  }
+
+  #perPage select {
+    border: 1px solid #aaa;
+    color: #000;
+  }
+
+  #details {
+    background-color: #ddd;
+    border: 1px solid #aaa;
+  }
+
+  .minmax_line {
+    background-color: #aaa;
+  }
+
+  .minmax_selLine, .minmax_minValue, .minmax_maxValue {
+    color: #fff;
+    background-color: #48c;
+  }
+
+  .minmax_minSlider, .minmax_maxSlider {
+    border: 1px solid #000;
+    background-color: #888;
+  }
+
+  #historyInfo div {
+    border: 1px solid #000;
+    background-color: #fff;
+  }
+
+  .multiInput > ul li:not(:first-child) {
+    border: 1px solid #000;
+  }
+
+  .multiInput > div > div {
+    background-color: #fff;
+  }
+
+  .multiInput > div > div ul {
+    border: 0 1px 1px 1px solid #000;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html, body {
+    color: #fff;
+    background-color: #000;
+    --historyBack: #444;
+  }
+
+  .prettyTable thead th {
+    border-bottom: 1px solid #fff;
+  }
+
+  .prettyTable tbody tr:nth-child(even) {
+    background-color: #333;
+  }
+
+  .prettyTable tbody tr:hover {
+    background-color: #440;
+  }
+
+  .prettyTable tbody tr.selected {
+    background-color: #442;
+  }
+
+  #perPage select {
+    border: 1px solid #444;
+    color: #fff;
+  }
+
+  #details {
+    background-color: #444;
+    border: 1px solid #888;
+  }
+
+  .minmax_line {
+    background-color: #aaa;
+  }
+
+  .minmax_selLine, .minmax_minValue, .minmax_maxValue {
+    color: #000;
+    background-color: #48c;
+  }
+
+  .minmax_minSlider, .minmax_maxSlider {
+    border: 1px solid #fff;
+    background-color: #666;
+  }
+
+  #historyInfo div {
+    border: 1px solid #fff;
+    background-color: #000;
+  }
+
+  .multiInput > ul li:not(:first-child) {
+    border: 1px solid #fff;
+  }
+
+  .multiInput > div > div {
+    background-color: #000;
+  }
+
+  .multiInput > div > div ul {
+    border: 0 1px 1px 1px solid #fff;
+  }
 }

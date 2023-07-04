@@ -127,18 +127,18 @@ export default ({history, width, height}: {history: History[], width: number, he
 			<defs>
 				<path id="point" d="M0,5 L5,0 0,-5 -5,0 Z" />
 			</defs>
-			<rect x={paddingXL} y={paddingYT} width={width - paddingXL - paddingXR} height={height - paddingYT - paddingYB} fill="#ddd" stroke="#000" />
+			<rect x={paddingXL} y={paddingYT} width={width - paddingXL - paddingXR} height={height - paddingYT - paddingYB} style={{"fill": "var(--historyBack, #ddd)"}} stroke="currentColor" />
 			{
 				Array.from({length: 4}, (_, n) => <line x1={paddingXL} x2={width - paddingXR} y1={paddingYT + yScale * (n + 1) * maxSize / 5} y2={paddingYT + yScale * (n + 1) * maxSize / 5} stroke="#fff" />)
 			}
 			{
-				Array.from({length: 6}, (_, n) => <text x={paddingXL - 3} y={paddingYT + yScale * n * maxSize / 5 + 5} fill="#000" text-anchor="end"><title>{formatNumber(maxSize * (5 - n) / 5) + " Bytes"}</title>{formatBytes(maxSize * (5 - n) / 5)}</text>)
+				Array.from({length: 6}, (_, n) => <text x={paddingXL - 3} y={paddingYT + yScale * n * maxSize / 5 + 5} fill="currentColor" text-anchor="end"><title>{formatNumber(maxSize * (5 - n) / 5) + " Bytes"}</title>{formatBytes(maxSize * (5 - n) / 5)}</text>)
 			}
 			{
 				Array.from({length: 4}, (_, n) => <line x1={paddingXL + xScale * (n + 1) * dateDiff / 5} x2={paddingXL + xScale * (n + 1) * dateDiff / 5} y1={paddingYT} y2={height - paddingYB} stroke="#fff" />)
 			}
 			{
-				Array.from({length: 6}, (_, n) => <text x={paddingXL + xScale * n * dateDiff / 5} y={height - paddingYB + 15} fill="#000" text-anchor={n === 0 ? "start" : n === 5 ? "end" : "middle"}>{formatDate(minDate + dateDiff * n / 5)}</text>)
+				Array.from({length: 6}, (_, n) => <text x={paddingXL + xScale * n * dateDiff / 5} y={height - paddingYB + 15} fill="currentColor" text-anchor={n === 0 ? "start" : n === 5 ? "end" : "middle"}>{formatDate(minDate + dateDiff * n / 5)}</text>)
 			}
 			<path d={quotaPath} stroke="#00c9cf" fill="none" />
 			<path d={`M${paddingXL + (latestDate - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale} L${paddingXL + (projectDate - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale}`} stroke="#00c9cf" fill="none" stroke-width="3" stroke-dasharray="3" />
@@ -149,10 +149,10 @@ export default ({history, width, height}: {history: History[], width: number, he
 			{
 				y === latestHistory.QuotaSize ? <path d="M5,5 L-5,-5 M-5,5 L5,-5" stroke="#f00" stroke-width={2} transform={`translate(${paddingXL + (x - minDate) * xScale} ${paddingYT + maxY - y * yScale})`} onMouseOver={() => setInfoBox(infoBoxes.length -1)} onMouseOut={() => setInfoBox(-1)} /> : []
 			}
-			<rect x={width - 70} y={paddingYT + 10} width={65} height={43} stroke="#000" fill="none" />
-			<rect x={width - 65} y={paddingYT + 15} width={10} height={10} stroke="#000" fill="#00c9cf" />
+			<rect x={width - 70} y={paddingYT + 10} width={65} height={43} stroke="currentColor" fill="none" />
+			<rect x={width - 65} y={paddingYT + 15} width={10} height={10} stroke="currentColor" fill="#00c9cf" />
 			<text x={width - 47} y={paddingYT + 25} fill="currentColor">Quota</text>
-			<rect x={width - 65} y={paddingYT + 35} width={10} height={10} stroke="#000" fill="#fb8c80" />
+			<rect x={width - 65} y={paddingYT + 35} width={10} height={10} stroke="currentColor" fill="#fb8c80" />
 			<text x={width - 47} y={paddingYT + 45} fill="currentColor">Usage</text>
 		</svg>
 	</>
