@@ -105,7 +105,9 @@ export default ({history, width, height}: {history: History[], width: number, he
 	let x = projectDate,
 	y = m * projectDate + c;
 
-	if (y < 0) {
+	if (latestHistory.UsageSize > latestHistory.QuotaSize) {
+		y = -Infinity;
+	} else if (y < 0) {
 		x = -c / m;
 		y = 0;
 	} else if (y > latestHistory.QuotaSize) {
