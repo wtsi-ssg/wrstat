@@ -31,7 +31,6 @@ fileTypes = [
 ] as const,
 stringSort = new Intl.Collator().compare,
 sorters = [
-	(_a: SubDir, _b: SubDir) => 0,
 	(a: SubDir, b: SubDir) => stringSort(a.SubDir, b.SubDir),
 	(a: SubDir, b: SubDir) => a.NumFiles - b.NumFiles,
 	(a: SubDir, b: SubDir) => a.SizeFiles - b.SizeFiles,
@@ -60,13 +59,13 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 		{
 			title: "Path",
 			key: "SubDir",
-			sortFn: sorters[1],
+			sortFn: sorters[0],
 			formatter: (subdir: string) => pathJoin(path, subdir)
 		},
 		{
 			title: "Number of Files",
 			key: "NumFiles",
-			sortFn: sorters[2],
+			sortFn: sorters[1],
 			startReverse: true,
 			formatter: formatNumber
 		},
@@ -74,7 +73,7 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 			title: "Size",
 			key: "SizeFiles",
 			extra: size => ({title: formatNumber(size) + " Bytes"}),
-			sortFn: sorters[3],
+			sortFn: sorters[2],
 			startReverse: true,
 			formatter: formatBytes
 		},
@@ -82,7 +81,7 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 			title: "Last Modified (days)",
 			key: "LastModified",
 			extra: title => ({title}),
-			sortFn: sorters[4],
+			sortFn: sorters[3],
 			startReverse: true,
 			formatter: asDaysAgo
 		},

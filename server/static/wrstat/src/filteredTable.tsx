@@ -9,7 +9,6 @@ import Table, {fitlerTableRows} from './table';
 
 const stringSort = new Intl.Collator().compare,
 sorters = [
-	(_a: Usage, _b: Usage) => 0,
 	(a: Usage, b: Usage) => a.Owner === "" ? 1 : b.Owner === "" ? -1 : stringSort(a.Owner, b.Owner) || stringSort(a.BaseDir, b.BaseDir),
 	(a: Usage, b: Usage) => stringSort(a.Name, b.Name) || stringSort(a.BaseDir, b.BaseDir),
 	(a: Usage, b: Usage) => stringSort(a.BaseDir, b.BaseDir) || stringSort(a.Name, b.Name),
@@ -23,7 +22,6 @@ sorters = [
 	(a: Usage, b: Usage) => stringSort(a.status ?? "", b.status ?? "") || stringSort(a.BaseDir, b.BaseDir),
 ],
 reverseSorters = [
-	null,
 	(a: Usage, b: Usage) => a.Owner === "" ? 1 : b.Owner === "" ? -1 : sorters[1](b, a),
 	null,
 	null,
@@ -107,24 +105,24 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 				{
 					title: "PI",
 					key: "Owner",
-					sortFn: sorters[1],
-					reverseFn: reverseSorters[1],
+					sortFn: sorters[0],
+					reverseFn: reverseSorters[0],
 				},
 				{
 					title: filter.byUser ? "User" : "Group",
 					key: "Name",
-					sortFn: sorters[2]
+					sortFn: sorters[1]
 				},
 				{
 					title: "Path",
 					key: "BaseDir",
-					sortFn: sorters[3]
+					sortFn: sorters[2]
 				},
 				{
 					title: "Space Used",
 					key: "UsageSize",
 					extra: used => ({title: formatNumber(used) + " Bytes"}),
-					sortFn: sorters[4],
+					sortFn: sorters[3],
 					startReverse: true,
 					formatter: formatBytes
 				},
@@ -132,37 +130,37 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					title: "Space Quota",
 					key: "QuotaSize",
 					extra: quota => ({title: formatNumber(quota) + " Bytes"}),
-					sortFn: sorters[5],
+					sortFn: sorters[4],
 					startReverse: true,
 					formatter: formatBytes
 				},
 				{
 					title: "Space Usage (%)",
 					key: "percentSize",
-					sortFn: sorters[6],
-					reverseFn: reverseSorters[6],
+					sortFn: sorters[5],
+					reverseFn: reverseSorters[5],
 					startReverse: true,
 					formatter: (p: number | undefined) => p ? formatNumber(p) : ""
 				},
 				{
 					title: "Num. Files",
 					key: "UsageInodes",
-					sortFn: sorters[7],
+					sortFn: sorters[6],
 					startReverse: true,
 					formatter: formatNumber
 				},
 				{
 					title: "Max Files",
 					key: "QuotaInodes",
-					sortFn: sorters[8],
+					sortFn: sorters[7],
 					startReverse: true,
 					formatter: formatNumber
 				},
 				{
 					title: "File Usage (%)",
 					key: "percentSize",
-					sortFn: sorters[9],
-					reverseFn: reverseSorters[9],
+					sortFn: sorters[8],
+					reverseFn: reverseSorters[8],
 					startReverse: true,
 					formatter: (p: number | undefined) => p ? formatNumber(p) : ""
 				},
@@ -170,7 +168,7 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					title: "Last Modified (days)",
 					key: "Mtime",
 					extra: title => ({title}),
-					sortFn: sorters[10],
+					sortFn: sorters[9],
 					formatter: asDaysAgo
 				},
 				{
