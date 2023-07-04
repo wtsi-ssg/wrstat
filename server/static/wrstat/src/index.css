@@ -342,3 +342,56 @@ summary {
 .treeFilter > select {
   grid-column: 2 / span 2;
 }
+
+.age_2years {
+  background-color: rgba(215, 48, 39, 0.75)
+}
+
+.age_1year {
+  background-color: rgba(244, 109, 67, 0.75);
+}
+
+.age_10months {
+  background-color: rgba(253, 174, 97, 0.75);
+}
+
+.age_8months {
+  background-color: rgba(254, 224, 139, 0.75);
+}
+
+.age_6months {
+  background-color: rgba(255, 255, 191, 0.75);
+}
+
+.age_3months {
+  background-color: rgba(217, 239, 139, 0.75);
+}
+
+.age_2months {
+  background-color: rgba(166, 217, 106, 0.75);
+}
+
+.age_1month {
+  background-color: rgba(102, 189, 99, 0.75);
+}
+
+.age_1week {
+  background-color: rgba(26, 152, 80, 0.75);
+}
+
+#treeKey {
+  margin-top: 1em;
+  font: 12px sans-serif;
+}
+
+#treeKey caption {
+  padding-bottom: 5px;
+  text-align: left;
+}
+
+#treeKey span {
+  background-color: #007DC1;
+  padding: 5px;
+  border-radius: 8px;
+  margin-right: 0.5em;
+}

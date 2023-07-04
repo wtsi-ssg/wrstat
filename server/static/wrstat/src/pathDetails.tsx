@@ -171,6 +171,25 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 		<Treemap table={treeMapData} width={treeWidth} height={500} onmouseout={() => setChildDetails(dirDetails)} />
 		<TreeDetails details={childDetails} />
+		<table id="treeKey">
+			<caption>
+				<span>Colour Key</span>
+				Greatest time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
+			</caption>
+			<tbody>
+				<tr>
+					<td className="age_2years">&gt; 2 years</td>
+					<td className="age_1year">&gt; 1 year</td>
+					<td className="age_10months">&gt; 10 months</td>
+					<td className="age_8months">&gt; 8 months</td>
+					<td className="age_6months">&gt; 6 months</td>
+					<td className="age_3months">&gt; 3 months</td>
+					<td className="age_2months">&gt; 2 months</td>
+					<td className="age_1month">&gt; 1 month</td>
+					<td className="age_1week">&lt; 1 month</td>
+				</tr>
+			</tbody>
+		</table>
 		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
 		<HistoryGraph history={history} width={960} height={500} />
 	</>
