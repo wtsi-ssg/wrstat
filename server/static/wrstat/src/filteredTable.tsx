@@ -22,21 +22,20 @@ sorters = [
 	(a: Usage, b: Usage) => new Date(b.Mtime).valueOf() - new Date(a.Mtime).valueOf() || stringSort(a.BaseDir, b.BaseDir),
 	(a: Usage, b: Usage) => stringSort(a.status ?? "", b.status ?? "") || stringSort(a.BaseDir, b.BaseDir),
 ],
-reverse = (fn: (a: Usage, b: Usage) => number) => (a: Usage, b: Usage) => fn(b, a),
 reverseSorters = [
-	sorters[0],
+	null,
 	(a: Usage, b: Usage) => a.Owner === "" ? 1 : b.Owner === "" ? -1 : sorters[1](b, a),
-	reverse(sorters[2]),
-	reverse(sorters[3]),
-	reverse(sorters[4]),
-	reverse(sorters[5]),
+	null,
+	null,
+	null,
+	null,
 	(a: Usage, b: Usage) => !a.QuotaSize ? 1 : !b.QuotaSize ? -1 : sorters[6](b, a),
-	reverse(sorters[7]),
-	reverse(sorters[8]),
+	null,
+	null,
 	(a: Usage, b: Usage) => !a.QuotaInodes ? 1 : !b.QuotaInodes ? -1 : sorters[9](b, a),
-	reverse(sorters[10]),
-	reverse(sorters[11])
-];
+	null,
+	null,
+] as const;
 
 export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /*, history: Map<string, History[]>*/}) => {
 	const [selectedDir, setSelectedDir] = useState(""),
