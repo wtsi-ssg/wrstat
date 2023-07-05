@@ -1,18 +1,20 @@
 import {useState, type CSSProperties} from "react";
 import Pagination from "./pagination";
 
-type Column<T> = { [K in Extract<keyof T, string>]-?: {
-	title: string;
-	key: K;
-	extra?: (data: T[K], row: T) => Record<string, any>;
-	formatter?: (data: T[K], row: T) => JSX.Element | string;
-	sortFn?: (a: T, b: T) => number;
-	reverseFn?: (a: T, b: T) => number;
-	startReverse?: boolean;
-}}[Extract<keyof T, string>];
+type Column<T> = {
+	[K in Extract<keyof T, string>]-?: {
+		title: string;
+		key: K;
+		extra?: (data: T[K], row: T) => Record<string, any>;
+		formatter?: (data: T[K], row: T) => JSX.Element | string;
+		sortFn?: (a: T, b: T) => number;
+		reverseFn?: (a: T, b: T) => number;
+		startReverse?: boolean;
+	}
+}[Extract<keyof T, string>];
 
 type Filter<T> = {
-	[K in keyof T]?: T[K][];
+	[K in keyof T]?: T[K] extends string ? T[K][] : T[K] extends number ? {min: number, max: number} : never;
 }
 
 type Params<T> = {
@@ -52,6 +54,10 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 					if (toFilter.length && !toFilter.includes(row[f])) {
 						continue Filter;
 					}
+				} else {
+					if (row[f] < toFilter.min || row[f] > toFilter.max) {
+						continue Filter;
+					}
 				}
 			}	
 		}
@@ -69,7 +75,7 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 	rows = fitlerTableRows(table, filter);
 
 	if (sortBy >= 0) {
-		rows.sort(getSorter(cols[sortBy], sortReverse))
+		rows.sort(getSorter(cols[sortBy], sortReverse));
 	}
 
 	return <>
