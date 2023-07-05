@@ -19,7 +19,7 @@ export default ({data, width, height, logX = false, logY = false}: {data: Data[]
 	const paddingXL = 80,
 	paddingXR = 10,
 	paddingYT = 10,
-	paddingYB = 70,
+	paddingYB = 65,
 	innerPadding = 10,
 	graphWidth = width - paddingXL - paddingXR - 2 * innerPadding,
 	graphHeight = height - paddingYT - paddingYB - 2 * innerPadding,
@@ -49,7 +49,7 @@ export default ({data, width, height, logX = false, logY = false}: {data: Data[]
 
 	return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
 		<defs>
-			<circle id="marker" r="2" fill="currentColor" fillOpacity={0.5} />
+			<circle id="marker" r="2" fill="currentColor" fillOpacity="0.25" />
 		</defs>
 		<rect x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{"fill": "var(--historyBack, #ddd)"}} stroke="currentColor" />
 		{
@@ -67,5 +67,6 @@ export default ({data, width, height, logX = false, logY = false}: {data: Data[]
 		{
 			data.map(d => <use href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} />)
 		}
+		<text x={paddingXL + (width - paddingXL - paddingXR) / 2} y={height - 5} textAnchor="middle">Last Modified (Days)</text>
 	</svg>
 }
