@@ -75,7 +75,10 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 		window.addEventListener("mouseup", mouseup, {"once": true});
 	};
 
-	useEffect(() => setHighlightCoords(null), [JSON.stringify(data)]);
+	useEffect(() => {
+		setHighlightCoords(null);
+		setLimits(-Infinity, Infinity, -Infinity, Infinity);
+	}, [JSON.stringify(data)]);
 
 	let maxSize = -Infinity,
 	maxDate = -Infinity;
