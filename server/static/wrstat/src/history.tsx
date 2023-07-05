@@ -51,7 +51,7 @@ export default ({history, width, height}: {history: History[], width: number, he
 	const paddingXL = 80,
 	paddingXR = 80,
 	paddingYT = 10,
-	paddingYB = 40,
+	paddingYB = 70,
 	dateDiff = maxDate - minDate,
 	xScale = (width - paddingXL - paddingXR) / dateDiff,
 	yScale = (height - paddingYT - paddingYB) / maxSize,
@@ -138,7 +138,7 @@ export default ({history, width, height}: {history: History[], width: number, he
 				Array.from({length: 4}, (_, n) => <line x1={paddingXL + xScale * (n + 1) * dateDiff / 5} x2={paddingXL + xScale * (n + 1) * dateDiff / 5} y1={paddingYT} y2={height - paddingYB} stroke="#fff" />)
 			}
 			{
-				Array.from({length: 6}, (_, n) => <text x={paddingXL + xScale * n * dateDiff / 5} y={height - paddingYB + 15} fill="currentColor" text-anchor={n === 0 ? "start" : n === 5 ? "end" : "middle"}>{formatDate(minDate + dateDiff * n / 5)}</text>)
+				Array.from({length: 6}, (_, n) => <text transform={`translate(${paddingXL + xScale * n * dateDiff / 5} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" text-anchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)
 			}
 			<path d={quotaPath} stroke="#00c9cf" fill="none" />
 			<path d={`M${paddingXL + (latestDate - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale} L${paddingXL + (projectDate - minDate) * xScale},${paddingYT + maxY - latestHistory.QuotaSize * yScale}`} stroke="#00c9cf" fill="none" stroke-width="3" stroke-dasharray="3" />
