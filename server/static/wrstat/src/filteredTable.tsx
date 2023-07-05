@@ -1,7 +1,7 @@
 import type {History, TreeFilter, Usage} from './rpc';
 import {useState, type ChangeEvent, useEffect} from "react";
 import {downloadGroups, downloadUsers} from './download';
-import {asDaysAgoStr, formatBytes, formatNumber} from './format';
+import {asDaysAgo, asDaysAgoStr, formatBytes, formatNumber} from './format';
 import PathDetails from './pathDetails';
 import fillQuotaSoon from './trend';
 import RPC from './rpc';
@@ -68,7 +68,13 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 	},
 	rowFilter = {
 		Name: filter.name,
-		Owner: filter.owner
+		Owner: filter.owner,
+		UsageSize: filter.size,
+		Mtime: (mtime: string) => {
+			const daysAgo = asDaysAgo(mtime);
+
+			return daysAgo >= filter.daysAgo.min && daysAgo <= filter.daysAgo.max;
+		}
 	};
 
 	useEffect(() => {

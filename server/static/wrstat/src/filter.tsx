@@ -1,5 +1,5 @@
 import type {Usage} from "./rpc";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import FilteredTable from "./filteredTable";
 import MultiSelect from "./multiselect";
 import Scatter from "./scatter";
@@ -13,7 +13,19 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 	[boms, setBOMs] = useState<string[]>([]),
 	[owners, setOwners] = useState<string[]>([]),
 	[scaleSize, setScaleSize] = useState(false),
-	[scaleDays, setScaleDays] = useState(false);
+	[scaleDays, setScaleDays] = useState(false),
+	[minSize, setMinSize] = useState(0),
+	[maxSize, setMaxSize] = useState(Infinity),
+	[minDaysAgo, setMinDaysAgo] = useState(0),
+	[maxDaysAgo, setMaxDaysAgo] = useState(Infinity);
+
+	useEffect(() => {
+		setMinSize(0);
+		setMaxSize(Infinity);
+		setMinDaysAgo(0);
+		setMaxDaysAgo(Infinity);
+	}, [byUser]);
+
 
 	return <>
 		<div className="treeFilter">
@@ -21,7 +33,12 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 			<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
 			<label htmlFor="byUser">By User</label>
 			<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
-			<Scatter width={900} height={400} data={byUser ? userUsage : groupUsage} logX={scaleDays} logY={scaleSize} />
+			<Scatter width={900} height={400} data={byUser ? userUsage : groupUsage} logX={scaleDays} logY={scaleSize} setLimits={(minS, maxS, minD, maxD) => {
+				setMinSize(minS);
+				setMaxSize(maxS);
+				setMinDaysAgo(minD);
+				setMaxDaysAgo(maxD);
+			}} />
 			{!byUser ? [] : <>
 				<label htmlFor="username">Username</label>
 				<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setUsers} />
@@ -41,6 +58,6 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 			<label htmlFor="scaleDays">Log Days</label>
 			<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 		</div>
-		<FilteredTable usage={byUser ? userUsage : groupUsage} byUser={byUser} name={byUser ? users : groups.concat(boms.map(b => areas[b]).flat())} owner={owners} /*history={history}*/ />
+		<FilteredTable usage={byUser ? userUsage : groupUsage} byUser={byUser} name={byUser ? users : groups.concat(boms.map(b => areas[b]).flat())} owner={owners} size={{min: minSize, max: maxSize}} daysAgo={{min: minDaysAgo, max: maxDaysAgo}} /*history={history}*/ />
 	</>
 }

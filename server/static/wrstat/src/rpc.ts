@@ -27,6 +27,8 @@ export type TreeFilter = {
 	byUser: boolean;
 	name: string[];
 	owner: string[];
+	size: {min: number; max: number};
+	daysAgo: {min: number; max: number};
 }
 
 export type TreeData = {
