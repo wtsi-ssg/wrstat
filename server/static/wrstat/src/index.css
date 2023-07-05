@@ -312,6 +312,10 @@ summary {
   grid-row: 1 / 7;
 }
 
+#scatter use {
+  cursor: crosshair;
+}
+
 .treeFilter > select {
   grid-column: 2 / span 2;
 }

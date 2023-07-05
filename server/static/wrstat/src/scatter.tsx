@@ -15,7 +15,7 @@ const minDaysAgo = (date: string) => {
 	return daysAgo;
 }
 
-export default ({data, width, height, logX = false, logY = false}: {data: Data[], width: number, height: number, logX?: boolean, logY?: boolean}) => {
+export default ({data, width, height, logX = false, logY = false, setLimits}: {data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void}) => {
 	const paddingXL = 80,
 	paddingXR = 10,
 	paddingYT = 10,
@@ -65,7 +65,7 @@ export default ({data, width, height, logX = false, logY = false}: {data: Data[]
 			Array.from({length: 6}, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(maxDate * n / 5, false)} ${sizeToY(0, false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{Math.round(logX ? Math.pow(Math.E, Math.log(1 + maxDate) * n / 5) - 1 : maxDate * n / 5)}</text>)
 		}
 		{
-			data.map(d => <use href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} />)
+			data.map(d => <use href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => setLimits(d.UsageSize, d.UsageSize, asDaysAgo(d.Mtime), asDaysAgo(d.Mtime))} />)
 		}
 		<text x={paddingXL + (width - paddingXL - paddingXR) / 2} y={height - 5} textAnchor="middle">Last Modified (Days)</text>
 	</svg>
