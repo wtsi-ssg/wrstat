@@ -75,7 +75,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 		window.addEventListener("mouseup", mouseup, {"once": true});
 	};
 
-	useEffect(() => setHighlightCoords(null), [data]);
+	useEffect(() => setHighlightCoords(null), [JSON.stringify(data)]);
 
 	let maxSize = -Infinity,
 	maxDate = -Infinity;
@@ -100,7 +100,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 
 	return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseDown={onDrag}>
 		<defs>
-			<circle id="marker" r="2" fill="currentColor" fillOpacity="0.25" />
+			<circle id="marker" r="2" fill="currentColor" fillOpacity="0.4" />
 		</defs>
 		<rect x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{"fill": "var(--historyBack, #ddd)"}} stroke="currentColor" />
 		{
@@ -124,6 +124,6 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 				setHighlightCoords(null);
 			}} />)
 		}
-		<text x={paddingXL + (width - paddingXL - paddingXR) / 2} y={height - 5} textAnchor="middle">Last Modified (Days)</text>
+		<text x={paddingXL + (width - paddingXL - paddingXR) / 2} y={height - 5} textAnchor="middle" fill="currentColor">Last Modified (Days)</text>
 	</svg>
 }

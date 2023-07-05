@@ -1,11 +1,11 @@
-import type {History, TreeFilter, Usage} from './rpc';
+import type {History, Usage} from './rpc';
 import {useState, type ChangeEvent, useEffect} from "react";
 import {downloadGroups, downloadUsers} from './download';
-import {asDaysAgo, asDaysAgoStr, formatBytes, formatNumber} from './format';
+import {asDaysAgoStr, formatBytes, formatNumber} from './format';
 import PathDetails from './pathDetails';
 import fillQuotaSoon from './trend';
 import RPC from './rpc';
-import Table, {fitlerTableRows} from './table';
+import Table, {type Filter, fitlerTableRows} from './table';
 
 const stringSort = new Intl.Collator().compare,
 sorters = [
@@ -35,13 +35,13 @@ reverseSorters = [
 	null,
 ] as const;
 
-export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /*, history: Map<string, History[]>*/}) => {
+export default ({usage, byUser /*, history*/, ...filter}: Filter<Usage> & {byUser: boolean; usage: Usage[] /*, history: Map<string, History[]>*/}) => {
 	const [selectedDir, setSelectedDir] = useState(""),
     [selectedID, setSelectedID] = useState(-1),
 	[perPage, setPerPage] = useState(10),
 	[history, setHistory] = useState<Map<string, History[]>>(new Map()),
 	statusFormatter = (_: any, row: Usage) => {
-		if (filter.byUser) {
+		if (byUser) {
 			return "";
 		}
 
@@ -65,22 +65,12 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 		})
 
 		return "Unknown";
-	},
-	rowFilter = {
-		Name: filter.name,
-		Owner: filter.owner,
-		UsageSize: filter.size,
-		Mtime: (mtime: string) => {
-			const daysAgo = asDaysAgo(mtime);
-
-			return daysAgo >= filter.daysAgo.min && daysAgo <= filter.daysAgo.max;
-		}
 	};
 
 	useEffect(() => {
 		setSelectedDir("");
 		setSelectedID(-1);
-	}, [filter.byUser]);
+	}, [byUser]);
 
 	return <>
 		<details open>
@@ -94,18 +84,18 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 				</select>
 			Entries</span>
 			<Table rowExtra={row => {
-				if ((filter.byUser ? row.UID : row.GID) === selectedID && row.BaseDir === selectedDir) {
+				if ((byUser ? row.UID : row.GID) === selectedID && row.BaseDir === selectedDir) {
 					return {"class": "selected"};
 				}
 
 				return {};
-			}} perPage={perPage} filter={rowFilter} onRowClick={(data: Usage) => {
-				if (selectedDir === data.BaseDir && selectedID === (filter.byUser ? data.UID : data.GID)) {
+			}} perPage={perPage} filter={filter} onRowClick={(data: Usage) => {
+				if (selectedDir === data.BaseDir && selectedID === (byUser ? data.UID : data.GID)) {
 						setSelectedDir("");
 						setSelectedID(-1);
 				} else {
 						setSelectedDir(data.BaseDir);
-						setSelectedID(filter.byUser ? data.UID : data.GID);
+						setSelectedID(byUser ? data.UID : data.GID);
 				}
 			}} cols={[
 				{
@@ -115,7 +105,7 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					reverseFn: reverseSorters[0],
 				},
 				{
-					title: filter.byUser ? "User" : "Group",
+					title: byUser ? "User" : "Group",
 					key: "Name",
 					sortFn: sorters[1]
 				},
@@ -182,10 +172,10 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					key: "status",
 					formatter: statusFormatter
 				}
-			]} table={usage} className={"prettyTable usageTable " + (filter.byUser ? "user" : "group")} />
-			<button className="download" onClick={() => (filter.byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
-			<button className="download" onClick={() => (filter.byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, rowFilter))}>Download Filtered Table</button>
+			]} table={usage} className={"prettyTable usageTable " + (byUser ? "user" : "group")} />
+			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
+			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 		</details>
-		<PathDetails id={selectedID} path={selectedDir} isUser={filter.byUser} filter={filter} history={filter.byUser ? [] : history.get(selectedID + "|" + selectedDir) ?? []} />
+		<PathDetails id={selectedID} path={selectedDir} isUser={byUser} filter={{name: filter.Name as string[], owner: filter.Owner as string[]}} history={byUser ? [] : history.get(selectedID + "|" + selectedDir) ?? []} />
 	</>
 }
