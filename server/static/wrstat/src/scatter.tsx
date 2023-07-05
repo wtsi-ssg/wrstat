@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import {asDaysAgo, formatBytes} from "./format";
+import {asDaysAgo, formatBytes, formatNumber} from "./format";
 
 type Data = {
 	UsageSize: number;
@@ -116,7 +116,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 			Array.from({length: 6}, (_, n) => <line x1={dateToX(maxDate * n / 5, false)} x2={dateToX(maxDate * n / 5, false)} y1={sizeToY(maxSize, false) - innerPadding} y2={sizeToY(0, false) + innerPadding} stroke="#fff" />)
 		}
 		{
-			Array.from({length: 6}, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(maxDate * n / 5, false)} ${sizeToY(0, false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{Math.round(logX ? Math.pow(Math.E, Math.log(1 + maxDate) * n / 5) - 1 : maxDate * n / 5)}</text>)
+			Array.from({length: 6}, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(maxDate * n / 5, false)} ${sizeToY(0, false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatNumber(Math.round(logX ? Math.pow(Math.E, Math.log(1 + maxDate) * n / 5) - 1 : maxDate * n / 5))}</text>)
 		}
 		{
 			highlightCoords ? <rect x={highlightCoords[0] + paddingXL} width={highlightCoords[1]} y={highlightCoords[2] + paddingYT} height={highlightCoords[3]} fill="#9cf" fillOpacity={0.25} stroke="#036" strokeOpacity={0.25} /> : []
