@@ -163,6 +163,7 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 			<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
 			<br />
 			<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
+			<br />
 			<label htmlFor="sinceAccess">Time Since Access</label>
 			<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
 				{timesSinceAccess.map(([l, t]) => <option selected={sinceLastAccess === t} value={t}>{l}</option>)}

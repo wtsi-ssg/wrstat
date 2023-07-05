@@ -1,6 +1,6 @@
 import type {SubDir} from "./rpc";
 import {useEffect, useState} from "react";
-import {asDaysAgo, formatBytes, formatNumber} from './format';
+import {asDaysAgoStr, formatBytes, formatNumber} from './format';
 import Table from './table';
 import RPC from './rpc';
 
@@ -83,7 +83,7 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 			extra: title => ({title}),
 			sortFn: sorters[3],
 			startReverse: true,
-			formatter: asDaysAgo
+			formatter: asDaysAgoStr
 		},
 		{
 			title: "File Usage",

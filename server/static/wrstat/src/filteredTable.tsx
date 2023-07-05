@@ -1,7 +1,7 @@
 import type {History, TreeFilter, Usage} from './rpc';
 import {useState, type ChangeEvent, useEffect} from "react";
 import {downloadGroups, downloadUsers} from './download';
-import {asDaysAgo, formatBytes, formatNumber} from './format';
+import {asDaysAgoStr, formatBytes, formatNumber} from './format';
 import PathDetails from './pathDetails';
 import fillQuotaSoon from './trend';
 import RPC from './rpc';
@@ -169,7 +169,7 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					key: "Mtime",
 					extra: title => ({title}),
 					sortFn: sorters[9],
-					formatter: asDaysAgo
+					formatter: asDaysAgoStr
 				},
 				{
 					title: "Status",
