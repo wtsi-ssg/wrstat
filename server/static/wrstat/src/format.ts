@@ -15,7 +15,7 @@ byteUnits = [
 	"QiB",
 ] as const;
 
-export const formatNumber = (n: number) => isNaN(n) ? "" : numberFormatter.format(n),
+export const formatNumber = (n: number) => numberFormatter.format(n),
 formatBytes = (n: number) => {
 	let unit = 0;
 	

@@ -140,7 +140,7 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					sortFn: sorters[5],
 					reverseFn: reverseSorters[5],
 					startReverse: true,
-					formatter: (p: number | undefined) => p ? formatNumber(p) : ""
+					formatter: (p: number | undefined) => p ? formatNumber(p) : "0"
 				},
 				{
 					title: "Num. Files",
@@ -162,7 +162,7 @@ export default ({usage /*, history*/, ...filter}: TreeFilter & {usage: Usage[] /
 					sortFn: sorters[8],
 					reverseFn: reverseSorters[8],
 					startReverse: true,
-					formatter: (p: number | undefined) => p ? formatNumber(p) : ""
+					formatter: (p: number | undefined) => p ? formatNumber(p) : "0"
 				},
 				{
 					title: "Last Modified (days)",
