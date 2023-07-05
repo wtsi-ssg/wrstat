@@ -14,7 +14,7 @@ type Column<T> = {
 }[Extract<keyof T, string>];
 
 type Filter<T> = {
-	[K in keyof T]?: T[K] extends string ? T[K][] : T[K] extends number ? {min: number, max: number} : never;
+	[K in keyof T]?: ((col: T[K]) => boolean) | (T[K] extends string ? T[K][] : T[K] extends number ? {min: number, max: number} : never);
 }
 
 type Params<T> = {
@@ -49,17 +49,19 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 	for (const row of table) {
 		for (const f of filterKeys) {
 			const toFilter = filter[f];
-			if (toFilter) {
-				if (toFilter instanceof Array) {
-					if (toFilter.length && !toFilter.includes(row[f])) {
-						continue Filter;
-					}
-				} else {
-					if (row[f] < toFilter.min || row[f] > toFilter.max) {
-						continue Filter;
-					}
+			if (toFilter instanceof Array) {
+				if (toFilter.length && !toFilter.includes(row[f])) {
+					continue Filter;
 				}
-			}	
+			} else if (toFilter instanceof Function) {
+				if (!toFilter(row[f])) {
+					continue Filter;
+				}
+			} else if (toFilter) {
+				if (row[f] < toFilter.min || row[f] > toFilter.max) {
+					continue Filter;
+				}
+			}
 		}
 
 		toRet.push(row);
