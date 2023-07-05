@@ -1,3 +1,4 @@
+import {useEffect, useState} from "react";
 import {asDaysAgo, formatBytes} from "./format";
 
 type Data = {
@@ -13,7 +14,7 @@ const minDaysAgo = (date: string) => {
 	}
 
 	return daysAgo;
-}
+};
 
 export default ({data, width, height, logX = false, logY = false, setLimits}: {data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void}) => {
 	const paddingXL = 80,
@@ -24,7 +25,57 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 	graphWidth = width - paddingXL - paddingXR - 2 * innerPadding,
 	graphHeight = height - paddingYT - paddingYB - 2 * innerPadding,
 	sizeToY = (size: number, log = logY) => paddingYT + innerPadding + (log ? graphHeight - graphHeight * (Math.log(1 + size) / Math.log(1 + maxSize)) : yScale * (maxSize - size)),
-	dateToX = (days: number, log = logX) => paddingXL + innerPadding + (log ? graphWidth * (Math.log(1 + days)  / Math.log(1 + maxDate)) : xScale * days);
+	dateToX = (days: number, log = logX) => paddingXL + innerPadding + (log ? graphWidth * (Math.log(1 + days)  / Math.log(1 + maxDate)) : xScale * days),
+	[highlightCoords, setHighlightCoords] = useState<null | [number, number, number, number]>(null),
+	onDrag = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+		const coords = e.currentTarget.getBoundingClientRect(),
+		graphLeft = coords.left + paddingXL,
+		graphTop = coords.top + paddingYT,
+		startX = e.clientX - graphLeft,
+		startY = e.clientY - graphTop;
+
+		if (startX < 0 || startX > graphWidth + 2 * innerPadding || startY < 0 || startY > graphHeight + 2 * innerPadding) {
+			return;
+		}
+
+		const mousemove = (e: MouseEvent) => {
+			const x = e.clientX - graphLeft,
+			y = e.clientY - graphTop,
+			minX = Math.max(Math.min(x, startX), 0),
+			maxX = Math.min(Math.max(x, startX), graphWidth + 2 * innerPadding),
+			minY = Math.max(Math.min(y, startY), 0),
+			maxY = Math.min(Math.max(y, startY), graphHeight + 2 * innerPadding);
+
+			if (minX === maxX || minY === maxY) {
+				setHighlightCoords(null);
+				setLimits(-Infinity, Infinity, -Infinity, Infinity);
+
+				return;
+			}
+
+			setHighlightCoords([minX, maxX - minX, minY, maxY - minY]);
+
+			const fMinX = Math.max(0, minX - innerPadding) / graphWidth,
+			fMaxX = Math.min(graphWidth, maxX - innerPadding) / graphWidth,
+			fMinY = Math.max(0, graphHeight - maxY + innerPadding) / graphHeight,
+			fMaxY = Math.min(graphHeight, graphHeight - minY + innerPadding) / graphHeight,
+			minDaysAgo = Math.round(logX ? Math.pow(Math.E, fMinX * Math.log(1 + maxDate)) - 1 : fMinX * maxDate),
+			maxDaysAgo = Math.round(logX ? Math.pow(Math.E, fMaxX * Math.log(1 + maxDate)) - 1 : fMaxX * maxDate),
+			minFileSize = Math.round(logY ? Math.pow(Math.E, fMinY * Math.log(1 + maxSize)) - 1 : fMinY * maxSize),
+			maxFileSize = Math.round(logY ? Math.pow(Math.E, fMaxY * Math.log(1 + maxSize)) - 1 : fMaxY * maxSize);
+
+			setLimits(minFileSize, maxFileSize, minDaysAgo, maxDaysAgo);
+		},
+		mouseup = (e: MouseEvent) => {
+			mousemove(e);
+			window.removeEventListener("mousemove", mousemove);
+		};
+
+		window.addEventListener("mousemove", mousemove);
+		window.addEventListener("mouseup", mouseup, {"once": true});
+	};
+
+	useEffect(() => setHighlightCoords(null), [data]);
 
 	let maxSize = -Infinity,
 	maxDate = -Infinity;
@@ -47,7 +98,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 	const xScale = graphWidth / maxDate,
 	yScale = graphHeight / maxSize;
 
-	return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+	return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseDown={onDrag}>
 		<defs>
 			<circle id="marker" r="2" fill="currentColor" fillOpacity="0.25" />
 		</defs>
@@ -65,7 +116,13 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 			Array.from({length: 6}, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(maxDate * n / 5, false)} ${sizeToY(0, false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{Math.round(logX ? Math.pow(Math.E, Math.log(1 + maxDate) * n / 5) - 1 : maxDate * n / 5)}</text>)
 		}
 		{
-			data.map(d => <use href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => setLimits(d.UsageSize, d.UsageSize, asDaysAgo(d.Mtime), asDaysAgo(d.Mtime))} />)
+			highlightCoords ? <rect x={highlightCoords[0] + paddingXL} width={highlightCoords[1]} y={highlightCoords[2] + paddingYT} height={highlightCoords[3]} fill="#9cf" fillOpacity={0.25} stroke="#036" strokeOpacity={0.25} /> : []
+		}
+		{
+			data.map(d => <use href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => {
+				setLimits(d.UsageSize, d.UsageSize, asDaysAgo(d.Mtime), asDaysAgo(d.Mtime));
+				setHighlightCoords(null);
+			}} />)
 		}
 		<text x={paddingXL + (width - paddingXL - paddingXR) / 2} y={height - 5} textAnchor="middle">Last Modified (Days)</text>
 	</svg>
