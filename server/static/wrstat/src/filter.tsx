@@ -41,36 +41,39 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 	}, [byUser]);
 
 	return <>
-		<div className="treeFilter">
-			<label htmlFor="byGroup">By Group</label>
-			<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
-			<label htmlFor="byUser">By User</label>
-			<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
-			<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, ofilter)} logX={scaleDays} logY={scaleSize} setLimits={(minS, maxS, minD, maxD) => {
-				setMinSize(minS);
-				setMaxSize(maxS);
-				setMinDaysAgo(minD);
-				setMaxDaysAgo(maxD);
-			}} />
-			{!byUser ? [] : <>
-				<label htmlFor="username">Username</label>
-				<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setUsers} />
-			</>}
-			{byUser ? [] : <>
-				<label htmlFor="owners">Owners</label>
-				<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
+		<details open>
+			<summary>Filter</summary>
+			<div className="treeFilter" >
+				<label htmlFor="byGroup">By Group</label>
+				<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
+				<label htmlFor="byUser">By User</label>
+				<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
+				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, ofilter)} logX={scaleDays} logY={scaleSize} setLimits={(minS, maxS, minD, maxD) => {
+					setMinSize(minS);
+					setMaxSize(maxS);
+					setMinDaysAgo(minD);
+					setMaxDaysAgo(maxD);
+				}} />
+				{!byUser ? [] : <>
+					<label htmlFor="username">Username</label>
+					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setUsers} />
+				</>}
+				{byUser ? [] : <>
+					<label htmlFor="owners">Owners</label>
+					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
 
-				<label htmlFor="unix">Unix Group</label>
-				<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setGroups} />
+					<label htmlFor="unix">Unix Group</label>
+					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setGroups} />
 
-				<label htmlFor="bom">Group Areas</label>
-				<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
-			</>}
-			<label htmlFor="scaleSize">Log Size</label>
-			<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
-			<label htmlFor="scaleDays">Log Days</label>
-			<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
-		</div>
+					<label htmlFor="bom">Group Areas</label>
+					<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
+				</>}
+				<label htmlFor="scaleSize">Log Size</label>
+				<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
+				<label htmlFor="scaleDays">Log Days</label>
+				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
+			</div>
+		</details>
 		<FilteredTable usage={byUser ? userUsage : groupUsage} byUser={byUser} {...filter} /*history={history}*/ />
 	</>
 }
