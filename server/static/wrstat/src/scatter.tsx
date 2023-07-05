@@ -78,7 +78,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 	useEffect(() => {
 		setHighlightCoords(null);
 		setLimits(-Infinity, Infinity, -Infinity, Infinity);
-	}, [JSON.stringify(data)]);
+	}, [JSON.stringify(data), logX, logY]);
 
 	let maxSize = -Infinity,
 	maxDate = -Infinity;
