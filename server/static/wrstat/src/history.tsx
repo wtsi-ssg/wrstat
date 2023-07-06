@@ -127,7 +127,7 @@ export default ({history, width, height}: {history: History[], width: number, he
 			<defs>
 				<path id="point" d="M0,5 L5,0 0,-5 -5,0 Z" />
 			</defs>
-			<rect x={paddingXL} y={paddingYT} width={width - paddingXL - paddingXR} height={height - paddingYT - paddingYB} style={{"fill": "var(--historyBack, #ddd)"}} stroke="currentColor" />
+			<rect x={paddingXL} y={paddingYT} width={width - paddingXL - paddingXR} height={height - paddingYT - paddingYB} style={{"fill": "var(--graphBack, #ddd)"}} stroke="currentColor" />
 			{
 				Array.from({length: 4}, (_, n) => <line x1={paddingXL} x2={width - paddingXR} y1={paddingYT + yScale * (n + 1) * maxSize / 5} y2={paddingYT + yScale * (n + 1) * maxSize / 5} stroke="#fff" />)
 			}

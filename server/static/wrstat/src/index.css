@@ -312,6 +312,10 @@ summary {
 }
 
 #scatter use {
+  cursor: pointer;
+}
+
+#scatter .back {
   cursor: crosshair;
 }
 
@@ -440,7 +444,7 @@ summary {
   html, body {
     color: #fff;
     background-color: #000;
-    --historyBack: #444;
+    --graphBack: #444;
   }
 
   .prettyTable thead th {

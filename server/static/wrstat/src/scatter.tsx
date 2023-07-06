@@ -103,9 +103,9 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 
 	return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseDown={onDrag}>
 		<defs>
-			<circle id="marker" r="2" fill="currentColor" fillOpacity="0.4" />
+			<circle id="marker" r="2.5" fill="currentColor" fillOpacity="0.4" />
 		</defs>
-		<rect x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{"fill": "var(--historyBack, #ddd)"}} stroke="currentColor" />
+		<rect className="back" x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{"fill": "var(--graphBack, #ddd)"}} stroke="currentColor" />
 		{
 			Array.from({length: 6}, (_, n) => <line x1={dateToX(0, false) - innerPadding} x2={dateToX(maxDate, false) + innerPadding} y1={sizeToY(maxSize * n / 5, false)} y2={sizeToY(maxSize * n / 5, false)} stroke="#fff" />)
 		}
@@ -119,7 +119,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 			Array.from({length: 6}, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(maxDate * n / 5, false)} ${sizeToY(0, false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatNumber(Math.round(logX ? Math.pow(Math.E, Math.log(1 + maxDate) * n / 5) - 1 : maxDate * n / 5))}</text>)
 		}
 		{
-			highlightCoords ? <rect x={highlightCoords[0] + paddingXL} width={highlightCoords[1]} y={highlightCoords[2] + paddingYT} height={highlightCoords[3]} fill="#9cf" fillOpacity={0.25} stroke="#036" strokeOpacity={0.25} /> : []
+			highlightCoords ? <rect className="back" x={highlightCoords[0] + paddingXL} width={highlightCoords[1]} y={highlightCoords[2] + paddingYT} height={highlightCoords[3]} fill="#9cf" fillOpacity={0.25} stroke="#036" strokeOpacity={0.25} /> : []
 		}
 		{
 			data.map(d => <use href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => {
