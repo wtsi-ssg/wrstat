@@ -1,11 +1,12 @@
 import type {History, Usage} from './rpc';
-import {useState, type ChangeEvent, useEffect} from "react";
+import {useState, type ChangeEvent} from "react";
 import {downloadGroups, downloadUsers} from './download';
 import {asDaysAgoStr, formatBytes, formatNumber} from './format';
 import PathDetails from './pathDetails';
-import fillQuotaSoon from './trend';
+import {useSavedState, useEffectAfterInit} from './state';
 import RPC from './rpc';
 import Table, {type Filter, fitlerTableRows} from './table';
+import fillQuotaSoon from './trend';
 
 const stringSort = new Intl.Collator().compare,
 sorters = [
@@ -36,8 +37,8 @@ reverseSorters = [
 ] as const;
 
 export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUser: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number>}) => {
-	const [selectedDir, setSelectedDir] = useState(""),
-    [selectedID, setSelectedID] = useState(-1),
+	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
+    [selectedID, setSelectedID] = useSavedState("selectedID", -1),
 	[perPage, setPerPage] = useState(10),
 	[history, setHistory] = useState<Map<string, History[]>>(new Map()),
 	statusFormatter = (_: any, row: Usage) => {
@@ -69,7 +70,7 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 	userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
 	groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname]));
 
-	useEffect(() => {
+	useEffectAfterInit(() => {
 		setSelectedDir("");
 		setSelectedID(-1);
 	}, [byUser]);

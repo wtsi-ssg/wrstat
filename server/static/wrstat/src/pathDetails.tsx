@@ -3,11 +3,12 @@ import type {Entry} from './treemap';
 import {useEffect, useState} from "react"
 import HistoryGraph from './history';
 import MultiSelect from './multiselect';
-import SubDirs from './subdirs';
-import Treemap from "./treemap";
-import TreeDetails from "./treedetails";
 import rpc from "./rpc";
+import {useSavedState, useEffectAfterInit} from './state';
+import SubDirs from './subdirs';
 import type {Filter} from './table';
+import TreeDetails from "./treedetails";
+import Treemap from "./treemap";
 
 const colours = [
 	"rgba(215, 48, 39, 0.75)",
@@ -111,20 +112,20 @@ timesSinceAccess = [
 ] as const;
 
 export default ({id, path, isUser, history, filter, users, groups}: {id: number, path: string; isUser: boolean; history: History[], filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string>}) => {
-	const [treePath, setTreePath] = useState(path || "/"),
+	const [treePath, setTreePath] = useSavedState("treePath", path || "/"),
 	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 	[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
 	[childDetails, setChildDetails] = useState<Child | null>(null),
 	[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
-	[useMTime, setUseMTime] = useState(false),
-	[useCount, setUseCount] = useState(false),
+	[useMTime, setUseMTime] = useSavedState("useMTime", false),
+	[useCount, setUseCount] = useSavedState("useCount", false),
 	[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
-	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
-	[sinceLastAccess, setSinceLastAccess] = useState(0)
+	[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("fileTypes", []),
+	[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0)
 
-	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())));
+	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
-	useEffect(() => setTreePath(path || "/"), [path]);
+	useEffectAfterInit(() => setTreePath(path || "/"), [path]);
 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))

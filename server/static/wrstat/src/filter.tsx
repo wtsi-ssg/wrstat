@@ -1,25 +1,26 @@
 import type {Usage} from "./rpc";
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import FilteredTable from "./filteredTable";
 import {asDaysAgo} from "./format";
 import MultiSelect from "./multiselect";
 import Scatter from "./scatter";
+import {useSavedState, useEffectAfterInit} from './state';
 import {fitlerTableRows} from "./table";
 
 const stringSort = new Intl.Collator().compare;
 
 export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]>}) => {
-	const [byUser, setBy] = useState(false),
+	const [byUser, setBy] = useSavedState("byUser", false),
 	[users, setUsers] = useState<number[]>([]),
 	[groups, setGroups] = useState<number[]>([]),
-	[boms, setBOMs] = useState<string[]>([]),
-	[owners, setOwners] = useState<string[]>([]),
-	[scaleSize, setScaleSize] = useState(false),
-	[scaleDays, setScaleDays] = useState(false),
-	[minSize, setMinSize] = useState(0),
-	[maxSize, setMaxSize] = useState(Infinity),
-	[minDaysAgo, setMinDaysAgo] = useState(0),
-	[maxDaysAgo, setMaxDaysAgo] = useState(Infinity),
+	[boms, setBOMs] = useSavedState<string[]>("boms", []),
+	[owners, setOwners] = useSavedState<string[]>("owners", []),
+	[scaleSize, setScaleSize] = useSavedState("scaleSize", false),
+	[scaleDays, setScaleDays] = useSavedState("scaleDays", false),
+	[minSize, setMinSize] = useSavedState("minSize", 0),
+	[maxSize, setMaxSize] = useSavedState("maxSize", Infinity),
+	[minDaysAgo, setMinDaysAgo] = useSavedState("minDaysAgo", 0),
+	[maxDaysAgo, setMaxDaysAgo] = useSavedState("maxDaysAgo", Infinity),
 	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
 	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
 	allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()),
@@ -39,7 +40,7 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 		}
 	}, ofilter);
 
-	useEffect(() => {
+	useEffectAfterInit(() => {
 		setMinSize(0);
 		setMaxSize(Infinity);
 		setMinDaysAgo(0);

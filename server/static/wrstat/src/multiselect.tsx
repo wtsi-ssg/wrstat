@@ -1,10 +1,13 @@
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
+import {useSavedState} from "./state";
 
 export default ({id, list, onchange}: {id: string; list: readonly string[]; onchange: (list: string[]) => void}) => {
-	const [selected, setSelected] = useState(new Set<string>()),
+	const [selected, setSelected] = useSavedState(id + "Multi", new Set<string>()),
 	filterRef = useRef<HTMLInputElement>(null),
 	[filter, setFilter] = useState(""),
 	filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase()));
+
+	useEffect(() => onchange(Array.from(selected)), []);
 
 	return <div className="multiInput">
 		<ul>
