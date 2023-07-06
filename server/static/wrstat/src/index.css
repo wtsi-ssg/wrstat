@@ -2,12 +2,11 @@
   float: right;
 }
 
-.usageTable.user tr > :nth-child(1),
-.usageTable.user tr > :nth-child(5),
 .usageTable.user tr > :nth-child(6),
+.usageTable.user tr > :nth-child(7),
 .usageTable.user tr > :nth-child(8),
-.usageTable.user tr > :nth-child(9),
-.usageTable.user tr > :nth-child(11) {
+.usageTable.user tr > :nth-child(10),
+.usageTable.user tr > :nth-child(12) {
   display: none;
 }
 
@@ -55,12 +54,12 @@ rect + text {
 }
 
 .prettyTable thead th:not(:last-child) {
-  cursor: pointer;
   padding-right: 1em;
 }
 
-.prettyTable thead th:not(:last-child):hover {
+.prettyTable thead th.sortable:hover {
     text-decoration: underline;
+    cursor: pointer;
 }
 
 .prettyTable .sort {
@@ -82,15 +81,15 @@ rect + text {
   padding: 0.5em 0.25em;
 }
 
-.usageTable tbody td:nth-child(4), .usageTable tbody td:nth-child(5), .usageTable tbody td:nth-child(6),
-.usageTable tbody td:nth-child(7), .usageTable tbody td:nth-child(8), .usageTable tbody td:nth-child(9),
-.usageTable tbody td:nth-child(10),
+.usageTable tbody td:nth-child(5), .usageTable tbody td:nth-child(6), .usageTable tbody td:nth-child(7),
+.usageTable tbody td:nth-child(8), .usageTable tbody td:nth-child(9), .usageTable tbody td:nth-child(10),
+.usageTable tbody td:nth-child(11),
 .historyTable tbody td:nth-child(2), .historyTable tbody td:nth-child(3), .historyTable tbody td:nth-child(4) {
   text-align: right;
   padding-right: 1em;
 }
 
-.usageTable tbody td:nth-child(11) {
+.usageTable tbody td:nth-child(12) {
   text-align: center;
   white-space: nowrap;
 }
@@ -309,7 +308,7 @@ summary {
 
 #scatter {
   grid-column: 5;
-  grid-row: 1 / 7;
+  grid-row: 1 / 8;
 }
 
 #scatter use {

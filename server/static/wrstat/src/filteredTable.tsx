@@ -35,7 +35,7 @@ reverseSorters = [
 	null,
 ] as const;
 
-export default ({usage, byUser /*, history*/, ...filter}: Filter<Usage> & {byUser: boolean; usage: Usage[] /*, history: Map<string, History[]>*/}) => {
+export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUser: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number>}) => {
 	const [selectedDir, setSelectedDir] = useState(""),
     [selectedID, setSelectedID] = useState(-1),
 	[perPage, setPerPage] = useState(10),
@@ -65,7 +65,9 @@ export default ({usage, byUser /*, history*/, ...filter}: Filter<Usage> & {byUse
 		})
 
 		return "Unknown";
-	};
+	},
+	userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
+	groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname]));
 
 	useEffect(() => {
 		setSelectedDir("");
@@ -90,12 +92,14 @@ export default ({usage, byUser /*, history*/, ...filter}: Filter<Usage> & {byUse
 
 				return {};
 			}} perPage={perPage} filter={filter} onRowClick={(data: Usage) => {
-				if (selectedDir === data.BaseDir && selectedID === (byUser ? data.UID : data.GID)) {
+				const id = byUser ? data.UID : data.GID;
+
+				if (selectedDir === data.BaseDir && selectedID === id) {
 						setSelectedDir("");
 						setSelectedID(-1);
 				} else {
 						setSelectedDir(data.BaseDir);
-						setSelectedID(byUser ? data.UID : data.GID);
+						setSelectedID(id);
 				}
 			}} cols={[
 				{
@@ -108,6 +112,11 @@ export default ({usage, byUser /*, history*/, ...filter}: Filter<Usage> & {byUse
 					title: byUser ? "User" : "Group",
 					key: "Name",
 					sortFn: sorters[1]
+				},
+				{
+					title: byUser ? "Groups" : "Users",
+					key: byUser ? "GIDs" : "UIDs",
+					formatter: (ids: number[]) => ids.map(id => (byUser ? groupMap : userMap).get(id) ?? "").filter(n => n).join(", "),
 				},
 				{
 					title: "Path",
@@ -176,6 +185,6 @@ export default ({usage, byUser /*, history*/, ...filter}: Filter<Usage> & {byUse
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 		</details>
-		<PathDetails id={selectedID} path={selectedDir} isUser={byUser} filter={{name: filter.Name as string[], owner: filter.Owner as string[]}} history={byUser ? [] : history.get(selectedID + "|" + selectedDir) ?? []} />
+		<PathDetails id={selectedID} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} filter={filter} history={byUser ? [] : history.get(selectedID + "|" + selectedDir) ?? []} />
 	</>
 }

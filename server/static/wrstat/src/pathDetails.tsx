@@ -1,4 +1,4 @@
-import type {Child, History, TreeFilter} from './rpc';
+import type {Child, History, Usage} from './rpc';
 import type {Entry} from './treemap';
 import {useEffect, useState} from "react"
 import HistoryGraph from './history';
@@ -7,6 +7,7 @@ import SubDirs from './subdirs';
 import Treemap from "./treemap";
 import TreeDetails from "./treedetails";
 import rpc from "./rpc";
+import type {Filter} from './table';
 
 const colours = [
 	"rgba(215, 48, 39, 0.75)",
@@ -86,10 +87,11 @@ determineTreeWidth = () => {
 
 	return width * mul;
 },
-makeFilter = (path: string, isUser: boolean, filter: TreeFilter, filetypes: string[]) => {
+makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => {
 	return {
 		path,
-		[isUser ? "users" : "groups"]: filter.name.join(","),
+		"users": (filter.UID as null | number[])?.map(uid => users.get(uid) ?? -1).join(",") ?? "",
+		"groups": (filter.GID as null | number[])?.map(gid => groups.get(gid) ?? -1).join(",") ?? "",
 		"types": filetypes.join(",")
 	};
 },
@@ -108,7 +110,7 @@ timesSinceAccess = [
 	["> 2 years", 730]
 ] as const;
 
-export default ({id, path, isUser, history, filter}: {id: number, path: string; isUser: boolean; history: History[], filter: TreeFilter}) => {
+export default ({id, path, isUser, history, filter, users, groups}: {id: number, path: string; isUser: boolean; history: History[], filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string>}) => {
 	const [treePath, setTreePath] = useState(path || "/"),
 	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 	[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
@@ -118,14 +120,14 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 	[useCount, setUseCount] = useState(false),
 	[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
 	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
-	[sinceLastAccess, setSinceLastAccess] = useState(0);
+	[sinceLastAccess, setSinceLastAccess] = useState(0)
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())));
 
 	useEffect(() => setTreePath(path || "/"), [path]);
 
 	useEffect(() => {
-		rpc.getChildren(makeFilter(treePath, isUser, filter, filterFileTypes))
+		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
 		.then(children => {
 			const entries: Entry[] = [],
 			since = new Date(children.timestamp).valueOf() - sinceLastAccess * 86_400_000;
@@ -138,7 +140,7 @@ export default ({id, path, isUser, history, filter}: {id: number, path: string; 
 				entries.push({
 					name: child.name,
 					value: useCount ? child.count : child.size,
-					backgroundColour: colourFromAge(+(new Date(useMTime ? child.timestamp : child.atime))),
+					backgroundColour: colourFromAge(+(new Date(useMTime ? child.mtime : child.atime))),
 					onclick: child.has_children ? () => setTreePath(child.path) : undefined,
 					onmouseover: () => setChildDetails(child)
 				});

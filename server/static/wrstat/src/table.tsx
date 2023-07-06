@@ -14,7 +14,7 @@ type Column<T> = {
 }[Extract<keyof T, string>];
 
 export type Filter<T> = {
-	[K in keyof T]?: ((col: T[K]) => boolean) | (T[K] extends string ? T[K][] : T[K] extends number ? {min: number, max: number} : never);
+	[K in keyof T]?: ((col: T[K]) => boolean) | T[K][] | (T[K] extends number ? {min: number, max: number} : never);
 }
 
 type Params<T> = {

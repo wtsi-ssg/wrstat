@@ -8,10 +8,10 @@ import {fitlerTableRows} from "./table";
 
 const stringSort = new Intl.Collator().compare;
 
-export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> /*, history: Map<string, History[]>*/}) => {
+export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]>}) => {
 	const [byUser, setBy] = useState(false),
-	[users, setUsers] = useState<string[]>([]),
-	[groups, setGroups] = useState<string[]>([]),
+	[users, setUsers] = useState<number[]>([]),
+	[groups, setGroups] = useState<number[]>([]),
 	[boms, setBOMs] = useState<string[]>([]),
 	[owners, setOwners] = useState<string[]>([]),
 	[scaleSize, setScaleSize] = useState(false),
@@ -20,8 +20,11 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 	[maxSize, setMaxSize] = useState(Infinity),
 	[minDaysAgo, setMinDaysAgo] = useState(0),
 	[maxDaysAgo, setMaxDaysAgo] = useState(Infinity),
+	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
+	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
 	ofilter = {
-		Name: byUser ? users : groups.concat(boms.map(b => areas[b]).flat()),
+		UID: users,
+		GID: groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()),
 		Owner: byUser ? [] : owners
 	},
 	filter = Object.assign({
@@ -43,7 +46,7 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 	return <>
 		<details open>
 			<summary>Filter</summary>
-			<div className="treeFilter" >
+			<div className="treeFilter">
 				<label htmlFor="byGroup">By Group</label>
 				<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
 				<label htmlFor="byUser">By User</label>
@@ -54,26 +57,20 @@ export default ({groupUsage, userUsage, areas /*, history*/}: {groupUsage: Usage
 					setMinDaysAgo(minD);
 					setMaxDaysAgo(maxD);
 				}} />
-				{!byUser ? [] : <>
-					<label htmlFor="username">Username</label>
-					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setUsers} />
-				</>}
-				{byUser ? [] : <>
-					<label htmlFor="owners">Owners</label>
-					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
-
-					<label htmlFor="unix">Unix Group</label>
-					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={setGroups} />
-
-					<label htmlFor="bom">Group Areas</label>
-					<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
-				</>}
+				<label htmlFor="username">Username</label>
+				<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userMap.get(username) ?? -1))} />
+				<label htmlFor="unix">Unix Group</label>
+				<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={groups => setGroups(groups.map(groupname => groupMap.get(groupname) ?? -1))} />
+				<label htmlFor="owners">Owners</label>
+				<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
+				<label htmlFor="bom">Group Areas</label>
+				<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
 				<label htmlFor="scaleSize">Log Size</label>
 				<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
 				<label htmlFor="scaleDays">Log Days</label>
 				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 			</div>
 		</details>
-		<FilteredTable usage={byUser ? userUsage : groupUsage} byUser={byUser} {...filter} /*history={history}*/ />
+		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...filter} />
 	</>
 }

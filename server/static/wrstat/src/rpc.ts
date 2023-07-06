@@ -14,6 +14,7 @@ export type Child = {
 	count: number;
 	size: number;
 	atime: string;
+	mtime: string;
 	users: string[];
 	groups: string[];
 	filetypes: string[];
@@ -21,11 +22,6 @@ export type Child = {
 	children: Child[];
 	timestamp: string;
 	areas: Record<string, string[]>;
-}
-
-export type TreeFilter = {
-	name: string[];
-	owner: string[];
 }
 
 export type TreeData = {
@@ -36,6 +32,8 @@ export type TreeData = {
 export type Usage = {
 	GID: number;
 	UID: number;
+	GIDs: number[];
+	UIDs: number[];
 	Name: string;
 	Owner: string;
 	BaseDir: string;
