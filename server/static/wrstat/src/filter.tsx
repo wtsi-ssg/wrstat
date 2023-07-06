@@ -22,9 +22,12 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	[maxDaysAgo, setMaxDaysAgo] = useState(Infinity),
 	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
 	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
+	allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()),
 	ofilter = {
-		UID: users,
-		GID: groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()),
+		UID: byUser ? users : undefined,
+		GID: byUser ? undefined : allGroups,
+		UIDs: byUser ? undefined : (uids: number[]) => users.length ? uids.some(uid => users.includes(uid)) : true,
+		GIDs: byUser ? (gids: number[]) => allGroups.length ? gids.some(gid => allGroups.includes(gid)) : true : undefined,
 		Owner: byUser ? [] : owners
 	},
 	filter = Object.assign({
