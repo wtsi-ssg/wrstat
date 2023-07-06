@@ -1,14 +1,20 @@
-import type {Usage} from './rpc';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
-import Auth from './auth';
+import Auth, {logout} from './auth';
+import Filter from './filter';
 import ready from './ready';
 import RPC from './rpc';
 
-ready.then(Auth)
-.then(username => (username ? Promise.all([
+const auth = ready.then(Auth);
+
+auth.catch(() => ReactDOM.createRoot(document.body).render(
+	<React.StrictMode>
+		<div><form action="/login"><input type="submit" value="Login" /></form></div>
+	</React.StrictMode>
+));
+
+auth.then(username => Promise.all([
 	RPC.getGroupUsageData().then(gud => {
 		for (const d of gud) {
 			d.percentSize = Math.round(10000 * d.UsageSize / d.QuotaSize) / 100;
@@ -19,41 +25,12 @@ ready.then(Auth)
 	}),
 	RPC.getUserUsageData(),
 	RPC.getChildren({path: "/"})
-]) : Promise.resolve<[Usage[], Usage[], {areas: Record<string, string[]>}]>([[], [], {areas: {}}]))
-/*
-	.then(([groupUsage, userUsage]) => {
-		return new Promise<[Usage[], Usage[], Map<string, History[]>]>(successFn => {
-			const history = new Map<string, History[]>();
-
-			let q = Promise.resolve();
-
-			for (const g of groupUsage) {
-				q = q.then(() => RPC.getBasedirsHistory(g.GID, g.BaseDir))
-				.then(h => {
-					history.set(g.Name + "|" + g.BaseDir, h);
-
-					switch(fillQuotaSoon(h)) {
-					case false:
-						g.status = "OK";
-
-						break;
-					case true:
-						g.status = "Not OK";
-
-						break;
-					default:
-						g.status = "Unknown"
-					}
-				})
-			}
-
-			q.then(() => successFn([groupUsage, userUsage, history]));
-		});
-	})
-	*/
-	.then(([groupUsage, userUsage, {areas} /*, history*/]) => ReactDOM.createRoot(document.body).render(
-		<React.StrictMode>
-			<App username={username} groupUsage={groupUsage} userUsage={userUsage} areas={areas} /*history={history}*/ />
-		</React.StrictMode>
-	))
-)
+])
+.then(([groupUsage, userUsage, {areas}]) => ReactDOM.createRoot(document.body).render(
+	<React.StrictMode>
+		<div>
+			<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
+			<Filter groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
+		</div>
+	</React.StrictMode>
+)));

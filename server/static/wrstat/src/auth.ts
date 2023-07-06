@@ -1,3 +1,7 @@
+const usernameFromJWT = (jwt: string): string => {
+	return JSON.parse(atob(jwt.split('.')[1])).Username;
+};
+
 export const getCookie = (toFind: string) => {
 	for (const cookie of document.cookie.split("; ")) {
 		const [name, value] = cookie.split("=");
@@ -9,20 +13,26 @@ export const getCookie = (toFind: string) => {
 
 	return "";
 },
-usernameFromJWT = (jwt: string): string => {
-	return JSON.parse(atob(jwt.split('.')[1])).Username;
-}
+logout = () => {
+	const expireNow = "=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/";
 
-export default async () => {
+	for (const cookie of document.cookie.split("; ")) {
+	  document.cookie = cookie.split("=")[0] + expireNow;
+	}
+
+	window.location.reload();
+};
+
+export default () => {
 	const jwt = getCookie("jwt");
 
 	if (jwt) {
-		return usernameFromJWT(jwt);
+		return Promise.resolve(usernameFromJWT(jwt));
 	}
 
 	const oidc = getCookie("okta-hosted-login-session-store");
 	if (!oidc) {
-		return "";
+		return Promise.reject();
 	}
 
 	return new Promise<string>((successFn, errorFn) => {
