@@ -80,6 +80,13 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 		setLimits(-Infinity, Infinity, -Infinity, Infinity);
 	}, [JSON.stringify(data), logX, logY]);
 
+	if (data.length === 0) {
+		return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+			<rect width={width} height={height} stroke="currentColor" fill="none" />
+			<text fill="currentColor" textAnchor="middle" x={width / 2} y={height/2}>—No Data—</text>
+		</svg>
+	}
+
 	let maxSize = -Infinity,
 	maxDate = -Infinity;
 
