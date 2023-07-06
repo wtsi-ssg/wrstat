@@ -239,36 +239,37 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					So(err, ShouldBeNil)
 					So(len(mainTable), ShouldEqual, 6)
 					So(mainTable, ShouldResemble, []*Usage{
-						{Name: "group1", GID: 1, Owner: "Alan", BaseDir: projectA, UsageSize: halfGig + twoGig,
-							QuotaSize: 4000000000, UsageInodes: 2, QuotaInodes: 20, Mtime: expectedMtimeA},
-						{Name: groupName, GID: uint32(gid), BaseDir: projectD, UsageSize: 15, QuotaSize: 0,
-							UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime},
-						{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40,
-							QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-						{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30,
-							QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-						{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20,
-							QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
-						{Name: "77777", GID: 77777, Owner: "", BaseDir: user2, UsageSize: 60, QuotaSize: 500,
-							UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime},
+						{Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
+							UsageSize: halfGig + twoGig, QuotaSize: 4000000000, UsageInodes: 2,
+							QuotaInodes: 20, Mtime: expectedMtimeA},
+						{Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
+							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime},
+						{Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
+							UsageSize: 40, QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
+						{Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB123,
+							UsageSize: 30, QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
+						{Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB125,
+							UsageSize: 20, QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
+						{Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2, UsageSize: 60,
+							QuotaSize: 500, UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime},
 					})
 
 					mainTable, err = bdr.UserUsage()
 					fixUsageTimes(mainTable)
 
 					expectedMainTable := []*Usage{
-						{Name: "user101", UID: 101, BaseDir: projectA, UsageSize: halfGig + twoGig,
-							UsageInodes: 2, Mtime: expectedMtimeA},
-						{Name: "user102", UID: 102, BaseDir: projectB123, UsageSize: 30, UsageInodes: 1,
-							Mtime: expectedMtime},
-						{Name: "user102", UID: 102, BaseDir: projectB125, UsageSize: 20, UsageInodes: 1,
-							Mtime: expectedMtime},
-						{Name: "user102", UID: 102, BaseDir: user2, UsageSize: 60, UsageInodes: 1,
-							Mtime: expectedMtime},
-						{Name: "88888", UID: 88888, BaseDir: projectC1, UsageSize: 40, UsageInodes: 1,
-							Mtime: expectedMtime},
-						{Name: username, UID: uint32(uid), BaseDir: projectD, UsageSize: 15, UsageInodes: 5,
-							Mtime: expectedMtime},
+						{Name: "user101", UID: 101, GIDs: []uint32{1}, BaseDir: projectA,
+							UsageSize: halfGig + twoGig, UsageInodes: 2, Mtime: expectedMtimeA},
+						{Name: "user102", UID: 102, GIDs: []uint32{2}, BaseDir: projectB123, UsageSize: 30,
+							UsageInodes: 1, Mtime: expectedMtime},
+						{Name: "user102", UID: 102, GIDs: []uint32{2}, BaseDir: projectB125, UsageSize: 20,
+							UsageInodes: 1, Mtime: expectedMtime},
+						{Name: "user102", UID: 102, GIDs: []uint32{77777}, BaseDir: user2, UsageSize: 60,
+							UsageInodes: 1, Mtime: expectedMtime},
+						{Name: "88888", UID: 88888, GIDs: []uint32{2}, BaseDir: projectC1, UsageSize: 40,
+							UsageInodes: 1, Mtime: expectedMtime},
+						{Name: username, UID: uint32(uid), GIDs: []uint32{uint32(gid)}, BaseDir: projectD,
+							UsageSize: 15, UsageInodes: 5, Mtime: expectedMtime},
 					}
 
 					sort.Slice(expectedMainTable, func(i, j int) bool {
@@ -367,19 +368,23 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						So(err, ShouldBeNil)
 						So(len(mainTable), ShouldEqual, 6)
 						So(mainTable, ShouldResemble, []*Usage{
-							{Name: "group1", GID: 1, Owner: "Alan", BaseDir: projectA,
+							{Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
 								UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
 								UsageInodes: 3, QuotaInodes: 21, Mtime: expectedMtimeA},
-							{Name: groupName, GID: uint32(gid), BaseDir: projectD, UsageSize: 10, QuotaSize: 0,
-								UsageInodes: 4, QuotaInodes: 0, Mtime: expectedMtime},
-							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectC1, UsageSize: 40,
-								QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB123, UsageSize: 30,
-								QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
-							{Name: "group2", GID: 2, Owner: "Barbara", BaseDir: projectB125, UsageSize: 20,
-								QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime},
-							{Name: "77777", GID: 77777, Owner: "", BaseDir: user2, UsageSize: 60, QuotaSize: 500,
-								UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime},
+							{Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
+								UsageSize: 10, QuotaSize: 0, UsageInodes: 4, QuotaInodes: 0, Mtime: expectedMtime},
+							{Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
+								UsageSize: 40, QuotaSize: 400, UsageInodes: 1,
+								QuotaInodes: 40, Mtime: expectedMtime},
+							{Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB123,
+								UsageSize: 30, QuotaSize: 400, UsageInodes: 1,
+								QuotaInodes: 40, Mtime: expectedMtime},
+							{Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB125,
+								UsageSize: 20, QuotaSize: 300, UsageInodes: 1,
+								QuotaInodes: 30, Mtime: expectedMtime},
+							{Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2,
+								UsageSize: 60, QuotaSize: 500, UsageInodes: 1,
+								QuotaInodes: 50, Mtime: expectedMtime},
 						})
 
 						history, err := bdr.History(1, projectA)

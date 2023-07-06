@@ -57,10 +57,14 @@ const (
 // Usage holds information summarising usage by a particular GID/UID-BaseDir.
 //
 // Only one of GID or UID will be set, and Owner will always be blank when UID
-// is set.
+// is set. If GID is set, then UIDs will be set, showing which users own files
+// in the BaseDir. If UID is set, then GIDs will be set, showing which groups
+// own files in the BaseDir.
 type Usage struct {
 	GID         uint32
 	UID         uint32
+	GIDs        []uint32
+	UIDs        []uint32
 	Name        string // the group or user name
 	Owner       string
 	BaseDir     string
@@ -180,6 +184,7 @@ func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) e
 			quotaSize, quotaInode := b.quotas.Get(gid, dcs.Dir)
 			uwm := &Usage{
 				GID:         gid,
+				UIDs:        dcs.UIDs,
 				BaseDir:     dcs.Dir,
 				UsageSize:   dcs.Size,
 				QuotaSize:   quotaSize,
@@ -221,6 +226,7 @@ func (b *BaseDirs) storeUIDBaseDirs(tx *bolt.Tx, uids []uint32) error {
 		for _, dcs := range dcss {
 			uwm := &Usage{
 				UID:         uid,
+				GIDs:        dcs.GIDs,
 				BaseDir:     dcs.Dir,
 				UsageSize:   dcs.Size,
 				UsageInodes: dcs.Count,
