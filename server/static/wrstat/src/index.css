@@ -62,15 +62,20 @@ rect + text {
     cursor: pointer;
 }
 
-.prettyTable .sort {
-    background-repeat: no-repeat;
-    background-position: right 0 bottom 0;
-    background-size: 1em 1em;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M1,19 h38 l-19,-18 z' fill='%23f00' stroke='%23000' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
+.prettyTable .sortable {
+  height: 2em;
+  background-repeat: no-repeat;
+  background-position: right 0 center;
+  background-size: 1em 2em;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 82'%3E%3Cpath d='M1,23 h38 l-19,18 z' fill='%23aaa'  fill-opacity='0.25' stroke='none' stroke-linejoin='round' /%3E%3Cpath d='M1,20 h38 l-19,-18 z' fill='%23aaa' fill-opacity='0.25' stroke='none' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
 }
 
-.prettyTable .sort.reverse {
-     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 20'%3E%3Cpath d='M1,1 h38 l-19,18 z' fill='%23f00' stroke='%23000' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
+.prettyTable .sort {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 82'%3E%3Cpath d='M1,23 h38 l-19,18 z' fill='%23aaa'  fill-opacity='0.25' stroke='none' stroke-linejoin='round' /%3E%3Cpath d='M1,20 h38 l-19,-18 z' fill='%23f00' fill-opacity='1' stroke='%23000' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
+}
+
+.prettyTable .reverse {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 82'%3E%3Cpath d='M1,23 h38 l-19,18 z' fill='%23f00'  fill-opacity='1' stroke='%23000' stroke-linejoin='round' /%3E%3Cpath d='M1,20 h38 l-19,-18 z' fill='%23aaa' fill-opacity='0.25' stroke='none' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
 }
 
 .prettyTable tbody {
