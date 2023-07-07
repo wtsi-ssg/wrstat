@@ -45,21 +45,21 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 	const toRet: T[] = [],
 	filterKeys = Object.keys(filter) as (keyof Filter<T>)[];
 
-	Filter:
+	FilterLoop:
 	for (const row of table) {
 		for (const f of filterKeys) {
 			const toFilter = filter[f];
 			if (toFilter instanceof Array) {
 				if (toFilter.length && !toFilter.includes(row[f])) {
-					continue Filter;
+					continue FilterLoop;
 				}
 			} else if (toFilter instanceof Function) {
 				if (!toFilter(row[f])) {
-					continue Filter;
+					continue FilterLoop;
 				}
 			} else if (toFilter) {
 				if (row[f] < toFilter.min || row[f] > toFilter.max) {
-					continue Filter;
+					continue FilterLoop;
 				}
 			}
 		}
