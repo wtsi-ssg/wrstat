@@ -197,8 +197,12 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 			</tbody>
 		</table>
 		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath}/>
-		<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
-		<label htmlFor="countHistory">Count History</label><input type="radio" id="countHistory" checked={inodeHistory} onChange={() => setInodeHistory(true)} />
+		{
+			history.length ? <>
+				<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
+				<label htmlFor="countHistory">Count History</label><input type="radio" id="countHistory" checked={inodeHistory} onChange={() => setInodeHistory(true)} />
+			</> : <></>
+		}
 		<HistoryGraph history={history.map(h => ({Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize}))} width={960} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
 			const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
 
