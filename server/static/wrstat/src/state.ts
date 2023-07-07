@@ -1,18 +1,16 @@
 import {useEffect, useState} from "react";
 
 const state: Record<string, any> = {},
-safeValues = (_: string, v: any) => {
+isSafeValue = (v: any) => {
 	if (v === null || v === undefined) {
-		return undefined;
-	} else if (v === Infinity) {
-		return "∞";
-	} else if (v === -Infinity) {
-		return "-∞";
+		return false;
+	} else if (v === Infinity || v === -Infinity || v === 0) {
+		return false;
 	} else if (v instanceof Array && v.length === 0) {
-		return undefined;
+		return false;
 	}
 
-	return v;
+	return true;
 },
 restoreState = <T>(name: string, v: T) => {
 	const s = state[name];
@@ -33,12 +31,18 @@ setHashState = () => {
 	}
 
 	stateTO = window.setTimeout(() => {
-		const hash = encodeURI(JSON.stringify(state, safeValues));
+		let query: string[] = [];
 
-		if (hash) {
-			window.location.hash = "#" + hash;
-		} else {
-			window.location.hash = "";
+		for (const [key, value] of Object.entries(state)) {
+			if (isSafeValue(value)) {
+				query.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`);
+			}
+		}
+
+		const queryStr = query.join("&");
+
+		if (queryStr !== window.location.search) {
+			window.history.pushState(Date.now(), "", "?" + queryStr);
 		}
 		
 		stateTO = -1;
@@ -49,21 +53,9 @@ let stateTO = -1,
 inited = false,
 setInit = -1;
 
-try {
-	const v = JSON.parse(decodeURI(window.location.hash.slice(1)), (_: string, v: string) => {
-		if (v === "∞") {
-			return Infinity;
-		} else if (v === "-∞") {
-			return -Infinity;
-		}
-
-		return v;
-	});
-
-	if (v instanceof Object) {
-		Object.assign(state, v);
-	}
-} catch {}
+for (const [key, value] of new URLSearchParams(window.location.search)) {
+	state[key] = JSON.parse(value);
+}
 
 export const useSavedState = <T>(name: string, v: T) => {
 
