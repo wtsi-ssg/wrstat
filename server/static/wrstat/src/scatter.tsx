@@ -17,7 +17,7 @@ const minDaysAgo = (date: string) => {
 	return daysAgo;
 };
 
-export default ({data, width, height, logX = false, logY = false, setLimits}: {data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void}) => {
+export default ({data, width, height, logX = false, logY = false, setLimits, previewLimits}: {data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void, previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void}) => {
 	const paddingXL = 80,
 	paddingXR = 10,
 	paddingYT = 10,
@@ -39,7 +39,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 			return;
 		}
 
-		const mousemove = (e: MouseEvent) => {
+		const mousemove = (e: MouseEvent, cb = previewLimits) => {
 			const x = e.clientX - graphLeft,
 			y = e.clientY - graphTop,
 			minX = Math.max(Math.min(x, startX), 0),
@@ -49,7 +49,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 
 			if (minX === maxX || minY === maxY) {
 				setHighlightCoords(null);
-				setLimits(-Infinity, Infinity, -Infinity, Infinity);
+				cb(-Infinity, Infinity, -Infinity, Infinity);
 
 				return;
 			}
@@ -65,10 +65,10 @@ export default ({data, width, height, logX = false, logY = false, setLimits}: {d
 			minFileSize = Math.round(logY ? Math.pow(Math.E, fMinY * Math.log(1 + maxSize)) - 1 : fMinY * maxSize),
 			maxFileSize = Math.round(logY ? Math.pow(Math.E, fMaxY * Math.log(1 + maxSize)) - 1 : fMaxY * maxSize);
 
-			setLimits(minFileSize, maxFileSize, minDaysAgo, maxDaysAgo);
+			cb(minFileSize, maxFileSize, minDaysAgo, maxDaysAgo);
 		},
 		mouseup = (e: MouseEvent) => {
-			mousemove(e);
+			mousemove(e, setLimits);
 			window.removeEventListener("mousemove", mousemove);
 		};
 

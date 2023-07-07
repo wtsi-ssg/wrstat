@@ -17,10 +17,14 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	[owners, setOwners] = useSavedState<string[]>("owners", []),
 	[scaleSize, setScaleSize] = useSavedState("scaleSize", false),
 	[scaleDays, setScaleDays] = useSavedState("scaleDays", false),
-	[minSize, setMinSize] = useSavedState("minSize", -Infinity),
-	[maxSize, setMaxSize] = useSavedState("maxSize", Infinity),
-	[minDaysAgo, setMinDaysAgo] = useSavedState("minDaysAgo", -Infinity),
-	[maxDaysAgo, setMaxDaysAgo] = useSavedState("maxDaysAgo", Infinity),
+	[savedMinSize, setSavedMinSize] = useSavedState("minSize", -Infinity),
+	[savedMaxSize, setSavedMaxSize] = useSavedState("maxSize", Infinity),
+	[savedMinDaysAgo, setSavedMinDaysAgo] = useSavedState("minDaysAgo", -Infinity),
+	[savedMaxDaysAgo, setSavedMaxDaysAgo] = useSavedState("maxDaysAgo", Infinity),
+	[minSize, setMinSize] = useState(savedMinSize),
+	[maxSize, setMaxSize] = useState(savedMaxSize),
+	[minDaysAgo, setMinDaysAgo] = useState(savedMinDaysAgo),
+	[maxDaysAgo, setMaxDaysAgo] = useState(savedMaxDaysAgo),
 	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
 	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
 	allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()),
@@ -41,6 +45,10 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	}, ofilter);
 
 	useEffectAfterInit(() => {
+		setSavedMinSize(-Infinity);
+		setSavedMaxSize(Infinity);
+		setSavedMinDaysAgo(-Infinity);
+		setSavedMaxDaysAgo(Infinity);
 		setMinSize(-Infinity);
 		setMaxSize(Infinity);
 		setMinDaysAgo(-Infinity);
@@ -56,6 +64,15 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 				<label htmlFor="byUser">By User</label>
 				<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
 				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, ofilter)} logX={scaleDays} logY={scaleSize} setLimits={(minS, maxS, minD, maxD) => {
+					setSavedMinSize(minS);
+					setSavedMaxSize(maxS);
+					setSavedMinDaysAgo(minD);
+					setSavedMaxDaysAgo(maxD);
+					setMinSize(minS);
+					setMaxSize(maxS);
+					setMinDaysAgo(minD);
+					setMaxDaysAgo(maxD);
+				}} previewLimits={(minS, maxS, minD, maxD) => {
 					setMinSize(minS);
 					setMaxSize(maxS);
 					setMinDaysAgo(minD);
