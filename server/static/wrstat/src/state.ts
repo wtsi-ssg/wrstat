@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react";
 
 const state = new Map<string, any>(),
-isDefaultValue = <T>(v: T, def: T) => JSON.stringify(v) === JSON.stringify(def),
+isDefaultValue = <T>(v: T, def: T) => v === def || JSON.stringify(v) === JSON.stringify(def),
 restoreState = <T>(name: string, v: T) => {
 	const s = state.get(name);
 
@@ -22,7 +22,8 @@ setHashState = () => {
 		let query: string[] = [];
 
 		for (const [key, value] of state) {
-			if (!isDefaultValue(value, setters.get(key)?.[0])) {
+			const def = setters.get(key)?.[0];
+			if (def !== undefined && !isDefaultValue(value, def)) {
 				query.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`);
 			}
 		}
