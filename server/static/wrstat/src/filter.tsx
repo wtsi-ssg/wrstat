@@ -17,9 +17,9 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	[owners, setOwners] = useSavedState<string[]>("owners", []),
 	[scaleSize, setScaleSize] = useSavedState("scaleSize", false),
 	[scaleDays, setScaleDays] = useSavedState("scaleDays", false),
-	[minSize, setMinSize] = useSavedState("minSize", 0),
+	[minSize, setMinSize] = useSavedState("minSize", -Infinity),
 	[maxSize, setMaxSize] = useSavedState("maxSize", Infinity),
-	[minDaysAgo, setMinDaysAgo] = useSavedState("minDaysAgo", 0),
+	[minDaysAgo, setMinDaysAgo] = useSavedState("minDaysAgo", -Infinity),
 	[maxDaysAgo, setMaxDaysAgo] = useSavedState("maxDaysAgo", Infinity),
 	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
 	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
@@ -41,9 +41,9 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	}, ofilter);
 
 	useEffectAfterInit(() => {
-		setMinSize(0);
+		setMinSize(-Infinity);
 		setMaxSize(Infinity);
-		setMinDaysAgo(0);
+		setMinDaysAgo(-Infinity);
 		setMaxDaysAgo(Infinity);
 	}, [byUser]);
 
