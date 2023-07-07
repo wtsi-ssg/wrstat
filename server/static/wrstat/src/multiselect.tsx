@@ -2,9 +2,10 @@ import {useEffect, useRef, useState} from "react";
 import {useSavedState} from "./state";
 
 export default ({id, list, onchange}: {id: string; list: readonly string[]; onchange: (list: string[]) => void}) => {
-	const [selected, setSelected] = useSavedState(id + "Multi", new Set<string>()),
+	const [selected, setSelected] = useSavedState<string[]>(id + "Multi", []),
 	filterRef = useRef<HTMLInputElement>(null),
 	[filter, setFilter] = useState(""),
+	selectedSet = new Set(selected),
 	filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase()));
 
 	useEffect(() => onchange(Array.from(selected)), []);
@@ -13,9 +14,12 @@ export default ({id, list, onchange}: {id: string; list: readonly string[]; onch
 		<ul>
 			<li><button id={id} onClick={() => filterRef.current?.focus()}>+</button></li>
 			{Array.from(selected).map(e => <li onClick={() => {
-				selected.delete(e);
-				setSelected(new Set(selected));
-				onchange(Array.from(selected));
+				selectedSet.delete(e);
+
+				const selected = Array.from(selectedSet);
+
+				setSelected(selected);
+				onchange(selected);
 			}}>{e}</li>)}
 		</ul>
 		<div>
@@ -24,15 +28,17 @@ export default ({id, list, onchange}: {id: string; list: readonly string[]; onch
 				<ul tabIndex={-1}>
 					{
 						filteredList.map(e => <li>
-							<label><input type="checkbox" checked={selected.has(e)} onChange={() => {
-								if (selected.has(e)) {
-									selected.delete(e);
+							<label><input type="checkbox" checked={selectedSet.has(e)} onChange={() => {
+								if (selectedSet.has(e)) {
+									selectedSet.delete(e);
 								} else {
-									selected.add(e);
+									selectedSet.add(e);
 								}
 
-								setSelected(new Set(selected));
-								onchange(Array.from(selected));
+								const selected = Array.from(selectedSet);
+
+								setSelected(selected);
+								onchange(selected);
 							}} />{e}</label>
 						</li>)
 					}
