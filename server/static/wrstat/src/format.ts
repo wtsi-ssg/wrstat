@@ -1,4 +1,8 @@
 const numberFormatter = new Intl.NumberFormat("en-GB", {"style": "decimal"}),
+largeNumberFormatter = new Intl.NumberFormat("en-GB", {
+	"style": "decimal",
+	"notation": "compact",
+}),
 now = Date.now(),
 msInDay = 86400000,
 byteUnits = [
@@ -16,6 +20,7 @@ byteUnits = [
 ] as const;
 
 export const formatNumber = (n: number) => numberFormatter.format(n),
+formatLargeNumber = (n: number) => largeNumberFormatter.format(n),
 formatBytes = (n: number) => {
 	let unit = 0;
 	
