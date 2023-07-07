@@ -510,6 +510,6 @@ summary {
   }
 }
 
-summary, label, text {
+summary, label, text, th, .multiInput {
   user-select: none;
 }
