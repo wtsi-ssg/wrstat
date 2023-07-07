@@ -120,7 +120,7 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 	[useMTime, setUseMTime] = useSavedState("useMTime", false),
 	[useCount, setUseCount] = useSavedState("useCount", false),
 	[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
-	[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("fileTypes", []),
+	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
 	[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0)
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
