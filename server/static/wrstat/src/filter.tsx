@@ -45,6 +45,13 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	}, ofilter);
 
 	useEffectAfterInit(() => {
+		setMinSize(savedMinSize);
+		setMaxSize(savedMaxSize);
+		setMinDaysAgo(savedMinDaysAgo);
+		setMaxDaysAgo(savedMaxDaysAgo);
+	}, [savedMinDaysAgo, savedMaxDaysAgo, savedMinSize, savedMaxSize]);
+
+	useEffectAfterInit(() => {
 		setSavedMinSize(-Infinity);
 		setSavedMaxSize(Infinity);
 		setSavedMinDaysAgo(-Infinity);
@@ -63,7 +70,7 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 				<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
 				<label htmlFor="byUser">By User</label>
 				<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
-				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, ofilter)} logX={scaleDays} logY={scaleSize} setLimits={(minS, maxS, minD, maxD) => {
+				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, ofilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} setLimits={(minS, maxS, minD, maxD) => {
 					setSavedMinSize(minS);
 					setSavedMaxSize(maxS);
 					setSavedMinDaysAgo(minD);

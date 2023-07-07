@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {asDaysAgo, formatBytes, formatNumber} from "./format";
 import {useEffectAfterInit} from "./state";
 
@@ -17,7 +17,7 @@ const minDaysAgo = (date: string) => {
 	return daysAgo;
 };
 
-export default ({data, width, height, logX = false, logY = false, setLimits, previewLimits}: {data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void, previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void}) => {
+export default ({data, width, height, logX = false, logY = false, setLimits, previewLimits, minX, maxX, minY, maxY}: {data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, minX: number, maxX: number, minY: number, maxY: number, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void, previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void}) => {
 	const paddingXL = 80,
 	paddingXR = 10,
 	paddingYT = 10,
@@ -75,6 +75,15 @@ export default ({data, width, height, logX = false, logY = false, setLimits, pre
 		window.addEventListener("mousemove", mousemove);
 		window.addEventListener("mouseup", mouseup, {"once": true});
 	};
+
+	useEffect(() => {
+		const x = dateToX(minX),
+		y = sizeToY(maxY),
+		width = dateToX(maxX) - x,
+		height = sizeToY(minY) - y;
+
+		setHighlightCoords([x - paddingXL, width, y - paddingYT, height]);
+	}, [minX, minY, maxX, maxY]);
 
 	useEffectAfterInit(() => {
 		setHighlightCoords(null);
