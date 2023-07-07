@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {formatBytes, formatDate, formatNumber} from './format';
+import {formatDate} from './format';
 
 type UsageHistory = {
 	Quota: number;
@@ -7,7 +7,7 @@ type UsageHistory = {
 	Date: string;
 }
 
-export default ({history, width, height, yFormatter, yRounder}: {history: UsageHistory[], width: number, height: number, yFormatter: (num: number) => string, yRounder: (num: number) => number}) => {
+export default ({history, width, height, yFormatter, secondaryFormatter, yRounder}: {history: UsageHistory[], width: number, height: number, yFormatter: (num: number) => string, secondaryFormatter: (num: number) => string, yRounder: (num: number) => number}) => {
 	const [infoBox, setInfoBox] = useState(-1),
 	amountToY = (amount: number) => paddingYT + maxY - amount * yScale,
 	dateToX = (date: number) => paddingXL + (date - minDate) * xScale;
@@ -74,12 +74,14 @@ export default ({history, width, height, yFormatter, yRounder}: {history: UsageH
 		quotaBox = infoBoxes.push(<div style={{left: x + "px", top: quotaY + "px", display: infoBoxes.length === infoBox ? "inline-block" : ""}}>
 			{yFormatter(h.Quota)}
 			<br />
+			{secondaryFormatter(h.Quota)}
+			<br />
 			{formatDate(h.Date)}
 		</div>) - 1,
 		sizeBox = infoBoxes.push(<div style={{left: x + "px", top: sizeY + "px", display: infoBoxes.length === infoBox ? "inline-block" : ""}}>
-			{formatBytes(h.Usage)}
+			{yFormatter(h.Usage)}
 			<br />
-			{formatNumber(h.Usage)} Bytes
+			{secondaryFormatter(h.Usage)}
 			<br />
 			{formatDate(h.Date)}
 		</div>) - 1;
@@ -137,7 +139,7 @@ export default ({history, width, height, yFormatter, yRounder}: {history: UsageH
 				Array.from({length: 4}, (_, n) => <line x1={paddingXL} x2={width - paddingXR} y1={amountToY((n + 1) * maxAmount / 5)} y2={amountToY((n + 1) * maxAmount / 5)} stroke="#fff" />)
 			}
 			{
-				Array.from({length: 6}, (_, n) => <text x={paddingXL - 3} y={amountToY(maxAmount - (n * maxAmount) / 5) + 5} fill="currentColor" text-anchor="end"><title>{formatNumber(maxAmount * (5 - n) / 5) + " Bytes"}</title>{yFormatter(maxAmount * (5 - n) / 5)}</text>)
+				Array.from({length: 6}, (_, n) => <text x={paddingXL - 3} y={amountToY(maxAmount - (n * maxAmount) / 5) + 5} fill="currentColor" text-anchor="end"><title>{secondaryFormatter(maxAmount * (5 - n) / 5)}</title>{yFormatter(maxAmount * (5 - n) / 5)}</text>)
 			}
 			{
 				Array.from({length: 4}, (_, n) => <line x1={dateToX((n + 1) * dateDiff / 5)} x2={dateToX((n + 1) * dateDiff / 5)} y1={paddingYT} y2={height - paddingYB} stroke="#fff" />)
