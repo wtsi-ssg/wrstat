@@ -57,8 +57,8 @@ const dirPerms = 0755
 const exampleDgutDirParentSuffix = "dgut.dbs"
 
 func TestIDsToWanted(t *testing.T) {
-	Convey("restrictIDsToWanted returns bad query if you don't want any of the given ids", t, func() {
-		_, err := restrictIDsToWanted([]string{"a"}, map[string]bool{"b": true})
+	Convey("restrictGIDs returns bad query if you don't want any of the given ids", t, func() {
+		_, err := restrictGIDs(map[uint32]bool{1: true}, []uint32{2})
 		So(err, ShouldNotBeNil)
 	})
 }
@@ -68,7 +68,7 @@ func TestServer(t *testing.T) {
 	exampleGIDs := getExampleGIDs(gids)
 	sentinelPollFrequency := 10 * time.Millisecond
 
-	Convey("Given a Server", t, func() {
+	FocusConvey("Given a Server", t, func() {
 		logWriter := gas.NewStringLogger()
 		s := New(logWriter)
 
@@ -115,7 +115,7 @@ func TestServer(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 
-		Convey("You can Start the Server", func() {
+		FocusConvey("You can Start the Server", func() {
 			certPath, keyPath, err := gas.CreateTestCert(t)
 			So(err, ShouldBeNil)
 
@@ -129,7 +129,7 @@ func TestServer(t *testing.T) {
 			client := resty.New()
 			client.SetRootCertificate(certPath)
 
-			Convey("The jwt endpoint works after enabling it", func() {
+			FocusConvey("The jwt endpoint works after enabling it", func() {
 				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, string) {
 					returnUID := uid
 
@@ -698,7 +698,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 	g, errg := user.LookupGroupId(gids[0])
 	So(errg, ShouldBeNil)
 
-	Convey("Given databases", func() {
+	FocusConvey("Given databases", func() {
 		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 
@@ -758,7 +758,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			So(dcss[0].Count, ShouldEqual, 14)
 		})
 
-		Convey("Normal users have access restricted only by group", func() {
+		FocusConvey("Normal users have access restricted only by group", func() {
 			err = s.EnableAuth(cert, key, func(username, password string) (bool, string) {
 				return true, uid
 			})
@@ -789,7 +789,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			So(dcss[0].Count, ShouldEqual, 13)
 		})
 
-		Convey("Once you add the tree page", func() {
+		FocusConvey("Once you add the tree page", func() {
 			var logWriter strings.Builder
 			s := New(&logWriter)
 
@@ -829,7 +829,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				So(string(resp.Body()), ShouldStartWith, "<!DOCTYPE html>")
 			})
 
-			Convey("You can access the tree API", func() {
+			FocusConvey("You can access the tree API", func() {
 				r := gas.NewAuthenticatedClientRequest(addr, cert, token)
 				resp, err := r.SetResult(&TreeElement{}).
 					ForceContentType("application/json").
@@ -1075,7 +1075,7 @@ func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, erro
 	return result, err
 }
 
-// testRestrictedGroups does tests for s.restrictedGroups() if user running the
+// testRestrictedGroups does tests for s.getRestrictedGIDs() if user running the
 // test has enough groups to make the test viable.
 func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *resty.Request, exampleGIDs []string) {
 	t.Helper()
@@ -1084,13 +1084,17 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 		return
 	}
 
-	var filterGIDs []string
-
-	var errg error
+	var (
+		filterGIDs []uint32
+		errg       error
+	)
 
 	s.AuthRouter().GET("/groups", func(c *gin.Context) {
+		filterGIDs = nil
+
 		groups := c.Query("groups")
-		filterGIDs, errg = s.restrictedGroups(c, groups)
+
+		filterGIDs, errg = s.getRestrictedGIDs(c, groups)
 	})
 
 	groups := gidsToGroups(t, gids...)
@@ -1098,7 +1102,11 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 	So(err, ShouldBeNil)
 
 	So(errg, ShouldBeNil)
-	So(filterGIDs, ShouldResemble, []string{exampleGIDs[0]})
+
+	gid0, err := strconv.Atoi(exampleGIDs[0])
+	So(err, ShouldBeNil)
+
+	So(filterGIDs, ShouldResemble, []uint32{uint32(gid0)})
 
 	_, err = r.Get(gas.EndPointAuth + "/groups?groups=0")
 	So(err, ShouldBeNil)
@@ -1123,7 +1131,7 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 	So(err, ShouldBeNil)
 
 	So(errg, ShouldBeNil)
-	So(filterGIDs, ShouldResemble, []string{"0"})
+	So(filterGIDs, ShouldResemble, []uint32{0})
 
 	s.WhiteListGroups(func(group string) bool {
 		return false
