@@ -28,6 +28,10 @@ export default ({data, width, height, logX = false, logY = false, setLimits, pre
 	dateToX = (days: number, log = logX) => paddingXL + innerPadding + (log ? graphWidth * (Math.log(1 + days)  / Math.log(1 + maxDate)) : xScale * days),
 	[highlightCoords, setHighlightCoords] = useState<null | [number, number, number, number]>(null),
 	onDrag = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+		if (e.button !== 0) {
+			return;
+		}
+
 		const coords = e.currentTarget.getBoundingClientRect(),
 		graphLeft = coords.left + paddingXL,
 		graphTop = coords.top + paddingYT,
@@ -67,12 +71,17 @@ export default ({data, width, height, logX = false, logY = false, setLimits, pre
 			cb(minFileSize, maxFileSize, minDaysAgo, maxDaysAgo);
 		},
 		mouseup = (e: MouseEvent) => {
+			if (e.button !== 0) {
+				return;
+			}
+
 			mousemove(e, setLimits);
 			window.removeEventListener("mousemove", mousemove);
+			window.removeEventListener("mouseup", mouseup);
 		};
 
 		window.addEventListener("mousemove", mousemove);
-		window.addEventListener("mouseup", mouseup, {"once": true});
+		window.addEventListener("mouseup", mouseup);
 	};
 
 	useEffect(() => {
