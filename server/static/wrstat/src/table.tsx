@@ -1,5 +1,6 @@
-import {useState, type CSSProperties} from "react";
+import {type CSSProperties} from "react";
 import Pagination from "./pagination";
+import {useSavedState} from "./state";
 
 type Column<T> = {
 	[K in Extract<keyof T, string>]-?: {
@@ -25,7 +26,7 @@ type Params<T> = {
 	rowExtra?: (row: T) => Record<string, any>;
 	onRowClick: (row: T) => void;
 	className?: string;
-	id?: string;
+	id: string;
 	style?: CSSProperties;
 }
 
@@ -70,10 +71,10 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 	return toRet;
 };
 
-export default <T extends Record<string, any>>({table, cols, onRowClick, perPage = Infinity, filter = {}, rowExtra,...additional}: Params<T>) => {
-	const [page, setPage] = useState(0),
-	[sortBy, setSortBy] = useState(-1),
-	[sortReverse, setSortReverse] = useState(false),
+export default <T extends Record<string, any>>({table, cols, onRowClick, perPage = Infinity, filter = {}, id, rowExtra,...additional}: Params<T>) => {
+	const [page, setPage] = useSavedState(id + "Page", 0),
+	[sortBy, setSortBy] = useSavedState(id + "Sort", -1),
+	[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
 	rows = fitlerTableRows(table, filter);
 
 	if (sortBy >= 0) {
@@ -82,7 +83,7 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 
 	return <>
 		<Pagination currentPage={page} onClick={e => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"))} totalPages={Math.ceil(rows.length / perPage)} />
-		<table {...additional}>
+		<table id={id} {...additional}>
 			<thead>
 				<tr>
 					{cols.map((c, n) => <th className={c.sortFn ? "sortable" + (sortBy === n ? " sort" + (sortReverse ? " reverse" : "") : "") : ""} onClick={c.sortFn ? () => {
