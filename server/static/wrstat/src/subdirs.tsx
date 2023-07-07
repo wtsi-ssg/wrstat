@@ -49,7 +49,7 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 
 		(isUser ? RPC.getBasedirsUserSubdirs : RPC.getBasedirsGroupSubdirs)(id, path)
 		.then(setSubdirs);
-	}, [path, isUser]);
+	}, [id, path, isUser]);
 
 	if (!subdirs || subdirs.length === 0) {
 		return <></>
