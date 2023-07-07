@@ -39,7 +39,7 @@ reverseSorters = [
 export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUser: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number>}) => {
 	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
     [selectedID, setSelectedID] = useSavedState("selectedID", -1),
-	[perPage, setPerPage] = useState(10),
+	[perPage, setPerPage] = useSavedState("perPage", 10),
 	[history, setHistory] = useState<Map<string, History[]>>(new Map()),
 	statusFormatter = (_: any, row: Usage) => {
 		if (byUser) {
@@ -80,10 +80,10 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 			<summary>Basedirs</summary>
 			<span id="perPage">Show
 				<select onChange={(e: ChangeEvent<HTMLSelectElement>) => {setPerPage(parseInt(e.target.value) ?? 10)}}>
-					<option>10</option>
-					<option>25</option>
-					<option>50</option>
-					<option>100</option>
+					<option selected={perPage === 10}>10</option>
+					<option selected={perPage === 25}>25</option>
+					<option selected={perPage === 50}>50</option>
+					<option selected={perPage === 100}>100</option>
 				</select>
 			Entries</span>
 			<Table rowExtra={row => {
@@ -182,7 +182,7 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 					key: "status",
 					formatter: statusFormatter
 				}
-			]} table={usage} className={"prettyTable usageTable " + (byUser ? "user" : "group")} />
+			]} table={usage} id="usageTable" className={"prettyTable " + (byUser ? "user" : "group")} />
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 		</details>

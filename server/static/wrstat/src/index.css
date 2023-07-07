@@ -2,11 +2,11 @@
   float: right;
 }
 
-.usageTable.user tr > :nth-child(6),
-.usageTable.user tr > :nth-child(7),
-.usageTable.user tr > :nth-child(8),
-.usageTable.user tr > :nth-child(10),
-.usageTable.user tr > :nth-child(12) {
+#usageTable.user tr > :nth-child(6),
+#usageTable.user tr > :nth-child(7),
+#usageTable.user tr > :nth-child(8),
+#usageTable.user tr > :nth-child(10),
+#usageTable.user tr > :nth-child(12) {
   display: none;
 }
 
@@ -86,15 +86,15 @@ rect + text {
   padding: 0.5em 0.25em;
 }
 
-.usageTable tbody td:nth-child(5), .usageTable tbody td:nth-child(6), .usageTable tbody td:nth-child(7),
-.usageTable tbody td:nth-child(8), .usageTable tbody td:nth-child(9), .usageTable tbody td:nth-child(10),
-.usageTable tbody td:nth-child(11),
+#usageTable tbody td:nth-child(5), #usageTable tbody td:nth-child(6), #usageTable tbody td:nth-child(7),
+#usageTable tbody td:nth-child(8), #usageTable tbody td:nth-child(9), #usageTable tbody td:nth-child(10),
+#usageTable tbody td:nth-child(11),
 .historyTable tbody td:nth-child(2), .historyTable tbody td:nth-child(3), .historyTable tbody td:nth-child(4) {
   text-align: right;
   padding-right: 1em;
 }
 
-.usageTable tbody td:nth-child(12) {
+#usageTable tbody td:nth-child(12) {
   text-align: center;
   white-space: nowrap;
 }
