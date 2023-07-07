@@ -13,7 +13,7 @@ restoreState = <T>(name: string, v: T) => {
 
 	return s;
 },
-setHashState = () => {
+setQueryState = () => {
 	if (stateTO !== -1) {
 		return;
 	}
@@ -66,6 +66,6 @@ export const useSavedState = <T>(name: string, v: T) => {
 
 		setter(val);
 
-		setHashState();
+		setQueryState();
 	}] as const;
 };
