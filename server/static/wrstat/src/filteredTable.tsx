@@ -3,7 +3,7 @@ import {useState, type ChangeEvent, useEffect} from "react";
 import {downloadGroups, downloadUsers} from './download';
 import {asDaysAgoStr, formatBytes, formatNumber} from './format';
 import PathDetails from './pathDetails';
-import {useSavedState} from './state';
+import {restoring, useSavedState} from './state';
 import RPC from './rpc';
 import Table, {type Filter, fitlerTableRows} from './table';
 import fillQuotaSoon from './trend';
@@ -35,6 +35,8 @@ reverseSorters = [
 	null,
 	null,
 ] as const;
+
+let first = true;
 
 export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUser: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number>}) => {
 	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
@@ -71,6 +73,12 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 	groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname]));
 
 	useEffect(() => {
+		if (restoring || first) {
+			first = false;
+
+			return;
+		}
+
 		setSelectedDir("");
 		setSelectedID(-1);
 	}, [byUser]);
