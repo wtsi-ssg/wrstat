@@ -1,9 +1,9 @@
 import type {History, Usage} from './rpc';
-import {useState, type ChangeEvent} from "react";
+import {useState, type ChangeEvent, useEffect} from "react";
 import {downloadGroups, downloadUsers} from './download';
 import {asDaysAgoStr, formatBytes, formatNumber} from './format';
 import PathDetails from './pathDetails';
-import {useSavedState, useEffectAfterInit} from './state';
+import {useSavedState} from './state';
 import RPC from './rpc';
 import Table, {type Filter, fitlerTableRows} from './table';
 import fillQuotaSoon from './trend';
@@ -70,7 +70,7 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 	userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
 	groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname]));
 
-	useEffectAfterInit(() => {
+	useEffect(() => {
 		setSelectedDir("");
 		setSelectedID(-1);
 	}, [byUser]);

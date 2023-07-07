@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useState} from "react";
 
 const state = new Map<string, any>(),
 isDefaultValue = <T>(v: T, def: T) => v === def || JSON.stringify(v) === JSON.stringify(def),
@@ -46,9 +46,7 @@ getStateFromQuery = () => {
 },
 setters = new Map<string, [any, React.Dispatch<React.SetStateAction<any>>]>();
 
-let stateTO = -1,
-inited = false,
-setInit = -1;
+let stateTO = -1;
 
 window.addEventListener("popstate", () => {
 	getStateFromQuery();
@@ -70,21 +68,4 @@ export const useSavedState = <T>(name: string, v: T) => {
 
 		setHashState();
 	}] as const;
-},
-useEffectAfterInit = (effect: React.EffectCallback, deps?: React.DependencyList | undefined) => {
-	if (!inited) {
-		if (setInit !== -1) {
-			clearTimeout(setInit);
-		}
-
-		setInit = window.setTimeout(() => inited = true, 10);
-	}
-
-	useEffect(() => {
-		if (!inited) {
-			return;
-		}
-
-		return effect();
-	}, deps);
 };

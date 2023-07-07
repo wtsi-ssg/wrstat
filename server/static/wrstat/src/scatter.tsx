@@ -1,6 +1,5 @@
 import {useEffect, useState} from "react";
 import {asDaysAgo, formatBytes, formatNumber} from "./format";
-import {useEffectAfterInit} from "./state";
 
 type Data = {
 	UsageSize: number;
@@ -85,7 +84,7 @@ export default ({data, width, height, logX = false, logY = false, setLimits, pre
 		setHighlightCoords([x - paddingXL, width, y - paddingYT, height]);
 	}, [minX, minY, maxX, maxY]);
 
-	useEffectAfterInit(() => {
+	useEffect(() => {
 		setHighlightCoords(null);
 		setLimits(-Infinity, Infinity, -Infinity, Infinity);
 	}, [JSON.stringify(data), logX, logY]);

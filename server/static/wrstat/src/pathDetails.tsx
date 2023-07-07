@@ -4,7 +4,7 @@ import {useEffect, useState} from "react"
 import HistoryGraph from './history';
 import MultiSelect from './multiselect';
 import rpc from "./rpc";
-import {useSavedState, useEffectAfterInit} from './state';
+import {useSavedState} from './state';
 import SubDirs from './subdirs';
 import type {Filter} from './table';
 import TreeDetails from "./treedetails";
@@ -125,7 +125,7 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
-	useEffectAfterInit(() => setTreePath(path || "/"), [path]);
+	useEffect(() => setTreePath(path || "/"), [path]);
 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))

@@ -1,10 +1,10 @@
 import type {Usage} from "./rpc";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import FilteredTable from "./filteredTable";
 import {asDaysAgo} from "./format";
 import MultiSelect from "./multiselect";
 import Scatter from "./scatter";
-import {useSavedState, useEffectAfterInit} from './state';
+import {useSavedState} from './state';
 import {fitlerTableRows} from "./table";
 
 const stringSort = new Intl.Collator().compare;
@@ -44,14 +44,14 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 		}
 	}, ofilter);
 
-	useEffectAfterInit(() => {
+	useEffect(() => {
 		setMinSize(savedMinSize);
 		setMaxSize(savedMaxSize);
 		setMinDaysAgo(savedMinDaysAgo);
 		setMaxDaysAgo(savedMaxDaysAgo);
 	}, [savedMinDaysAgo, savedMaxDaysAgo, savedMinSize, savedMaxSize]);
 
-	useEffectAfterInit(() => {
+	useEffect(() => {
 		setSavedMinSize(-Infinity);
 		setSavedMaxSize(Infinity);
 		setSavedMinDaysAgo(-Infinity);
