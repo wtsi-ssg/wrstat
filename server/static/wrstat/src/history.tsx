@@ -142,10 +142,10 @@ export default ({history, width, height, yFormatter, secondaryFormatter, yRounde
 				Array.from({length: 6}, (_, n) => <text x={paddingXL - 3} y={amountToY(maxAmount - (n * maxAmount) / 5) + 5} fill="currentColor" text-anchor="end"><title>{secondaryFormatter(maxAmount * (5 - n) / 5)}</title>{yFormatter(maxAmount * (5 - n) / 5)}</text>)
 			}
 			{
-				Array.from({length: 4}, (_, n) => <line x1={dateToX((n + 1) * dateDiff / 5)} x2={dateToX((n + 1) * dateDiff / 5)} y1={paddingYT} y2={height - paddingYB} stroke="#fff" />)
+				Array.from({length: 4}, (_, n) => <line x1={dateToX(minDate + (n + 1) * dateDiff / 5)} x2={dateToX(minDate + (n + 1) * dateDiff / 5)} y1={paddingYT} y2={height - paddingYB} stroke="#fff" />)
 			}
 			{
-				Array.from({length: 6}, (_, n) => <text transform={`translate(${dateToX(n * dateDiff / 5)} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" text-anchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)
+				Array.from({length: 6}, (_, n) => <text transform={`translate(${dateToX(minDate + n * dateDiff / 5)} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" text-anchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)
 			}
 			<path d={quotaPath} stroke="#00c9cf" fill="none" />
 			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Quota)} L${dateToX(projectDate)},${amountToY(latestHistory.Quota)}`} stroke="#00c9cf" fill="none" stroke-width="3" stroke-dasharray="3" />
