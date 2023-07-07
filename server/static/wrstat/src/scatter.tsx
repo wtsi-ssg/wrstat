@@ -82,12 +82,12 @@ export default ({data, width, height, logX = false, logY = false, setLimits, pre
 		height = sizeToY(minY) - y;
 
 		setHighlightCoords([x - paddingXL, width, y - paddingYT, height]);
-	}, [minX, minY, maxX, maxY]);
+	}, [minX, minY, maxX, maxY, logX, logY]);
 
 	useEffect(() => {
 		setHighlightCoords(null);
 		setLimits(-Infinity, Infinity, -Infinity, Infinity);
-	}, [JSON.stringify(data), logX, logY]);
+	}, [JSON.stringify(data)]);
 
 	if (data.length === 0) {
 		return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
