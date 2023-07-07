@@ -19,7 +19,7 @@ setQueryState = () => {
 	}
 
 	stateTO = window.setTimeout(() => {
-		let query: string[] = [];
+		const query: string[] = [];
 
 		for (const [key, value] of state) {
 			const def = setters.get(key)?.[0];
@@ -50,12 +50,18 @@ let stateTO = -1;
 
 window.addEventListener("popstate", () => {
 	getStateFromQuery();
+
+	restoring = true;
+	window.setTimeout(() => restoring = false, 1);
+
 	for (const [key, [v, fn]] of setters) {
-		fn(state.get(key) ?? v)
+		fn(state.get(key) ?? v);
 	}
 });
 
 getStateFromQuery();
+
+export let restoring = false;
 
 export const useSavedState = <T>(name: string, v: T) => {
 	const [val, setter] = useState<T>(restoreState(name, v));
