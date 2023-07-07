@@ -1,7 +1,7 @@
 import type {Child, History, Usage} from './rpc';
 import type {Entry} from './treemap';
 import {useEffect, useState} from "react"
-import {formatBytes} from './format';
+import {formatBytes, formatLargeNumber, formatNumber} from './format';
 import HistoryGraph from './history';
 import MultiSelect from './multiselect';
 import rpc from "./rpc";
@@ -122,7 +122,8 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 	[useCount, setUseCount] = useSavedState("useCount", false),
 	[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
 	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
-	[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0)
+	[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
+	[inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false);
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
@@ -196,6 +197,12 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 			</tbody>
 		</table>
 		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath}/>
-		<HistoryGraph history={history.map(h => ({Date: h.Date, Usage: h.UsageSize, Quota: h.QuotaSize}))} width={960} height={500} yFormatter={formatBytes} yRounder={(maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
+		<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
+		<label htmlFor="countHistory">Count History</label><input type="radio" id="countHistory" checked={inodeHistory} onChange={() => setInodeHistory(true)} />
+		<HistoryGraph history={history.map(h => ({Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize}))} width={960} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
+			const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
+
+			return maxAmount = order * Math.ceil(maxAmount / order)
+		 } : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
 	</>
 }
