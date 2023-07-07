@@ -1,6 +1,7 @@
 import type {Child, History, Usage} from './rpc';
 import type {Entry} from './treemap';
 import {useEffect, useState} from "react"
+import {formatBytes} from './format';
 import HistoryGraph from './history';
 import MultiSelect from './multiselect';
 import rpc from "./rpc";
@@ -194,7 +195,7 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 				</tr>
 			</tbody>
 		</table>
-		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
-		<HistoryGraph history={history} width={960} height={500} />
+		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath}/>
+		<HistoryGraph history={history.map(h => ({Date: h.Date, Usage: h.UsageSize, Quota: h.QuotaSize}))} width={960} height={500} yFormatter={formatBytes} yRounder={(maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
 	</>
 }
