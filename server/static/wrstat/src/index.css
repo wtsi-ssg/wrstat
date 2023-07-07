@@ -90,7 +90,7 @@ rect + text {
 #usageTable tbody td:nth-child(5), #usageTable tbody td:nth-child(6), #usageTable tbody td:nth-child(7),
 #usageTable tbody td:nth-child(8), #usageTable tbody td:nth-child(9), #usageTable tbody td:nth-child(10),
 #usageTable tbody td:nth-child(11),
-.historyTable tbody td:nth-child(2), .historyTable tbody td:nth-child(3), .historyTable tbody td:nth-child(4) {
+#historyTable tbody td:nth-child(2), #historyTable tbody td:nth-child(3), #historyTable tbody td:nth-child(4) {
   text-align: right;
   padding-right: 1em;
 }
@@ -100,7 +100,7 @@ rect + text {
   white-space: nowrap;
 }
 
-.historyTable {
+#historyTable {
   margin-top: 2em;
 }
 

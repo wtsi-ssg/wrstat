@@ -55,7 +55,7 @@ export default ({id, path, isUser, setPath}: {id: number, path: string; isUser: 
 		return <></>
 	}
 
-	return <Table table={subdirs} className="prettyTable historyTable" onRowClick={(row: SubDir) => setPath(pathJoin(path, row.SubDir))} cols={[
+	return <Table id="historyTable" table={subdirs} className="prettyTable" onRowClick={(row: SubDir) => setPath(pathJoin(path, row.SubDir))} cols={[
 		{
 			title: "Path",
 			key: "SubDir",
