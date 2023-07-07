@@ -1,25 +1,13 @@
 import {useEffect, useState} from "react";
 
-const state: Record<string, any> = {},
-isSafeValue = (v: any) => {
-	if (v === null || v === undefined) {
-		return false;
-	} else if (v === Infinity || v === -Infinity || v === 0) {
-		return false;
-	} else if (v instanceof Array && v.length === 0) {
-		return false;
-	}
-
-	return true;
-},
+const state = new Map<string, any>(),
+isDefaultValue = <T>(v: T, def: T) => JSON.stringify(v) === JSON.stringify(def),
 restoreState = <T>(name: string, v: T) => {
-	const s = state[name];
+	const s = state.get(name);
 
-	if (v instanceof Set && s instanceof Array) {
-		return new Set(s);
-	} else if (v instanceof Array && s instanceof Array) {
+	if (v instanceof Array && s instanceof Array) {
 		return s;
-	} else if (typeof v !== typeof state[name] || state === undefined) {
+	} else if (typeof v !== typeof s || state === undefined) {
 		return v;
 	}
 
@@ -33,38 +21,52 @@ setHashState = () => {
 	stateTO = window.setTimeout(() => {
 		let query: string[] = [];
 
-		for (const [key, value] of Object.entries(state)) {
-			if (isSafeValue(value)) {
+		for (const [key, value] of state) {
+			if (!isDefaultValue(value, setters.get(key)?.[0])) {
 				query.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`);
 			}
 		}
 
 		const queryStr = query.join("&");
 
-		if (queryStr !== window.location.search) {
+		if (queryStr !== window.location.search.slice(1)) {
 			window.history.pushState(Date.now(), "", "?" + queryStr);
 		}
 		
 		stateTO = -1;
 	});
-};
+},
+getStateFromQuery = () => {
+	state.clear();
+
+	for (const [key, value] of new URLSearchParams(window.location.search)) {
+		state.set(key, JSON.parse(value));
+	}
+},
+setters = new Map<string, [any, React.Dispatch<React.SetStateAction<any>>]>();
 
 let stateTO = -1,
 inited = false,
 setInit = -1;
 
-for (const [key, value] of new URLSearchParams(window.location.search)) {
-	state[key] = JSON.parse(value);
-}
+window.addEventListener("popstate", () => {
+	getStateFromQuery();
+	for (const [key, [v, fn]] of setters) {
+		fn(state.get(key) ?? v)
+	}
+});
+
+getStateFromQuery();
 
 export const useSavedState = <T>(name: string, v: T) => {
-
 	const [val, setter] = useState<T>(restoreState(name, v));
+	setters.set(name, [v, setter]);
 	
 	return [val, (val: T) => {
-		state[name] = val instanceof Set ? Array.from(val) : val
+		state.set(name, val);
 
 		setter(val);
+
 		setHashState();
 	}] as const;
 },
