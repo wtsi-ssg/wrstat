@@ -117,11 +117,7 @@ func Merge(inputs []*os.File, output io.Writer, streamFunc Merger) error {
 		return err
 	}
 
-	if err = cleanup(); err != nil {
-		return err
-	}
-
-	return nil
+	return cleanup()
 }
 
 // MergeAndCompress takes a list of open files, an open output file, and a

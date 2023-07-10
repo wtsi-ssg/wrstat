@@ -33,7 +33,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -56,8 +55,6 @@ const (
 // options for this cmd.
 var quotaPath string
 var ownersPath string
-var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
-var basedirHumgenRegexp = regexp.MustCompile(`\/lustre\/scratch\d\d\d\/(humgen|hgi|tol|pam|opentargets)`)
 
 // basedirCmd represents the basedir command.
 var basedirCmd = &cobra.Command{
