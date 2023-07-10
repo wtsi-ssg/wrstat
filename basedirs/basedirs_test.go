@@ -790,6 +790,11 @@ func TestOwners(t *testing.T) {
 func fixUsageTimes(mt []*Usage) {
 	for _, u := range mt {
 		u.Mtime = fixtimes.FixTime(u.Mtime)
+
+		if !u.DateNoSpace.IsZero() {
+			u.DateNoSpace = fixtimes.FixTime(u.DateNoSpace)
+			u.DateNoFiles = fixtimes.FixTime(u.DateNoFiles)
+		}
 	}
 }
 
