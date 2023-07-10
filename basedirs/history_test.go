@@ -36,6 +36,14 @@ import (
 
 func TestHistory(t *testing.T) {
 	now := time.Now()
+
+	quotaMax := 1000000
+	quotaUsageStart := 1
+	dy := float64(quotaMax - quotaUsageStart)
+	changeDays := float64(2)
+	usageFor4Years := changeDays * dy / (4 * 365)
+	usageFor6Years := changeDays * dy / (6 * 365)
+
 	for _, test := range [...]struct {
 		Name        string
 		Histories   []History
@@ -217,12 +225,46 @@ func TestHistory(t *testing.T) {
 			UntilSize:   now.Add(secondsInDay * 38),
 			UntilInodes: now.Add(secondsInDay * 2),
 		},
+		{
+			Name: "Predictions beyond 5 years are treated as not running out.",
+			Histories: []History{
+				{
+					Date:        time.Now().Add(-(time.Duration(changeDays * 24)) * time.Hour),
+					UsageSize:   uint64(quotaUsageStart),
+					QuotaSize:   uint64(quotaMax),
+					UsageInodes: uint64(quotaUsageStart),
+					QuotaInodes: uint64(quotaMax),
+				},
+				{
+					Date:        time.Now().Add(-24 * time.Hour),
+					UsageSize:   uint64(quotaUsageStart),
+					QuotaSize:   uint64(quotaMax),
+					UsageInodes: uint64(quotaUsageStart),
+					QuotaInodes: uint64(quotaMax),
+				},
+				{
+					Date:        time.Now(),
+					UsageSize:   uint64(usageFor6Years),
+					QuotaSize:   uint64(quotaMax),
+					UsageInodes: uint64(usageFor4Years),
+					QuotaInodes: uint64(quotaMax),
+				},
+			},
+			UntilSize:   time.Time{},
+			UntilInodes: now.Add(secondsInDay * 4 * 365),
+		},
 	} {
 		Convey(test.Name, t, func() {
 			untilSize, untilInodes := DateQuotaFull(test.Histories)
 
-			So(untilSize.Unix(), ShouldBeBetween, test.UntilSize.Unix()-2, test.UntilSize.Unix()+2)
-			So(untilInodes.Unix(), ShouldBeBetween, test.UntilInodes.Unix()-2, test.UntilInodes.Unix()+2)
+			marginOfError := int64(2)
+
+			if time.Until(untilInodes) > 3*365*24*time.Hour {
+				marginOfError = 15000
+			}
+
+			So(untilSize.Unix(), ShouldBeBetween, test.UntilSize.Unix()-marginOfError, test.UntilSize.Unix()+marginOfError)
+			So(untilInodes.Unix(), ShouldBeBetween, test.UntilInodes.Unix()-marginOfError, test.UntilInodes.Unix()+marginOfError)
 		})
 	}
 }
