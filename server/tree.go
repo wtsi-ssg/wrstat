@@ -160,12 +160,12 @@ func (s *Server) getTree(c *gin.Context) {
 func (s *Server) diToTreeElement(di *dgut.DirInfo, filter *dgut.Filter, allowedGIDs map[uint32]bool) *TreeElement {
 	te := s.ddsToTreeElement(di.Current, allowedGIDs)
 	te.Areas = s.areas
+	te.HasChildren = len(di.Children) > 0
 
 	if te.NoAuth {
 		return te
 	}
 
-	te.HasChildren = len(di.Children) > 0
 	childElements := make([]*TreeElement, len(di.Children))
 
 	for i, dds := range di.Children {

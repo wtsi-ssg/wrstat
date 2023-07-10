@@ -68,7 +68,7 @@ func TestServer(t *testing.T) {
 	exampleGIDs := getExampleGIDs(gids)
 	sentinelPollFrequency := 10 * time.Millisecond
 
-	FocusConvey("Given a Server", t, func() {
+	Convey("Given a Server", t, func() {
 		logWriter := gas.NewStringLogger()
 		s := New(logWriter)
 
@@ -115,7 +115,7 @@ func TestServer(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 
-		FocusConvey("You can Start the Server", func() {
+		Convey("You can Start the Server", func() {
 			certPath, keyPath, err := gas.CreateTestCert(t)
 			So(err, ShouldBeNil)
 
@@ -129,7 +129,7 @@ func TestServer(t *testing.T) {
 			client := resty.New()
 			client.SetRootCertificate(certPath)
 
-			FocusConvey("The jwt endpoint works after enabling it", func() {
+			Convey("The jwt endpoint works after enabling it", func() {
 				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, string) {
 					returnUID := uid
 
@@ -698,7 +698,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 	g, errg := user.LookupGroupId(gids[0])
 	So(errg, ShouldBeNil)
 
-	FocusConvey("Given databases", func() {
+	Convey("Given databases", func() {
 		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 
@@ -758,7 +758,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			So(dcss[0].Count, ShouldEqual, 14)
 		})
 
-		FocusConvey("Normal users have access restricted only by group", func() {
+		Convey("Normal users have access restricted only by group", func() {
 			err = s.EnableAuth(cert, key, func(username, password string) (bool, string) {
 				return true, uid
 			})
@@ -789,12 +789,12 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			So(dcss[0].Count, ShouldEqual, 13)
 		})
 
-		FocusConvey("Once you add the tree page", func() {
+		Convey("Once you add the tree page", func() {
 			var logWriter strings.Builder
 			s := New(&logWriter)
 
 			err = s.EnableAuth(cert, key, func(username, password string) (bool, string) {
-				return true, ""
+				return true, uid
 			})
 			So(err, ShouldBeNil)
 
@@ -829,7 +829,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				So(string(resp.Body()), ShouldStartWith, "<!DOCTYPE html>")
 			})
 
-			FocusConvey("You can access the tree API", func() {
+			Convey("You can access the tree API", func() {
 				r := gas.NewAuthenticatedClientRequest(addr, cert, token)
 				resp, err := r.SetResult(&TreeElement{}).
 					ForceContentType("application/json").
@@ -847,7 +847,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				expectedAtime := "1970-01-01T00:00:50Z"
 				expectedMtime := "1970-01-01T00:01:30Z"
 
-				const numDirectories = 10
+				const numDirectories = 12
 
 				const directorySize = 1024
 
@@ -894,7 +894,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				So(err, ShouldBeNil)
 				So(resp.Result(), ShouldNotBeNil)
 
-				expectedMtime = "1970-01-01T00:01:20Z"
+				expectedMtime2 := "1970-01-01T00:01:20Z"
 
 				tm = *resp.Result().(*TreeElement) //nolint:forcetypeassert
 				So(tm, ShouldResemble, TreeElement{
@@ -903,7 +903,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					Count:       13 + 8,
 					Size:        120 + 8*directorySize,
 					Atime:       expectedAtime,
-					Mtime:       expectedMtime,
+					Mtime:       expectedMtime2,
 					Users:       users,
 					Groups:      []string{g.Name},
 					FileTypes:   expectedFTs,
@@ -916,7 +916,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 							Count:       13 + 8,
 							Size:        120 + 8*directorySize,
 							Atime:       expectedAtime,
-							Mtime:       expectedMtime,
+							Mtime:       expectedMtime2,
 							Users:       users,
 							Groups:      []string{g.Name},
 							FileTypes:   expectedFTs,
@@ -925,6 +925,175 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 							Children:    nil,
 						},
 					},
+				})
+
+				r = gas.NewAuthenticatedClientRequest(addr, cert, token)
+				resp, err = r.SetResult(&TreeElement{}).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"path": "/a",
+					}).
+					Get(EndPointAuthTree)
+
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+
+				abgroups := gidsToGroups(t, g.Gid, "0")
+				sort.Strings(abgroups)
+
+				acgroups := gidsToGroups(t, gids[1])
+				cramAndDir := []string{"cram", "dir"}
+
+				tm = *resp.Result().(*TreeElement) //nolint:forcetypeassert
+				So(tm, ShouldResemble, TreeElement{
+					Name:        "a",
+					Path:        "/a",
+					Count:       19 + numDirectories,
+					Size:        126 + numDirectories*directorySize,
+					Atime:       expectedAtime,
+					Mtime:       expectedMtime,
+					Users:       users,
+					Groups:      groups,
+					FileTypes:   expectedFTs,
+					TimeStamp:   "0001-01-01T00:00:00Z",
+					HasChildren: true,
+					Children: []*TreeElement{
+						{
+							Name:        "b",
+							Path:        "/a/b",
+							Count:       19 - 5 + numDirectories - 3,
+							Size:        126 - 5 + (numDirectories-3)*directorySize,
+							Atime:       expectedAtime,
+							Mtime:       expectedMtime2,
+							Users:       users,
+							Groups:      abgroups,
+							FileTypes:   expectedFTs,
+							TimeStamp:   "0001-01-01T00:00:00Z",
+							HasChildren: true,
+							Children:    nil,
+						},
+						{
+							Name:        "c",
+							Path:        "/a/c",
+							Count:       7,
+							Size:        5 + 2*directorySize,
+							Atime:       "1970-01-01T00:01:30Z",
+							Mtime:       expectedMtime,
+							Users:       []string{"root"},
+							Groups:      acgroups,
+							FileTypes:   cramAndDir,
+							TimeStamp:   "0001-01-01T00:00:00Z",
+							HasChildren: true,
+							Children:    nil,
+						},
+					},
+				})
+
+				r = gas.NewAuthenticatedClientRequest(addr, cert, token)
+				resp, err = r.SetResult(&TreeElement{}).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"path": "/a/b/d",
+					}).
+					Get(EndPointAuthTree)
+
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+
+				dgroups := gidsToGroups(t, gids[0], "0")
+				sort.Strings(dgroups)
+
+				root := []string{"root"}
+
+				tm = *resp.Result().(*TreeElement) //nolint:forcetypeassert
+				So(tm, ShouldResemble, TreeElement{
+					Name:        "d",
+					Path:        "/a/b/d",
+					Count:       12 + 5,
+					Size:        111 + 5*directorySize,
+					Atime:       expectedAtime,
+					Mtime:       "1970-01-01T00:01:15Z",
+					Users:       users,
+					Groups:      dgroups,
+					FileTypes:   cramAndDir,
+					TimeStamp:   "0001-01-01T00:00:00Z",
+					HasChildren: true,
+					NoAuth:      false,
+					Children: []*TreeElement{
+						{
+							Name:        "f",
+							Path:        "/a/b/d/f",
+							Count:       2,
+							Size:        10 + directorySize,
+							Atime:       expectedAtime,
+							Mtime:       "1970-01-01T00:00:50Z",
+							Users:       []string{username},
+							Groups:      []string{g.Name},
+							FileTypes:   cramAndDir,
+							TimeStamp:   "0001-01-01T00:00:00Z",
+							HasChildren: false,
+							Children:    nil,
+							NoAuth:      false,
+						},
+						{
+							Name:        "g",
+							Path:        "/a/b/d/g",
+							Count:       11,
+							Size:        100 + directorySize,
+							Atime:       "1970-01-01T00:01:00Z",
+							Mtime:       "1970-01-01T00:01:15Z",
+							Users:       users,
+							Groups:      []string{g.Name},
+							FileTypes:   cramAndDir,
+							TimeStamp:   "0001-01-01T00:00:00Z",
+							HasChildren: false,
+							Children:    nil,
+							NoAuth:      false,
+						},
+						{
+							Name:        "i",
+							Path:        "/a/b/d/i",
+							Count:       3,
+							Size:        1 + 2*directorySize,
+							Atime:       expectedAtime,
+							Mtime:       "1970-01-01T00:00:50Z",
+							Users:       root,
+							Groups:      root,
+							FileTypes:   cramAndDir,
+							TimeStamp:   "0001-01-01T00:00:00Z",
+							HasChildren: true,
+							Children:    nil,
+							NoAuth:      true,
+						},
+					},
+				})
+
+				r = gas.NewAuthenticatedClientRequest(addr, cert, token)
+				resp, err = r.SetResult(&TreeElement{}).
+					ForceContentType("application/json").
+					SetQueryParams(map[string]string{
+						"path": "/a/b/d/i",
+					}).
+					Get(EndPointAuthTree)
+
+				So(err, ShouldBeNil)
+				So(resp.Result(), ShouldNotBeNil)
+
+				tm = *resp.Result().(*TreeElement) //nolint:forcetypeassert
+				So(tm, ShouldResemble, TreeElement{
+					Name:        "i",
+					Path:        "/a/b/d/i",
+					Count:       3,
+					Size:        1 + 2*directorySize,
+					Atime:       expectedAtime,
+					Mtime:       "1970-01-01T00:00:50Z",
+					Users:       root,
+					Groups:      root,
+					FileTypes:   cramAndDir,
+					TimeStamp:   "0001-01-01T00:00:00Z",
+					HasChildren: true,
+					Children:    nil,
+					NoAuth:      true,
 				})
 
 				r = gas.NewAuthenticatedClientRequest(addr, cert, token)
@@ -1198,6 +1367,14 @@ func adjustedExpectations(expected []*DirSummary, groupA, groupB string) ([]*Dir
 
 			expectedGroupsRoot = ds.Groups
 		}
+
+		if ds.Dir == "/a/b" {
+			fmt.Printf("\nwill decrement ab's count from %d\n", expectedNonRoot[i].Count)
+			expectedNonRoot[i].Count--
+			expectedNonRoot[i].Size--
+			expectedNonRoot[i].Groups = append(expectedNonRoot[i].Groups, "root")
+			sort.Strings(expectedNonRoot[i].Groups)
+		}
 	}
 
 	return expectedNonRoot, expectedGroupsRoot
@@ -1244,7 +1421,7 @@ type matrixElement struct {
 func runMapMatrixTest(t *testing.T, matrix []*matrixElement, s *Server) {
 	t.Helper()
 
-	for _, m := range matrix {
+	for i, m := range matrix {
 		fixDirSummaryTimes(m.dss)
 
 		response, err := queryWhere(s, m.filter)
@@ -1253,6 +1430,7 @@ func runMapMatrixTest(t *testing.T, matrix []*matrixElement, s *Server) {
 
 		result, err := decodeWhereResult(response)
 		So(err, ShouldBeNil)
+		t.Logf("%d", i)
 		So(result, ShouldResemble, m.dss)
 	}
 }
