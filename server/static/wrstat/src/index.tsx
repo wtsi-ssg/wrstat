@@ -35,9 +35,7 @@ auth.then(username => Promise.all([
 ])
 .then(([groupUsage, userUsage, {areas}]) => ReactDOM.createRoot(document.body).render(
 	<React.StrictMode>
-		<div>
-			<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
-			<Filter groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
-		</div>
+		<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
+		<Filter groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
 	</React.StrictMode>
 )));
