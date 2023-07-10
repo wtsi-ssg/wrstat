@@ -73,6 +73,10 @@ type Usage struct {
 	UsageInodes uint64
 	QuotaInodes uint64
 	Mtime       time.Time
+	// DateNoSpace is an estimate of when there will be no space quota left.
+	DateNoSpace time.Time
+	// DateNoFiles is an estimate of when there will be no inode quota left.
+	DateNoFiles time.Time
 }
 
 // CreateDatabase creates a database containing usage information for each of
@@ -96,6 +100,11 @@ func (b *BaseDirs) CreateDatabase(historyDate time.Time) error {
 	}
 
 	err = db.Update(b.updateDatabase(historyDate, gids, uids))
+	if err != nil {
+		return err
+	}
+
+	err = db.Update(b.storeDateQuotasFill())
 	if err != nil {
 		return err
 	}
@@ -502,4 +511,58 @@ func (b *BaseDirs) storeUIDSubDirs(tx *bolt.Tx, uids []uint32) error {
 	}
 
 	return nil
+}
+
+// storeDateQuotasFill goes through all our stored group usage and histories and
+// stores the date quota will be full on the group Usage.
+//
+// This needs to be pre-calculated and stored in the db because it's too slow to
+// do for all group-basedirs every time the reader gets all of them.
+//
+// This is done as a separate transaction to updateDatabase() so we have access
+// to the latest stored history, without having to have all histories in memory.
+func (b *BaseDirs) storeDateQuotasFill() func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(groupUsageBucket))
+		hbucket := tx.Bucket([]byte(groupHistoricalBucket))
+
+		return bucket.ForEach(func(_, data []byte) error {
+			gu := new(Usage)
+
+			if err := b.decodeFromBytes(data, gu); err != nil {
+				return err
+			}
+
+			h, err := b.history(hbucket, gu.GID, gu.BaseDir)
+			if err != nil {
+				return err
+			}
+
+			sizeExceedDate, inodeExceedDate := DateQuotaFull(h)
+			gu.DateNoSpace = sizeExceedDate
+			gu.DateNoFiles = inodeExceedDate
+
+			return bucket.Put(keyName(gu.GID, gu.BaseDir), b.encodeToBytes(gu))
+		})
+	}
+}
+
+func (b *BaseDirs) history(bucket *bolt.Bucket, gid uint32, path string) ([]History, error) {
+	mp := b.mountPoints.prefixOf(path)
+	if mp == "" {
+		return nil, ErrInvalidBasePath
+	}
+
+	var history []History
+
+	key := historyKey(gid, mp)
+
+	data := bucket.Get(key)
+	if data == nil {
+		return nil, ErrNoBaseDirHistory
+	}
+
+	err := b.decodeFromBytes(data, &history)
+
+	return history, err
 }

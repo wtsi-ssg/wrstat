@@ -43,6 +43,8 @@ var (
 	ErrNoBaseDirHistory = errors.New("no base dir history found")
 )
 
+// History contains actual usage and quota max information for a particular
+// point in time.
 type History struct {
 	Date        time.Time
 	UsageSize   uint64
@@ -51,6 +53,8 @@ type History struct {
 	QuotaInodes uint64
 }
 
+// History returns a slice of History values for the given gid and path, one
+// value per Date the information was calculated.
 func (b *BaseDirReader) History(gid uint32, path string) ([]History, error) {
 	mp := b.mountPoints.prefixOf(path)
 	if mp == "" {
@@ -61,7 +65,7 @@ func (b *BaseDirReader) History(gid uint32, path string) ([]History, error) {
 
 	if err := b.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(groupHistoricalBucket))
-		key := []byte(strconv.FormatUint(uint64(gid), 10) + bucketKeySeparator + mp)
+		key := historyKey(gid, mp)
 
 		data := bucket.Get(key)
 		if data == nil {
@@ -74,6 +78,10 @@ func (b *BaseDirReader) History(gid uint32, path string) ([]History, error) {
 	}
 
 	return history, nil
+}
+
+func historyKey(gid uint32, mountPoint string) []byte {
+	return []byte(strconv.FormatUint(uint64(gid), 10) + bucketKeySeparator + mountPoint)
 }
 
 type mountPoints []string

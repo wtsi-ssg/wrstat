@@ -243,7 +243,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 							UsageSize: halfGig + twoGig, QuotaSize: 4000000000, UsageInodes: 2,
 							QuotaInodes: 20, Mtime: expectedMtimeA},
 						{Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
-							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime},
+							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
+							DateNoSpace: yesterday, DateNoFiles: yesterday},
 						{Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
 							UsageSize: 40, QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime},
 						{Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB123,
@@ -365,6 +366,17 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						mainTable, err := bdr.GroupUsage()
 						fixUsageTimes(mainTable)
 
+						dateNoSpace := today.Add(4 * 24 * time.Hour)
+						So(mainTable[0].DateNoSpace, ShouldHappenOnOrBetween,
+							dateNoSpace.Add(-2*time.Second), dateNoSpace.Add(2*time.Second))
+
+						dateNoTime := today.Add(18 * 24 * time.Hour)
+						So(mainTable[0].DateNoFiles, ShouldHappenOnOrBetween,
+							dateNoTime.Add(-2*time.Second), dateNoTime.Add(2*time.Second))
+
+						mainTable[0].DateNoSpace = time.Time{}
+						mainTable[0].DateNoFiles = time.Time{}
+
 						So(err, ShouldBeNil)
 						So(len(mainTable), ShouldEqual, 6)
 						So(mainTable, ShouldResemble, []*Usage{
@@ -372,7 +384,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 								UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
 								UsageInodes: 3, QuotaInodes: 21, Mtime: expectedMtimeA},
 							{Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
-								UsageSize: 10, QuotaSize: 0, UsageInodes: 4, QuotaInodes: 0, Mtime: expectedMtime},
+								UsageSize: 10, QuotaSize: 0, UsageInodes: 4, QuotaInodes: 0, Mtime: expectedMtime,
+								DateNoSpace: today, DateNoFiles: today},
 							{Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
 								UsageSize: 40, QuotaSize: 400, UsageInodes: 1,
 								QuotaInodes: 40, Mtime: expectedMtime},

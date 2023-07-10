@@ -187,19 +187,13 @@ func (b *BaseDirReader) GroupUsageTable() (string, error) {
 		return "", err
 	}
 
-	return b.usageTable(gu, b.History)
+	return b.usageTable(gu)
 }
 
-func (b *BaseDirReader) usageTable(usage []*Usage,
-	historyCB func(gid uint32, path string) ([]History, error)) (string, error) {
+func (b *BaseDirReader) usageTable(usage []*Usage) (string, error) {
 	var sb strings.Builder
 
 	for _, u := range usage {
-		h, err := historyCB(u.GID, u.BaseDir)
-		if err != nil {
-			return "", err
-		}
-
 		fmt.Fprintf(&sb, "%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\n",
 			u.Name,
 			b.owners[u.GID],
@@ -209,15 +203,14 @@ func (b *BaseDirReader) usageTable(usage []*Usage,
 			u.QuotaSize,
 			u.UsageInodes,
 			u.QuotaInodes,
-			usageStatus(h),
+			usageStatus(u.DateNoSpace, u.DateNoFiles),
 		)
 	}
 
 	return sb.String(), nil
 }
 
-func usageStatus(h []History) string {
-	sizeExceedDate, inodeExceedDate := DateQuotaFull(h)
+func usageStatus(sizeExceedDate, inodeExceedDate time.Time) string {
 	threeDaysFromNow := time.Now().Add(threeDays)
 
 	if !sizeExceedDate.IsZero() && threeDaysFromNow.After(sizeExceedDate) {
@@ -251,9 +244,7 @@ func (b *BaseDirReader) UserUsageTable() (string, error) {
 		return "", err
 	}
 
-	return b.usageTable(uu, func(_ uint32, _ string) ([]History, error) {
-		return nil, nil
-	})
+	return b.usageTable(uu)
 }
 
 func daysSince(mtime time.Time) uint64 {
