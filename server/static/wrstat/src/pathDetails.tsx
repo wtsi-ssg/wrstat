@@ -5,7 +5,7 @@ import {formatBytes, formatLargeNumber, formatNumber} from './format';
 import HistoryGraph from './history';
 import MultiSelect from './multiselect';
 import rpc from "./rpc";
-import {useSavedState} from './state';
+import {restoring, useSavedState} from './state';
 import SubDirs from './subdirs';
 import type {Filter} from './table';
 import TreeDetails from "./treedetails";
@@ -112,6 +112,8 @@ timesSinceAccess = [
 	["> 2 years", 730]
 ] as const;
 
+let first = true;
+
 export default ({id, path, isUser, history, filter, users, groups}: {id: number, path: string; isUser: boolean; history: History[], filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string>}) => {
 	const [treePath, setTreePath] = useSavedState("treePath", path || "/"),
 	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
@@ -127,7 +129,15 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
-	useEffect(() => setTreePath(path || "/"), [path]);
+	useEffect(() => {
+		if (restoring || first) {
+			first = false;
+
+			return;
+		}
+
+		setTreePath(path || "/")
+	}, [path]);
 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
