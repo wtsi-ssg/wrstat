@@ -43,6 +43,8 @@ var (
 	ErrNoBaseDirHistory = errors.New("no base dir history found")
 )
 
+const fiveYearsInHours = 24 * 365 * 5
+
 // History contains actual usage and quota max information for a particular
 // point in time.
 type History struct {
@@ -170,5 +172,11 @@ func calculateTrend(max uint64, latestTime, oldestTime time.Time, latestValue, o
 
 	secs := (float64(max) - c) * dt / dy
 
-	return time.Unix(int64(secs), 0)
+	t := time.Unix(int64(secs), 0)
+
+	if t.After(time.Now().Add(fiveYearsInHours * time.Hour)) {
+		return time.Time{}
+	}
+
+	return t
 }
