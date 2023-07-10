@@ -1,11 +1,12 @@
 import type {Usage} from "./rpc";
 import {useEffect, useState} from "react";
 import FilteredTable from "./filteredTable";
-import {asDaysAgo} from "./format";
+import {asDaysAgo, formatBytes, formatNumber} from "./format";
 import MultiSelect from "./multiselect";
 import Scatter from "./scatter";
 import {useSavedState} from './state';
 import {fitlerTableRows} from "./table";
+import Minmax from "./minmax";
 
 const stringSort = new Intl.Collator().compare;
 
@@ -97,6 +98,10 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 				<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
 				<label htmlFor="scaleDays">Log Days</label>
 				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
+				<label>Size </label>
+				<Minmax min={0} max={(byUser ? userUsage : groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={300} onchange={() => {}} formatter={formatBytes} />
+				<label>Last Modified</label>
+				<Minmax min={0} max={(byUser ? userUsage : groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} width={300} onchange={() => {}} formatter={formatNumber} />
 			</div>
 		</details>
 		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...filter} />

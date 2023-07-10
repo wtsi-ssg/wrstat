@@ -178,6 +178,7 @@ rect + text {
   display: block;
   margin: 1em;
   height: calc(1em + 4px + 1em + 1px);
+  grid-column: 2 / span 3;
 }
 
 .minmax_min, .minmax_max, .minmax_minValue, .minmax_maxValue {
@@ -314,7 +315,7 @@ summary {
 
 #scatter {
   grid-column: 5;
-  grid-row: 1 / 8;
+  grid-row: 1 / 10;
 }
 
 #scatter use {
@@ -423,6 +424,10 @@ summary {
     background-color: #48c;
   }
 
+  .minmax_min, .minmax_max, .minmax_minValue, .minmax_maxValue {
+    white-space: nowrap;
+  }
+
   .minmax_minSlider, .minmax_maxSlider {
     border: 1px solid #000;
     background-color: #888;
@@ -511,6 +516,6 @@ summary {
   }
 }
 
-summary, label, text, th, .multiInput {
+summary, label, text, th, .multiInput, .minmax {
   user-select: none;
 }

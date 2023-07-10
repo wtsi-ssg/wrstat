@@ -1,34 +1,25 @@
-/*
+import {useState} from "react";
 
-#moveSlider(e: MouseEvent, dragging: HTMLDivElement) {
-	const [min, max] = this.#getMinMax(e, dragging);
-
-	this.#setSliders(min, max);
-}
-
-#dropSlider(e: MouseEvent, dragging: HTMLDivElement) {
-	const [min, max] = this.#getMinMax(e, dragging);
-	if (this.dispatchEvent(new CustomEvent("change", {"cancelable": true, "detail": {min, max}}))) {
-		this.#minValue = min;
-		this.#maxValue = max;
-	}
-	
-	this.#setSliders(this.#minValue, this.#maxValue);
-}
-*/
-
-export default ({min = 0, max, minValue = 0, maxValue = max, onchange, width, ticks = 5, noOverlap = true}:
+export default ({min = 0, max = min + 1, onchange, width, ticks = 5, noOverlap = true, formatter}:
 	 {min?: number; max: number; minValue?: number; maxValue?: number; ticks?: number, width: number,
-		onchange: (min: number, max: number) => void, noOverlap?: boolean}) => {
-	
-	let draggingMin = false;
+		onchange: (min: number, max: number) => void, noOverlap?: boolean, formatter: (val: number) => string}) => {
+
+	const [sliderMin, setSliderMin] = useState(min),
+	[sliderMax, setSliderMax] = useState(max),
+	safeMin = Math.min(Math.max(min, sliderMin), Math.max(max, min)),
+	safeMax = Math.max(Math.min(max, sliderMax), Math.min(min, max)),
+	minX = width * (sliderMin / max),
+	maxX = width * (sliderMax / max);
+
+	let draggingMin = false,
+	offsetLeft = 0;
 
 	const getMinMax = (e: MouseEvent) => {
-		const minX = 0,
-		val = ticks * Math.round((max - min) * (e.clientX - minX) / (width * ticks));
+		const val = ticks * Math.round((max - min) * (e.clientX - offsetLeft) / (width * ticks));
 	
-		let [amin, amax] = getSafeMinMax();
-	
+		let amin = safeMin,
+		amax = safeMax;
+
 		if (draggingMin) {
 			amin = Math.min(Math.max(val, min), max, amax - +noOverlap * ticks);
 		} else {
@@ -37,82 +28,53 @@ export default ({min = 0, max, minValue = 0, maxValue = max, onchange, width, ti
 	
 		return [amin, amax];
 	},
-	getSafeMinMax = () => {
-		const amin = Math.min(Math.max(min, minValue), Math.max(max, min)),
-			  amax = Math.max(Math.min(max, maxValue), Math.min(min, max));
-	
-		return [amin, amax];
-	},
-	dragMin = () => {},
-	dragMax = () => {};
+	mousedown = (e: React.MouseEvent<HTMLDivElement, MouseEvent>, which: boolean) => {
+		if (e.button !== 0) {
+			return;
+		}
 
-	return <div className="minmax">
-		<div className="minmax_min">{min}</div>
-		<div className="minmax_max">{max}</div>
+		offsetLeft = ((e.target as HTMLDivElement).offsetParent as HTMLDivElement)?.offsetLeft ?? 0;
+
+		draggingMin = which;
+		window.addEventListener("mousemove", mousemove);
+		window.addEventListener("mouseup", mouseup);
+	},
+	mousemove = (e: MouseEvent) => {
+		const [min, max] = getMinMax(e);
+
+		setSliderMin(min);
+		setSliderMax(max);
+	},
+	mouseup = (e: MouseEvent) => {
+		if (e.button !== 0) {
+			return;
+		}
+
+		window.removeEventListener("mousemove", mousemove);
+		window.removeEventListener("mouseup", mouseup);
+
+		const [min, max] = getMinMax(e);
+
+		onchange(min, max);
+		setSliderMin(min);
+		setSliderMax(max);
+	},
+	minAndMax = [
+		<div className="minmax_minSlider" onMouseDown={e => mousedown(e, true)} style={{left: `calc(${minX}px - 0.5em)`}} />,
+		<div className="minmax_maxSlider" onMouseDown={e => mousedown(e, false)} style={{left: `calc(${maxX}px - 0.5em)`}} />
+	];
+
+	if (sliderMin - min > max - sliderMax) {
+		minAndMax.reverse();
+	}
+
+	return <div className="minmax" style={{width: width + "px"}}>
+		<div className="minmax_min">{formatter(min)}</div>
+		<div className="minmax_max">{formatter(max)}</div>
 		<div className="minmax_line" />
-		<div className="minmax_setline" />
-		<div className="minmax_minvalue" style={{left: 0}}>{minValue}</div>
-		<div className="minmax_maxvalue" style={{right: 0}}>{maxValue}</div>
-		<div className="minmax_minslider" onMouseDown={dragMin} />
-		<div className="minmax_maxslider" onMouseDown={dragMax} />
+		<div className="minmax_setLine" />
+		<div className="minmax_minValue" style={{right: (width - minX) + "px"}}>{formatter(sliderMin)}</div>
+		<div className="minmax_maxValue" style={{left: maxX + "px"}}>{formatter(sliderMax)}</div>
+		{minAndMax}
 	</div>
 };
-
-/*
-
-		let dragging: HTMLDivElement | null = null;
-		const [startDrag] = mouseDragEvent(
-			0,
-			(e: MouseEvent) => this.#moveSlider(e, dragging!),
-			(e: MouseEvent) => {
-				this.#dropSlider(e, dragging!);
-				dragging = null;
-			}
-		      ),
-		      dragSlider = (e: MouseEvent) => {
-			if (e.button === 0) {
-				e.preventDefault();
-				amendNode(this.#shadow, dragging = e.target as HTMLDivElement);
-				startDrag();
-			}
-		      }
-
-		amendNode(this.#shadow = this.attachShadow({"mode": "closed"}), [
-			this.#minText = div({"id": min}),
-			this.#maxText = div({"id": max}),
-			div({"id": line}),
-			this.#selectedLine = div({"id": selLine}),
-			this.#minValueText = div({"id": minValue}),
-			this.#maxValueText = div({"id": maxValue}),
-			this.#minSlider = div({"id": minSlider, "onmousedown": dragSlider}),
-			this.#maxSlider = div({"id": maxSlider, "onmousedown": dragSlider})
-		]).adoptedStyleSheets = minMaxStyles;
-
-		this.#build();
-	}
-
-
-	#build() {
-		clearNode(this.#minText, this.#min + "");
-		clearNode(this.#maxText, (this.#max < this.#min ? this.#min : this.#max) + "");
-
-		const [min, max] = this.#getSafeMinMax();
-
-		amendNode(this.#shadow, min - this.#min > this.#max - max ? this.#minSlider : this.#maxSlider);
-
-		this.#setSliders(min, max);
-	}
-
-	#setSliders(min: number, max: number) {
-		const width = this.clientWidth,
-		      minX = width * (min / this.#max),
-		      maxX = width * (max / this.#max);
-
-		clearNode(this.#minValueText, {"style": {"right": `${width - minX}px`}}, min + "");
-		clearNode(this.#maxValueText, {"style": {"left": `${maxX}px`}}, max + "");
-		amendNode(this.#minSlider, {"style": {"left": `calc(${minX}px - 0.5em)`}});
-		amendNode(this.#maxSlider, {"style": {"left": `calc(${maxX}px - 0.5em)`}});
-		amendNode(this.#selectedLine, {"style": {"left": minX + "px", "right": (width - maxX) + "px"}});
-	}
-}
-*/
