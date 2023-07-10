@@ -143,7 +143,7 @@ func NewByGroupUser() *GroupUser {
 // Add is a github.com/wtsi-ssg/wrstat/stat Operation. It will add the file size
 // and increment the file count summed for the info's group and user. If path is
 // a directory, it is ignored.
-func (g *GroupUser) Add(path string, info fs.FileInfo) error {
+func (g *GroupUser) Add(_ string, info fs.FileInfo) error {
 	if info.IsDir() {
 		return nil
 	}

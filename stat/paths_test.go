@@ -267,7 +267,7 @@ type statterWithConcurrentTest struct {
 	i  int
 }
 
-func (s *statterWithConcurrentTest) Lstat(path string) (info fs.FileInfo, err error) {
+func (s *statterWithConcurrentTest) Lstat(_ string) (info fs.FileInfo, err error) {
 	s.i++
 	if s.i == 1 {
 		return
