@@ -176,7 +176,7 @@ rect + text {
 .minmax {
   position: relative;
   display: block;
-  margin: 1em;
+  margin: 0 1em;
   height: calc(1em + 4px + 1em + 1px);
   grid-column: 2 / span 3;
 }
