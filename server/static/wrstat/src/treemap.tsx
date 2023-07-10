@@ -7,6 +7,7 @@ export type Entry = {
 	backgroundColour?: string;
 	onclick?: MouseEventHandler<SVGRectElement>;
 	onmouseover?: MouseEventHandler<SVGRectElement>;
+	noauth: boolean;
 }
 
 export type Table = Entry[];
@@ -62,7 +63,7 @@ buildTree = (table: Table, box: Box) => {
 			left = isRow ? d : box.left,
 			colWidth = isRow ? boxWidth * entry.value / total : boxWidth * total / remainingTotal,
 			rowHeight = isRow ? boxHeight * total / remainingTotal : boxHeight * entry.value / total,
-			bbox = getTextBB(entry.name),
+			bbox = getTextBB((entry.noauth ? "Wi" : "") + entry.name),
 			xScale = colWidth / bbox.width,
 			yScale = rowHeight / bbox.height,
 			minScale = lastFontSize = Math.min(xScale, yScale, lastFontSize);
@@ -71,6 +72,7 @@ buildTree = (table: Table, box: Box) => {
 
 			toRet.push(
 				<rect key={`rect_${i}`} x={left} y={top} width={colWidth} height={rowHeight} stroke="#000" fill={entry.backgroundColour ?? "#fff"} className={entry.onclick ? "hasClick" : ""} onClick={entry.onclick} onMouseOver={entry.onmouseover}><title>{entry.name}</title></rect>,
+				entry.noauth ? <use x={left} y={top} key={`icon_${i}`} href="#lock" width="0.7em" height="1em" style={{fontSize: `${minScale * 0.9}px`}} /> : <></>,
 				<text key={`text_${i}`} fontSize={minScale * 0.9} fontFamily={font} x={left + colWidth / 2} y={top + rowHeight / 2 + 0.225 * minScale * bbox.height} textAnchor="middle" fill={entry.colour ?? "#000"}>{entry.name}</text>
 			);
 		}
@@ -150,6 +152,13 @@ export default ({table, width, height, noAuth = false, onmouseout}: {table: Tabl
 	}
 	
 	return <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
+		<defs>
+			<symbol id="lock" viewBox="0 0 70 100" style={{stroke: "#000"}} stroke-width={2} stroke-linejoin="round">
+				<path d="M15,45 v-20 a1,1 0,0,1 40,0 v20 h-10 v-20 a1,1 0,0,0 -20,0 v20 z" fill="#ccc" />
+				<rect x={5} y={45} width={60} height={50} fill="#aaa" stroke-width={4} rx={10} />
+				<path d="M30,78 l2,-8 c-7,-12 13,-12 6,0 l2,8 z" fill="#666" stroke="#000" stroke-linejoin="round" />
+			</symbol>
+		</defs>
 		{buildTree(table, box)}
 	</svg>
 }

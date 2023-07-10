@@ -157,8 +157,9 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 					name: child.name,
 					value: useCount ? child.count : child.size,
 					backgroundColour: colourFromAge(+(new Date(useMTime ? child.mtime : child.atime))),
-					onclick: child.has_children ? () => setTreePath(child.path) : undefined,
-					onmouseover: () => setChildDetails(child)
+					onclick: child.has_children && !child.noauth ? () => setTreePath(child.path) : undefined,
+					onmouseover: () => setChildDetails(child),
+					noauth: child.noauth
 				});
 			}
 
