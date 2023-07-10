@@ -33,8 +33,7 @@ reverseSorters = [
 	(a: Usage, b: Usage) => !a.QuotaInodes ? 1 : !b.QuotaInodes ? -1 : sorters[8](b, a),
 	null,
 	null,
-] as const,
-threeDays = 86_400_000;
+] as const;
 
 let first = true;
 
@@ -42,23 +41,6 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
     [selectedID, setSelectedID] = useSavedState("selectedID", -1),
 	[perPage, setPerPage] = useSavedState("perPage", 10),
-	statusFormatter = (status: string | undefined, row: Usage) => {
-		if (byUser) {
-			return "";
-		} else if (status) {
-			return "Unknown";
-		}
-
-		const now = Date.now(),
-		daysUntilSpaceFull = new Date(row.DateNoSpace).valueOf() - now,
-		daysUntilFilesFull = new Date(row.DateNoFiles).valueOf() - now;
-
-		if (daysUntilFilesFull < threeDays || daysUntilSpaceFull < threeDays) {
-			return "Not OK";
-		}
-
-		return "OK";
-	},
 	userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
 	groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname]));
 
@@ -178,8 +160,7 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 				{
 					title: "Status",
 					key: "status",
-					sortFn: sorters[10],
-					formatter: statusFormatter
+					sortFn: sorters[10]
 				}
 			]} table={usage} id="usageTable" className={"prettyTable " + (byUser ? "user" : "group")} />
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
