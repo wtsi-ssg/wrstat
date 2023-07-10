@@ -188,7 +188,7 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 			</select>
 		</div>	
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
-		<Treemap table={treeMapData} width={treeWidth} height={500} emptyMessage={hasAuth ? undefined : <>No Auth</>} onmouseout={() => setChildDetails(dirDetails)} />
+		<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
 		<TreeDetails details={childDetails} />
 		<table id="treeKey">
 			<caption>

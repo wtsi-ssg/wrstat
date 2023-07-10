@@ -107,7 +107,7 @@ getTextBB = (() => {
 
 const maxTableEntries = 1000;
 
-export default ({table, width, height, emptyMessage, onmouseout}: {table: Table | null; width: number; height: number; emptyMessage?: JSX.Element; onmouseout?: MouseEventHandler}) => {
+export default ({table, width, height, noAuth = false, onmouseout}: {table: Table | null; width: number; height: number; noAuth?: boolean; onmouseout?: MouseEventHandler}) => {
 	if (table === null) {
 		return <></>
 	}
@@ -134,7 +134,18 @@ export default ({table, width, height, emptyMessage, onmouseout}: {table: Table 
 	if (filteredTable.length === 0) {
 		return <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
 			<rect width="100%" height="100%" stroke="#000" fill="#fff" />
-			<text text-anchor="middle" x={width / 2} y={height / 2} >{emptyMessage ?? "—No Sub-Directories—"}</text>
+			{
+				noAuth ?
+				<>
+					<svg height={150} transform={`translate(0 ${((height / 2) - 150) / 2})`} viewBox="0 0 70 100" style={{stroke: "#000"}} stroke-width={2} stroke-linejoin="round">
+						<path d="M15,45 v-20 a1,1 0,0,1 40,0 v20 h-10 v-20 a1,1 0,0,0 -20,0 v20 z" fill="#ccc" />
+						<rect x={5} y={45} width={60} height={50} fill="#aaa" stroke-width={4} rx={10} />
+						<path d="M30,78 l2,-8 c-7,-12 13,-12 6,0 l2,8 z" fill="#666" stroke="#000" stroke-linejoin="round" />
+					</svg>
+					<text text-anchor="middle" x={width / 2} y={height / 2} >—Not Authorised—</text>
+				</> :
+				<text text-anchor="middle" x={width / 2} y={height / 2} >—No Sub-Directories—</text>
+			}
 		</svg>;
 	}
 	
