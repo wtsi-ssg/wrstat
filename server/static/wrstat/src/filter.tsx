@@ -33,11 +33,13 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
 	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
 	allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()),
-	ofilter = {
+	basefilter = {
 		UID: byUser ? users : undefined,
 		GID: byUser ? undefined : allGroups,
 		UIDs: byUser ? undefined : (uids: number[]) => users.length ? uids.some(uid => users.includes(uid)) : true,
-		GIDs: byUser ? (gids: number[]) => allGroups.length ? gids.some(gid => allGroups.includes(gid)) : true : undefined,
+		GIDs: byUser ? (gids: number[]) => allGroups.length ? gids.some(gid => allGroups.includes(gid)) : true : undefined
+	},
+	ofilter = Object.assign({
 		Owner: byUser ? [] : owners,
 		UsageSize: {min: filterMinSize, max: filterMaxSize},
 		Mtime: (mtime: string) => {
@@ -45,15 +47,15 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 
 			return daysAgo >= filterMinDaysAgo && daysAgo <= filterMaxDaysAgo;
 		}
-	},
+	}, basefilter),
 	filter = Object.assign({
-		UsageSize: {min: Math.max(minSize, filterMinSize), max: Math.min(maxSize, filterMinSize)},
+		UsageSize: {min: Math.max(minSize, filterMinSize), max: Math.min(maxSize, filterMaxSize)},
 		Mtime: (mtime: string) => {
 			const daysAgo = asDaysAgo(mtime);
 
 			return daysAgo >= Math.max(minDaysAgo, filterMinDaysAgo) && daysAgo <= Math.min(maxDaysAgo, filterMaxDaysAgo);
 		}
-	}, ofilter);
+	}, basefilter);
 
 	useEffect(() => {
 		setMinSize(savedMinSize);
