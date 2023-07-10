@@ -141,7 +141,13 @@ export default ({id, path, isUser, filter, users, groups}: {id: number, path: st
 		setTreePath(path || "/")
 	}, [path]);
 
-	useEffect(() => {rpc.getBasedirsHistory(id, path).then(setHistory)}, [id, path]);
+	useEffect(() => {
+		if (id === -1 || path === "") {
+			return;
+		}
+
+		rpc.getBasedirsHistory(id, path).then(setHistory);
+	}, [id, path]);
 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
