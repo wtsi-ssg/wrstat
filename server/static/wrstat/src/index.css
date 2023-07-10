@@ -15,7 +15,7 @@ rect.hasClick {
   cursor: pointer;
 }
 
-rect + text, rect + use + text {
+rect + text, rect + use, rect + use + text {
   pointer-events: none;
   font-family: Times;
 }
