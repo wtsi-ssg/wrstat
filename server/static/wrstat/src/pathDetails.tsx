@@ -115,7 +115,7 @@ timesSinceAccess = [
 let first = true;
 
 export default ({id, path, isUser, history, filter, users, groups}: {id: number, path: string; isUser: boolean; history: History[], filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string>}) => {
-	const [treePath, setTreePath] = useSavedState("treePath", path || "/"),
+	const [treePath, setTreePath] = useSavedState("treePath", "/"),
 	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 	[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
 	[childDetails, setChildDetails] = useState<Child | null>(null),
