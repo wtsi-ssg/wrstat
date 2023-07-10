@@ -221,6 +221,7 @@ rect + text {
   width: 1em;
   height: 1em;
   border-radius: 1em;
+  cursor: ew-resize;
 }
 
 #history {
