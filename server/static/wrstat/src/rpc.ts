@@ -22,6 +22,7 @@ export type Child = {
 	children: Child[];
 	timestamp: string;
 	areas: Record<string, string[]>;
+	noauth: boolean;
 }
 
 export type TreeData = {

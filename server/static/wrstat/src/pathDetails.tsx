@@ -125,7 +125,8 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 	[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
 	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
 	[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
-	[inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false);
+	[inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
+	[hasAuth, setHasAuth] = useState(true);
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
@@ -144,6 +145,8 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 		.then(children => {
 			const entries: Entry[] = [],
 			since = new Date(children.timestamp).valueOf() - sinceLastAccess * 86_400_000;
+
+			setHasAuth(!children.noauth);
 
 			for (const child of children.children ?? []) {
 				if (new Date(child.atime).valueOf() > since) {
@@ -185,7 +188,7 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 			</select>
 		</div>	
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
-		<Treemap table={treeMapData} width={treeWidth} height={500} onmouseout={() => setChildDetails(dirDetails)} />
+		<Treemap table={treeMapData} width={treeWidth} height={500} emptyMessage={hasAuth ? undefined : <>No Auth</>} onmouseout={() => setChildDetails(dirDetails)} />
 		<TreeDetails details={childDetails} />
 		<table id="treeKey">
 			<caption>

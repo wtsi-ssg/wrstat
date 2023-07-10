@@ -107,7 +107,7 @@ getTextBB = (() => {
 
 const maxTableEntries = 1000;
 
-export default ({table, width, height, onmouseout}: {table: Table | null; width: number; height: number; onmouseout?: MouseEventHandler}) => {
+export default ({table, width, height, emptyMessage, onmouseout}: {table: Table | null; width: number; height: number; emptyMessage?: JSX.Element; onmouseout?: MouseEventHandler}) => {
 	if (table === null) {
 		return <></>
 	}
@@ -134,7 +134,7 @@ export default ({table, width, height, onmouseout}: {table: Table | null; width:
 	if (filteredTable.length === 0) {
 		return <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
 			<rect width="100%" height="100%" stroke="#000" fill="#fff" />
-			<text text-anchor="middle" x={width / 2} y={height / 2} >—No Sub-Directories—</text>
+			<text text-anchor="middle" x={width / 2} y={height / 2} >{emptyMessage ?? "—No Sub-Directories—"}</text>
 		</svg>;
 	}
 	
