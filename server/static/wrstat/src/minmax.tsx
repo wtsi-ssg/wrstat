@@ -1,15 +1,20 @@
-import {useState} from "react";
+import {useEffect, useState} from "react";
 
-export default ({min = 0, max = min + 1, onchange, width, ticks = 5, noOverlap = true, formatter}:
-	 {min?: number; max: number; minValue?: number; maxValue?: number; ticks?: number, width: number,
+export default ({min = 0, max = min + 1, minValue = min, maxValue = max, onchange, width, ticks = 5, noOverlap = true, formatter}:
+	 {min?: number; max?: number; minValue?: number; maxValue?: number; ticks?: number, width: number,
 		onchange: (min: number, max: number) => void, noOverlap?: boolean, formatter: (val: number) => string}) => {
 
-	const [sliderMin, setSliderMin] = useState(min),
-	[sliderMax, setSliderMax] = useState(max),
+	const [sliderMin, setSliderMin] = useState(Math.max(min, minValue)),
+	[sliderMax, setSliderMax] = useState(Math.min(max, maxValue)),
 	safeMin = Math.min(Math.max(min, sliderMin), Math.max(max, min)),
 	safeMax = Math.max(Math.min(max, sliderMax), Math.min(min, max)),
 	minX = width * (sliderMin / max),
 	maxX = width * (sliderMax / max);
+
+	useEffect(() => {
+		setSliderMin(Math.max(min, minValue));
+		setSliderMax(Math.min(max, maxValue));
+	}, [minValue, maxValue]);
 
 	let draggingMin = false,
 	offsetLeft = 0;

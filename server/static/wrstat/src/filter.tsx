@@ -26,6 +26,10 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	[maxSize, setMaxSize] = useState(savedMaxSize),
 	[minDaysAgo, setMinDaysAgo] = useState(savedMinDaysAgo),
 	[maxDaysAgo, setMaxDaysAgo] = useState(savedMaxDaysAgo),
+	[filterMinSize, setFilterMinSize] = useSavedState("filterMinSize", -Infinity),
+	[filterMaxSize, setFilterMaxSize] = useSavedState("filterMaxSize", Infinity),
+	[filterMinDaysAgo, setFilterMinDaysAgo] = useSavedState("filterMinDaysAgo", -Infinity),
+	[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSavedState("filterMaxDaysAgo", Infinity),
 	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
 	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
 	allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()),
@@ -34,14 +38,20 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 		GID: byUser ? undefined : allGroups,
 		UIDs: byUser ? undefined : (uids: number[]) => users.length ? uids.some(uid => users.includes(uid)) : true,
 		GIDs: byUser ? (gids: number[]) => allGroups.length ? gids.some(gid => allGroups.includes(gid)) : true : undefined,
-		Owner: byUser ? [] : owners
-	},
-	filter = Object.assign({
-		UsageSize: {min: minSize, max: maxSize},
+		Owner: byUser ? [] : owners,
+		UsageSize: {min: filterMinSize, max: filterMaxSize},
 		Mtime: (mtime: string) => {
 			const daysAgo = asDaysAgo(mtime);
 
-			return daysAgo >= minDaysAgo && daysAgo <= maxDaysAgo;
+			return daysAgo >= filterMinDaysAgo && daysAgo <= filterMaxDaysAgo;
+		}
+	},
+	filter = Object.assign({
+		UsageSize: {min: Math.max(minSize, filterMinSize), max: Math.min(maxSize, filterMinSize)},
+		Mtime: (mtime: string) => {
+			const daysAgo = asDaysAgo(mtime);
+
+			return daysAgo >= Math.max(minDaysAgo, filterMinDaysAgo) && daysAgo <= Math.min(maxDaysAgo, filterMaxDaysAgo);
 		}
 	}, ofilter);
 
@@ -61,6 +71,10 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 		setMaxSize(Infinity);
 		setMinDaysAgo(-Infinity);
 		setMaxDaysAgo(Infinity);
+		setFilterMinSize(-Infinity);
+		setFilterMaxSize(Infinity);
+		setFilterMinDaysAgo(-Infinity);
+		setFilterMaxDaysAgo(Infinity);
 	}, [byUser]);
 
 	return <>
@@ -99,9 +113,15 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 				<label htmlFor="scaleDays">Log Days</label>
 				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 				<label>Size </label>
-				<Minmax min={0} max={(byUser ? userUsage : groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={300} onchange={() => {}} formatter={formatBytes} />
+				<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={300} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
+					setFilterMinSize(min);
+					setFilterMaxSize(max);
+				}} formatter={formatBytes} />
 				<label>Last Modified</label>
-				<Minmax min={0} max={(byUser ? userUsage : groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} width={300} onchange={() => {}} formatter={formatNumber} />
+				<Minmax max={userUsage.concat(groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={300} onchange={(min: number, max: number) => {
+					setFilterMinDaysAgo(min);
+					setFilterMaxDaysAgo(max);
+				}} formatter={formatNumber} />
 			</div>
 		</details>
 		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...filter} />
