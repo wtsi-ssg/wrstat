@@ -199,7 +199,7 @@ rect + text, rect + use, rect + use + text {
   left: 100%;
 }
 
-.minmax_line, .minmax_selLine {
+.minmax_line, .minmax_setLine {
   position: absolute;
   top: calc(1em + 4px + 0.5em - 5px);
   bottom: 5px;
@@ -425,7 +425,7 @@ summary {
     background-color: #aaa;
   }
 
-  .minmax_selLine, .minmax_minValue, .minmax_maxValue {
+  .minmax_setLine, .minmax_minValue, .minmax_maxValue {
     color: #fff;
     background-color: #48c;
   }
@@ -490,7 +490,7 @@ summary {
     background-color: #aaa;
   }
 
-  .minmax_selLine, .minmax_minValue, .minmax_maxValue {
+  .minmax_setLine, .minmax_minValue, .minmax_maxValue {
     color: #000;
     background-color: #48c;
   }

@@ -77,7 +77,7 @@ export default ({min = 0, max = min + 1, minValue = min, maxValue = max, onchang
 		<div className="minmax_min">{formatter(min)}</div>
 		<div className="minmax_max">{formatter(max)}</div>
 		<div className="minmax_line" />
-		<div className="minmax_setLine" />
+		<div className="minmax_setLine" style={{left: minX + "px", right: (width - maxX) + "px"}} />
 		<div className="minmax_minValue" style={{right: (width - minX) + "px"}}>{formatter(sliderMin)}</div>
 		<div className="minmax_maxValue" style={{left: maxX + "px"}}>{formatter(sliderMax)}</div>
 		{minAndMax}
