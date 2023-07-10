@@ -32,7 +32,7 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSavedState("filterMaxDaysAgo", Infinity),
 	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
 	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
-	allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()),
+	allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()).filter(gid => gid !== -1),
 	basefilter = {
 		UID: byUser ? users : undefined,
 		GID: byUser ? undefined : allGroups,
