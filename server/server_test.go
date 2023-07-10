@@ -229,6 +229,8 @@ func TestServer(t *testing.T) {
 						expectedRoot := []string{"root"}
 						expectedGroupsA := []string{groupA}
 						expectedGroupsB := []string{groupB}
+						expectedGroupsRootA := []string{groupA, "root"}
+						sort.Strings(expectedGroupsRootA)
 						expectedFTs := expectedNonRoot[0].FileTypes
 						expectedBams := []string{"bam", "temp"}
 						expectedCrams := []string{"cram"}
@@ -261,12 +263,18 @@ func TestServer(t *testing.T) {
 								{Dir: "/a", Count: 14, Size: 86, Atime: expectedAtime,
 									Mtime: time.Unix(90, 0), Users: expectedRoot,
 									Groups: expectedGroupsRoot, FileTypes: expectedCrams},
+								{Dir: "/a/b/d", Count: 9, Size: 81, Atime: expectedAtime,
+									Mtime: time.Unix(75, 0), Users: expectedRoot,
+									Groups: expectedGroupsRootA, FileTypes: expectedCrams},
 								{Dir: "/a/b/d/g", Count: 8, Size: 80, Atime: time.Unix(75, 0),
 									Mtime: time.Unix(75, 0), Users: expectedRoot,
 									Groups: expectedGroupsA, FileTypes: expectedCrams},
 								{Dir: "/a/c/d", Count: 5, Size: 5, Atime: time.Unix(90, 0),
 									Mtime: time.Unix(90, 0), Users: expectedRoot,
 									Groups: expectedGroupsB, FileTypes: expectedCrams},
+								{Dir: "/a/b/d/i/j", Count: 1, Size: 1, Atime: expectedAtime,
+									Mtime: expectedAtime, Users: expectedRoot,
+									Groups: expectedRoot, FileTypes: expectedCrams},
 							}},
 							{"?groups=" + groups[0] + "&users=root", []*DirSummary{
 								{Dir: "/a/b/d/g", Count: 8, Size: 80, Atime: time.Unix(75, 0),
@@ -1350,7 +1358,8 @@ func adjustedExpectations(expected []*DirSummary, groupA, groupB string) ([]*Dir
 	for i, ds := range expected {
 		expectedNonRoot[i] = ds
 
-		if ds.Dir == "/a" {
+		switch ds.Dir {
+		case "/a":
 			groups := []string{groupA, groupB}
 			sort.Strings(groups)
 
@@ -1366,14 +1375,17 @@ func adjustedExpectations(expected []*DirSummary, groupA, groupB string) ([]*Dir
 			}
 
 			expectedGroupsRoot = ds.Groups
-		}
-
-		if ds.Dir == "/a/b" {
-			fmt.Printf("\nwill decrement ab's count from %d\n", expectedNonRoot[i].Count)
-			expectedNonRoot[i].Count--
-			expectedNonRoot[i].Size--
-			expectedNonRoot[i].Groups = append(expectedNonRoot[i].Groups, "root")
-			sort.Strings(expectedNonRoot[i].Groups)
+		case "/a/b", "/a/b/d":
+			expectedNonRoot[i] = &DirSummary{
+				Dir:       ds.Dir,
+				Count:     ds.Count - 1,
+				Size:      ds.Size - 1,
+				Atime:     ds.Atime,
+				Mtime:     ds.Mtime,
+				Users:     ds.Users,
+				Groups:    []string{groupA},
+				FileTypes: ds.FileTypes,
+			}
 		}
 	}
 
@@ -1421,7 +1433,7 @@ type matrixElement struct {
 func runMapMatrixTest(t *testing.T, matrix []*matrixElement, s *Server) {
 	t.Helper()
 
-	for i, m := range matrix {
+	for _, m := range matrix {
 		fixDirSummaryTimes(m.dss)
 
 		response, err := queryWhere(s, m.filter)
@@ -1430,7 +1442,6 @@ func runMapMatrixTest(t *testing.T, matrix []*matrixElement, s *Server) {
 
 		result, err := decodeWhereResult(response)
 		So(err, ShouldBeNil)
-		t.Logf("%d", i)
 		So(result, ShouldResemble, m.dss)
 	}
 }
