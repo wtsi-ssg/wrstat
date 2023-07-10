@@ -1,12 +1,11 @@
-import type {History, Usage} from './rpc';
-import {useState, type ChangeEvent, useEffect} from "react";
+import type {Usage} from './rpc';
+import type {ChangeEvent} from "react";
+import {useEffect} from "react";
 import {downloadGroups, downloadUsers} from './download';
 import {asDaysAgoStr, formatBytes, formatNumber} from './format';
 import PathDetails from './pathDetails';
 import {restoring, useSavedState} from './state';
-import RPC from './rpc';
 import Table, {type Filter, fitlerTableRows} from './table';
-import fillQuotaSoon from './trend';
 
 const stringSort = new Intl.Collator().compare,
 sorters = [
@@ -34,7 +33,8 @@ reverseSorters = [
 	(a: Usage, b: Usage) => !a.QuotaInodes ? 1 : !b.QuotaInodes ? -1 : sorters[8](b, a),
 	null,
 	null,
-] as const;
+] as const,
+threeDays = 86_400_000;
 
 let first = true;
 
@@ -42,32 +42,22 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
     [selectedID, setSelectedID] = useSavedState("selectedID", -1),
 	[perPage, setPerPage] = useSavedState("perPage", 10),
-	[history, setHistory] = useState<Map<string, History[]>>(new Map()),
-	statusFormatter = (_: any, row: Usage) => {
+	statusFormatter = (status: string | undefined, row: Usage) => {
 		if (byUser) {
 			return "";
+		} else if (status) {
+			return "Unknown";
 		}
 
-		const gidBasename = row.GID + "|" + row.BaseDir,
-		h = history.get(gidBasename);
-		if (h) {
-			switch (fillQuotaSoon(h)) {
-			case false:
-				return "OK";
-			case true:
-				return "Not OK";
-			default:
-				return "Unknown";
-			}
+		const now = Date.now(),
+		daysUntilSpaceFull = new Date(row.DateNoSpace).valueOf() - now,
+		daysUntilFilesFull = new Date(row.DateNoFiles).valueOf() - now;
+
+		if (daysUntilFilesFull < threeDays || daysUntilSpaceFull < threeDays) {
+			return "Not OK";
 		}
 
-		RPC.getBasedirsHistory(row.GID, row.BaseDir)
-		.then(h => {
-			history.set(gidBasename, h);
-			setHistory(new Map(history));
-		})
-
-		return "Unknown";
+		return "OK";
 	},
 	userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
 	groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname]));
@@ -188,12 +178,13 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 				{
 					title: "Status",
 					key: "status",
+					sortFn: sorters[10],
 					formatter: statusFormatter
 				}
 			]} table={usage} id="usageTable" className={"prettyTable " + (byUser ? "user" : "group")} />
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 		</details>
-		<PathDetails id={selectedID} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} filter={filter} history={byUser ? [] : history.get(selectedID + "|" + selectedDir) ?? []} />
+		<PathDetails id={selectedID} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} filter={filter} />
 	</>
 }

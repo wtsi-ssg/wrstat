@@ -8,7 +8,7 @@ download = (csv: string, filename: string) => {
 	a.click();
 };
 
-export const downloadGroups = (table: Usage[]) => download("PI,Group,Path,Space,SQuota,Inodes,IQuota,LastMod\n" + 
+export const downloadGroups = (table: Usage[]) => download("PI,Group,Path,Space,SQuota,Inodes,IQuota,LastMod,Status\n" +
 	table.map(row => `"${
 		escapeQuote(row.Owner)
 	}","${
@@ -25,6 +25,8 @@ export const downloadGroups = (table: Usage[]) => download("PI,Group,Path,Space,
 		row.QuotaInodes
 	},"${
 		escapeQuote(row.Mtime)
+	},${
+		row.status
 	}"`).join("\r\n"),
 	"groups.csv"
 ),

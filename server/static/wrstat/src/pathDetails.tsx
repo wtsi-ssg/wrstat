@@ -114,7 +114,7 @@ timesSinceAccess = [
 
 let first = true;
 
-export default ({id, path, isUser, history, filter, users, groups}: {id: number, path: string; isUser: boolean; history: History[], filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string>}) => {
+export default ({id, path, isUser, filter, users, groups}: {id: number, path: string; isUser: boolean; filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string>}) => {
 	const [treePath, setTreePath] = useSavedState("treePath", "/"),
 	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 	[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
@@ -126,7 +126,8 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
 	[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
 	[inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
-	[hasAuth, setHasAuth] = useState(true);
+	[hasAuth, setHasAuth] = useState(true),
+	[history, setHistory] = useState<History[]>([]);
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
@@ -139,6 +140,8 @@ export default ({id, path, isUser, history, filter, users, groups}: {id: number,
 
 		setTreePath(path || "/")
 	}, [path]);
+
+	useEffect(() => {rpc.getBasedirsHistory(id, path).then(setHistory)}, [id, path]);
 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))

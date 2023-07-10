@@ -54,7 +54,7 @@ rect + text, rect + use, rect + use + text {
   border-spacing: 0;
 }
 
-.prettyTable thead th:not(:last-child) {
+.prettyTable thead th {
   padding-right: 1em;
 }
 

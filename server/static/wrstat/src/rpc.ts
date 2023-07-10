@@ -43,6 +43,8 @@ export type Usage = {
 	UsageInodes: number;
 	QuotaInodes: number;
 	Mtime: string;
+	DateNoSpace: string;
+	DateNoFiles: string;
 	status?: string;
 	percentSize?: number;
 	percentInodes?: number;
