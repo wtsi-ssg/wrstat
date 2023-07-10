@@ -288,6 +288,10 @@ rect + text {
   overflow-y: scroll;
 }
 
+.minmax_min, .minmax_max, .minmax_minValue, .minmax_maxValue {
+  white-space: nowrap;
+}
+
 summary {
   cursor: pointer;
 }
@@ -423,10 +427,6 @@ summary {
   .minmax_selLine, .minmax_minValue, .minmax_maxValue {
     color: #fff;
     background-color: #48c;
-  }
-
-  .minmax_min, .minmax_max, .minmax_minValue, .minmax_maxValue {
-    white-space: nowrap;
   }
 
   .minmax_minSlider, .minmax_maxSlider {
