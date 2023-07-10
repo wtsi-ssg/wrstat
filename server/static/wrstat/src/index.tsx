@@ -17,12 +17,13 @@ auth.catch(() => ReactDOM.createRoot(document.body).render(
 
 auth.then(username => Promise.all([
 	RPC.getGroupUsageData().then(gud => {
+		const now = Date.now();
+
 		for (const d of gud) {
 			d.percentSize = Math.round(10000 * d.UsageSize / d.QuotaSize) / 100;
 			d.percentInodes = Math.round(10000 * d.UsageInodes / d.QuotaInodes) / 100;
 
-			const now = Date.now(),
-			daysUntilSpaceFull = new Date(d.DateNoSpace).valueOf() - now,
+			const daysUntilSpaceFull = new Date(d.DateNoSpace).valueOf() - now,
 			daysUntilFilesFull = new Date(d.DateNoFiles).valueOf() - now;
 
 			d.status = daysUntilFilesFull < threeDays || daysUntilSpaceFull < threeDays ? "Not OK" :" OK";
