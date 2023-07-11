@@ -154,8 +154,8 @@ export default ({table, width, height, noAuth = false, onmouseout}: {table: Tabl
 	return <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
 		<defs>
 			<symbol id="lock" viewBox="0 0 100 100">
-				<rect rx="15" x="5" y="38" width="90" height="62" fill="currentColor" />
-				<path d="M27,40 v-10 a1,1 0,0,1 46,0 v10" fill="none" stroke="currentColor" stroke-width="12" />
+				<rect rx="15" x="5" y="38" width="90" height="62" fill="#000" />
+				<path d="M27,40 v-10 a1,1 0,0,1 46,0 v10" fill="none" stroke="#000" stroke-width="12" />
 			</symbol>
 		</defs>
 		{buildTree(table, box)}
