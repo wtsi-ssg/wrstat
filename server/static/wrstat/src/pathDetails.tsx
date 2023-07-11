@@ -204,7 +204,7 @@ export default ({id, path, isUser, filter, users, groups}: {id: number, path: st
 		<table id="treeKey">
 			<caption>
 				<span>Colour Key</span>
-				Greatest time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
+				{useMTime ? "Least" : "Greatest"} time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
 			</caption>
 			<tbody>
 				<tr>
