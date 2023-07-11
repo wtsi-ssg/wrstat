@@ -53,7 +53,7 @@ export default ({history, width, height, yFormatter, secondaryFormatter, yRounde
 	minDate -= (maxDate - minDate) / 10;
 	maxDate += (maxDate - minDate) / 10;
 
-	maxAmount = yRounder(maxAmount);
+	maxAmount = Math.max(yRounder(maxAmount), 5);
 
 	const paddingXL = 80,
 	paddingXR = 80,
