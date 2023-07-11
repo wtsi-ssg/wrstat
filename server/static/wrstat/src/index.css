@@ -352,13 +352,13 @@ summary {
   display: grid;
   width: 100%;
   gap: 0.5em 1em;
-  grid-template-columns: min-content min-content min-content auto min-content;
+  grid-template-columns: auto auto auto 1fr min-content;
   justify-items: start;
 }
 
 .treeFilter label {
   white-space: nowrap;
-  text-align: right;
+  justify-self: end;
 }
 
 .treeFilter > label:after {
