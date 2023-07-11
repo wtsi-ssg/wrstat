@@ -88,6 +88,9 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 	return <>
 		<Pagination currentPage={page} onClick={e => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"))} totalPages={Math.ceil(rows.length / perPage)} />
 		<table id={id} {...additional}>
+			<colgroup>
+				{cols.map(() => <col />)}
+			</colgroup>
 			<thead>
 				<tr>
 					{cols.map((c, n) => <th className={c.sortFn ? "sortable" + (sortBy === n ? " sort" + (sortReverse ? " reverse" : "") : "") : ""} onClick={c.sortFn ? () => {
