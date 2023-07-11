@@ -77,7 +77,7 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 	[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
 	rows = fitlerTableRows(table, filter),
 	maxPages = Math.ceil(rows.length / perPage),
-	currPage = Math.min(page, maxPages - 1);
+	currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1);
 
 	if (sortBy >= 0) {
 		rows.sort(getSorter(cols[sortBy], sortReverse));
