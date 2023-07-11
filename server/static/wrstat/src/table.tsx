@@ -30,7 +30,7 @@ type Params<T> = {
 	style?: CSSProperties;
 }
 
-const noopFormatter = (a: {toString(): string}) => a.toString(),
+const noopFormatter = (a: {toString(): string}) => a + "",
 noop = () => {},
 noopSort = () => 0,
 reverseSort = <T extends Record<string, any>,>(fn: (a: T, b: T) => number) => (a: T, b: T) => fn(b, a),
