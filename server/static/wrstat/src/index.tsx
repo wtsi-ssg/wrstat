@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import './index.css';
 import Auth, { logout } from './auth';
 import Filter from './filter';
@@ -12,7 +12,7 @@ const auth = ready.then(Auth),
 	nullDate = "0001-01-01T00:00:00Z",
 	daysUntilQuotaFull = (date: string) => (new Date(date).valueOf() - now) / threeDays
 
-auth.catch(() => ReactDOM.createRoot(document.body).render(
+auth.catch(() => createRoot(document.body).render(
 	<StrictMode>
 		<div><form action="/login"><input type="submit" value="Login" /></form></div>
 	</StrictMode>
@@ -48,7 +48,7 @@ auth.then(username => Promise.all([
 	RPC.getUserUsageData(),
 	RPC.getChildren({ path: "/" })
 ])
-	.then(([groupUsage, userUsage, { areas }]) => ReactDOM.createRoot(document.body).render(
+	.then(([groupUsage, userUsage, { areas }]) => createRoot(document.body).render(
 		<StrictMode>
 			<svg xmlns="http://www.w3.org/2000/svg" style={{ width: 0, height: 0 }}>
 				<symbol id="ok" viewBox="0 0 100 100">
