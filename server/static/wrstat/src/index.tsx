@@ -7,7 +7,10 @@ import ready from './ready';
 import RPC from './rpc';
 
 const auth = ready.then(Auth),
-threeDays = 3 * 86_400_000;
+now = Date.now(),
+threeDays = 3 * 86_400_000,
+nullDate = "0001-01-01T00:00:00Z",
+daysUntilQuotaFull = (date: string) => (new Date(date).valueOf() - now) / threeDays
 
 auth.catch(() => ReactDOM.createRoot(document.body).render(
 	<React.StrictMode>
@@ -17,16 +20,27 @@ auth.catch(() => ReactDOM.createRoot(document.body).render(
 
 auth.then(username => Promise.all([
 	RPC.getGroupUsageData().then(gud => {
-		const now = Date.now();
-
 		for (const d of gud) {
 			d.percentSize = Math.round(10000 * d.UsageSize / d.QuotaSize) / 100;
 			d.percentInodes = Math.round(10000 * d.UsageInodes / d.QuotaInodes) / 100;
 
-			const daysUntilSpaceFull = new Date(d.DateNoSpace).valueOf() - now,
-			daysUntilFilesFull = new Date(d.DateNoFiles).valueOf() - now;
+			let spaceOK = false, filesOK = false;
 
-			d.status = daysUntilFilesFull < threeDays || daysUntilSpaceFull < threeDays ? "Not OK" :" OK";
+			if (d.DateNoSpace == nullDate) {
+				spaceOK = true
+			}
+			else {
+				spaceOK = daysUntilQuotaFull(d.DateNoSpace) > 3;
+			}
+
+			if (d.DateNoFiles == nullDate) {
+				filesOK = true
+			}
+			else {
+				filesOK = daysUntilQuotaFull(d.DateNoFiles) > 3;
+			}
+
+			d.status = spaceOK && filesOK  ? "OK" :"Not OK";
 		}
 
 		return gud;
