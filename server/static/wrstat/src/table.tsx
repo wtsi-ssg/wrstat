@@ -81,6 +81,10 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 		rows.sort(getSorter(cols[sortBy], sortReverse));
 	}
 
+	let moved = false,
+	clicking = -1,
+	downTime = 0;
+
 	return <>
 		<Pagination currentPage={page} onClick={e => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"))} totalPages={Math.ceil(rows.length / perPage)} />
 		<table id={id} {...additional}>
@@ -97,7 +101,32 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 				</tr>
 			</thead>
 			<tbody>
-				{rows.slice(page * perPage, (page + 1) * perPage).map(row => <tr onClick={() => onRowClick(row)} {...(rowExtra?.(row) ?? {})}>
+				{rows.slice(page * perPage, (page + 1) * perPage).map(row => <tr onMouseDown={e => {
+					if (e.button !== 0) {
+						return;
+					}
+
+					moved = false;
+					window.addEventListener("mousemove", () => moved = true, {"once": true});
+					downTime = Date.now();
+				}} onMouseUp={e =>{
+					if (e.button !== 0) {
+						return;
+					}
+
+					if (!moved || Date.now() - downTime < 100) {
+						if (clicking === -1) {
+							clicking = window.setTimeout(() => {
+								onRowClick(row);
+								clicking = -1;
+							}, 200);
+						} else {
+							clearTimeout(clicking);
+							clicking = -2;
+							window.setTimeout(() => clicking = -1, 200);
+						}
+					}
+				}} {...(rowExtra?.(row) ?? {})}>
 					{cols.map(col => <td {...(col.extra?.(row[col.key], row) ?? {})}>{(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)}
 				</tr>)}
 			</tbody>
