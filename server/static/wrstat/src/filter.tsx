@@ -110,10 +110,6 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 				<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
 				<label htmlFor="bom">Group Areas</label>
 				<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
-				<label htmlFor="scaleSize">Log Size</label>
-				<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
-				<label htmlFor="scaleDays">Log Days</label>
-				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 				<label>Size </label>
 				<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={300} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
 					setFilterMinSize(min);
@@ -124,6 +120,10 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 					setFilterMinDaysAgo(min);
 					setFilterMaxDaysAgo(max);
 				}} formatter={formatNumber} />
+				<label htmlFor="scaleSize">Log Size Axis</label>
+				<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
+				<label htmlFor="scaleDays">Log Days Axis</label>
+				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 			</div>
 		</details>
 		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...filter} />
