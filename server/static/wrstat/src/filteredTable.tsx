@@ -150,6 +150,8 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 				{
 					title: "Status",
 					key: "status",
+					extra: title => ({title}),
+					formatter: status => <svg xmlns="http://www.w3.org/2000/svg" style={{width: "1em", height: "1em"}}><use href={status === "OK" ? "#ok" : "#notok"} /></svg>,
 					sortFn: sorters[10]
 				}
 			]} table={usage} id="usageTable" className={"prettyTable " + (byUser ? "user" : "group")} />
