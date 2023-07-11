@@ -231,6 +231,8 @@ rect + text, rect + use, rect + use + text {
 
 .minmax_min, .minmax_max {
   padding: 2px;
+  margin-top: -6px;
+  background-color: #aaa;
 }
 
 .minmax_min {
@@ -255,6 +257,8 @@ rect + text, rect + use, rect + use + text {
 
 .minmax_minValue, .minmax_maxValue {
   padding: 2px;
+  margin-top: -6px;
+  border-radius: 3px;
 }
 
 .minmax_minSlider, .minmax_maxSlider {
@@ -471,6 +475,10 @@ summary, label, text, th, .multiInput, .minmax {
     background-color: #aaa;
   }
 
+  .minmax_min, .minmax_max {
+    background-color: #ddd;
+  }
+
   .minmax_setLine, .minmax_minValue, .minmax_maxValue {
     color: #fff;
     background-color: #284;
@@ -534,6 +542,10 @@ summary, label, text, th, .multiInput, .minmax {
 
   .minmax_line {
     background-color: #aaa;
+  }
+
+  .minmax_min, .minmax_max {
+    background-color: #444;
   }
 
   .minmax_setLine, .minmax_minValue, .minmax_maxValue {
