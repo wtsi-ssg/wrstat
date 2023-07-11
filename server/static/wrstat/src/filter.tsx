@@ -1,5 +1,5 @@
 import type {Usage} from "./rpc";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import FilteredTable from "./filteredTable";
 import {asDaysAgo, formatBytes, formatNumber} from "./format";
 import MultiSelect from "./multiselect";
@@ -30,6 +30,8 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 	[filterMaxSize, setFilterMaxSize] = useSavedState("filterMaxSize", Infinity),
 	[filterMinDaysAgo, setFilterMinDaysAgo] = useSavedState("filterMinDaysAgo", -Infinity),
 	[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSavedState("filterMaxDaysAgo", Infinity),
+	[sliderWidth, setSliderWidth] = useState(300),
+	treeFilter = useRef<HTMLDivElement>(null),
 	groupMap = new Map<string, number>(groupUsage.map(({GID, Name}) => [Name || (GID + ""), GID])),
 	userMap = new Map<string, number>(userUsage.map(({UID, Name}) => [Name || (UID + ""), UID])),
 	allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()).filter(gid => gid !== -1),
@@ -79,10 +81,22 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 		setFilterMaxDaysAgo(Infinity);
 	}, [byUser]);
 
+	useEffect(() => {
+		window.addEventListener("resize", () => {
+			if (treeFilter.current) {
+				setSliderWidth(getComputedStyle(treeFilter.current).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
+			}
+		});
+
+		if (treeFilter.current) {
+			setSliderWidth(getComputedStyle(treeFilter.current).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
+		}
+	}, []);
+
 	return <>
 		<details open>
 			<summary>Filter</summary>
-			<div className="treeFilter">
+			<div className="treeFilter" ref={treeFilter}>
 				<label htmlFor="byGroup">By Group</label>
 				<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
 				<label htmlFor="byUser">By User</label>
@@ -111,12 +125,12 @@ export default ({groupUsage, userUsage, areas}: {groupUsage: Usage[], userUsage:
 				<label htmlFor="bom">Group Areas</label>
 				<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
 				<label>Size </label>
-				<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={300} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
+				<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
 					setFilterMinSize(min);
 					setFilterMaxSize(max);
 				}} formatter={formatBytes} />
 				<label>Last Modified</label>
-				<Minmax max={userUsage.concat(groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={300} onchange={(min: number, max: number) => {
+				<Minmax max={userUsage.concat(groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={sliderWidth} onchange={(min: number, max: number) => {
 					setFilterMinDaysAgo(min);
 					setFilterMaxDaysAgo(max);
 				}} formatter={formatNumber} />
