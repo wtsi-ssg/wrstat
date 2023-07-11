@@ -158,11 +158,15 @@ rect + text, rect + use, rect + use + text {
 }
 
 .pagination > li:not(:first-child) {
-  margin-left: 1em;
+  margin-left: 0.25em;
 }
 
 .pagination_link {
   cursor: pointer;
+}
+
+.pagination_link, .pagination_selected {
+  padding: 0.25em;
 }
 
 .pagination_selected {
@@ -489,7 +493,7 @@ summary, label, text, th, .multiInput, .minmax {
 
   .minmax_setLine, .minmax_minValue, .minmax_maxValue {
     color: #fff;
-    background-color: #284;
+    background-color: #074987;
   }
 
   .minmax_minSlider, .minmax_maxSlider {
@@ -512,6 +516,16 @@ summary, label, text, th, .multiInput, .minmax {
 
   .multiInput > div > div ul {
     border: 0 1px 1px 1px solid #000;
+  }
+
+  .pagination_link {
+    background-color: #074987;
+    border: 1px solid #000;
+    color: #fff;
+  }
+
+  .pagination_selected {
+    border: 1px solid #000;
   }
 }
 
@@ -558,7 +572,7 @@ summary, label, text, th, .multiInput, .minmax {
 
   .minmax_setLine, .minmax_minValue, .minmax_maxValue {
     color: #000;
-    background-color: #284;
+    background-color: #d2ecf5;
   }
 
   .minmax_minSlider, .minmax_maxSlider {
@@ -581,5 +595,15 @@ summary, label, text, th, .multiInput, .minmax {
 
   .multiInput > div > div ul {
     border: 0 1px 1px 1px solid #fff;
+  }
+
+  .pagination_link {
+    background-color: #d2ecf5;
+    border: 1px solid #fff;
+    color: #000;
+  }
+
+  .pagination_selected {
+    border: 1px solid #fff;
   }
 }
