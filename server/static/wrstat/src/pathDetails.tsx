@@ -163,6 +163,7 @@ export default ({id, path, isUser, filter, users, groups}: {id: number, path: st
 				}
 
 				entries.push({
+					key: btoa(child.path),
 					name: child.name,
 					value: useCount ? child.count : child.size,
 					backgroundColour: colourFromAge(+(new Date(useMTime ? child.mtime : child.atime))),
