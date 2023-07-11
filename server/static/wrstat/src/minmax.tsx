@@ -4,6 +4,8 @@ export default ({min = 0, max = min + 1, minValue = min, maxValue = max, onchang
 	 {min?: number; max?: number; minValue?: number; maxValue?: number; ticks?: number, width: number,
 		onchange: (min: number, max: number) => void, noOverlap?: boolean, formatter: (val: number) => string}) => {
 
+	width = Math.max(width, 100)
+
 	const [sliderMin, setSliderMin] = useState(Math.max(min, minValue)),
 	[sliderMax, setSliderMax] = useState(Math.min(max, maxValue)),
 	safeMin = Math.min(Math.max(min, sliderMin), Math.max(max, min)),
