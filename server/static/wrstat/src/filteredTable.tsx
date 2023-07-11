@@ -84,24 +84,14 @@ export default ({usage, byUser, groups, users, ...filter}: Filter<Usage> & {byUs
 				}
 			}} cols={[
 				{
-					title: "PI",
-					key: "Owner",
-					sortFn: sorters[0],
-					reverseFn: reverseSorters[0],
-				},
-				{
-					title: byUser ? "User" : "Group",
-					key: "Name",
-					sortFn: sorters[1]
-				},
-				{
-					title: byUser ? "Groups" : "Users",
-					key: byUser ? "GIDs" : "UIDs",
-					formatter: (ids: number[]) => ids.map(id => (byUser ? groupMap : userMap).get(id) ?? "").filter(n => n).join(", "),
-				},
-				{
 					title: "Path",
 					key: "BaseDir",
+					extra: (path, row) => ({
+						title: path +
+							(row.Owner ? "\nPI: " + row.Owner : "") +
+							"\n" + (byUser ? "User: " : "Group: ") + row.Name +
+							"\n" + (byUser ? "Groups: " : "Users: ") + (byUser ? row.GIDs : row.UIDs).map(id => (byUser ? groupMap : userMap).get(id) ?? "").filter(n => n).join(", ")
+					}),
 					sortFn: sorters[2]
 				},
 				{
