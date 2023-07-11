@@ -473,7 +473,7 @@ summary, label, text, th, .multiInput, .minmax {
 
   .minmax_setLine, .minmax_minValue, .minmax_maxValue {
     color: #fff;
-    background-color: #48c;
+    background-color: #284;
   }
 
   .minmax_minSlider, .minmax_maxSlider {
@@ -538,7 +538,7 @@ summary, label, text, th, .multiInput, .minmax {
 
   .minmax_setLine, .minmax_minValue, .minmax_maxValue {
     color: #000;
-    background-color: #48c;
+    background-color: #284;
   }
 
   .minmax_minSlider, .minmax_maxSlider {
