@@ -74,20 +74,10 @@ makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
 
 	return breadcrumbs;
 },
-widthStopMin = 400,
-widthStopMax = 960,
 determineTreeWidth = () => {
 	const width = window.innerWidth;
 
-	let mul = 1;
-
-	if (width > widthStopMax) {
-		mul = 0.6;
-	} else if (width > widthStopMin) {
-		mul = 1 - 0.4 * (width - widthStopMin) / (widthStopMax - widthStopMin);
-	}
-
-	return width * mul;
+	return width - 40;
 },
 makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => {
 	return {
