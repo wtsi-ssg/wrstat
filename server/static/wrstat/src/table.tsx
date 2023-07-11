@@ -75,7 +75,9 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 	const [page, setPage] = useSavedState(id + "Page", 0),
 	[sortBy, setSortBy] = useSavedState(id + "Sort", -1),
 	[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
-	rows = fitlerTableRows(table, filter);
+	rows = fitlerTableRows(table, filter),
+	maxPages = Math.ceil(rows.length / perPage),
+	currPage = Math.min(page, maxPages - 1);
 
 	if (sortBy >= 0) {
 		rows.sort(getSorter(cols[sortBy], sortReverse));
@@ -86,7 +88,7 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 	downTime = 0;
 
 	return <>
-		<Pagination currentPage={page} onClick={e => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"))} totalPages={Math.ceil(rows.length / perPage)} />
+		<Pagination currentPage={currPage} onClick={e => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"))} totalPages={maxPages} />
 		<table id={id} {...additional}>
 			<colgroup>
 				{cols.map(() => <col />)}
@@ -104,7 +106,7 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 				</tr>
 			</thead>
 			<tbody>
-				{rows.slice(page * perPage, (page + 1) * perPage).map(row => <tr onMouseDown={e => {
+				{rows.slice(currPage * perPage, (currPage + 1) * perPage).map(row => <tr onMouseDown={e => {
 					if (e.button !== 0) {
 						return;
 					}
