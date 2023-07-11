@@ -12,16 +12,16 @@ import TreeDetails from "./treedetails";
 import Treemap from "./treemap";
 
 const colours = [
-	"rgba(215, 48, 39, 0.75)",
-	"rgba(244, 109, 67, 0.75)",
-	"rgba(253, 174, 97, 0.75)",
-	"rgba(254, 224, 139, 0.75)",
-	"rgba(255, 255, 191, 0.75)",
-	"rgba(217, 239, 139, 0.75)",
-	"rgba(166, 217, 106, 0.75)",
-	"rgba(102, 189, 99, 0.75)",
-	"rgba(26, 152, 80, 0.75)",
-	"rgba(255, 255, 255, 0.75)"
+	"#d73027",
+	"#f46c43",
+	"#fdaf61",
+	"#fedf8b",
+	"#ffffbf",
+	"#d9ef8b",
+	"#a6d96a",
+	"#66bd63",
+	"#1a9850",
+	"#fff"
 ] as const,
 now = +Date.now(),
 colourFromAge = (lm: number) => {

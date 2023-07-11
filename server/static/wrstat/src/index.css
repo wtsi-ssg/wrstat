@@ -435,6 +435,14 @@ summary {
   margin-right: 0.5em;
 }
 
+.treeMap rect {
+  fill-opacity: 0.75;
+}
+
+.treeMap rect:hover {
+  fill-opacity: 0.8;
+}
+
 summary, label, text, th, .multiInput, .minmax {
   user-select: none;
 }
