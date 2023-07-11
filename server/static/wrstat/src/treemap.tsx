@@ -135,7 +135,7 @@ export default ({table, width, height, noAuth = false, onmouseout}: {table: Tabl
 	};
 
 	if (filteredTable.length === 0) {
-		return <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+		return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
 			<rect width="100%" height="100%" stroke="#000" fill="#fff" />
 			{
 				noAuth ?
@@ -152,7 +152,7 @@ export default ({table, width, height, noAuth = false, onmouseout}: {table: Tabl
 		</svg>;
 	}
 	
-	return <svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
+	return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
 		<defs>
 			<symbol id="lock" viewBox="0 0 100 100">
 				<rect rx="15" x="5" y="38" width="90" height="62" fill="#000" />
