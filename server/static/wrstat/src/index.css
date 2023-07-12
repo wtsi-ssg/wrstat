@@ -53,7 +53,15 @@ body {
 #usageTable.user tr> :nth-child(6),
 #usageTable.user tr> :nth-child(7),
 #usageTable.user tr> :nth-child(9) {
-  display: none;
+  visibility: hidden;
+}
+
+#usageTable.user col:nth-child(3),
+#usageTable.user col:nth-child(4),
+#usageTable.user col:nth-child(6),
+#usageTable.user col:nth-child(7),
+#usageTable.user col:nth-child(9) {
+  width: 0;
 }
 
 rect.hasClick {
