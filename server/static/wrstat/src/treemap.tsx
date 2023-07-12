@@ -140,11 +140,10 @@ export default ({ table, width, height, noAuth = false, onmouseout }: { table: T
 			{
 				noAuth ?
 					<>
-						<svg height={150} transform={`translate(0 ${((height / 2) - 200) / 2})`} viewBox="0 0 100 100" style={{ stroke: "#000" }} stroke-width={2} stroke-linejoin="round">
+						<svg height={150} transform={`translate(0 ${(height - 200) / 2})`} viewBox="0 0 100 100" style={{ stroke: "#000" }} stroke-width={2} stroke-linejoin="round">
 							<rect rx="15" x="5" y="38" width="90" height="62" fill="#000" />
 							<path d="M27,40 v-10 a1,1 0,0,1 46,0 v10" fill="none" stroke="#000" stroke-width="12" />
 						</svg>
-						<text text-anchor="middle" x={width / 2} y={height / 2} >—Not Authorised—</text>
 					</> :
 					<text text-anchor="middle" x={width / 2} y={height / 2} >—No Sub-Directories—</text>
 			}
