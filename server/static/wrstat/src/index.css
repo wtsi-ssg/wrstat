@@ -31,13 +31,16 @@ body {
   text-overflow: ellipsis;
 }
 
-#usageTable col:nth-child(2), #usageTable col:nth-child(3),
-#usageTable col:nth-child(7), #usageTable col:nth-child(8),
+#usageTable col:nth-child(2),
+#usageTable col:nth-child(3),
+#usageTable col:nth-child(7),
+#usageTable col:nth-child(8),
 #usageTable col:nth-child(9) {
   width: 5em;
 }
 
-#usageTable col:nth-child(4), #usageTable col:nth-child(5) {
+#usageTable col:nth-child(4),
+#usageTable col:nth-child(5) {
   width: 7em;
 }
 
@@ -45,11 +48,11 @@ body {
   width: 8em;
 }
 
-#usageTable.user tr > :nth-child(3),
-#usageTable.user tr > :nth-child(4),
-#usageTable.user tr > :nth-child(6),
-#usageTable.user tr > :nth-child(7),
-#usageTable.user tr > :nth-child(9) {
+#usageTable.user tr> :nth-child(3),
+#usageTable.user tr> :nth-child(4),
+#usageTable.user tr> :nth-child(6),
+#usageTable.user tr> :nth-child(7),
+#usageTable.user tr> :nth-child(9) {
   display: none;
 }
 
@@ -57,7 +60,9 @@ rect.hasClick {
   cursor: pointer;
 }
 
-rect + text, rect + use, rect + use + text {
+rect+text,
+rect+use,
+rect+use+text {
   pointer-events: none;
   font-family: Times;
 }
@@ -101,8 +106,8 @@ rect + text, rect + use, rect + use + text {
 }
 
 .prettyTable thead th.sortable:hover {
-    text-decoration: underline;
-    cursor: pointer;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .prettyTable .sortable {
@@ -129,10 +134,16 @@ rect + text, rect + use, rect + use + text {
   padding: 0.5em 0.25em;
 }
 
-#usageTable tbody td:nth-child(2), #usageTable tbody td:nth-child(3), #usageTable tbody td:nth-child(4),
-#usageTable tbody td:nth-child(5), #usageTable tbody td:nth-child(6), #usageTable tbody td:nth-child(7),
+#usageTable tbody td:nth-child(2),
+#usageTable tbody td:nth-child(3),
+#usageTable tbody td:nth-child(4),
+#usageTable tbody td:nth-child(5),
+#usageTable tbody td:nth-child(6),
+#usageTable tbody td:nth-child(7),
 #usageTable tbody td:nth-child(8),
-#historyTable tbody td:nth-child(2), #historyTable tbody td:nth-child(3), #historyTable tbody td:nth-child(4) {
+#historyTable tbody td:nth-child(2),
+#historyTable tbody td:nth-child(3),
+#historyTable tbody td:nth-child(4) {
   text-align: right;
   padding-right: 1em;
 }
@@ -153,11 +164,11 @@ rect + text, rect + use, rect + use + text {
   user-select: none;
 }
 
-.pagination > li {
+.pagination>li {
   display: inline-block;
 }
 
-.pagination > li:not(:first-child) {
+.pagination>li:not(:first-child) {
   margin-left: 0.25em;
 }
 
@@ -165,7 +176,8 @@ rect + text, rect + use, rect + use + text {
   cursor: pointer;
 }
 
-.pagination_link, .pagination_selected {
+.pagination_link,
+.pagination_selected {
   padding: 0.25em;
 }
 
@@ -227,13 +239,17 @@ rect + text, rect + use, rect + use + text {
   grid-column: 2 / span 3;
 }
 
-.minmax_min, .minmax_max, .minmax_minValue, .minmax_maxValue {
+.minmax_min,
+.minmax_max,
+.minmax_minValue,
+.minmax_maxValue {
   position: absolute;
   top: 0;
 }
 
 
-.minmax_min, .minmax_max {
+.minmax_min,
+.minmax_max {
   padding: 2px;
   margin-top: -6px;
   background-color: #aaa;
@@ -247,7 +263,8 @@ rect + text, rect + use, rect + use + text {
   left: 100%;
 }
 
-.minmax_line, .minmax_setLine {
+.minmax_line,
+.minmax_setLine {
   position: absolute;
   top: calc(1em + 4px + 0.5em - 5px);
   bottom: 5px;
@@ -259,13 +276,15 @@ rect + text, rect + use, rect + use + text {
   border-radius: 1em;
 }
 
-.minmax_minValue, .minmax_maxValue {
+.minmax_minValue,
+.minmax_maxValue {
   padding: 2px;
   margin-top: -6px;
   border-radius: 3px;
 }
 
-.minmax_minSlider, .minmax_maxSlider {
+.minmax_minSlider,
+.minmax_maxSlider {
   position: absolute;
   top: calc(1em + 2px);
   width: 1em;
@@ -305,41 +324,44 @@ rect + text, rect + use, rect + use + text {
   list-style: none;
 }
 
-.multiInput > ul li {
+.multiInput>ul li {
   display: inline-block;
 }
 
-.multiInput > ul li:not(:first-child) {
+.multiInput>ul li:not(:first-child) {
   margin-left: 1em;
   padding: 0 0.5em;
   cursor: cell;
 }
 
-.multiInput > div {
+.multiInput>div {
   height: 0px;
   position: relative;
   z-index: 10;
 }
 
-.multiInput > div:not(:focus-within) {
+.multiInput>div:not(:focus-within) {
   overflow: hidden;
 }
 
-.multiInput > div > div {
+.multiInput>div>div {
   position: absolute;
 }
 
-.multiInput > div > div > input {
+.multiInput>div>div>input {
   box-sizing: border-box;
   width: 100%;
 }
 
-.multiInput > div > div ul {
+.multiInput>div>div ul {
   max-height: 20em;
   overflow-y: scroll;
 }
 
-.minmax_min, .minmax_max, .minmax_minValue, .minmax_maxValue {
+.minmax_min,
+.minmax_max,
+.minmax_minValue,
+.minmax_maxValue {
   white-space: nowrap;
 }
 
@@ -361,11 +383,11 @@ summary {
   justify-self: end;
 }
 
-.treeFilter > label:after {
+.treeFilter>label:after {
   content: ":";
 }
 
-.treeFilter > .multiInput {
+.treeFilter>.multiInput {
   grid-column: 2 / span 3;
 }
 
@@ -382,7 +404,7 @@ summary {
   cursor: crosshair;
 }
 
-.treeFilter > select {
+.treeFilter>select {
   grid-column: 2 / span 2;
 }
 
@@ -439,20 +461,27 @@ summary {
   margin-right: 0.5em;
 }
 
-.treeMap rect {
+.treeMap rect.box {
   fill-opacity: 0.75;
 }
 
-.treeMap rect:hover {
+.treeMap rect.box:hover {
   fill-opacity: 0.8;
 }
 
-summary, label, text, th, .multiInput, .minmax {
+summary,
+label,
+text,
+th,
+.multiInput,
+.minmax {
   user-select: none;
 }
 
 @media (prefers-color-scheme: light) {
-  html, body {
+
+  html,
+  body {
     color: #000;
     background-color: #fff;
   }
@@ -487,16 +516,20 @@ summary, label, text, th, .multiInput, .minmax {
     background-color: #aaa;
   }
 
-  .minmax_min, .minmax_max {
+  .minmax_min,
+  .minmax_max {
     background-color: #ddd;
   }
 
-  .minmax_setLine, .minmax_minValue, .minmax_maxValue {
+  .minmax_setLine,
+  .minmax_minValue,
+  .minmax_maxValue {
     color: #fff;
     background-color: #074987;
   }
 
-  .minmax_minSlider, .minmax_maxSlider {
+  .minmax_minSlider,
+  .minmax_maxSlider {
     border: 1px solid #000;
     background-color: #888;
   }
@@ -506,15 +539,15 @@ summary, label, text, th, .multiInput, .minmax {
     background-color: #fff;
   }
 
-  .multiInput > ul li:not(:first-child) {
+  .multiInput>ul li:not(:first-child) {
     border: 1px solid #000;
   }
 
-  .multiInput > div > div {
+  .multiInput>div>div {
     background-color: #fff;
   }
 
-  .multiInput > div > div ul {
+  .multiInput>div>div ul {
     border: 0 1px 1px 1px solid #000;
   }
 
@@ -530,7 +563,9 @@ summary, label, text, th, .multiInput, .minmax {
 }
 
 @media (prefers-color-scheme: dark) {
-  html, body {
+
+  html,
+  body {
     color: #fff;
     background-color: #000;
     --graphBack: #444;
@@ -566,16 +601,20 @@ summary, label, text, th, .multiInput, .minmax {
     background-color: #aaa;
   }
 
-  .minmax_min, .minmax_max {
+  .minmax_min,
+  .minmax_max {
     background-color: #444;
   }
 
-  .minmax_setLine, .minmax_minValue, .minmax_maxValue {
+  .minmax_setLine,
+  .minmax_minValue,
+  .minmax_maxValue {
     color: #000;
     background-color: #d2ecf5;
   }
 
-  .minmax_minSlider, .minmax_maxSlider {
+  .minmax_minSlider,
+  .minmax_maxSlider {
     border: 1px solid #fff;
     background-color: #666;
   }
@@ -585,15 +624,15 @@ summary, label, text, th, .multiInput, .minmax {
     background-color: #000;
   }
 
-  .multiInput > ul li:not(:first-child) {
+  .multiInput>ul li:not(:first-child) {
     border: 1px solid #fff;
   }
 
-  .multiInput > div > div {
+  .multiInput>div>div {
     background-color: #000;
   }
 
-  .multiInput > div > div ul {
+  .multiInput>div>div ul {
     border: 0 1px 1px 1px solid #fff;
   }
 
