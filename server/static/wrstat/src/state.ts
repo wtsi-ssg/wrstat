@@ -70,8 +70,12 @@ export const useSavedState = <T>(name: string, v: T) => {
 	const [val, setter] = useState<T>(restoreState(name, v));
 	setters.set(name, [v, setter]);
 
-	if (firstSet === -1) {
-		firstSet = window.setTimeout(() => firstRender = false, 100);
+	if (firstRender) {
+		if (firstSet >= 0) {
+			clearTimeout(firstSet);
+		}
+
+		firstSet = window.setTimeout(() => firstRender = false, 1);
 	}
 
 	return [val, (val: T) => {
