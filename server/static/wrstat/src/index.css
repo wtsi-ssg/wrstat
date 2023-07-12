@@ -481,9 +481,11 @@ summary {
 }
 
 #disktree {
+  margin-top: 2em;
+  border-top: 1px solid #000;
   display: grid;
   width: 100%;
-  gap: 0.5em 1em;
+  gap: 1em;
   grid-template-columns: 1fr auto;
 }
 
