@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { downloadGroups, downloadUsers } from './download';
 import { asDaysAgoStr, formatBytes, formatNumber } from './format';
 import PathDetails from './pathDetails';
-import { restoring, useSavedState } from './state';
+import { useSavedState } from './state';
 import Table, { type Filter, fitlerTableRows } from './table';
 
 const stringSort = new Intl.Collator().compare,
@@ -35,8 +35,6 @@ const stringSort = new Intl.Collator().compare,
 		null,
 	] as const;
 
-let first = true;
-
 export default ({ usage, byUser, groups, users, ...filter }: Filter<Usage> & { byUser: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number> }) => {
 	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
@@ -45,12 +43,6 @@ export default ({ usage, byUser, groups, users, ...filter }: Filter<Usage> & { b
 		groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname]));
 
 	useEffect(() => {
-		if (restoring || first) {
-			first = false;
-
-			return;
-		}
-
 		setSelectedDir("");
 		setSelectedID(-1);
 	}, [byUser]);

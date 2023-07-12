@@ -61,13 +61,24 @@ window.addEventListener("popstate", () => {
 
 getStateFromQuery();
 
-export let restoring = false;
+export let restoring = false,
+	firstRender = true;
+
+let firstSet = -1;
 
 export const useSavedState = <T>(name: string, v: T) => {
 	const [val, setter] = useState<T>(restoreState(name, v));
 	setters.set(name, [v, setter]);
 
+	if (firstSet === -1) {
+		firstSet = window.setTimeout(() => firstRender = false, 100);
+	}
+
 	return [val, (val: T) => {
+		if (firstRender || restoring) {
+			return;
+		}
+
 		state.set(name, val);
 
 		setter(val);

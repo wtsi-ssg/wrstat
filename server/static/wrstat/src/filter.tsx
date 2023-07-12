@@ -4,7 +4,7 @@ import FilteredTable from "./filteredTable";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import MultiSelect from "./multiselect";
 import Scatter from "./scatter";
-import { useSavedState } from './state';
+import { firstRender, useSavedState } from './state';
 import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
 
@@ -39,10 +39,10 @@ export default ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsa
 			UID: byUser ? users : undefined,
 			GID: byUser ? undefined : allGroups,
 			UIDs: byUser ? undefined : (uids: number[]) => users.length ? uids.some(uid => users.includes(uid)) : true,
-			GIDs: byUser ? (gids: number[]) => allGroups.length ? gids.some(gid => allGroups.includes(gid)) : true : undefined
+			GIDs: byUser ? (gids: number[]) => allGroups.length ? gids.some(gid => allGroups.includes(gid)) : true : undefined,
+			Owner: byUser ? [] : owners
 		},
-		ofilter = Object.assign({
-			Owner: byUser ? [] : owners,
+		scatterFilter = Object.assign({
 			UsageSize: { min: filterMinSize, max: filterMaxSize },
 			Mtime: (mtime: string) => {
 				const daysAgo = asDaysAgo(mtime);
@@ -50,7 +50,7 @@ export default ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsa
 				return daysAgo >= filterMinDaysAgo && daysAgo <= filterMaxDaysAgo;
 			}
 		}, basefilter),
-		filter = Object.assign({
+		tableFilter = Object.assign({
 			UsageSize: { min: Math.max(minSize, filterMinSize), max: Math.min(maxSize, filterMaxSize) },
 			Mtime: (mtime: string) => {
 				const daysAgo = asDaysAgo(mtime);
@@ -67,6 +67,10 @@ export default ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsa
 	}, [savedMinDaysAgo, savedMaxDaysAgo, savedMinSize, savedMaxSize]);
 
 	useEffect(() => {
+		if (firstRender) {
+			return
+		}
+
 		setSavedMinSize(-Infinity);
 		setSavedMaxSize(Infinity);
 		setSavedMinDaysAgo(-Infinity);
@@ -101,7 +105,7 @@ export default ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsa
 				<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
 				<label htmlFor="byUser">By User</label>
 				<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
-				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, ofilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} setLimits={(minS, maxS, minD, maxD) => {
+				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} setLimits={(minS, maxS, minD, maxD) => {
 					setSavedMinSize(minS);
 					setSavedMaxSize(maxS);
 					setSavedMinDaysAgo(minD);
@@ -140,6 +144,6 @@ export default ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsa
 				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 			</div>
 		</details>
-		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...filter} />
+		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...tableFilter} />
 	</>
 }
