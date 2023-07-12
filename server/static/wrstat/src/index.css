@@ -493,6 +493,16 @@ summary {
   margin-top: 3em;
 }
 
+.exceed,
+.exceeded {
+  margin-top: 1em;
+  font-size: 1, 2em;
+}
+
+.exceeded {
+  font-weight: bold;
+}
+
 summary,
 label,
 text,
@@ -592,6 +602,10 @@ th,
   .pagination_prev {
     border: 1px solid #000;
   }
+
+  .exceeded {
+    color: #f00;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -681,5 +695,9 @@ th,
 
   .pagination_selected {
     border: 1px solid #fff;
+  }
+
+  .exceeded {
+    color: #f00;
   }
 }
