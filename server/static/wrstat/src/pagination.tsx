@@ -30,8 +30,8 @@ const PaginationComponent = ({ totalPages, currentPage, onClick }: { totalPages:
 		if (!(page < paginationEnd || page > lastPage - paginationEnd ||
 			((paginationSurround > currentPage ||
 				page >= currentPage - paginationSurround) && page <= currentPage + paginationSurround) ||
-			paginationEnd > 0 && ((currentPage - paginationSurround - 1 === paginationEnd && page === paginationEnd) ||
-				(currentPage + paginationSurround + 1 === lastPage - paginationEnd && page === lastPage - paginationEnd)))) {
+			(paginationEnd > 0 && ((currentPage - paginationSurround - 1 === paginationEnd && page === paginationEnd) ||
+				(currentPage + paginationSurround + 1 === lastPage - paginationEnd && page === lastPage - paginationEnd))))) {
 			if (page !== start) {
 				processPaginationSection(ret, currentPage, start, page - 1, onClick);
 			}
