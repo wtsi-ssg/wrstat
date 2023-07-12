@@ -1,27 +1,32 @@
 import 'jest-canvas-mock';
-import {render} from '@testing-library/react';
-import TreeMap, {type Table} from './treemap';
+import { render } from '@testing-library/react';
+import TreeMap, { type Table } from './treemap';
 
 const testData: Table = [
 	{
 		name: "A",
-		value: 60
+		value: 60,
+		noauth: false
 	},
 	{
 		name: "B",
-		value: 15
+		value: 15,
+		noauth: false
 	},
 	{
 		name: "C",
-		value: 15
+		value: 15,
+		noauth: false
 	},
 	{
 		name: "D",
-		value: 10
+		value: 10,
+		noauth: false
 	},
 	{
 		name: "E",
-		value: 0
+		value: 0,
+		noauth: false
 	},
 ];
 
@@ -33,39 +38,39 @@ type Box = {
 }
 
 it("TreeMap creates boxes with the correct area", () => {
-	const {asFragment} = render(<TreeMap width={10} height={10} table={testData} />),
-	expectedAreas = new Map<string, number>(testData.map(({name, value}) => [name, value])),
-	boxesGot: Box[] = [],
-	overlapsExisting = (box: Box) => {
-		let overlap = false;
+	const { asFragment } = render(<TreeMap width={10} height={10} table={testData} />),
+		expectedAreas = new Map<string, number>(testData.map(({ name, value }) => [name, value])),
+		boxesGot: Box[] = [],
+		overlapsExisting = (box: Box) => {
+			let overlap = false;
 
-		for (const existing of boxesGot) {
-			if (box.left < existing.right && box.right > existing.left &&
-				box.top < existing.bottom && box.bottom > existing.top
-			) {
-				overlap = true;
+			for (const existing of boxesGot) {
+				if (box.left < existing.right && box.right > existing.left &&
+					box.top < existing.bottom && box.bottom > existing.top
+				) {
+					overlap = true;
 
-				break;
+					break;
+				}
 			}
-		}
 
-		boxesGot.push(box);
+			boxesGot.push(box);
 
-		return overlap;
-	};
+			return overlap;
+		};
 
 	for (const svg of asFragment().childNodes) {
 		if (svg.nodeName === "svg") {
 			for (const child of svg.childNodes) {
 				if (child.nodeName === "rect") {
 					const left = parseFloat((child as SVGRectElement).getAttribute("x") || "0"),
-					top = parseFloat((child as SVGRectElement).getAttribute("y") || "0"),
-					width = parseFloat((child as SVGRectElement).getAttribute("width") || "0"),
-					height = parseFloat((child as SVGRectElement).getAttribute("height") || "0"),
-					bottom = top + height,
-					right = left + width,
-					area = width * height,
-					expectedArea = expectedAreas.get(child.textContent ?? "");
+						top = parseFloat((child as SVGRectElement).getAttribute("y") || "0"),
+						width = parseFloat((child as SVGRectElement).getAttribute("width") || "0"),
+						height = parseFloat((child as SVGRectElement).getAttribute("height") || "0"),
+						bottom = top + height,
+						right = left + width,
+						area = width * height,
+						expectedArea = expectedAreas.get(child.textContent ?? "");
 
 					expect(area).toEqual(expectedArea);
 					expect(left).toBeGreaterThanOrEqual(0);

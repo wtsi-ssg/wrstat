@@ -1,12 +1,12 @@
-import {useEffect, useRef, useState} from "react";
-import {useSavedState} from "./state";
+import { useEffect, useRef, useState } from "react";
+import { useSavedState } from "./state";
 
-export default ({id, list, onchange}: {id: string; list: readonly string[]; onchange: (list: string[]) => void}) => {
+export default ({ id, list, onchange }: { id: string; list: readonly string[]; onchange: (list: string[]) => void }) => {
 	const [selected, setSelected] = useSavedState<string[]>(id + "Multi", []),
-	filterRef = useRef<HTMLInputElement>(null),
-	[filter, setFilter] = useState(""),
-	selectedSet = new Set(selected),
-	filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase()));
+		filterRef = useRef<HTMLInputElement>(null),
+		[filter, setFilter] = useState(""),
+		selectedSet = new Set(selected),
+		filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase()));
 
 	useEffect(() => onchange(Array.from(selected)), []);
 

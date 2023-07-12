@@ -1,13 +1,13 @@
-import type {Child, History, Usage} from './rpc';
-import type {Entry} from './treemap';
-import {useEffect, useState} from "react"
-import {formatBytes, formatLargeNumber, formatNumber} from './format';
+import type { Child, History, Usage } from './rpc';
+import type { Entry } from './treemap';
+import { useEffect, useState } from "react"
+import { formatBytes, formatLargeNumber, formatNumber } from './format';
 import HistoryGraph from './history';
 import MultiSelect from './multiselect';
 import rpc from "./rpc";
-import {restoring, useSavedState} from './state';
+import { restoring, useSavedState } from './state';
 import SubDirs from './subdirs';
-import type {Filter} from './table';
+import type { Filter } from './table';
 import TreeDetails from "./treedetails";
 import Treemap from "./treemap";
 
@@ -23,101 +23,101 @@ const colours = [
 	"#1a9850",
 	"#fff"
 ] as const,
-now = +Date.now(),
-colourFromAge = (lm: number) => {
-	const diff = now - lm;
+	now = +Date.now(),
+	colourFromAge = (lm: number) => {
+		const diff = now - lm;
 
-	const day = 24 * 60 * 60 * 1000;
-	
-	if (diff > 2 * 365 * day) {
-		return colours[0];
-	} else if (diff > 365 * day) {
-		return colours[1];
-	} else if (diff > 10 * 30 * day) {
-		return colours[2];
-	} else if (diff > 8 * 30 * day) {
-		return colours[3];
-	} else if (diff > 6 * 30 * day) {
-		return colours[4];
-	} else if (diff > 3 * 30 * day) {
-		return colours[5];
-	} else if (diff > 2 * 30 * day) {
-		return colours[6];
-	} else if (diff > 30 * day) {
-		return colours[7];
-	}
-	return colours[8];
-},
-makeBreadcrumb = (path: string, part: string, setPath: (path: string) => void) => {
-	return <li><button onClick={() => setPath(path)}>{part}</button></li>;
-},
-makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
-	let last = 0;
+		const day = 24 * 60 * 60 * 1000;
 
-	const breadcrumbs = [
-		makeBreadcrumb("/", "Root", setPath)
-	];
+		if (diff > 2 * 365 * day) {
+			return colours[0];
+		} else if (diff > 365 * day) {
+			return colours[1];
+		} else if (diff > 10 * 30 * day) {
+			return colours[2];
+		} else if (diff > 8 * 30 * day) {
+			return colours[3];
+		} else if (diff > 6 * 30 * day) {
+			return colours[4];
+		} else if (diff > 3 * 30 * day) {
+			return colours[5];
+		} else if (diff > 2 * 30 * day) {
+			return colours[6];
+		} else if (diff > 30 * day) {
+			return colours[7];
+		}
+		return colours[8];
+	},
+	makeBreadcrumb = (path: string, part: string, setPath: (path: string) => void) => {
+		return <li><button onClick={() => setPath(path)}>{part}</button></li>;
+	},
+	makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
+		let last = 0;
 
-	while (true) {
-		const pos = path.indexOf("/", last+1);
+		const breadcrumbs = [
+			makeBreadcrumb("/", "Root", setPath)
+		];
 
-		if (pos === -1) {
-			break;
+		while (true) {
+			const pos = path.indexOf("/", last + 1);
+
+			if (pos === -1) {
+				break;
+			}
+
+			breadcrumbs.push(makeBreadcrumb(path.slice(0, pos), path.slice(last + 1, pos), setPath));
+
+			last = pos;
 		}
 
-		breadcrumbs.push(makeBreadcrumb(path.slice(0, pos), path.slice(last+1, pos), setPath));	
+		breadcrumbs.push(<span>{path.slice(last + 1) || "/"}</span>);
 
-		last = pos;
-	}
+		return breadcrumbs;
+	},
+	determineTreeWidth = () => {
+		const width = window.innerWidth;
 
-	breadcrumbs.push(<span>{path.slice(last+1) || "/"}</span>);
-
-	return breadcrumbs;
-},
-determineTreeWidth = () => {
-	const width = window.innerWidth;
-
-	return width - 40;
-},
-makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => {
-	return {
-		path,
-		"users": (filter.UID as null | number[])?.map(uid => users.get(uid) ?? -1).join(",") ?? "",
-		"groups": (filter.GID as null | number[])?.map(gid => groups.get(gid) ?? -1).join(",") ?? "",
-		"types": filetypes.join(",")
-	};
-},
-fileTypes = ["other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
-"cram", "fasta", "fastq", "fastq.gz", "ped/bed", "compressed", "text",
-"log", "dir"] as const,
-timesSinceAccess = [
-	["> 0 days", 0],
-	["> 1 month", 30],
-	["> 2 months", 60],
-	["> 3 months", 120],
-	["> 6 months", 180],
-	["> 8 months", 240],
-	["> 10 months", 300],
-	["> 1 year", 365],
-	["> 2 years", 730]
-] as const;
+		return width - 40;
+	},
+	makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => {
+		return {
+			path,
+			"users": (filter.UID as null | number[])?.map(uid => users.get(uid) ?? -1).join(",") ?? "",
+			"groups": (filter.GID as null | number[])?.map(gid => groups.get(gid) ?? -1).join(",") ?? "",
+			"types": filetypes.join(",")
+		};
+	},
+	fileTypes = ["other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
+		"cram", "fasta", "fastq", "fastq.gz", "ped/bed", "compressed", "text",
+		"log", "dir"] as const,
+	timesSinceAccess = [
+		["> 0 days", 0],
+		["> 1 month", 30],
+		["> 2 months", 60],
+		["> 3 months", 120],
+		["> 6 months", 180],
+		["> 8 months", 240],
+		["> 10 months", 300],
+		["> 1 year", 365],
+		["> 2 years", 730]
+	] as const;
 
 let first = true;
 
-export default ({id, path, isUser, filter, users, groups}: {id: number, path: string; isUser: boolean; filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string>}) => {
+export default ({ id, path, isUser, filter, users, groups }: { id: number, path: string; isUser: boolean; filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string> }) => {
 	const [treePath, setTreePath] = useSavedState("treePath", "/"),
-	[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
-	[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
-	[childDetails, setChildDetails] = useState<Child | null>(null),
-	[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
-	[useMTime, setUseMTime] = useSavedState("useMTime", false),
-	[useCount, setUseCount] = useSavedState("useCount", false),
-	[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
-	[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
-	[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
-	[inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
-	[hasAuth, setHasAuth] = useState(true),
-	[history, setHistory] = useState<History[]>([]);
+		[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
+		[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
+		[childDetails, setChildDetails] = useState<Child | null>(null),
+		[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
+		[useMTime, setUseMTime] = useSavedState("useMTime", false),
+		[useCount, setUseCount] = useSavedState("useCount", false),
+		[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
+		[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
+		[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
+		[inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
+		[hasAuth, setHasAuth] = useState(true),
+		[history, setHistory] = useState<History[]>([]);
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
@@ -141,34 +141,34 @@ export default ({id, path, isUser, filter, users, groups}: {id: number, path: st
 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
-		.then(children => {
-			const entries: Entry[] = [],
-			since = new Date(children.timestamp).valueOf() - sinceLastAccess * 86_400_000;
+			.then(children => {
+				const entries: Entry[] = [],
+					since = new Date(children.timestamp).valueOf() - sinceLastAccess * 86_400_000;
 
-			setHasAuth(!children.noauth);
+				setHasAuth(!children.noauth);
 
-			for (const child of children.children ?? []) {
-				if (new Date(child.atime).valueOf() > since) {
-					continue;
+				for (const child of children.children ?? []) {
+					if (new Date(child.atime).valueOf() > since) {
+						continue;
+					}
+
+					entries.push({
+						key: btoa(child.path),
+						name: child.name,
+						value: useCount ? child.count : child.size,
+						backgroundColour: colourFromAge(+(new Date(useMTime ? child.mtime : child.atime))),
+						onclick: child.has_children && !child.noauth ? () => setTreePath(child.path) : undefined,
+						onmouseover: () => setChildDetails(child),
+						noauth: child.noauth
+					});
 				}
 
-				entries.push({
-					key: btoa(child.path),
-					name: child.name,
-					value: useCount ? child.count : child.size,
-					backgroundColour: colourFromAge(+(new Date(useMTime ? child.mtime : child.atime))),
-					onclick: child.has_children && !child.noauth ? () => setTreePath(child.path) : undefined,
-					onmouseover: () => setChildDetails(child),
-					noauth: child.noauth
-				});
-			}
+				entries.sort((a, b) => b.value - a.value);
 
-			entries.sort((a, b) => b.value - a.value);
-
-			setTreeMapData(entries);
-			setChildDetails(children);
-			setDirDetails(children);
-		});
+				setTreeMapData(entries);
+				setChildDetails(children);
+				setDirDetails(children);
+			});
 
 		setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
 	}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, JSON.stringify(filter)]);
@@ -187,7 +187,7 @@ export default ({id, path, isUser, filter, users, groups}: {id: number, path: st
 			<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
 				{timesSinceAccess.map(([l, t]) => <option selected={sinceLastAccess === t} value={t}>{l}</option>)}
 			</select>
-		</div>	
+		</div>
 		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 		<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
 		<TreeDetails details={childDetails} />
@@ -210,17 +210,17 @@ export default ({id, path, isUser, filter, users, groups}: {id: number, path: st
 				</tr>
 			</tbody>
 		</table>
-		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath}/>
+		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
 		{
 			history.length ? <>
 				<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
 				<label htmlFor="countHistory">Count History</label><input type="radio" id="countHistory" checked={inodeHistory} onChange={() => setInodeHistory(true)} />
 			</> : <></>
 		}
-		<HistoryGraph history={history.map(h => ({Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize}))} width={960} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
+		<HistoryGraph history={history.map(h => ({ Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize }))} width={960} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
 			const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
 
 			return maxAmount = order * Math.ceil(maxAmount / order)
-		 } : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
+		} : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
 	</>
 }

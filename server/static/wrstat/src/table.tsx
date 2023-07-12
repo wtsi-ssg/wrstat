@@ -1,6 +1,6 @@
-import {type CSSProperties} from "react";
+import { type CSSProperties } from "react";
 import Pagination from "./pagination";
-import {useSavedState} from "./state";
+import { useSavedState } from "./state";
 
 type Column<T> = {
 	[K in Extract<keyof T, string>]-?: {
@@ -15,7 +15,7 @@ type Column<T> = {
 }[Extract<keyof T, string>];
 
 export type Filter<T> = {
-	[K in keyof T]?: ((col: T[K]) => boolean) | T[K][] | (T[K] extends number ? {min: number, max: number} : never);
+	[K in keyof T]?: ((col: T[K]) => boolean) | T[K][] | (T[K] extends number ? { min: number, max: number } : never);
 }
 
 type Params<T> = {
@@ -30,21 +30,21 @@ type Params<T> = {
 	style?: CSSProperties;
 }
 
-const noopFormatter = (a: {toString(): string}) => a + "",
-noop = () => {},
-noopSort = () => 0,
-reverseSort = <T extends Record<string, any>,>(fn: (a: T, b: T) => number) => (a: T, b: T) => fn(b, a),
-getSorter = <T extends Record<string, any>>(col: Column<T>, reverse = false) => {
-	if (!reverse) {
-		return col["sortFn"] ?? noopSort;
-	}
+const noopFormatter = (a: { toString(): string }) => a + "",
+	noop = () => { },
+	noopSort = () => 0,
+	reverseSort = <T extends Record<string, any>,>(fn: (a: T, b: T) => number) => (a: T, b: T) => fn(b, a),
+	getSorter = <T extends Record<string, any>>(col: Column<T>, reverse = false) => {
+		if (!reverse) {
+			return col["sortFn"] ?? noopSort;
+		}
 
-	return col["reverseFn"] ?? reverseSort(col["sortFn"] ?? noopSort);
-};
+		return col["reverseFn"] ?? reverseSort(col["sortFn"] ?? noopSort);
+	};
 
 export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filter: Filter<T>) => {
 	const toRet: T[] = [],
-	filterKeys = Object.keys(filter) as (keyof Filter<T>)[];
+		filterKeys = Object.keys(filter) as (keyof Filter<T>)[];
 
 	FilterLoop:
 	for (const row of table) {
@@ -71,21 +71,21 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 	return toRet;
 };
 
-export default <T extends Record<string, any>>({table, cols, onRowClick, perPage = Infinity, filter = {}, id, rowExtra,...additional}: Params<T>) => {
+export default <T extends Record<string, any>>({ table, cols, onRowClick, perPage = Infinity, filter = {}, id, rowExtra, ...additional }: Params<T>) => {
 	const [page, setPage] = useSavedState(id + "Page", 0),
-	[sortBy, setSortBy] = useSavedState(id + "Sort", -1),
-	[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
-	rows = fitlerTableRows(table, filter),
-	maxPages = Math.ceil(rows.length / perPage),
-	currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1);
+		[sortBy, setSortBy] = useSavedState(id + "Sort", -1),
+		[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
+		rows = fitlerTableRows(table, filter),
+		maxPages = Math.ceil(rows.length / perPage),
+		currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1);
 
 	if (sortBy >= 0) {
 		rows.sort(getSorter(cols[sortBy], sortReverse));
 	}
 
 	let moved = false,
-	clicking = -1,
-	downTime = 0;
+		clicking = -1,
+		downTime = 0;
 
 	return <>
 		<Pagination currentPage={currPage} onClick={e => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"))} totalPages={maxPages} />
@@ -112,9 +112,9 @@ export default <T extends Record<string, any>>({table, cols, onRowClick, perPage
 					}
 
 					moved = false;
-					window.addEventListener("mousemove", () => moved = true, {"once": true});
+					window.addEventListener("mousemove", () => moved = true, { "once": true });
 					downTime = Date.now();
-				}} onMouseUp={e =>{
+				}} onMouseUp={e => {
 					if (e.button !== 0) {
 						return;
 					}

@@ -13,15 +13,15 @@ export const getCookie = (toFind: string) => {
 
 	return "";
 },
-logout = () => {
-	const expireNow = "=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/";
+	logout = () => {
+		const expireNow = "=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/";
 
-	for (const cookie of document.cookie.split("; ")) {
-	  document.cookie = cookie.split("=")[0] + expireNow;
-	}
+		for (const cookie of document.cookie.split("; ")) {
+			document.cookie = cookie.split("=")[0] + expireNow;
+		}
 
-	window.location.reload();
-};
+		window.location.reload();
+	};
 
 export default () => {
 	const jwt = getCookie("jwt");
