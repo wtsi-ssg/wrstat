@@ -1,12 +1,12 @@
 import { formatBytes, formatDate, formatNumber } from "./format";
 import type { Child } from "./rpc";
 
-export default ({ details }: { details: Child | null }) => {
+export default ({ details, ...rest }: { details: Child | null } & Record<string, any>) => {
 	if (!details) {
 		return <></>
 	}
 
-	return <div id="details">
+	return <div id="details" {...rest}>
 		{details.path}
 		<table>
 			<tr>

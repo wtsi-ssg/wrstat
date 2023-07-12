@@ -385,6 +385,7 @@ summary {
   width: 100%;
   gap: 0.5em 1em;
   grid-template-columns: auto auto auto 1fr min-content;
+  grid-auto-rows: min-content;
   justify-items: start;
 }
 
@@ -479,6 +480,17 @@ summary {
   fill-opacity: 0.8;
 }
 
+#disktree {
+  display: grid;
+  width: 100%;
+  gap: 0.5em 1em;
+  grid-template-columns: 1fr auto;
+}
+
+#disktree .treeFilter {
+  margin-top: 3em;
+}
+
 summary,
 label,
 text,
@@ -520,6 +532,7 @@ th,
   #details {
     background-color: #ddd;
     border: 1px solid #aaa;
+    box-sizing: border-box;
   }
 
   .minmax_line {

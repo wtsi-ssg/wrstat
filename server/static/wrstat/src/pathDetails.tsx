@@ -77,7 +77,7 @@ const colours = [
 	determineTreeWidth = () => {
 		const width = window.innerWidth;
 
-		return width - 40;
+		return Math.max(width - 400, 400);
 	},
 	makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => {
 		return {
@@ -164,42 +164,46 @@ export default ({ id, path, isUser, filter, users, groups }: { id: number, path:
 	}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, JSON.stringify(filter)]);
 
 	return <>
-		<div className="treeFilter">
-			<label htmlFor="aTime">Use ATime</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
-			<label htmlFor="mTime">Use MTime</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
-			<br />
-			<label htmlFor="useSize">Use Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
-			<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
-			<br />
-			<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
-			<br />
-			<label htmlFor="sinceAccess">Time Since Access</label>
-			<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
-				{timesSinceAccess.map(([l, t]) => <option selected={sinceLastAccess === t} value={t}>{l}</option>)}
-			</select>
+		<div id="disktree">
+			<div>
+				<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
+				<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
+				<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
+				<table id="treeKey">
+					<caption>
+						<span>Colour Key</span>
+						{useMTime ? "Least" : "Greatest"} time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
+					</caption>
+					<tbody>
+						<tr>
+							<td className="age_2years">&gt; 2 years</td>
+							<td className="age_1year">&gt; 1 year</td>
+							<td className="age_10months">&gt; 10 months</td>
+							<td className="age_8months">&gt; 8 months</td>
+							<td className="age_6months">&gt; 6 months</td>
+							<td className="age_3months">&gt; 3 months</td>
+							<td className="age_2months">&gt; 2 months</td>
+							<td className="age_1month">&gt; 1 month</td>
+							<td className="age_1week">&lt; 1 month</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div className="treeFilter">
+				<label htmlFor="aTime">Use ATime</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
+				<label htmlFor="mTime">Use MTime</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
+				<br />
+				<label htmlFor="useSize">Use Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
+				<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
+				<br />
+				<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
+				<br />
+				<label htmlFor="sinceAccess">Time Since Access</label>
+				<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
+					{timesSinceAccess.map(([l, t]) => <option selected={sinceLastAccess === t} value={t}>{l}</option>)}
+				</select>
+			</div>
 		</div>
-		<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
-		<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
-		<TreeDetails details={childDetails} />
-		<table id="treeKey">
-			<caption>
-				<span>Colour Key</span>
-				{useMTime ? "Least" : "Greatest"} time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
-			</caption>
-			<tbody>
-				<tr>
-					<td className="age_2years">&gt; 2 years</td>
-					<td className="age_1year">&gt; 1 year</td>
-					<td className="age_10months">&gt; 10 months</td>
-					<td className="age_8months">&gt; 8 months</td>
-					<td className="age_6months">&gt; 6 months</td>
-					<td className="age_3months">&gt; 3 months</td>
-					<td className="age_2months">&gt; 2 months</td>
-					<td className="age_1month">&gt; 1 month</td>
-					<td className="age_1week">&lt; 1 month</td>
-				</tr>
-			</tbody>
-		</table>
 		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
 		{
 			history.length ? <>
