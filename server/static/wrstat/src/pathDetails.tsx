@@ -111,7 +111,7 @@ export default ({ id, path, isUser, filter, users, groups }: { id: number, path:
 		[useMTime, setUseMTime] = useSavedState("useMTime", false),
 		[useCount, setUseCount] = useSavedState("useCount", false),
 		[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
-		[filterFileTypes, setFilterFileTypes] = useState<string[]>([]),
+		[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("treeTypes", []),
 		[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
 		[inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
 		[hasAuth, setHasAuth] = useState(true),
