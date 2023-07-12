@@ -6,6 +6,17 @@ body {
   padding: 0 0.25em;
 }
 
+html,
+body {
+  color: var(--colour);
+  background-color: var(--background);
+}
+
+input[type=radio],
+input[type=checkbox] {
+  accent-color: var(--inputAccent);
+}
+
 #auth {
   float: right;
 }
@@ -111,6 +122,7 @@ rect+use+text {
 
 .prettyTable thead th {
   padding-right: 1em;
+  border-bottom: 1px solid currentColor;
 }
 
 .prettyTable thead th.sortable:hover {
@@ -132,6 +144,26 @@ rect+use+text {
 
 .prettyTable .reverse {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 82'%3E%3Cpath d='M1,23 h38 l-19,18 z' fill='%23f00'  fill-opacity='1' stroke='%23000' stroke-linejoin='round' /%3E%3Cpath d='M1,20 h38 l-19,-18 z' fill='%23aaa' fill-opacity='0.25' stroke='none' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
+}
+
+.prettyTable tbody tr {
+  background-color: var(--tableOddBG);
+  color: var(--tableOddFont);
+}
+
+.prettyTable tbody tr:nth-child(even) {
+  background-color: var(--tableEventBG);
+  color: var(--tableEvenFont);
+}
+
+.prettyTable tbody tr:hover {
+  background-color: var(--tableHoverBG);
+  color: var(--tableHoverFont);
+}
+
+.prettyTable tbody tr.selected {
+  background-color: var(--tableSelectedBG);
+  color: var(--tableSelectedFont);
 }
 
 .prettyTable tbody {
@@ -180,8 +212,11 @@ rect+use+text {
   margin-left: 0.25em;
 }
 
-.pagination_link {
+.pagination .pagination_link {
   cursor: pointer;
+  background-color: var(--paginationClickableBG);
+  border: 1px solid var(--paginationClickableBorder);
+  color: var(--paginationClickableFont);
 }
 
 .pagination_link,
@@ -189,6 +224,9 @@ rect+use+text {
 .pagination_next,
 .pagination_prev {
   padding: 0.25em;
+  background-color: var(--paginationNonClickableBG);
+  border: 1px solid var(--paginationNonClickableBorder);
+  color: var(--paginationNonClickableFont);
 }
 
 .pagination_selected {
@@ -200,6 +238,9 @@ rect+use+text {
 }
 
 #perPage select {
+  border: 1px solid var(--perPageBorder);
+  background-color: var(--perPageBG);
+  color: var(--perPageFont);
   border-radius: 3px;
   padding: 5px;
   background-color: transparent;
@@ -211,6 +252,10 @@ rect+use+text {
   border-radius: 8px;
   padding: 1em 0.5em;
   max-width: 100vw;
+  color: var(--diskTreeDetailsFont);
+  background-color: var(--diskTreeDetailsBG);
+  border: 1px solid var(--diskTreeDetailsBorder);
+  box-sizing: border-box;
 }
 
 #details table {
@@ -257,12 +302,24 @@ rect+use+text {
   top: 0;
 }
 
-
 .minmax_min,
 .minmax_max {
   padding: 2px;
   margin-top: -6px;
   background-color: #aaa;
+}
+
+.minmax_min,
+.minmax_max {
+  background-color: var(--minmaxStaticBG);
+  color: var(--minmaxStaticFont);
+}
+
+.minmax_setLine,
+.minmax_minValue,
+.minmax_maxValue {
+  color: var(--minmaxRangeFont);
+  background-color: var(--minmaxRangeBG);
 }
 
 .minmax_min {
@@ -284,6 +341,7 @@ rect+use+text {
   left: 0;
   right: 0;
   border-radius: 1em;
+  background-color: var(--minmaxLine);
 }
 
 .minmax_minValue,
@@ -301,6 +359,8 @@ rect+use+text {
   height: 1em;
   border-radius: 1em;
   cursor: ew-resize;
+  border: 1px solid currentColor;
+  background-color: var(--minmaxSlide);
 }
 
 #history {
@@ -322,6 +382,9 @@ rect+use+text {
   z-index: 2;
   border-radius: 5px;
   padding: 5px;
+  border: 1px solid var(--historyInfoBorder);
+  background-color: var(--historyInfoBG);
+  color: var(--historyInfoFont);
 }
 
 #historyInfo div:hover {
@@ -342,6 +405,7 @@ rect+use+text {
   margin-left: 1em;
   padding: 0 0.5em;
   cursor: cell;
+  border: 1px solid currentColor;
 }
 
 .multiInput>div {
@@ -356,6 +420,8 @@ rect+use+text {
 
 .multiInput>div>div {
   position: absolute;
+  background-color: var(--multiInputBG);
+  color: var(--multiInputFont);
 }
 
 .multiInput>div>div>input {
@@ -366,6 +432,7 @@ rect+use+text {
 .multiInput>div>div ul {
   max-height: 20em;
   overflow-y: scroll;
+  border: 0 1px 1px 1px solid currentColor;
 }
 
 .minmax_min,
@@ -501,6 +568,7 @@ summary {
 
 .exceeded {
   font-weight: bold;
+  color: var(--exceedWarning);
 }
 
 summary,
@@ -513,191 +581,107 @@ th,
 }
 
 @media (prefers-color-scheme: light) {
+  html {
+    --colour: #000;
+    --background: #fff;
 
-  html,
-  body {
-    color: #000;
-    background-color: #fff;
-  }
+    --graphQuota: #00c9cf;
+    --graphUsage: #fb8c80;
+    --graphBack: #ddd;
 
-  .prettyTable thead th {
-    border-bottom: 1px solid #000;
-  }
+    --inputAccent: #074987;
 
-  .prettyTable tbody tr:nth-child(even) {
-    background-color: #f9f9f9;
-  }
+    --minmaxRangeBG: var(--inputAccent);
+    --minmaxRangeFont: #fff;
+    --minmaxLine: #aaa;
+    --minmaxStaticBG: #ddd;
+    --minmaxStaticFont: currentColor;
+    --minmaxSlide: #888;
 
-  .prettyTable tbody tr:hover {
-    background-color: #c0cee9;
-  }
+    --multiInputBG: var(--background);
+    --multiInputFont: currentColor;
 
-  .prettyTable tbody tr.selected {
-    background-color: #b0bed9;
-  }
+    --paginationClickableBG: var(--inputAccent);
+    --paginationClickableFont: #fff;
+    --paginationClickableBorder: currentColor;
+    --paginationNonClickableBG: var(--background);
+    --paginationNonClickableFont: currentColor;
+    --paginationNonClickableBorder: currentColor;
 
-  #perPage select {
-    border: 1px solid #aaa;
-    color: #000;
-  }
+    --tableHoverBG: #c0cee9;
+    --tableHoverFont: currentColor;
+    --tableSelectedBG: #b0bed9;
+    --tableSelectedFont: currentColor;
+    --tableOddBG: var(--background);
+    --tableOddFont: currentColor;
+    --tableEventBG: #f9f9f9;
+    --tableOddFont: currentColor;
 
-  #details {
-    background-color: #ddd;
-    border: 1px solid #aaa;
-    box-sizing: border-box;
-  }
+    --perPageBG: var(--background);
+    --perPageBorder: #aaa;
+    --perPageFont: currentColor;
 
-  .minmax_line {
-    background-color: #aaa;
-  }
+    --diskTreeDetailsBG: #ddd;
+    --diskTreeDetailsBorder: #aaa;
+    --diskTreeDetailsFont: currentColor;
 
-  .minmax_min,
-  .minmax_max {
-    background-color: #ddd;
-  }
+    --historyInfoFont: currentColor;
+    --historyInfoBorder: currentColor;
+    --historyInfoBG: var(--background);
 
-  .minmax_setLine,
-  .minmax_minValue,
-  .minmax_maxValue {
-    color: #fff;
-    background-color: #074987;
-  }
-
-  .minmax_minSlider,
-  .minmax_maxSlider {
-    border: 1px solid #000;
-    background-color: #888;
-  }
-
-  #historyInfo div {
-    border: 1px solid #000;
-    background-color: #fff;
-  }
-
-  .multiInput>ul li:not(:first-child) {
-    border: 1px solid #000;
-  }
-
-  .multiInput>div>div {
-    background-color: #fff;
-  }
-
-  .multiInput>div>div ul {
-    border: 0 1px 1px 1px solid #000;
-  }
-
-  .pagination_link {
-    background-color: #074987;
-    border: 1px solid #000;
-    color: #fff;
-  }
-
-  input[type=radio],
-  input[type=checkbox] {
-    accent-color: #074987;
-  }
-
-  .pagination_selected,
-  .pagination_next,
-  .pagination_prev {
-    border: 1px solid #000;
-  }
-
-  .exceeded {
-    color: #f00;
+    --exceedWarning: #f00;
   }
 }
 
 @media (prefers-color-scheme: dark) {
+  html {
+    --colour: #fff;
+    --background: #222;
 
-  html,
-  body {
-    color: #fff;
-    background-color: #000;
+    --graphQuota: #00c9cf;
+    --graphUsage: #fb8c80;
     --graphBack: #444;
-  }
 
-  .prettyTable thead th {
-    border-bottom: 1px solid #fff;
-  }
+    --inputAccent: #d2ecf5;
 
-  .prettyTable tbody tr:nth-child(even) {
-    background-color: #333;
-  }
+    --minmaxRangeBG: var(--inputAccent);
+    --minmaxRangeFont: #000;
+    --minmaxLine: #aaa;
+    --minmaxStaticBG: #444;
+    --minmaxStaticFont: currentColor;
+    --minmaxSlide: #666;
 
-  .prettyTable tbody tr:hover {
-    background-color: #440;
-  }
+    --multiInputBG: var(--background);
+    --multiInputFont: currentColor;
 
-  .prettyTable tbody tr.selected {
-    background-color: #442;
-  }
+    --paginationClickableBG: var(--inputAccent);
+    --paginationClickableFont: #000;
+    --paginationClickableBorder: currentColor;
+    --paginationNonClickableBG: var(--background);
+    --paginationNonClickableFont: currentColor;
+    --paginationNonClickableBorder: currentColor;
 
-  #perPage select {
-    border: 1px solid #444;
-    color: #fff;
-  }
+    --tableHoverBG: #440;
+    --tableHoverFont: currentColor;
+    --tableSelectedBG: #442;
+    --tableSelectedFont: currentColor;
+    --tableOddBG: var(--background);
+    --tableOddFont: currentColor;
+    --tableEventBG: #333;
+    --tableOddFont: currentColor;
 
-  #details {
-    background-color: #444;
-    border: 1px solid #888;
-  }
+    --perPageBG: var(--background);
+    --perPageBorder: #444;
+    --perPageFont: currentColor;
 
-  .minmax_line {
-    background-color: #aaa;
-  }
+    --diskTreeDetailsBG: #444;
+    --diskTreeDetailsBorder: #888;
+    --diskTreeDetailsFont: currentColor;
 
-  .minmax_min,
-  .minmax_max {
-    background-color: #444;
-  }
+    --historyInfoFont: currentColor;
+    --historyInfoBorder: currentColor;
+    --historyInfoBG: var(--background);
 
-  .minmax_setLine,
-  .minmax_minValue,
-  .minmax_maxValue {
-    color: #000;
-    background-color: #d2ecf5;
-  }
-
-  .minmax_minSlider,
-  .minmax_maxSlider {
-    border: 1px solid #fff;
-    background-color: #666;
-  }
-
-  #historyInfo div {
-    border: 1px solid #fff;
-    background-color: #000;
-  }
-
-  .multiInput>ul li:not(:first-child) {
-    border: 1px solid #fff;
-  }
-
-  .multiInput>div>div {
-    background-color: #000;
-  }
-
-  .multiInput>div>div ul {
-    border: 0 1px 1px 1px solid #fff;
-  }
-
-  .pagination_link {
-    background-color: #d2ecf5;
-    border: 1px solid #fff;
-    color: #000;
-  }
-
-  input[type=radio],
-  input[type=checkbox] {
-    accent-color: #d2ecf5;
-  }
-
-  .pagination_selected {
-    border: 1px solid #fff;
-  }
-
-  .exceeded {
-    color: #f00;
+    --exceedWarning: #f00;
   }
 }

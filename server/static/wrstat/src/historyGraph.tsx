@@ -94,8 +94,8 @@ export default ({ history, width, height, yFormatter, secondaryFormatter, yRound
 		quotaPath += `${x},${quotaY}`;
 		usagePath += `${x},${sizeY}`;
 
-		quotaPoints.push(<use href="#point" fill="#00c9cf" x={x} y={quotaY} onMouseOver={() => setInfoBox(quotaBox)} onMouseOut={() => setInfoBox(-1)} />)
-		usagePoints.push(<use href="#point" fill="#fb8c80" x={x} y={sizeY} onMouseOver={() => setInfoBox(sizeBox)} onMouseOut={() => setInfoBox(-1)} />)
+		quotaPoints.push(<use href="#point" style={{ fill: "var(--graphQuota)" }} x={x} y={quotaY} onMouseOver={() => setInfoBox(quotaBox)} onMouseOut={() => setInfoBox(-1)} />)
+		usagePoints.push(<use href="#point" style={{ fill: "var(--graphUsage)" }} x={x} y={sizeY} onMouseOver={() => setInfoBox(sizeBox)} onMouseOut={() => setInfoBox(-1)} />)
 
 		first = false;
 	}
@@ -147,19 +147,19 @@ export default ({ history, width, height, yFormatter, secondaryFormatter, yRound
 			{
 				Array.from({ length: 6 }, (_, n) => <text transform={`translate(${dateToX(minDate + n * dateDiff / 5)} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" text-anchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)
 			}
-			<path d={quotaPath} stroke="#00c9cf" fill="none" />
-			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Quota)} L${dateToX(projectDate)},${amountToY(latestHistory.Quota)}`} stroke="#00c9cf" fill="none" stroke-width="3" stroke-dasharray="3" />
-			<path d={usagePath} stroke="#fb8c80" fill="none" />
-			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Usage)} L${dateToX(x)},${amountToY(y)}`} stroke="#fb8c80" fill="none" stroke-width="3" stroke-dasharray="3" />
+			<path d={quotaPath} style={{ stroke: "var(--graphQuota)" }} fill="none" />
+			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Quota)} L${dateToX(projectDate)},${amountToY(latestHistory.Quota)}`} style={{ stroke: "var(--graphQuota)" }} fill="none" stroke-width="3" stroke-dasharray="3" />
+			<path d={usagePath} style={{ stroke: "var(--graphUsage)" }} fill="none" />
+			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Usage)} L${dateToX(x)},${amountToY(y)}`} style={{ stroke: "var(--graphUsage)" }} fill="none" stroke-width="3" stroke-dasharray="3" />
 			{quotaPoints}
 			{usagePoints}
 			{
 				y === latestHistory.Quota ? <path d="M5,5 L-5,-5 M-5,5 L5,-5" stroke="#f00" stroke-width={2} transform={`translate(${paddingXL + (x - minDate) * xScale} ${amountToY(y)})`} onMouseOver={() => setInfoBox(infoBoxes.length - 1)} onMouseOut={() => setInfoBox(-1)} /> : []
 			}
 			<rect x={width - 70} y={paddingYT + 10} width={65} height={43} stroke="currentColor" fill="none" />
-			<rect x={width - 65} y={paddingYT + 15} width={10} height={10} stroke="currentColor" fill="#00c9cf" />
+			<rect x={width - 65} y={paddingYT + 15} width={10} height={10} stroke="currentColor" style={{ fill: "var(--graphQuota)" }} />
 			<text x={width - 47} y={paddingYT + 25} fill="currentColor">Quota</text>
-			<rect x={width - 65} y={paddingYT + 35} width={10} height={10} stroke="currentColor" fill="#fb8c80" />
+			<rect x={width - 65} y={paddingYT + 35} width={10} height={10} stroke="currentColor" style={{ fill: "var(--graphUsage)" }} />
 			<text x={width - 47} y={paddingYT + 45} fill="currentColor">Usage</text>
 		</svg>
 	</>
