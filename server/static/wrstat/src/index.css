@@ -177,7 +177,9 @@ rect+use+text {
 }
 
 .pagination_link,
-.pagination_selected {
+.pagination_selected,
+.pagination_next,
+.pagination_prev {
   padding: 0.25em;
 }
 
@@ -557,7 +559,9 @@ th,
     color: #fff;
   }
 
-  .pagination_selected {
+  .pagination_selected,
+  .pagination_next,
+  .pagination_prev {
     border: 1px solid #000;
   }
 }
