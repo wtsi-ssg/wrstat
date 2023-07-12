@@ -40,7 +40,8 @@ export default ({ usage, byUser, groups, users, ...filter }: Filter<Usage> & { b
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
 		[perPage, setPerPage] = useSavedState("perPage", 10),
 		userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
-		groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname]));
+		groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname])),
+		selectedRow = usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir)[0];
 
 	useEffect(() => {
 		setSelectedDir("");
@@ -150,6 +151,6 @@ export default ({ usage, byUser, groups, users, ...filter }: Filter<Usage> & { b
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 		</details>
-		<PathDetails id={selectedID} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} filter={filter} />
+		<PathDetails id={selectedID} name={selectedRow?.Name} owner={selectedRow?.Owner} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} filter={filter} />
 	</>
 }

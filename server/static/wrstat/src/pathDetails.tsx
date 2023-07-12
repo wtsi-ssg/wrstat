@@ -102,7 +102,7 @@ const colours = [
 		["> 2 years", 730]
 	] as const;
 
-export default ({ id, path, isUser, filter, users, groups }: { id: number, path: string; isUser: boolean; filter: Filter<Usage>, users: Map<number, string>, groups: Map<number, string> }) => {
+export default ({ id, name, owner, path, isUser, filter, users, groups }: { id: number; name: string; owner: string; path: string; isUser: boolean; filter: Filter<Usage>; users: Map<number, string>; groups: Map<number, string> }) => {
 	const [treePath, setTreePath] = useSavedState("treePath", "/"),
 		[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 		[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
@@ -205,6 +205,12 @@ export default ({ id, path, isUser, filter, users, groups }: { id: number, path:
 			</div>
 		</div>
 		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
+		{
+			isUser ? <></> : <>
+				<h2>Usage | {name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
+				<h3>History/Future Predictions</h3>
+			</>
+		}
 		{
 			history.length ? <>
 				<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
