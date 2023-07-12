@@ -8,7 +8,8 @@ import { firstRender, useSavedState } from './state';
 import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
 
-const stringSort = new Intl.Collator().compare;
+const stringSort = new Intl.Collator().compare,
+	calculateSliderWidth = (div: HTMLDivElement) => getComputedStyle(div).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 50;
 
 const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),
@@ -84,12 +85,12 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 	useEffect(() => {
 		window.addEventListener("resize", () => {
 			if (treeFilter.current) {
-				setSliderWidth(getComputedStyle(treeFilter.current).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
+				setSliderWidth(calculateSliderWidth(treeFilter.current));
 			}
 		});
 
 		if (treeFilter.current) {
-			setSliderWidth(getComputedStyle(treeFilter.current).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
+			setSliderWidth(calculateSliderWidth(treeFilter.current));
 		}
 	}, []);
 
