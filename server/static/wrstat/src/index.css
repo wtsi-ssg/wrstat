@@ -582,6 +582,11 @@ th,
     color: #fff;
   }
 
+  input[type=radio],
+  input[type=checkbox] {
+    accent-color: #074987;
+  }
+
   .pagination_selected,
   .pagination_next,
   .pagination_prev {
@@ -667,6 +672,11 @@ th,
     background-color: #d2ecf5;
     border: 1px solid #fff;
     color: #000;
+  }
+
+  input[type=radio],
+  input[type=checkbox] {
+    accent-color: #d2ecf5;
   }
 
   .pagination_selected {
