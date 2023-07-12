@@ -79,10 +79,6 @@ export default ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsa
 		setMaxSize(Infinity);
 		setMinDaysAgo(-Infinity);
 		setMaxDaysAgo(Infinity);
-		setFilterMinSize(-Infinity);
-		setFilterMaxSize(Infinity);
-		setFilterMinDaysAgo(-Infinity);
-		setFilterMaxDaysAgo(Infinity);
 	}, [byUser]);
 
 	useEffect(() => {
