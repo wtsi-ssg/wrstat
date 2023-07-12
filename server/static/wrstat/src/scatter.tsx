@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
-import { firstRender } from "./state";
+import { firstRender, restoring } from "./state";
 
 type Data = {
 	UsageSize: number;
@@ -107,7 +107,7 @@ export default ({ data, width, height, logX = false, logY = false, setLimits, pr
 	}, [minX, minY, maxX, maxY, logX, logY]);
 
 	useEffect(() => {
-		if (firstRender) {
+		if (firstRender || restoring) {
 			return;
 		}
 
