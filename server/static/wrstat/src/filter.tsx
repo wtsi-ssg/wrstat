@@ -1,5 +1,5 @@
 import type { Usage } from "./rpc";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import FilteredTable from "./filteredTable";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import MultiSelect from "./multiselect";
@@ -9,7 +9,7 @@ import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
 
 const stringSort = new Intl.Collator().compare,
-	calculateSliderWidth = (div: HTMLDivElement) => getComputedStyle(div).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 50;
+	calculateSliderWidth = (div: HTMLDivElement) => getComputedStyle(div).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10;
 
 const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),
@@ -88,11 +88,13 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 				setSliderWidth(calculateSliderWidth(treeFilter.current));
 			}
 		});
+	}, []);
 
+	useLayoutEffect(() => {
 		if (treeFilter.current) {
 			setSliderWidth(calculateSliderWidth(treeFilter.current));
 		}
-	}, []);
+	});
 
 	return <>
 		<details open>
