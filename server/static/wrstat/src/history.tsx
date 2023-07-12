@@ -13,6 +13,8 @@ const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path:
 
 	useEffect(() => {
 		if (id === -1 || path === "") {
+			setHistory([]);
+
 			return;
 		}
 
