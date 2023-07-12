@@ -24,8 +24,20 @@ export default ({ data, width, height, logX = false, logY = false, setLimits, pr
 		innerPadding = 10,
 		graphWidth = width - paddingXL - paddingXR - 2 * innerPadding,
 		graphHeight = height - paddingYT - paddingYB - 2 * innerPadding,
-		sizeToY = (size: number, log = logY) => paddingYT + innerPadding + (log ? graphHeight - graphHeight * (Math.log(1 + size) / Math.log(1 + maxSize)) : yScale * (maxSize - size)),
-		dateToX = (days: number, log = logX) => paddingXL + innerPadding + (log ? graphWidth * (Math.log(1 + days) / Math.log(1 + maxDate)) : xScale * days),
+		sizeToY = (size: number, log = logY) => paddingYT + innerPadding + (log ? logSizeToY : nonLogSizeToY)(size),
+		dateToX = (days: number, log = logX) => paddingXL + innerPadding + (log ? logDateToX : nonLogDateToX)(days),
+		nonLogSizeToY = (size: number) => yScale * (maxSize - size),
+		nonLogDateToX = (days: number) => xScale * (days - minDate),
+		logSizeToY = (size: number) => graphHeight - graphHeight * logRatio(size, minSize, maxSize),
+		logDateToX = (days: number) => graphWidth * logRatio(days, minDate, maxDate),
+		logRatio = (value: number, min: number, max: number) => min ? Math.log(value / min) / Math.log(max / min) : Math.log(value + 1) / Math.log(max + 1),
+		fractionToSize = (f: number) => Math.round((logX ? logFractionToSize : nonLogFractionToSize)(f)),
+		fractionToDate = (f: number) => Math.round((logY ? logFractionToDate : nonLogFractionToDate)(f)),
+		nonLogFractionToSize = (f: number) => minSize + f * (maxSize - minSize),
+		nonLogFractionToDate = (f: number) => minDate + f * (maxDate - minDate),
+		logFractionToSize = (f: number) => minSize + logRatioToValue(f, minSize, maxSize),
+		logFractionToDate = (f: number) => minDate + logRatioToValue(f, minDate, maxDate),
+		logRatioToValue = (r: number, min: number, max: number) => Math.pow(Math.E, (min ? Math.log(max / min) : Math.log(max + 1)) * r) * (min || 1) - (min || 1),
 		[highlightCoords, setHighlightCoords] = useState<null | [number, number, number, number]>(null),
 		onDrag = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
 			if (e.button !== 0) {
@@ -63,10 +75,10 @@ export default ({ data, width, height, logX = false, logY = false, setLimits, pr
 					fMaxX = Math.min(graphWidth, maxX - innerPadding) / graphWidth,
 					fMinY = Math.max(0, graphHeight - maxY + innerPadding) / graphHeight,
 					fMaxY = Math.min(graphHeight, graphHeight - minY + innerPadding) / graphHeight,
-					minDaysAgo = Math.round(logX ? Math.pow(Math.E, fMinX * Math.log(1 + maxDate)) - 1 : fMinX * maxDate),
-					maxDaysAgo = Math.round(logX ? Math.pow(Math.E, fMaxX * Math.log(1 + maxDate)) - 1 : fMaxX * maxDate),
-					minFileSize = Math.round(logY ? Math.pow(Math.E, fMinY * Math.log(1 + maxSize)) - 1 : fMinY * maxSize),
-					maxFileSize = Math.round(logY ? Math.pow(Math.E, fMaxY * Math.log(1 + maxSize)) - 1 : fMaxY * maxSize);
+					minDaysAgo = fractionToDate(fMinX),
+					maxDaysAgo = fractionToDate(fMaxX),
+					minFileSize = fractionToSize(fMinY),
+					maxFileSize = fractionToSize(fMaxY);
 
 				cb(minFileSize, maxFileSize, minDaysAgo, maxDaysAgo);
 			},
@@ -105,26 +117,36 @@ export default ({ data, width, height, logX = false, logY = false, setLimits, pr
 		</svg>
 	}
 
-	let maxSize = -Infinity,
+	let minSize = Infinity,
+		maxSize = -Infinity,
+		minDate = Infinity,
 		maxDate = -Infinity;
 
 	for (const d of data) {
+		if (d.UsageSize < minSize) {
+			minSize = d.UsageSize
+		}
+
 		if (d.UsageSize > maxSize) {
 			maxSize = d.UsageSize;
 		}
 
 		const daysAgo = minDaysAgo(d.Mtime);
 
+		if (daysAgo < minDate) {
+			minDate = daysAgo;
+		}
+
 		if (daysAgo > maxDate) {
 			maxDate = daysAgo;
 		}
 	}
 
-	maxDate += maxDate / 20;
-	maxSize += maxSize / 20;
+	maxDate += (maxDate - minDate) / 20;
+	maxSize += (maxSize - minSize) / 20;
 
-	const xScale = graphWidth / maxDate,
-		yScale = graphHeight / maxSize;
+	const xScale = graphWidth / (maxDate - minDate),
+		yScale = graphHeight / (maxSize - minSize);
 
 	return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseDown={onDrag}>
 		<defs>
@@ -132,16 +154,16 @@ export default ({ data, width, height, logX = false, logY = false, setLimits, pr
 		</defs>
 		<rect className="back" x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
 		{
-			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(0, false) - innerPadding} x2={dateToX(maxDate, false) + innerPadding} y1={sizeToY(maxSize * n / 5, false)} y2={sizeToY(maxSize * n / 5, false)} stroke="#fff" />)
+			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(nonLogFractionToDate(0), false) - innerPadding} x2={dateToX(nonLogFractionToDate(1), false) + innerPadding} y1={sizeToY(nonLogFractionToSize(n / 5), false)} y2={sizeToY(nonLogFractionToSize(n / 5), false)} stroke="#fff" />)
 		}
 		{
-			Array.from({ length: 6 }, (_, n) => <text x={dateToX(0, false) - innerPadding - 5} y={Math.max(sizeToY(maxSize * n / 5, false), paddingYT) + 5} fill="currentColor" textAnchor="end">{formatBytes(Math.round(logY ? Math.pow(Math.E, Math.log(1 + maxSize) * n / 5) - 1 : maxSize * n / 5))}</text>)
+			Array.from({ length: 6 }, (_, n) => <text x={dateToX(nonLogFractionToDate(0), false) - innerPadding - 5} y={Math.max(sizeToY(nonLogFractionToSize(n / 5), false), paddingYT) + 5} fill="currentColor" textAnchor="end">{formatBytes(fractionToSize(n / 5))}</text>)
 		}
 		{
-			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(maxDate * n / 5, false)} x2={dateToX(maxDate * n / 5, false)} y1={sizeToY(maxSize, false) - innerPadding} y2={sizeToY(0, false) + innerPadding} stroke="#fff" />)
+			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(nonLogFractionToDate(n / 5), false)} x2={dateToX(nonLogFractionToDate(n / 5), false)} y1={sizeToY(nonLogFractionToSize(1), false) - innerPadding} y2={sizeToY(nonLogFractionToSize(0), false) + innerPadding} stroke="#fff" />)
 		}
 		{
-			Array.from({ length: 6 }, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(maxDate * n / 5, false)} ${sizeToY(0, false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatNumber(Math.round(logX ? Math.pow(Math.E, Math.log(1 + maxDate) * n / 5) - 1 : maxDate * n / 5))}</text>)
+			Array.from({ length: 6 }, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(nonLogFractionToDate(n / 5), false)} ${sizeToY(nonLogFractionToSize(0), false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatNumber(fractionToDate(n / 5))}</text>)
 		}
 		{
 			highlightCoords ? <rect className="back" x={highlightCoords[0] + paddingXL} width={highlightCoords[1]} y={highlightCoords[2] + paddingYT} height={highlightCoords[3]} fill="#9cf" fillOpacity={0.25} stroke="#036" strokeOpacity={0.25} /> : []
