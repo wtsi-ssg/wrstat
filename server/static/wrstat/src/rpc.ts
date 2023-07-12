@@ -1,4 +1,4 @@
-import { getCookie } from "./auth";
+import { getCookie, logout } from "./auth";
 
 
 export type ChildFilter = {
@@ -104,6 +104,8 @@ const cache = new Map<string, string>(),
 					if (xh.status === 200) {
 						cache.set(url, xh.responseText);
 						successFn(JSON.parse(xh.responseText));
+					} else if (xh.status === 401) {
+						logout();
 					} else {
 						errorFn(new Error(xh.responseText));
 					}
