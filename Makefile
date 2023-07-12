@@ -13,13 +13,13 @@ default: install
 
 build: export CGO_ENABLED = 1
 build:
-	@cd server/static/wrstat; npm install && npm run build
+	@cd server/static/wrstat; npm install && npm run build:prod
 	go build -tags netgo ${LDFLAGS}
 
 install: export CGO_ENABLED = 1
 install:
 	@rm -f ${GOPATH}/bin/wrstat
-	@cd server/static/wrstat; npm install && npm run build
+	@cd server/static/wrstat; npm install && npm run build:prod
 	@go install -tags netgo ${LDFLAGS}
 	@echo installed to ${GOPATH}/bin/wrstat
 

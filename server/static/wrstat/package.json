@@ -11,6 +11,7 @@
     "@types/node": "^16.18.36",
     "@types/react": "^18.2.14",
     "@types/react-dom": "^18.2.6",
+    "patch-package": "^7.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
@@ -19,7 +20,10 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && mv build/index.html build/tree.html",
+    "build": "echo \"Please use build:dev or build:prod \" && exit 1",
+    "build:prod": "cross-env NODE_ENV=production react-scripts build && mv build/index.html build/tree.html",
+    "build:dev": "cross-env NODE_ENV=development react-scripts build && mv build/index.html build/tree.html",
+    "postinstall": "npx patch-package",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -40,5 +44,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }
