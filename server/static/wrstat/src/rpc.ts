@@ -1,6 +1,5 @@
 import { getCookie, logout } from "./auth";
 
-
 export type ChildFilter = {
 	path: string;
 	groups?: string;
@@ -114,11 +113,13 @@ const cache = new Map<string, string>(),
 		});
 	}
 
-export default {
+const RPC = {
 	"getChildren": (filter: ChildFilter) => getURL<Child>(treeURL, filter),
 	"getGroupUsageData": () => getURL<Usage[]>(groupUsageURL),
 	"getUserUsageData": () => getURL<Usage[]>(userUsageURL),
 	"getBasedirsGroupSubdirs": (id: number, basedir: string) => getURL<SubDir[]>(groupSubDirPathURL, { id, basedir }),
 	"getBasedirsUserSubdirs": (id: number, basedir: string) => getURL<SubDir[]>(userSubDirPathURL, { id, basedir }),
 	"getBasedirsHistory": (id: number, basedir: string) => getURL<History[]>(baseDirHistoryURL, { id, basedir })
-}
+};
+
+export default RPC;

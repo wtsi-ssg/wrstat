@@ -37,7 +37,7 @@ const pathJoin = (base: string, sub: string) => {
 		(a: SubDir, b: SubDir) => new Date(b.LastModified).valueOf() - new Date(a.LastModified).valueOf(),
 	] as const;
 
-export default ({ id, path, isUser, setPath }: { id: number, path: string; isUser: boolean; setPath: (path: string) => void }) => {
+const SubdirsComponent = ({ id, path, isUser, setPath }: { id: number, path: string; isUser: boolean; setPath: (path: string) => void }) => {
 	const [subdirs, setSubdirs] = useState<SubDir[]>([]);
 
 	useEffect(() => {
@@ -91,4 +91,6 @@ export default ({ id, path, isUser, setPath }: { id: number, path: string; isUse
 			formatter: (files: Record<number, number>) => Object.entries(files).sort((a, b) => b[1] - a[1]).map(e => `${fileTypes[parseInt(e[0])]}: ${formatBytes(e[1])}`).join(", ")
 		}
 	]} />
-}
+};
+
+export default SubdirsComponent;

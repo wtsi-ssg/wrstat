@@ -35,7 +35,7 @@ const stringSort = new Intl.Collator().compare,
 		null,
 	] as const;
 
-export default ({ usage, byUser, groups, users, ...filter }: Filter<Usage> & { byUser: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number> }) => {
+const FilteredTableComponent = ({ usage, byUser, groups, users, ...filter }: Filter<Usage> & { byUser: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number> }) => {
 	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
 		[perPage, setPerPage] = useSavedState("perPage", 10),
@@ -153,4 +153,6 @@ export default ({ usage, byUser, groups, users, ...filter }: Filter<Usage> & { b
 		</details>
 		<PathDetails id={selectedID} name={selectedRow?.Name} owner={selectedRow?.Owner} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} filter={filter} />
 	</>
-}
+};
+
+export default FilteredTableComponent;

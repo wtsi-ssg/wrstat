@@ -13,7 +13,7 @@ const paginationEnd = 3,
 		}
 	};
 
-export default ({ totalPages, currentPage, onClick }: { totalPages: number; currentPage: number, onClick: MouseEventHandler }) => {
+const PaginationComponent = ({ totalPages, currentPage, onClick }: { totalPages: number; currentPage: number, onClick: MouseEventHandler }) => {
 	const ret: JSX.Element[] = [],
 		lastPage = totalPages - 1;
 	if (lastPage < 1) {
@@ -49,3 +49,5 @@ export default ({ totalPages, currentPage, onClick }: { totalPages: number; curr
 		<li className={"pagination_next" + (currentPage === lastPage ? "" : " pagination_link")} onClick={currentPage === lastPage ? noop : onClick} data-page={currentPage + 1}>Next</li>
 	</ul>
 };
+
+export default PaginationComponent;
