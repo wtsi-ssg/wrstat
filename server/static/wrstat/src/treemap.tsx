@@ -72,7 +72,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 				d += isRow ? colWidth : rowHeight;
 
 				toRet.push(
-					<rect className="box" key={entry.key ? `rect_${entry.key}` : ""} x={left} y={top} width={colWidth} height={rowHeight} stroke="#000" fill={entry.backgroundColour ?? "#fff"} className={entry.onclick ? "hasClick" : ""} onClick={entry.onclick} onMouseOver={entry.onmouseover}><title>{entry.name}</title></rect>,
+					<rect key={entry.key ? `rect_${entry.key}` : ""} x={left} y={top} width={colWidth} height={rowHeight} stroke="#000" fill={entry.backgroundColour ?? "#fff"} className={entry.onclick ? "hasClick box" : "box"} onClick={entry.onclick} onMouseOver={entry.onmouseover}><title>{entry.name}</title></rect>,
 					entry.noauth ? <use key={entry.key ? `lock_${entry.key}` : ""} x={left + (colWidth - bbox.width * minScale + minScale * 0.45) / 2} y={top + (rowHeight - minScale * 0.40) / 2} href="#lock" width="0.5em" height="0.5em" style={{ fontSize: `${minScale * 0.9}px` }} /> : <></>,
 					<text key={entry.key ? `text_${entry.key}` : ""} fontSize={minScale * 0.9} fontFamily={font} x={(entry.noauth ? minScale * 0.225 : 0) + left + colWidth / 2} y={top + rowHeight / 2 + 0.225 * minScale * bbox.height} textAnchor="middle" fill={entry.colour ?? "#000"}>{entry.name}</text>
 				);
