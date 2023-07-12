@@ -16,11 +16,12 @@ const calculateTrend = (max: number, latestTime: number, oldestTime: number, lat
 
 	return secs;
 },
-	limit = 3 * 86400;
+	day = 86_400,
+	limit = 3 * day;
 
-export default (history: History[]) => {
-	if (history.length < 1) {
-		return null;
+export const exceedDates = (history: History[]): [number, number] => {
+	if (history.length === 0) {
+		return [0, 0];
 	}
 
 	const latest = history[history.length - 1],
@@ -29,6 +30,16 @@ export default (history: History[]) => {
 		oldestDate = new Date(oldest.Date).valueOf() / 1000,
 		untilSize = calculateTrend(latest.QuotaSize, latestDate, oldestDate, latest.UsageSize, oldest.UsageSize),
 		untilInodes = calculateTrend(latest.QuotaInodes, latestDate, oldestDate, latest.UsageInodes, oldest.UsageInodes);
+
+	return [Math.round(untilSize / day), Math.round(untilInodes / day)];
+}
+
+export default (history: History[]) => {
+	if (history.length < 1) {
+		return null;
+	}
+
+	const [untilSize, untilInodes] = exceedDates(history);
 
 	return untilInodes < limit || untilSize < limit;
 };
