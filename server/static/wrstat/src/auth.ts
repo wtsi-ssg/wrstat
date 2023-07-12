@@ -23,7 +23,7 @@ export const getCookie = (toFind: string) => {
 		window.location.reload();
 	};
 
-export default () => {
+const AuthComponent = () => {
 	const jwt = getCookie("jwt");
 
 	if (jwt) {
@@ -55,3 +55,5 @@ export default () => {
 		xh.send(null);
 	});
 };
+
+export default AuthComponent;

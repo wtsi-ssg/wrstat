@@ -34,7 +34,7 @@ export const exceedDates = (history: History[]): [number, number] => {
 	return [Math.round(untilSize / day), Math.round(untilInodes / day)];
 }
 
-export default (history: History[]) => {
+const TrendComponent = (history: History[]) => {
 	if (history.length < 1) {
 		return null;
 	}
@@ -43,3 +43,5 @@ export default (history: History[]) => {
 
 	return untilInodes < limit || untilSize < limit;
 };
+
+export default TrendComponent;

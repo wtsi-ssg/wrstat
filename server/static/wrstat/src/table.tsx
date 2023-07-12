@@ -71,7 +71,7 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 	return toRet;
 };
 
-export default <T extends Record<string, any>>({ table, cols, onRowClick, perPage = Infinity, filter = {}, id, rowExtra, ...additional }: Params<T>) => {
+const TableComponent = <T extends Record<string, any>>({ table, cols, onRowClick, perPage = Infinity, filter = {}, id, rowExtra, ...additional }: Params<T>) => {
 	const [page, setPage] = useSavedState(id + "Page", 0),
 		[sortBy, setSortBy] = useSavedState(id + "Sort", -1),
 		[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
@@ -137,4 +137,6 @@ export default <T extends Record<string, any>>({ table, cols, onRowClick, perPag
 			</tbody>
 		</table>
 	</>
-}
+};
+
+export default TableComponent;

@@ -1,12 +1,12 @@
 import type { History } from "./rpc";
 import { useEffect, useState } from "react";
 import HistoryGraph from "./historyGraph";
-import rpc from "./rpc";
+import RPC from "./rpc";
 import { useSavedState } from "./state";
 import { formatBytes, formatLargeNumber, formatNumber } from "./format";
 import { exceedDates } from "./trend";
 
-export default ({ id, path, name, owner, isUser }: { id: number; path: string; name: string; owner: string; isUser: boolean }) => {
+const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path: string; name: string; owner: string; isUser: boolean }) => {
 	const [inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
 		[history, setHistory] = useState<History[]>([]),
 		[exceedSize, exceedInode] = exceedDates(history);
@@ -16,7 +16,7 @@ export default ({ id, path, name, owner, isUser }: { id: number; path: string; n
 			return;
 		}
 
-		rpc.getBasedirsHistory(id, path).then(setHistory);
+		RPC.getBasedirsHistory(id, path).then(setHistory);
 	}, [id, path]);
 
 	if (history.length === 0 || isUser) {
@@ -42,4 +42,6 @@ export default ({ id, path, name, owner, isUser }: { id: number; path: string; n
 				inodeHistory && exceedInode !== Infinity ? <div className="exceed">Expected to exceed inode quota in {formatNumber(exceedInode)} days.</div> : <></>
 		}
 	</>
-}
+};
+
+export default HistoryComponent;

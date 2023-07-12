@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSavedState } from "./state";
 
-export default ({ id, list, onchange }: { id: string; list: readonly string[]; onchange: (list: string[]) => void }) => {
+const MultiselectComponent = ({ id, list, onchange }: { id: string; list: readonly string[]; onchange: (list: string[]) => void }) => {
 	const [selected, setSelected] = useSavedState<string[]>(id + "Multi", []),
 		filterRef = useRef<HTMLInputElement>(null),
 		[filter, setFilter] = useState(""),
@@ -47,3 +47,5 @@ export default ({ id, list, onchange }: { id: string; list: readonly string[]; o
 		</div>
 	</div>
 };
+
+export default MultiselectComponent;

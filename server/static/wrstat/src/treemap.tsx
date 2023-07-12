@@ -110,7 +110,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 
 const maxTableEntries = 1000;
 
-export default ({ table, width, height, noAuth = false, onmouseout }: { table: Table | null; width: number; height: number; noAuth?: boolean; onmouseout?: MouseEventHandler }) => {
+const TreemapComponent = ({ table, width, height, noAuth = false, onmouseout }: { table: Table | null; width: number; height: number; noAuth?: boolean; onmouseout?: MouseEventHandler }) => {
 	if (table === null) {
 		return <></>
 	}
@@ -159,4 +159,6 @@ export default ({ table, width, height, noAuth = false, onmouseout }: { table: T
 		</defs>
 		{buildTree(table, box)}
 	</svg>
-}
+};
+
+export default TreemapComponent;

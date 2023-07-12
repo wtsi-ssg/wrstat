@@ -13,7 +13,7 @@ const paginationEnd = 3,
 		}
 	};
 
-export default ({ totalPages, currentPage, onClick }: { totalPages: number; currentPage: number, onClick: MouseEventHandler }) => {
+const PaginationComponent = ({ totalPages, currentPage, onClick }: { totalPages: number; currentPage: number, onClick: MouseEventHandler }) => {
 	const ret: JSX.Element[] = [],
 		lastPage = totalPages - 1;
 	if (lastPage < 1) {
@@ -30,8 +30,8 @@ export default ({ totalPages, currentPage, onClick }: { totalPages: number; curr
 		if (!(page < paginationEnd || page > lastPage - paginationEnd ||
 			((paginationSurround > currentPage ||
 				page >= currentPage - paginationSurround) && page <= currentPage + paginationSurround) ||
-			paginationEnd > 0 && ((currentPage - paginationSurround - 1 === paginationEnd && page === paginationEnd) ||
-				(currentPage + paginationSurround + 1 === lastPage - paginationEnd && page === lastPage - paginationEnd)))) {
+			(paginationEnd > 0 && ((currentPage - paginationSurround - 1 === paginationEnd && page === paginationEnd) ||
+				(currentPage + paginationSurround + 1 === lastPage - paginationEnd && page === lastPage - paginationEnd))))) {
 			if (page !== start) {
 				processPaginationSection(ret, currentPage, start, page - 1, onClick);
 			}
@@ -49,3 +49,5 @@ export default ({ totalPages, currentPage, onClick }: { totalPages: number; curr
 		<li className={"pagination_next" + (currentPage === lastPage ? "" : " pagination_link")} onClick={currentPage === lastPage ? noop : onClick} data-page={currentPage + 1}>Next</li>
 	</ul>
 };
+
+export default PaginationComponent;

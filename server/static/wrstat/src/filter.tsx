@@ -10,7 +10,7 @@ import Minmax from "./minmax";
 
 const stringSort = new Intl.Collator().compare;
 
-export default ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
+const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),
 		[users, setUsers] = useState<number[]>([]),
 		[groups, setGroups] = useState<number[]>([]),
@@ -142,4 +142,6 @@ export default ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsa
 		</details>
 		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...tableFilter} />
 	</>
-}
+};
+
+export default FilterComponent;

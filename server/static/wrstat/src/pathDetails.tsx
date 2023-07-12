@@ -3,7 +3,7 @@ import type { Entry } from './treemap';
 import { useEffect, useState } from "react"
 import History from './history';
 import MultiSelect from './multiselect';
-import rpc from "./rpc";
+import RPC from "./rpc";
 import { useSavedState } from './state';
 import SubDirs from './subdirs';
 import type { Filter } from './table';
@@ -101,7 +101,7 @@ const colours = [
 		["> 2 years", 730]
 	] as const;
 
-export default ({ id, name, owner, path, isUser, filter, users, groups }: { id: number; name: string; owner: string; path: string; isUser: boolean; filter: Filter<Usage>; users: Map<number, string>; groups: Map<number, string> }) => {
+const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, groups }: { id: number; name: string; owner: string; path: string; isUser: boolean; filter: Filter<Usage>; users: Map<number, string>; groups: Map<number, string> }) => {
 	const [treePath, setTreePath] = useSavedState("treePath", "/"),
 		[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 		[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
@@ -119,7 +119,7 @@ export default ({ id, name, owner, path, isUser, filter, users, groups }: { id: 
 	useEffect(() => setTreePath(path || "/"), [path]);
 
 	useEffect(() => {
-		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
+		RPC.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
 			.then(children => {
 				const entries: Entry[] = [],
 					since = new Date(children.timestamp).valueOf() - sinceLastAccess * 86_400_000;
@@ -196,4 +196,6 @@ export default ({ id, name, owner, path, isUser, filter, users, groups }: { id: 
 		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
 		<History id={id} path={path} isUser={isUser} name={name} owner={owner} />
 	</>
-}
+};
+
+export default PathdetailsComponent;

@@ -7,7 +7,7 @@ type UsageHistory = {
 	Date: string;
 }
 
-export default ({ history, width, height, yFormatter, secondaryFormatter, yRounder }: { history: UsageHistory[], width: number, height: number, yFormatter: (num: number) => string, secondaryFormatter: (num: number) => string, yRounder: (num: number) => number }) => {
+const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, yRounder }: { history: UsageHistory[], width: number, height: number, yFormatter: (num: number) => string, secondaryFormatter: (num: number) => string, yRounder: (num: number) => number }) => {
 	const [infoBox, setInfoBox] = useState(-1),
 		amountToY = (amount: number) => paddingYT + maxY - amount * yScale,
 		dateToX = (date: number) => paddingXL + (date - minDate) * xScale;
@@ -163,4 +163,6 @@ export default ({ history, width, height, yFormatter, secondaryFormatter, yRound
 			<text x={width - 47} y={paddingYT + 45} fill="currentColor">Usage</text>
 		</svg>
 	</>
-}
+};
+
+export default HistoryGraph;

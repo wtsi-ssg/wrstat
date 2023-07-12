@@ -17,7 +17,7 @@ const minDaysAgo = (date: string) => {
 	return daysAgo;
 };
 
-export default ({ data, width, height, logX = false, logY = false, setLimits, previewLimits, minX, maxX, minY, maxY }: { data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, minX: number, maxX: number, minY: number, maxY: number, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void, previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void }) => {
+const ScatterComponent = ({ data, width, height, logX = false, logY = false, setLimits, previewLimits, minX, maxX, minY, maxY }: { data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, minX: number, maxX: number, minY: number, maxY: number, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void, previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void }) => {
 	const paddingXL = 80,
 		paddingXR = 10,
 		paddingYT = 10,
@@ -181,4 +181,6 @@ export default ({ data, width, height, logX = false, logY = false, setLimits, pr
 		}
 		<text x={paddingXL + (width - paddingXL - paddingXR) / 2} y={height - 5} textAnchor="middle" fill="currentColor">Last Modified (Days)</text>
 	</svg>
-}
+};
+
+export default ScatterComponent;
