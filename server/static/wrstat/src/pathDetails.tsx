@@ -1,8 +1,7 @@
-import type { Child, History, Usage } from './rpc';
+import type { Child, Usage } from './rpc';
 import type { Entry } from './treemap';
 import { useEffect, useState } from "react"
-import { formatBytes, formatLargeNumber, formatNumber } from './format';
-import HistoryGraph from './history';
+import History from './history';
 import MultiSelect from './multiselect';
 import rpc from "./rpc";
 import { useSavedState } from './state';
@@ -113,21 +112,11 @@ export default ({ id, name, owner, path, isUser, filter, users, groups }: { id: 
 		[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
 		[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("treeTypes", []),
 		[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
-		[inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
-		[hasAuth, setHasAuth] = useState(true),
-		[history, setHistory] = useState<History[]>([]);
+		[hasAuth, setHasAuth] = useState(true);
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
 	useEffect(() => setTreePath(path || "/"), [path]);
-
-	useEffect(() => {
-		if (id === -1 || path === "") {
-			return;
-		}
-
-		rpc.getBasedirsHistory(id, path).then(setHistory);
-	}, [id, path]);
 
 	useEffect(() => {
 		rpc.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
@@ -205,22 +194,6 @@ export default ({ id, name, owner, path, isUser, filter, users, groups }: { id: 
 			</div>
 		</div>
 		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
-		{
-			isUser ? <></> : <>
-				<h2>Usage | {name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
-				<h3>History/Future Predictions</h3>
-			</>
-		}
-		{
-			history.length ? <>
-				<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
-				<label htmlFor="countHistory">Count History</label><input type="radio" id="countHistory" checked={inodeHistory} onChange={() => setInodeHistory(true)} />
-			</> : <></>
-		}
-		<HistoryGraph history={history.map(h => ({ Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize }))} width={960} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
-			const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
-
-			return maxAmount = order * Math.ceil(maxAmount / order)
-		} : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
+		<History id={id} path={path} isUser={isUser} name={name} owner={owner} />
 	</>
 }
