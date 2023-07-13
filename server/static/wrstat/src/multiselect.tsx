@@ -24,7 +24,20 @@ const MultiselectComponent = ({ id, list, disabled = false, onchange }: { id: st
 		</ul>
 		<div>
 			<div>
-				<input ref={filterRef} value={filter} onChange={e => setFilter(e.target.value)} />
+				<input ref={filterRef} value={filter} onKeyDown={e => {
+					if (e.key === "Escape") {
+						(e.target as HTMLInputElement).blur();
+					} else if (e.key === "Enter") {
+						if (filteredList.length === 1) {
+							selectedSet.add(filteredList[0]);
+
+							const selected = Array.from(selectedSet);
+
+							setSelected(selected);
+							onchange(selected);
+						}
+					}
+				}} onChange={e => setFilter(e.target.value)} />
 				<ul tabIndex={-1}>
 					{
 						filteredList.map(e => <li>
