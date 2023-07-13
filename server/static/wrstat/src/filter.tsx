@@ -9,7 +9,7 @@ import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
 
 const stringSort = new Intl.Collator().compare,
-	calculateSliderWidth = (div: HTMLDivElement) => Math.min(500, getComputedStyle(div).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
+	calculateSliderWidth = (div: HTMLDivElement) => Math.min(500, getComputedStyle(div).gridTemplateColumns.split(" ").slice(1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
 
 const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),
@@ -82,6 +82,14 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		setMaxDaysAgo(Infinity);
 	}, [byUser]);
 
+	useEffect(() => {
+		window.addEventListener("resize", () => {
+			if (treeFilter.current) {
+				setSliderWidth(calculateSliderWidth(treeFilter.current));
+			}
+		});
+	}, []);
+
 	useLayoutEffect(() => {
 		if (treeFilter.current) {
 			setSliderWidth(calculateSliderWidth(treeFilter.current));
@@ -89,13 +97,37 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 	});
 
 	return <>
-		<details open>
+		<details open className="boxed">
 			<summary>Filter</summary>
-			<div className="treeFilter" ref={treeFilter}>
-				<label htmlFor="byGroup">By Group</label>
-				<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
-				<label htmlFor="byUser">By User</label>
-				<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
+			<div className="primaryFilter">
+				<div className="treeFilter" ref={treeFilter}>
+					<label htmlFor="byGroup">By Group</label>
+					<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
+					<label htmlFor="byUser">By User</label>
+					<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
+					<label htmlFor="username">Username</label>
+					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userMap.get(username) ?? -1))} />
+					<label htmlFor="unix">Unix Group</label>
+					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={groups => setGroups(groups.map(groupname => groupMap.get(groupname) ?? -1))} />
+					<label htmlFor="owners">Owners</label>
+					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
+					<label htmlFor="bom">Group Areas</label>
+					<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
+					<label>Size </label>
+					<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
+						setFilterMinSize(min);
+						setFilterMaxSize(max);
+					}} formatter={formatBytes} />
+					<label>Last Modified</label>
+					<Minmax max={userUsage.concat(groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={sliderWidth} onchange={(min: number, max: number) => {
+						setFilterMinDaysAgo(min);
+						setFilterMaxDaysAgo(max);
+					}} formatter={formatNumber} />
+					<label htmlFor="scaleSize">Log Size Axis</label>
+					<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
+					<label htmlFor="scaleDays">Log Days Axis</label>
+					<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
+				</div>
 				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} setLimits={(minS, maxS, minD, maxD) => {
 					setSavedMinSize(minS);
 					setSavedMaxSize(maxS);
@@ -111,30 +143,8 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					setMinDaysAgo(minD);
 					setMaxDaysAgo(maxD);
 				}} />
-				<label htmlFor="username">Username</label>
-				<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userMap.get(username) ?? -1))} />
-				<label htmlFor="unix">Unix Group</label>
-				<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={groups => setGroups(groups.map(groupname => groupMap.get(groupname) ?? -1))} />
-				<label htmlFor="owners">Owners</label>
-				<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
-				<label htmlFor="bom">Group Areas</label>
-				<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
-				<label>Size </label>
-				<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
-					setFilterMinSize(min);
-					setFilterMaxSize(max);
-				}} formatter={formatBytes} />
-				<label>Last Modified</label>
-				<Minmax max={userUsage.concat(groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={sliderWidth} onchange={(min: number, max: number) => {
-					setFilterMinDaysAgo(min);
-					setFilterMaxDaysAgo(max);
-				}} formatter={formatNumber} />
-				<label htmlFor="scaleSize">Log Size Axis</label>
-				<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
-				<label htmlFor="scaleDays">Log Days Axis</label>
-				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 			</div>
-		</details>
+		</details >
 		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...tableFilter} />
 	</>
 };

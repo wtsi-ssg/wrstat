@@ -18,12 +18,13 @@ input[type=checkbox] {
 }
 
 #auth {
-  float: right;
+  text-align: right;
+  padding-bottom: 1em;
 }
 
 #usageTable {
   table-layout: fixed;
-  width: calc(100vw - 2em);
+  width: calc(100vw - 3em);
 }
 
 #usageTable tbody {
@@ -223,10 +224,11 @@ rect+use+text {
 .pagination_selected,
 .pagination_next,
 .pagination_prev {
-  padding: 0.25em;
+  padding: 0.1em 0.25em;
   background-color: var(--paginationNonClickableBG);
   border: 1px solid var(--paginationNonClickableBorder);
   color: var(--paginationNonClickableFont);
+  border-radius: 4px;
 }
 
 .pagination_selected {
@@ -374,6 +376,7 @@ rect+use+text {
 #historyInfo {
   position: relative;
   height: 0;
+  margin-top: 1.5em;
 }
 
 #historyInfo div {
@@ -446,14 +449,64 @@ summary {
   cursor: pointer;
 }
 
-.treeFilter {
-  margin-top: 1em;
+.primaryFilter {
   display: grid;
   width: 100%;
+  gap: 0 3em;
+  grid-template-columns: auto 934px;
+  align-items: start;
+}
+
+.boxed {
+  border: 1px solid var(--subtleBorder);
+  border-radius: 8px;
+  margin-bottom: 1em;
+}
+
+.boxed summary {
+  list-style: none;
+  padding: 0.5em 1em;
+  border-bottom: 1px solid #ddd;
+}
+
+.boxed summary:after {
+  display: block;
+  content: ".";
+  border: 1px solid var(--subtleBorder);
+  border-top-right-radius: 8px;
+  background-color: var(--background);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M70,0 v100 l-50,-50 z' fill='%23000' /%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 1em 1em;
+  padding: 0.5em 1em;
+  float: right;
+  margin-top: calc(-0.5em - 1px);
+  margin-right: calc(-1em - 1px);
+}
+
+.boxed[open] summary:after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M0,30 h100 l-50,50 z' fill='%23000' /%3E%3C/svg%3E");
+}
+
+.boxed[open] summary {
+  margin-bottom: 1em;
+}
+
+.primaryFilter .treeFilter {
+  margin-left: 1em;
+  padding-right: 3em;
+}
+
+.treeFilter {
+  display: grid;
   gap: 0.5em 1em;
-  grid-template-columns: auto auto auto auto 1fr;
+  grid-template-columns: auto auto auto auto;
   grid-auto-rows: min-content;
-  justify-items: start;
+  border: 1px solid var(--subtleBorder);
+  background-color: var(--subtleBG);
+  border-radius: 8px;
+  padding: 1em;
 }
 
 .treeFilter label {
@@ -469,11 +522,6 @@ summary {
   grid-column: 2 / span 3;
 }
 
-#scatter {
-  grid-column: 5;
-  grid-row: 1 / 10;
-  margin-left: 2em;
-}
 
 #scatter use {
   cursor: pointer;
@@ -550,11 +598,11 @@ summary {
 
 #disktree {
   margin-top: 2em;
-  border-top: 1px solid #000;
   display: grid;
   width: 100%;
   gap: 1em;
   grid-template-columns: 1fr auto;
+  align-items: start;
 }
 
 #disktree .treeFilter {
@@ -585,6 +633,9 @@ th,
   html {
     --colour: #000;
     --background: #fff;
+
+    --subtleBorder: #ddd;
+    --subtleBG: #f8f8f8;
 
     --graphQuota: #00c9cf;
     --graphUsage: #fb8c80;
@@ -639,6 +690,9 @@ th,
     --colour: #fff;
     --background: #222;
 
+    --subtleBorder: #888;
+    --subtleBG: #666;
+
     --graphQuota: #00c9cf;
     --graphUsage: #fb8c80;
     --graphBack: #444;
@@ -684,5 +738,13 @@ th,
     --historyInfoBG: var(--background);
 
     --exceedWarning: #f00;
+  }
+
+  .boxed summary:after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M70,0 v100 l-50,-50 z' fill='%23fff' /%3E%3C/svg%3E");
+  }
+
+  .boxed[open] summary:after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M0,30 h100 l-50,50 z' fill='%23fff' /%3E%3C/svg%3E");
   }
 }

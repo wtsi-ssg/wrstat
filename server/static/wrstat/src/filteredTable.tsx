@@ -49,7 +49,7 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, ...filter }: Fil
 	}, [byUser]);
 
 	return <>
-		<details open>
+		<details open className="boxed">
 			<summary>Basedirs</summary>
 			<span id="perPage">Show
 				<select onChange={(e: ChangeEvent<HTMLSelectElement>) => { setPerPage(parseInt(e.target.value) ?? 10) }}>

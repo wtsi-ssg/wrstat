@@ -26,23 +26,27 @@ const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path:
 	}
 
 	return <>
-		<h2>Usage | {name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
-		<h3>History/Future Predictions</h3>
-		<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
-		<label htmlFor="countHistory">Count History</label><input type="radio" id="countHistory" checked={inodeHistory} onChange={() => setInodeHistory(true)} />
-		<HistoryGraph history={history.map(h => ({ Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize }))} width={960} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
-			const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
+		<details open className="boxed">
+			<summary>History</summary>
+			<h2>Usage | {name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
+			<h3>History/Future Predictions</h3>
+			<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
+			<label htmlFor="countHistory">Count History</label><input type="radio" id="countHistory" checked={inodeHistory} onChange={() => setInodeHistory(true)} />
+			<br />
+			<HistoryGraph history={history.map(h => ({ Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize }))} width={960} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
+				const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
 
-			return maxAmount = order * Math.ceil(maxAmount / order);
-		} : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
-		{
-			!inodeHistory && exceedSize === 0 ? <div className="exceeded">Size Quota has been reached.</div> :
-				!inodeHistory && exceedSize !== Infinity ? <div className="exceed">Expected to exceed size quota in {formatNumber(exceedSize)} days.</div> : <></>
-		}
-		{
-			inodeHistory && exceedInode === 0 ? <div className="exceeded">Inode Quota has been reached.</div> :
-				inodeHistory && exceedInode !== Infinity ? <div className="exceed">Expected to exceed inode quota in {formatNumber(exceedInode)} days.</div> : <></>
-		}
+				return maxAmount = order * Math.ceil(maxAmount / order);
+			} : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
+			{
+				!inodeHistory && exceedSize === 0 ? <div className="exceeded">Size Quota has been reached.</div> :
+					!inodeHistory && exceedSize !== Infinity ? <div className="exceed">Expected to exceed size quota in {formatNumber(exceedSize)} days.</div> : <></>
+			}
+			{
+				inodeHistory && exceedInode === 0 ? <div className="exceeded">Inode Quota has been reached.</div> :
+					inodeHistory && exceedInode !== Infinity ? <div className="exceed">Expected to exceed inode quota in {formatNumber(exceedInode)} days.</div> : <></>
+			}
+		</details>
 	</>
 };
 
