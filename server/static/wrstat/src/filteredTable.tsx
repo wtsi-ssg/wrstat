@@ -35,7 +35,7 @@ const stringSort = new Intl.Collator().compare,
 		null,
 	] as const;
 
-const FilteredTableComponent = ({ usage, byUser, groups, users, ...filter }: Filter<Usage> & { byUser: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number> }) => {
+const FilteredTableComponent = ({ usage, byUser, groups, users, preview, ...filter }: Filter<Usage> & { byUser: boolean; preview: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number> }) => {
 	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
 		[perPage, setPerPage] = useSavedState("perPage", 10),
@@ -47,6 +47,11 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, ...filter }: Fil
 		setSelectedDir("");
 		setSelectedID(-1);
 	}, [byUser]);
+
+	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), filter).length === 0) {
+		setSelectedDir("");
+		setSelectedID(-1);
+	}
 
 	return <>
 		<details open className="boxed">

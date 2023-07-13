@@ -175,7 +175,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 				}} />
 			</div>
 		</details >
-		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...tableFilter} />
+		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} preview={savedMinSize !== minSize || savedMaxSize !== maxSize || savedMinDaysAgo !== minDaysAgo || savedMaxDaysAgo !== maxDaysAgo} {...tableFilter} />
 	</>
 };
 
