@@ -4,7 +4,7 @@ import FilteredTable from "./filteredTable";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import MultiSelect from "./multiselect";
 import Scatter from "./scatter";
-import { firstRender, useSavedState } from './state';
+import { clearState, firstRender, useSavedState } from './state';
 import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
 
@@ -127,6 +127,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
 					<label htmlFor="scaleDays">Log Days Axis</label>
 					<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
+					<button onClick={clearState}>Reset Filter</button>
 				</div>
 				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} setLimits={(minS, maxS, minD, maxD) => {
 					setSavedMinSize(minS);
