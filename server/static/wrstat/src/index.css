@@ -84,7 +84,6 @@ rect+text,
 rect+use,
 rect+use+text {
   pointer-events: none;
-  font-family: Times;
 }
 
 #treeBreadcrumbs {
@@ -466,12 +465,16 @@ summary {
 .boxed summary {
   list-style: none;
   padding: 0.5em 1em;
+}
+
+.boxed[open] summary {
   border-bottom: 1px solid #ddd;
+  margin-bottom: 1em;
 }
 
 .boxed summary:after {
   display: block;
-  content: ".";
+  content: "·";
   border: 1px solid var(--subtleBorder);
   border-top-right-radius: 8px;
   background-color: var(--background);
@@ -489,8 +492,8 @@ summary {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M0,30 h100 l-50,50 z' fill='%23000' /%3E%3C/svg%3E");
 }
 
-.boxed[open] summary {
-  margin-bottom: 1em;
+.boxed:not([open]) summary:after {
+  border-bottom-right-radius: 8px;
 }
 
 .primaryFilter .treeFilter {
@@ -521,7 +524,6 @@ summary {
 .treeFilter>.multiInput {
   grid-column: 2 / span 3;
 }
-
 
 #scatter use {
   cursor: pointer;
