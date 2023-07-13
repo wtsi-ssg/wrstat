@@ -110,7 +110,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					<label htmlFor="unix">Unix Group</label>
 					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={groups => setGroups(groups.map(groupname => groupMap.get(groupname) ?? -1))} />
 					<label htmlFor="owners">Owners</label>
-					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} />
+					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} disabled={byUser} />
 					<label htmlFor="bom">Group Areas</label>
 					<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
 					<label>Size </label>

@@ -68,10 +68,7 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, ...filter }: Fil
 			}} perPage={perPage} filter={filter} onRowClick={(data: Usage) => {
 				const id = byUser ? data.UID : data.GID;
 
-				if (selectedDir === data.BaseDir && selectedID === id) {
-					setSelectedDir("");
-					setSelectedID(-1);
-				} else {
+				if (selectedDir !== data.BaseDir || selectedID !== id) {
 					setSelectedDir(data.BaseDir);
 					setSelectedID(id);
 				}

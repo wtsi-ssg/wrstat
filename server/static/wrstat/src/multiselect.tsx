@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSavedState } from "./state";
 
-const MultiselectComponent = ({ id, list, onchange }: { id: string; list: readonly string[]; onchange: (list: string[]) => void }) => {
+const MultiselectComponent = ({ id, list, disabled = false, onchange }: { id: string; disabled?: boolean; list: readonly string[]; onchange: (list: string[]) => void }) => {
 	const [selected, setSelected] = useSavedState<string[]>(id + "Multi", []),
 		filterRef = useRef<HTMLInputElement>(null),
 		[filter, setFilter] = useState(""),
@@ -12,8 +12,8 @@ const MultiselectComponent = ({ id, list, onchange }: { id: string; list: readon
 
 	return <div className="multiInput">
 		<ul>
-			<li><button id={id} onClick={() => filterRef.current?.focus()}>+</button></li>
-			{Array.from(selected).map(e => <li onClick={() => {
+			<li><button id={id} disabled={disabled} onClick={() => filterRef.current?.focus()}>+</button></li>
+			{(disabled ? [] : Array.from(selected)).map(e => <li onClick={() => {
 				selectedSet.delete(e);
 
 				const selected = Array.from(selectedSet);
