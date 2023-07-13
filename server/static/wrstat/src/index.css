@@ -37,44 +37,48 @@ input[type=checkbox] {
   overflow: hidden;
 }
 
-#usageTable .selected td:first-child {
+#usageTable .selected td:first-child,
+#usageTable .selected td:nth-child(2) {
   white-space: normal;
 }
 
-#usageTable td:first-child {
+#usageTable td:first-child,
+#usageTable td:nth-child(2) {
   text-overflow: ellipsis;
 }
 
-#usageTable col:nth-child(2),
+
 #usageTable col:nth-child(3),
-#usageTable col:nth-child(7),
+#usageTable col:nth-child(4),
 #usageTable col:nth-child(8),
-#usageTable col:nth-child(9) {
+#usageTable col:nth-child(9),
+#usageTable col:nth-child(10) {
   width: 5em;
 }
 
-#usageTable col:nth-child(4),
-#usageTable col:nth-child(5) {
+#usageTable col:nth-child(2),
+#usageTable col:nth-child(5),
+#usageTable col:nth-child(6) {
   width: 8em;
 }
 
-#usageTable col:nth-child(6) {
+#usageTable col:nth-child(7) {
   width: 9em;
 }
 
-#usageTable.user tr> :nth-child(3),
 #usageTable.user tr> :nth-child(4),
-#usageTable.user tr> :nth-child(6),
+#usageTable.user tr> :nth-child(5),
 #usageTable.user tr> :nth-child(7),
-#usageTable.user tr> :nth-child(9) {
+#usageTable.user tr> :nth-child(8),
+#usageTable.user tr> :nth-child(10) {
   visibility: hidden;
 }
 
-#usageTable.user col:nth-child(3),
 #usageTable.user col:nth-child(4),
-#usageTable.user col:nth-child(6),
+#usageTable.user col:nth-child(5),
 #usageTable.user col:nth-child(7),
-#usageTable.user col:nth-child(9) {
+#usageTable.user col:nth-child(8),
+#usageTable.user col:nth-child(10) {
   width: 0;
 }
 
@@ -176,13 +180,13 @@ rect+use+text {
   padding: 0.5em 0.25em;
 }
 
-#usageTable tbody td:nth-child(2),
 #usageTable tbody td:nth-child(3),
 #usageTable tbody td:nth-child(4),
 #usageTable tbody td:nth-child(5),
 #usageTable tbody td:nth-child(6),
 #usageTable tbody td:nth-child(7),
 #usageTable tbody td:nth-child(8),
+#usageTable tbody td:nth-child(9),
 #historyTable tbody td:nth-child(2),
 #historyTable tbody td:nth-child(3),
 #historyTable tbody td:nth-child(4) {

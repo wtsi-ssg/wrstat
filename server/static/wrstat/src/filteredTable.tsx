@@ -90,6 +90,12 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, preview, ...filt
 					sortFn: sorters[2]
 				},
 				{
+					title: byUser ? "User" : "Group",
+					key: "Name",
+					extra: title => ({ title }),
+					sortFn: sorters[1]
+				},
+				{
 					title: "Space Used",
 					key: "UsageSize",
 					extra: used => ({ title: formatNumber(used) + " Bytes" }),
