@@ -90,7 +90,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 
 		return toRet;
 	},
-	font = "Times",
+	font = "\"Helvetica Neue\", Helvetica, Arial, sans-serif",
 	getTextBB = (() => {
 		const ctx = document.createElement("canvas").getContext("2d");
 
