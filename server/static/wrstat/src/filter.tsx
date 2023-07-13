@@ -105,9 +105,15 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 			<div className="primaryFilter">
 				<div className="treeFilter" ref={treeFilter}>
 					<label htmlFor="byGroup">By Group</label>
-					<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => setBy(!e.target.checked)} />
+					<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => {
+						clearState();
+						setBy(!e.target.checked);
+					}} />
 					<label htmlFor="byUser">By User</label>
-					<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
+					<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => {
+						clearState();
+						setBy(e.target.checked);
+					}} />
 					<label htmlFor="username">Username</label>
 					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
 					<label htmlFor="unix">Unix Group</label>
