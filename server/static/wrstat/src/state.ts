@@ -89,4 +89,12 @@ export const useSavedState = <T>(name: string, v: T) => {
 
 		setQueryState();
 	}] as const;
-};
+},
+	clearState = () => {
+		state.clear();
+		setQueryState();
+
+		for (const [v, fn] of setters.values()) {
+			fn(v);
+		}
+	};
