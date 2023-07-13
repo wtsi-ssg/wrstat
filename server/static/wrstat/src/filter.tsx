@@ -9,7 +9,7 @@ import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
 
 const stringSort = new Intl.Collator().compare,
-	calculateSliderWidth = (div: HTMLDivElement) => getComputedStyle(div).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10;
+	calculateSliderWidth = (div: HTMLDivElement) => Math.min(500, getComputedStyle(div).gridTemplateColumns.split(" ").slice(1, -1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
 
 const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),
@@ -81,14 +81,6 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		setMinDaysAgo(-Infinity);
 		setMaxDaysAgo(Infinity);
 	}, [byUser]);
-
-	useEffect(() => {
-		window.addEventListener("resize", () => {
-			if (treeFilter.current) {
-				setSliderWidth(calculateSliderWidth(treeFilter.current));
-			}
-		});
-	}, []);
 
 	useLayoutEffect(() => {
 		if (treeFilter.current) {
