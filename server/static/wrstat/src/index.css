@@ -232,10 +232,7 @@ rect+use+text {
   border-radius: 4px;
 }
 
-.pagination_selected {
-  font-weight: bold;
-}
-
+.pagination_selected,
 #perPage {
   font-weight: bold;
 }
@@ -470,7 +467,7 @@ summary {
 }
 
 .boxed[open] summary {
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--subtleBorder);
   margin-bottom: 1em;
 }
 
