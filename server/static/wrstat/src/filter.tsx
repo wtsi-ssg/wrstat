@@ -2,7 +2,7 @@ import type { Usage } from "./rpc";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import FilteredTable from "./filteredTable";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
-import MultiSelect from "./multiselect";
+import MultiSelect, { type Listener } from "./multiselect";
 import Scatter from "./scatter";
 import { clearState, firstRender, useSavedState } from './state';
 import { fitlerTableRows } from "./table";
@@ -15,7 +15,6 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 	const [byUser, setBy] = useSavedState("byUser", false),
 		[users, setUsers] = useState<number[]>([]),
 		[groups, setGroups] = useState<number[]>([]),
-		[boms, setBOMs] = useSavedState<string[]>("boms", []),
 		[owners, setOwners] = useSavedState<string[]>("owners", []),
 		[scaleSize, setScaleSize] = useSavedState("scaleSize", false),
 		[scaleDays, setScaleDays] = useSavedState("scaleDays", false),
@@ -33,14 +32,14 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSavedState("filterMaxDaysAgo", Infinity),
 		[sliderWidth, setSliderWidth] = useState(300),
 		treeFilter = useRef<HTMLDivElement>(null),
-		groupMap = new Map<string, number>(groupUsage.map(({ GID, Name }) => [Name || (GID + ""), GID])),
-		userMap = new Map<string, number>(userUsage.map(({ UID, Name }) => [Name || (UID + ""), UID])),
-		allGroups = groups.concat(boms.map(b => areas[b].map(a => groupMap.get(a) ?? -1)).flat()).filter(gid => gid !== -1),
+		groupNameToIDMap = new Map<string, number>(groupUsage.map(({ GID, Name }) => [Name || (GID + ""), GID])),
+		groupIDToNameMap = new Map<number, string>(groupUsage.map(({ GID, Name }) => [GID, Name || (GID + "")])),
+		userNameToIDMap = new Map<string, number>(userUsage.map(({ UID, Name }) => [Name || (UID + ""), UID])),
 		basefilter = {
 			UID: byUser ? users : undefined,
-			GID: byUser ? undefined : allGroups,
+			GID: byUser ? undefined : groups,
 			UIDs: byUser ? undefined : (uids: number[]) => users.length ? uids.some(uid => users.includes(uid)) : true,
-			GIDs: byUser ? (gids: number[]) => allGroups.length ? gids.some(gid => allGroups.includes(gid)) : true : undefined,
+			GIDs: byUser ? (gids: number[]) => groups.length ? gids.some(gid => groups.includes(gid)) : true : undefined,
 			Owner: byUser ? [] : owners
 		},
 		scatterFilter = Object.assign({
@@ -58,7 +57,9 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 
 				return daysAgo >= Math.max(minDaysAgo, filterMinDaysAgo) && daysAgo <= Math.min(maxDaysAgo, filterMaxDaysAgo);
 			}
-		}, basefilter);
+		}, basefilter),
+		groupSet = new Set(groups),
+		selectedBOMs = Object.entries(areas).map(([bom, groups]) => groups.every(g => groupNameToIDMap.get(g) === undefined || groupSet.has(groupNameToIDMap.get(g)!)) ? bom : "").filter(b => b).sort(stringSort);
 
 	useEffect(() => {
 		setMinSize(savedMinSize);
@@ -96,6 +97,8 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		}
 	});
 
+	let groupPipe: Listener | null = null;
+
 	return <>
 		<details open className="boxed">
 			<summary>Filter</summary>
@@ -106,13 +109,33 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					<label htmlFor="byUser">By User</label>
 					<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => setBy(e.target.checked)} />
 					<label htmlFor="username">Username</label>
-					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userMap.get(username) ?? -1))} />
+					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
 					<label htmlFor="unix">Unix Group</label>
-					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={groups => setGroups(groups.map(groupname => groupMap.get(groupname) ?? -1))} />
+					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} listener={(cb: Listener) => groupPipe = cb} onchange={groups => setGroups(groups.map(groupname => groupNameToIDMap.get(groupname) ?? -1))} />
+					<label htmlFor="bom">Group Areas</label>
+					<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} selectedList={selectedBOMs} onchange={(boms, deleted) => {
+						if (deleted) {
+							groupPipe?.(areas[deleted], true);
+
+							return false;
+						}
+
+						const existingGroups = new Set(groups.map(gid => groupIDToNameMap.get(gid) ?? ""));
+
+						for (const bom of boms) {
+							for (const g of areas[bom] ?? []) {
+								if (groupNameToIDMap.has(g)) {
+									existingGroups.add(g);
+								}
+							}
+						}
+
+						groupPipe?.(Array.from(existingGroups), false);
+
+						return false;
+					}} />
 					<label htmlFor="owners">Owners</label>
 					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} disabled={byUser} />
-					<label htmlFor="bom">Group Areas</label>
-					<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} onchange={setBOMs} />
 					<label>Size </label>
 					<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
 						setFilterMinSize(min);
@@ -146,7 +169,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 				}} />
 			</div>
 		</details >
-		<FilteredTable users={userMap} groups={groupMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...tableFilter} />
+		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} {...tableFilter} />
 	</>
 };
 
