@@ -536,6 +536,16 @@ summary {
   cursor: crosshair;
 }
 
+#scatter use {
+  fill: currentColor;
+  fill-opacity: 0.4;
+}
+
+#scatter use.selected {
+  fill: var(--scatterHighlight);
+  fill-opacity: 1;
+}
+
 .treeFilter>select {
   grid-column: 2 / span 2;
 }
@@ -686,6 +696,7 @@ th,
     --historyInfoBorder: currentColor;
     --historyInfoBG: var(--background);
 
+    --scatterHighlight: #f00;
     --exceedWarning: #f00;
   }
 }
@@ -742,6 +753,7 @@ th,
     --historyInfoBorder: currentColor;
     --historyInfoBG: var(--background);
 
+    --scatterHighlight: #f00;
     --exceedWarning: #f00;
   }
 

@@ -31,6 +31,8 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		[filterMinDaysAgo, setFilterMinDaysAgo] = useSavedState("filterMinDaysAgo", -Infinity),
 		[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSavedState("filterMaxDaysAgo", Infinity),
 		[sliderWidth, setSliderWidth] = useState(300),
+		[selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
+		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
 		treeFilter = useRef<HTMLDivElement>(null),
 		groupNameToIDMap = new Map<string, number>(groupUsage.map(({ GID, Name }) => [Name || (GID + ""), GID])),
 		groupIDToNameMap = new Map<number, string>(groupUsage.map(({ GID, Name }) => [GID, Name || (GID + "")])),
@@ -59,7 +61,13 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 			}
 		}, basefilter),
 		groupSet = new Set(groups),
-		selectedBOMs = Object.entries(areas).map(([bom, groups]) => groups.every(g => groupNameToIDMap.get(g) === undefined || groupSet.has(groupNameToIDMap.get(g)!)) ? bom : "").filter(b => b).sort(stringSort);
+		selectedBOMs = Object.entries(areas).map(([bom, groups]) => groups.every(g => groupNameToIDMap.get(g) === undefined || groupSet.has(groupNameToIDMap.get(g)!)) ? bom : "").filter(b => b).sort(stringSort),
+		preview = savedMinSize !== minSize || savedMaxSize !== maxSize || savedMinDaysAgo !== minDaysAgo || savedMaxDaysAgo !== maxDaysAgo;
+
+	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows((byUser ? userUsage : groupUsage).filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), tableFilter).length === 0) {
+		setSelectedDir("");
+		setSelectedID(-1);
+	}
 
 	useEffect(() => {
 		setMinSize(savedMinSize);
@@ -81,6 +89,9 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		setMaxSize(Infinity);
 		setMinDaysAgo(-Infinity);
 		setMaxDaysAgo(Infinity);
+
+		setSelectedDir("");
+		setSelectedID(-1);
 	}, [byUser]);
 
 	useEffect(() => {
@@ -158,7 +169,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 					<button onClick={clearState}>Reset Filter</button>
 				</div>
-				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} setLimits={(minS, maxS, minD, maxD) => {
+				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} isSelected={(u: any) => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir} setLimits={(minS, maxS, minD, maxD) => {
 					setSavedMinSize(minS);
 					setSavedMaxSize(maxS);
 					setSavedMinDaysAgo(minD);
@@ -175,7 +186,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 				}} />
 			</div>
 		</details >
-		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={byUser ? userUsage : groupUsage} byUser={byUser} preview={savedMinSize !== minSize || savedMaxSize !== maxSize || savedMinDaysAgo !== minDaysAgo || savedMaxDaysAgo !== maxDaysAgo} {...tableFilter} />
+		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={byUser ? userUsage : groupUsage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} {...tableFilter} />
 	</>
 };
 

@@ -17,7 +17,7 @@ const minDaysAgo = (date: string) => {
 	return daysAgo;
 };
 
-const ScatterComponent = ({ data, width, height, logX = false, logY = false, setLimits, previewLimits, minX, maxX, minY, maxY }: { data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, minX: number, maxX: number, minY: number, maxY: number, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void, previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void }) => {
+const ScatterComponent = ({ data, width, height, logX = false, logY = false, setLimits, previewLimits, minX, maxX, minY, maxY, isSelected }: { data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, minX: number, maxX: number, minY: number, maxY: number, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void, previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void; isSelected: (u: Data) => boolean }) => {
 	const paddingXL = 80,
 		paddingXR = 10,
 		paddingYT = 10,
@@ -160,7 +160,7 @@ const ScatterComponent = ({ data, width, height, logX = false, logY = false, set
 
 	return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseDown={onDrag}>
 		<defs>
-			<circle id="marker" r="2.5" fill="currentColor" fillOpacity="0.4" />
+			<circle id="marker" r="2.5" />
 		</defs>
 		<rect className="back" x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
 		{
@@ -179,7 +179,7 @@ const ScatterComponent = ({ data, width, height, logX = false, logY = false, set
 			highlightCoords ? <rect className="back" x={highlightCoords[0] + paddingXL} width={highlightCoords[1]} y={highlightCoords[2] + paddingYT} height={highlightCoords[3]} fill="#9cf" fillOpacity={0.25} stroke="#036" strokeOpacity={0.25} /> : []
 		}
 		{
-			data.map(d => <use href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => {
+			data.map(d => <use className={isSelected(d) ? "selected" : ""} href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => {
 				setLimits(d.UsageSize, d.UsageSize, asDaysAgo(d.Mtime), asDaysAgo(d.Mtime));
 				setHighlightCoords(null);
 			}} />)

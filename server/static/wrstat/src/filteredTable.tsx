@@ -1,6 +1,5 @@
 import type { Usage } from './rpc';
 import type { ChangeEvent } from "react";
-import { useEffect } from "react";
 import { downloadGroups, downloadUsers } from './download';
 import { asDaysAgoStr, formatBytes, formatNumber } from './format';
 import PathDetails from './pathDetails';
@@ -35,23 +34,11 @@ const stringSort = new Intl.Collator().compare,
 		null,
 	] as const;
 
-const FilteredTableComponent = ({ usage, byUser, groups, users, preview, ...filter }: Filter<Usage> & { byUser: boolean; preview: boolean; usage: Usage[], users: Map<string, number>, groups: Map<string, number> }) => {
-	const [selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
-		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
-		[perPage, setPerPage] = useSavedState("perPage", 10),
+const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, selectedDir, setSelectedID, setSelectedDir, ...filter }: Filter<Usage> & { byUser: boolean; selectedID: number; setSelectedID: (id: number) => void; selectedDir: string; setSelectedDir: (dir: string) => void; usage: Usage[], users: Map<string, number>, groups: Map<string, number> }) => {
+	const [perPage, setPerPage] = useSavedState("perPage", 10),
 		userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
 		groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname])),
 		selectedRow = usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir)[0];
-
-	useEffect(() => {
-		setSelectedDir("");
-		setSelectedID(-1);
-	}, [byUser]);
-
-	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), filter).length === 0) {
-		setSelectedDir("");
-		setSelectedID(-1);
-	}
 
 	return <>
 		<details open className="boxed">
