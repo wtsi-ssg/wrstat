@@ -147,8 +147,13 @@ const ScatterComponent = ({ data, width, height, logX = false, logY = false, set
 		}
 	}
 
-	maxDate += (maxDate - minDate) / 20;
-	maxSize += (maxSize - minSize) / 20;
+	const orderMax = Math.pow(10, Math.max(Math.floor(Math.log10(maxDate)), 1)),
+		orderMin = Math.pow(10, Math.max(Math.floor(Math.log10(minDate)), 1));
+
+	minDate = orderMin * Math.floor(minDate / orderMin);
+	maxDate = orderMax * Math.ceil(maxDate / orderMax);
+	minSize = 100 * Math.pow(2, Math.floor(Math.log2(minSize / 100)));
+	maxSize = 100 * Math.pow(2, Math.ceil(Math.log2(maxSize / 100)));
 
 	const xScale = graphWidth / (maxDate - minDate),
 		yScale = graphHeight / (maxSize - minSize);
