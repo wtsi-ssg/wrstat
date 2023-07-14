@@ -532,6 +532,10 @@ summary {
   grid-column: 2 / span 3;
 }
 
+#disktree .treeFilter {
+  margin-right: 1.5em;
+}
+
 #scatter use {
   cursor: pointer;
 }
