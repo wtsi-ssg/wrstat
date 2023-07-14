@@ -5,6 +5,7 @@ import RPC from "./rpc";
 import { useSavedState } from "./state";
 import { formatBytes, formatLargeNumber, formatNumber } from "./format";
 import { exceedDates } from "./trend";
+import Tabs from "./tabs";
 
 const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path: string; name: string; owner: string; isUser: boolean }) => {
 	const [inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
@@ -30,8 +31,18 @@ const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path:
 			<summary>History</summary>
 			<h2>Usage | {name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
 			<h3>History/Future Predictions</h3>
-			<label htmlFor="sizeHistory">Size History</label><input type="radio" id="sizeHistory" checked={!inodeHistory} onChange={() => setInodeHistory(false)} />
-			<label htmlFor="countHistory">Count History</label><input type="radio" id="countHistory" checked={inodeHistory} onChange={() => setInodeHistory(true)} />
+			<Tabs id="historyTabs" tabs={[
+				{
+					title: "Size",
+					onClick: () => setInodeHistory(false),
+					selected: !inodeHistory,
+				},
+				{
+					title: "Count",
+					onClick: () => setInodeHistory(true),
+					selected: inodeHistory,
+				}
+			]} />
 			<HistoryGraph history={history.map(h => ({ Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize }))} width={960} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
 				const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
 
