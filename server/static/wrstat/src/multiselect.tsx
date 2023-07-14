@@ -37,7 +37,7 @@ const MultiselectComponent = ({ id, list, disabled = false, selectedList, listen
 		}
 	});
 
-	return <div className="multiInput">
+	return <div className="multiInput" id={`multi_${id}`}>
 		<ul>
 			<li><button id={id} disabled={disabled} onClick={() => filterRef.current?.focus()}>+</button></li>
 			{(disabled ? [] : Array.from(selected)).map(e => <li onClick={() => {

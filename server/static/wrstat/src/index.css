@@ -393,6 +393,11 @@ rect+use+text {
   display: inline-block;
 }
 
+#multi_unix {
+  max-height: 100px;
+  overflow: hidden;
+}
+
 .multiInput ul {
   margin: 0;
   padding: 0;
