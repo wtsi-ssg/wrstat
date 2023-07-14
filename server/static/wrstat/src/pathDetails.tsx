@@ -155,9 +155,9 @@ const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, gr
 	return <>
 		<details open className="boxed">
 			<summary>Disktree</summary>
+			<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 			<div id="disktree">
 				<div>
-					<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 					<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
 					<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
 					<table id="treeKey">

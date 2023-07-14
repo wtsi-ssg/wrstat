@@ -611,6 +611,10 @@ summary {
   fill-opacity: 0.8;
 }
 
+#treeBreadcrumbs {
+  margin-bottom: 0;
+}
+
 #disktree {
   margin-top: 2em;
   display: grid;
@@ -618,10 +622,6 @@ summary {
   gap: 1em;
   grid-template-columns: 1fr auto;
   align-items: start;
-}
-
-#disktree .treeFilter {
-  margin-top: 3em;
 }
 
 .exceed,
