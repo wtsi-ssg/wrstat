@@ -632,6 +632,97 @@ summary {
   align-items: start;
 }
 
+.tabs {
+  padding-left: 0;
+  line-height: 24px;
+  position: relative;
+  width: calc(100% - 20px);
+  overflow: hidden;
+  padding: 0 0 0 20px;
+  margin: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.tabs:after {
+  position: absolute;
+  content: "";
+  width: calc(100% + 20px);
+  bottom: 0;
+  left: 0;
+  border: 1px solid currentColor;
+  z-index: 1;
+  overflow: hidden;
+  text-align: center;
+  transform: translateX(-20px);
+}
+
+.tabs>li {
+  text-decoration: none
+}
+
+.tabs>li {
+  border-width: 1px;
+  border-style: solid;
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+  margin: 0 -5px;
+  padding: 0 20px;
+  border-top-right-radius: 6px;
+  border-top-left-radius: 6px;
+  background: linear-gradient(to bottom, var(--tabBGFrom) 50%, var(--tabBGTo) 100%);
+  box-shadow: 0 3px 3px color-mix(in srgb, currentColor 40%, transparent), inset 0 1px 0 var(--background);
+  text-shadow: 0 1px var(--background);
+  border-color: currentColor;
+}
+
+.tabs>li:hover {
+  cursor: pointer;
+  outline: none;
+  background: linear-gradient(to bottom, var(--tabHoverBGFrom) 1%, var(--tabHoverBGMid) 50%, var(--tabHoverBGTo) 100%);
+}
+
+.tabs>li:before,
+.tabs>li:after {
+  position: absolute;
+  bottom: -1px;
+  width: 6px;
+  height: 6px;
+  content: " ";
+  border-style: solid;
+  border-color: currentColor;
+}
+
+.tabs>li:before {
+  left: -7px;
+  border-bottom-right-radius: 6px;
+  border-width: 0 1px 1px 0;
+  box-shadow: 2px 2px 0 var(--tabShadow);
+}
+
+.tabs>li:after {
+  right: -7px;
+  border-bottom-left-radius: 6px;
+  border-width: 0 0 1px 1px;
+  box-shadow: -2px 2px 0 var(--tabShadow);
+}
+
+.tabs .selected {
+  z-index: 2;
+  cursor: default !important;
+  border-bottom-color: var(--tabSelectedBG);
+  background: var(--tabSelectedBG) !important;
+}
+
+.tabs .selected:before {
+  box-shadow: 2px 2px 0 var(--tabSelectedBG);
+}
+
+.tabs .selected:after {
+  box-shadow: -2px 2px 0 var(--tabSelectedBG);
+}
+
 .exceed,
 .exceeded {
   margin-top: 1em;
@@ -704,6 +795,16 @@ th,
     --historyInfoBorder: currentColor;
     --historyInfoBG: var(--background);
 
+    --tabFont: currentColor;
+    --tabBGFrom: #ececec;
+    --tabBGTo: #d1d1d1;
+    --tabHoverBGFrom: #faa;
+    --tabHoverBGMid: #ffecec;
+    --tabHoverBGTo: #d1d1d1;
+    --tabShadow: #d1d1d1;
+    --tabSelectedBG: var(--background);
+    --tabSelectedFont: currentColor;
+
     --scatterHighlight: #f00;
     --exceedWarning: #f00;
   }
@@ -760,6 +861,16 @@ th,
     --historyInfoFont: currentColor;
     --historyInfoBorder: currentColor;
     --historyInfoBG: var(--background);
+
+    --tabFont: currentColor;
+    --tabBGFrom: #777;
+    --tabBGTo: #111;
+    --tabHoverBGFrom: #f22;
+    --tabHoverBGMid: #a77;
+    --tabHoverBGTo: #111;
+    --tabShadow: #2e2e2e;
+    --tabSelectedBG: var(--background);
+    --tabSelectedFont: currentColor;
 
     --scatterHighlight: #f00;
     --exceedWarning: #f00;
