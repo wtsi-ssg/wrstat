@@ -7,6 +7,7 @@ import Scatter from "./scatter";
 import { clearState, useSavedState } from './state';
 import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
+import Tabs from "./tabs";
 
 const stringSort = new Intl.Collator().compare,
 	calculateSliderWidth = (div: HTMLDivElement) => Math.min(500, getComputedStyle(div).gridTemplateColumns.split(" ").slice(1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
@@ -93,20 +94,28 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 	let groupPipe: Listener | null = null;
 
 	return <>
+		<Tabs id="mainTabs" tabs={[
+			{
+				title: "By Group",
+				onClick: () => {
+					clearState();
+					setBy(false);
+				},
+				selected: !byUser
+			},
+			{
+				title: "By User",
+				onClick: () => {
+					clearState();
+					setBy(true);
+				},
+				selected: byUser
+			},
+		]} />
 		<details open className="boxed">
 			<summary>Filter</summary>
 			<div className="primaryFilter">
 				<div className="treeFilter" ref={treeFilter}>
-					<label htmlFor="byGroup">By Group</label>
-					<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => {
-						clearState();
-						setBy(!e.target.checked);
-					}} />
-					<label htmlFor="byUser">By User</label>
-					<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => {
-						clearState();
-						setBy(e.target.checked);
-					}} />
 					<label htmlFor="username">Username</label>
 					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
 					<label htmlFor="unix">Unix Group</label>
