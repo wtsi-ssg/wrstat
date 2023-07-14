@@ -4,7 +4,11 @@ import FilteredTable from "./filteredTable";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import MultiSelect, { type Listener } from "./multiselect";
 import Scatter from "./scatter";
+<<<<<<< HEAD
 import { clearState, useSavedState } from './state';
+=======
+import { clearState, firstRender, useSavedState, useSearchParamsState } from './state';
+>>>>>>> Attempt at using urlstate; not working right.
 import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
 import Tabs from "./tabs";
@@ -19,6 +23,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		[owners, setOwners] = useSavedState<string[]>("owners", []),
 		[scaleSize, setScaleSize] = useSavedState("scaleSize", false),
 		[scaleDays, setScaleDays] = useSavedState("scaleDays", false),
+<<<<<<< HEAD
 		[savedMinSize, setSavedMinSize] = useSavedState("minSize", -Infinity),
 		[savedMaxSize, setSavedMaxSize] = useSavedState("maxSize", Infinity),
 		[savedMinDaysAgo, setSavedMinDaysAgo] = useSavedState("minDaysAgo", -Infinity),
@@ -32,6 +37,17 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		[filterMinDaysAgo, setFilterMinDaysAgo] = useSavedState("filterMinDaysAgo", -Infinity),
 		[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSavedState("filterMaxDaysAgo", Infinity),
 		[scatterWidth, setScatterWidth] = useState(300),
+=======
+		[minSize, setMinSize] = useSearchParamsState("minSize", -Infinity),
+		[maxSize, setMaxSize] = useSearchParamsState("maxSize", Infinity),
+		[minDaysAgo, setMinDaysAgo] = useSearchParamsState("minDaysAgo", -Infinity),
+		[maxDaysAgo, setMaxDaysAgo] = useSearchParamsState("maxDaysAgo", Infinity),
+		[filterMinSize, setFilterMinSize] = useSearchParamsState("filterMinSize", -Infinity),
+		[filterMaxSize, setFilterMaxSize] = useSearchParamsState("filterMaxSize", Infinity),
+		[filterMinDaysAgo, setFilterMinDaysAgo] = useSearchParamsState("filterMinDaysAgo", -Infinity),
+		[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSearchParamsState("filterMaxDaysAgo", Infinity),
+		[sliderWidth, setSliderWidth] = useState(300),
+>>>>>>> Attempt at using urlstate; not working right.
 		[selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
 		usage = byUser ? userUsage : groupUsage,
@@ -176,7 +192,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					setMinDaysAgo(minD);
 					setMaxDaysAgo(maxD);
 				}} />
-			</div>
+			</div >
 		</details >
 		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} filter={tableFilter} />
 	</>
