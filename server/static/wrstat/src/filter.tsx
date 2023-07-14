@@ -116,10 +116,8 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 			<summary>Filter</summary>
 			<div className="primaryFilter">
 				<div className="treeFilter" ref={treeFilter}>
-					<label htmlFor="username">Username</label>
-					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
-					<label htmlFor="unix">Unix Group</label>
-					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} listener={(cb: Listener) => groupPipe = cb} onchange={groups => setGroups(groups.map(groupname => groupNameToIDMap.get(groupname) ?? -1))} />
+					<label htmlFor="owners">Owners</label>
+					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} disabled={byUser} />
 					<label htmlFor="bom">Group Areas</label>
 					<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} selectedList={selectedBOMs} onchange={(boms, deleted) => {
 						if (deleted) {
@@ -142,8 +140,10 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 
 						return false;
 					}} />
-					<label htmlFor="owners">Owners</label>
-					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} disabled={byUser} />
+					<label htmlFor="unix">Unix Group</label>
+					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} listener={(cb: Listener) => groupPipe = cb} onchange={groups => setGroups(groups.map(groupname => groupNameToIDMap.get(groupname) ?? -1))} />
+					<label htmlFor="username">Username</label>
+					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
 					<label>Size </label>
 					<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
 						setFilterMinSize(min);
