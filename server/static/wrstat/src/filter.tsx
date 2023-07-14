@@ -4,7 +4,7 @@ import FilteredTable from "./filteredTable";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import MultiSelect, { type Listener } from "./multiselect";
 import Scatter from "./scatter";
-import { clearState, firstRender, useSavedState } from './state';
+import { clearState, useSavedState } from './state';
 import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
 
@@ -75,24 +75,6 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		setMinDaysAgo(savedMinDaysAgo);
 		setMaxDaysAgo(savedMaxDaysAgo);
 	}, [savedMinDaysAgo, savedMaxDaysAgo, savedMinSize, savedMaxSize]);
-
-	useEffect(() => {
-		if (firstRender) {
-			return
-		}
-
-		setSavedMinSize(-Infinity);
-		setSavedMaxSize(Infinity);
-		setSavedMinDaysAgo(-Infinity);
-		setSavedMaxDaysAgo(Infinity);
-		setMinSize(-Infinity);
-		setMaxSize(Infinity);
-		setMinDaysAgo(-Infinity);
-		setMaxDaysAgo(Infinity);
-
-		setSelectedDir("");
-		setSelectedID(-1);
-	}, [byUser]);
 
 	useEffect(() => {
 		window.addEventListener("resize", () => {
