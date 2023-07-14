@@ -64,7 +64,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		}, basefilter),
 		groupSet = new Set(groups),
 		selectedBOMs = Object.entries(areas).map(([bom, groups]) => groups.every(g => groupNameToIDMap.get(g) === undefined || groupSet.has(groupNameToIDMap.get(g)!)) ? bom : "").filter(b => b).sort(stringSort),
-		preview = minSize !== minSize || maxSize !== maxSize || minDaysAgo !== minDaysAgo || maxDaysAgo !== maxDaysAgo;
+		preview = savedMinSize !== minSize || savedMaxSize !== maxSize || savedMinDaysAgo !== minDaysAgo || savedMaxDaysAgo !== maxDaysAgo;
 
 	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), tableFilter).length === 0) {
 		setSelectedDir("");
@@ -176,7 +176,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					setMinDaysAgo(minD);
 					setMaxDaysAgo(maxD);
 				}} />
-			</div >
+			</div>
 		</details >
 		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} filter={tableFilter} />
 	</>

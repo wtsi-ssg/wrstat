@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 const MinmaxComponent = ({ min = 0, max = min + 1, minValue = min, maxValue = max, width, ticks = 5, noOverlap = true, formatter }:
 	{
 		min?: number; max?: number; minValue?: number; maxValue?: number; ticks?: number, width: number,
-		setSliderMin: any, setSliderMax: any, noOverlap?: boolean, formatter: (val: number) => string
+		onchange: (min: number, max: number) => void, noOverlap?: boolean, formatter: (val: number) => string
 	}) => {
 
 	width = Math.max(width, 100)
