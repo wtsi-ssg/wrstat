@@ -2,10 +2,10 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import Auth, { logout } from './auth';
-import Filter from './filter';
 import ready from './ready';
 import RPC from './rpc';
 import { BrowserRouter } from "react-router-dom";
+import App from "./App";
 
 const auth = ready.then(Auth),
 	now = Date.now(),
@@ -61,9 +61,13 @@ auth.then(username => Promise.all([
 					<path d="M35,35 l30,30 M35,65 l30,-30" stroke="currentColor" fill="none" stroke-width="10" stroke-linecap="round" />
 				</symbol>
 			</svg>
-			<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
+
 			<BrowserRouter>
-				<Filter groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
+				<div id="auth">
+					{username} - <button onClick={logout}> Logout </button>
+				</div>
+
+				<App />
 			</BrowserRouter>
 		</StrictMode>
 	)));
