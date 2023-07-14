@@ -181,10 +181,13 @@ const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, gr
 					</table>
 				</div>
 				<div className="treeFilter">
+					<h3>Colour</h3>
 					<label htmlFor="aTime">Use ATime</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
 					<label htmlFor="mTime">Use MTime</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
+					<h3>Area</h3>
 					<label htmlFor="useSize">Use Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
 					<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
+					<h3>Filter</h3>
 					<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
 					<label htmlFor="sinceAccess">Time Since Access</label>
 					<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>

@@ -515,6 +515,10 @@ summary {
   padding: 1em;
 }
 
+.treeFilter h3 {
+  grid-column: 1 / span 4;
+}
+
 .treeFilter label {
   white-space: nowrap;
   justify-self: end;
