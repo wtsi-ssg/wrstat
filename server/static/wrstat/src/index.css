@@ -624,7 +624,7 @@ summary {
 }
 
 #disktree {
-  margin-top: 2em;
+  margin-top: 0.25em;
   display: grid;
   width: 100%;
   gap: 1em;
