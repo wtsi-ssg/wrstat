@@ -662,7 +662,7 @@ summary {
   width: calc(100% + 20px);
   bottom: 0;
   left: 0;
-  border: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
   z-index: 1;
   overflow: hidden;
   text-align: center;
