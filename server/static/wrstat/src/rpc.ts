@@ -1,6 +1,6 @@
 import { getCookie, logout } from "./auth";
 
-export type ChildFilter = {
+type ChildFilter = {
 	path: string;
 	groups?: string;
 	users?: string;
@@ -22,11 +22,6 @@ export type Child = {
 	timestamp: string;
 	areas: Record<string, string[]>;
 	noauth: boolean;
-}
-
-export type TreeData = {
-	name: string;
-	path: string;
 }
 
 export type Usage = {
