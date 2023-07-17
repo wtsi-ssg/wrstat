@@ -751,12 +751,11 @@ button.download:first-of-type {
 .exceed,
 .exceeded {
   margin-top: 1em;
-  font-size: 1, 2em;
 }
 
-.exceeded {
+.exceed {
   font-weight: bold;
-  color: var(--exceedWarning);
+  color: color-mix(in srgb, currentColor var(--warningProx), var(--exceedWarning));
 }
 
 summary,

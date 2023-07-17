@@ -7,13 +7,15 @@ import { formatBytes, formatLargeNumber, formatNumber } from "./format";
 import { exceedDates } from "./trend";
 import Tabs from "./tabs";
 
-const determineGraphWidth = () => Math.max(500, window.innerWidth - 60);
+const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
+	maxWarningDay = 25;
 
 const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path: string; name: string; owner: string; isUser: boolean }) => {
 	const [inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
 		[history, setHistory] = useState<History[]>([]),
 		[historyWidth, setHistoryWidth] = useState(960),
-		[exceedSize, exceedInode] = exceedDates(history);
+		[exceedSize, exceedInode] = exceedDates(history),
+		daysToday = Math.round(Date.now() / 86_400_000);
 
 	useEffect(() => {
 		if (id === -1 || path === "") {
@@ -57,11 +59,11 @@ const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path:
 			} : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
 			{
 				!inodeHistory && exceedSize === 0 ? <div className="exceeded">Size Quota has been reached.</div> :
-					!inodeHistory && exceedSize !== Infinity ? <div className="exceed">Expected to exceed size quota in {formatNumber(exceedSize)} days.</div> : <></>
+					!inodeHistory && exceedSize !== Infinity ? <div style={{ [`--warningProx` as any]: (100 * Math.min(maxWarningDay, (exceedSize - daysToday)) / maxWarningDay) + "%" }} className="exceed">Expected to exceed size quota in {formatNumber(exceedSize - daysToday)} days.</div> : <></>
 			}
 			{
 				inodeHistory && exceedInode === 0 ? <div className="exceeded">Inode Quota has been reached.</div> :
-					inodeHistory && exceedInode !== Infinity ? <div className="exceed">Expected to exceed inode quota in {formatNumber(exceedInode)} days.</div> : <></>
+					inodeHistory && exceedInode !== Infinity ? <div style={{ [`--warningProx` as any]: (100 * Math.min(maxWarningDay, (exceedInode - daysToday)) / maxWarningDay) + "%" }} className="exceed">Expected to exceed inode quota in {formatNumber(exceedInode - daysToday)} days.</div> : <></>
 			}
 		</details>
 	</>
