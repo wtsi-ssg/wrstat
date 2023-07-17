@@ -34,6 +34,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		[sliderWidth, setSliderWidth] = useState(300),
 		[selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
+		usage = byUser ? userUsage : groupUsage,
 		treeFilter = useRef<HTMLDivElement>(null),
 		groupNameToIDMap = new Map<string, number>(groupUsage.map(({ GID, Name }) => [Name || (GID + ""), GID])),
 		groupIDToNameMap = new Map<number, string>(groupUsage.map(({ GID, Name }) => [GID, Name || (GID + "")])),
@@ -65,7 +66,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		selectedBOMs = Object.entries(areas).map(([bom, groups]) => groups.every(g => groupNameToIDMap.get(g) === undefined || groupSet.has(groupNameToIDMap.get(g)!)) ? bom : "").filter(b => b).sort(stringSort),
 		preview = savedMinSize !== minSize || savedMaxSize !== maxSize || savedMinDaysAgo !== minDaysAgo || savedMaxDaysAgo !== maxDaysAgo;
 
-	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows((byUser ? userUsage : groupUsage).filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), tableFilter).length === 0) {
+	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), tableFilter).length === 0) {
 		setSelectedDir("");
 		setSelectedID(-1);
 	}
@@ -145,12 +146,12 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					<label htmlFor="username">Username</label>
 					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
 					<label>Size </label>
-					<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
+					<Minmax max={usage.reduce((max, curr) => Math.max(max, curr.UsageSize), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
 						setFilterMinSize(min);
 						setFilterMaxSize(max);
 					}} formatter={formatBytes} />
 					<label>Last Modified</label>
-					<Minmax max={userUsage.concat(groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={sliderWidth} onchange={(min: number, max: number) => {
+					<Minmax max={usage.reduce((curr, next) => Math.max(curr, asDaysAgo(next.Mtime)), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={sliderWidth} onchange={(min: number, max: number) => {
 						setFilterMinDaysAgo(min);
 						setFilterMaxDaysAgo(max);
 					}} formatter={formatNumber} />
@@ -177,7 +178,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 				}} />
 			</div>
 		</details >
-		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={byUser ? userUsage : groupUsage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} {...tableFilter} />
+		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} {...tableFilter} />
 	</>
 };
 
