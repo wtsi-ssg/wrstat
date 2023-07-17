@@ -265,6 +265,10 @@ rect+use+text {
   font-weight: bold;
 }
 
+#perPage {
+  float: left;
+}
+
 #perPage select {
   border: 1px solid var(--perPageBorder);
   background-color: var(--perPageBG);
@@ -274,7 +278,6 @@ rect+use+text {
   background-color: transparent;
   padding: 4px;
   font-weight: bold;
-  float: left;
 }
 
 #details {
