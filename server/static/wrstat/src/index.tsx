@@ -8,9 +8,9 @@ import RPC from './rpc';
 
 const auth = ready.then(Auth),
 	now = Date.now(),
-	threeDays = 3 * 86_400_000,
+	day = 86_400_000,
 	nullDate = "0001-01-01T00:00:00Z",
-	daysUntilQuotaFull = (date: string) => (new Date(date).valueOf() - now) / threeDays
+	daysUntilQuotaFull = (date: string) => (new Date(date).valueOf() - now) / day;
 
 auth.catch(() => createRoot(document.body).render(
 	<StrictMode>
