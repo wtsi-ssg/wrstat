@@ -1,6 +1,25 @@
 const usernameFromJWT = (jwt: string): string => {
 	return JSON.parse(atob(jwt.split('.')[1])).Username;
-};
+},
+	getJWT = () => new Promise<string>((successFn, errorFn) => {
+		const xh = new XMLHttpRequest();
+
+		xh.addEventListener("readystatechange", () => {
+			if (xh.readyState === 4) {
+				if (xh.status === 200) {
+					const token = JSON.parse(xh.response);
+
+					document.cookie = `jwt=${token};samesite=strict;path=/tree`
+
+					successFn(usernameFromJWT(token));
+				} else {
+					errorFn(new Error(xh.responseText));
+				}
+			}
+		});
+		xh.open("POST", "/rest/v1/jwt");
+		xh.send(null);
+	});
 
 export const getCookie = (toFind: string) => {
 	for (const cookie of document.cookie.split("; ")) {
@@ -32,25 +51,7 @@ const AuthComponent = () => {
 		return Promise.reject();
 	}
 
-	return new Promise<string>((successFn, errorFn) => {
-		const xh = new XMLHttpRequest();
-
-		xh.addEventListener("readystatechange", () => {
-			if (xh.readyState === 4) {
-				if (xh.status === 200) {
-					const token = JSON.parse(xh.response);
-
-					document.cookie = `jwt=${token};samesite=strict;path=/tree`
-
-					successFn(usernameFromJWT(token));
-				} else {
-					errorFn(new Error(xh.responseText));
-				}
-			}
-		});
-		xh.open("POST", "/rest/v1/jwt");
-		xh.send(null);
-	});
+	return getJWT();
 };
 
 export default AuthComponent;
