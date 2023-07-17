@@ -207,6 +207,7 @@ rect+use+text {
 .pagination {
   float: right;
   list-style: none;
+  margin: 0;
   padding: 0;
   user-select: none;
 }
@@ -251,6 +252,7 @@ rect+use+text {
   background-color: transparent;
   padding: 4px;
   font-weight: bold;
+  float: left;
 }
 
 #details {
