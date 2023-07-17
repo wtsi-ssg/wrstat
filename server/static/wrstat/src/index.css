@@ -23,7 +23,7 @@ input[type=checkbox] {
 
 #usageTable {
   table-layout: fixed;
-  width: calc(100vw - 3em);
+  width: 100%;
 }
 
 #usageTable tbody {
