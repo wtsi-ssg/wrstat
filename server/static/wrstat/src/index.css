@@ -498,7 +498,7 @@ summary {
   display: grid;
   width: 100%;
   gap: 0 3em;
-  grid-template-columns: auto 934px;
+  grid-template-columns: auto 1fr;
   align-items: start;
 }
 
@@ -584,6 +584,11 @@ button.download:first-of-type {
 
 #disktree .treeFilter {
   margin-right: 1.5em;
+}
+
+#scatter {
+  justify-self: end;
+  padding-right: 0.5em;
 }
 
 #scatter use {

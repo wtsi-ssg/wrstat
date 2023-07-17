@@ -10,7 +10,7 @@ import Minmax from "./minmax";
 import Tabs from "./tabs";
 
 const stringSort = new Intl.Collator().compare,
-	calculateSliderWidth = (div: HTMLDivElement) => Math.min(500, getComputedStyle(div).gridTemplateColumns.split(" ").slice(1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
+	calculateScatterWidth = (div: HTMLDivElement) => Math.min(Math.max(300, parseInt(getComputedStyle(div).gridTemplateColumns.split(" ")[1]) - 40), 1500);
 
 const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),
@@ -31,11 +31,11 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		[filterMaxSize, setFilterMaxSize] = useSavedState("filterMaxSize", Infinity),
 		[filterMinDaysAgo, setFilterMinDaysAgo] = useSavedState("filterMinDaysAgo", -Infinity),
 		[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSavedState("filterMaxDaysAgo", Infinity),
-		[sliderWidth, setSliderWidth] = useState(300),
+		[scatterWidth, setScatterWidth] = useState(300),
 		[selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
 		usage = byUser ? userUsage : groupUsage,
-		treeFilter = useRef<HTMLDivElement>(null),
+		primaryFilter = useRef<HTMLDivElement>(null),
 		groupNameToIDMap = new Map<string, number>(groupUsage.map(({ GID, Name }) => [Name || (GID + ""), GID])),
 		groupIDToNameMap = new Map<number, string>(groupUsage.map(({ GID, Name }) => [GID, Name || (GID + "")])),
 		userNameToIDMap = new Map<string, number>(userUsage.map(({ UID, Name }) => [Name || (UID + ""), UID])),
@@ -80,15 +80,15 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 
 	useEffect(() => {
 		window.addEventListener("resize", () => {
-			if (treeFilter.current) {
-				setSliderWidth(calculateSliderWidth(treeFilter.current));
+			if (primaryFilter.current) {
+				setScatterWidth(calculateScatterWidth(primaryFilter.current));
 			}
 		});
 	}, []);
 
 	useLayoutEffect(() => {
-		if (treeFilter.current) {
-			setSliderWidth(calculateSliderWidth(treeFilter.current));
+		if (primaryFilter.current) {
+			setScatterWidth(calculateScatterWidth(primaryFilter.current));
 		}
 	});
 
@@ -115,8 +115,8 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		]} />
 		<details open className="boxed">
 			<summary>Filter</summary>
-			<div className="primaryFilter">
-				<div className="treeFilter" ref={treeFilter}>
+			<div className="primaryFilter" ref={primaryFilter}>
+				<div className="treeFilter">
 					<label htmlFor="owners">Owners</label>
 					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} disabled={byUser} />
 					<label htmlFor="bom">Group Areas</label>
@@ -146,12 +146,12 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					<label htmlFor="username">Username</label>
 					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
 					<label>Size </label>
-					<Minmax max={usage.reduce((max, curr) => Math.max(max, curr.UsageSize), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
+					<Minmax max={usage.reduce((max, curr) => Math.max(max, curr.UsageSize), 0)} width={300} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
 						setFilterMinSize(min);
 						setFilterMaxSize(max);
 					}} formatter={formatBytes} />
 					<label>Last Modified</label>
-					<Minmax max={usage.reduce((curr, next) => Math.max(curr, asDaysAgo(next.Mtime)), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={sliderWidth} onchange={(min: number, max: number) => {
+					<Minmax max={usage.reduce((curr, next) => Math.max(curr, asDaysAgo(next.Mtime)), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={300} onchange={(min: number, max: number) => {
 						setFilterMinDaysAgo(min);
 						setFilterMaxDaysAgo(max);
 					}} formatter={formatNumber} />
@@ -161,7 +161,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 					<button onClick={clearState}>Reset Filter</button>
 				</div>
-				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} isSelected={(u: any) => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir} setLimits={(minS, maxS, minD, maxD) => {
+				<Scatter width={scatterWidth} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} isSelected={(u: any) => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir} setLimits={(minS, maxS, minD, maxD) => {
 					setSavedMinSize(minS);
 					setSavedMaxSize(maxS);
 					setSavedMinDaysAgo(minD);
