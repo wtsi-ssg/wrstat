@@ -14,7 +14,7 @@ const auth = ready.then(Auth),
 
 auth.catch(() => createRoot(document.body).render(
 	<StrictMode>
-		<div><form action="/login"><input type="submit" value="Login" /></form></div>
+		<div id="login"><form action="/login"><input type="submit" value="Sign in via Okta" /></form></div>
 	</StrictMode>
 ));
 

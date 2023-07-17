@@ -11,6 +11,28 @@ body {
   margin: 0;
 }
 
+#login input {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100vw - 4em);
+  font-size: 3em;
+  padding: 1em 2em;
+  margin: 0 2em;
+  border: 0.5em outset #000;
+  cursor: pointer;
+  color: #000;
+  background-color: var(--inputAccent);
+}
+
+#login input:hover {
+  color: #fff;
+}
+
+#login input:active {
+  border-style: inset;
+  padding: 0.9em 2.1em 1.1em 1.9em;
+}
+
 input[type=radio],
 input[type=checkbox] {
   accent-color: var(--inputAccent);
@@ -849,7 +871,7 @@ th,
     --graphBack: #444;
     --graphLines: #000;
 
-    --inputAccent: #d2ecf5;
+    --inputAccent: #80caff;
 
     --minmaxRangeBG: var(--inputAccent);
     --minmaxRangeFont: #000;
