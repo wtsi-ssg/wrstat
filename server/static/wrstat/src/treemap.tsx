@@ -127,13 +127,6 @@ const TreemapComponent = ({ table, width, height, noAuth = false, onmouseout }: 
 		}
 	}
 
-	const box: Box = {
-		"left": 0,
-		"top": 0,
-		"right": width,
-		"bottom": height
-	};
-
 	if (filteredTable.length === 0) {
 		return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
 			<rect width="100%" height="100%" stroke="currentColor" style={{ fill: "var(--background)" }} />
@@ -149,6 +142,13 @@ const TreemapComponent = ({ table, width, height, noAuth = false, onmouseout }: 
 			}
 		</svg>;
 	}
+
+	const box: Box = {
+		"left": 0,
+		"top": 0,
+		"right": width,
+		"bottom": height
+	};
 
 	return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
 		<defs>
