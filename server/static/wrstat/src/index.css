@@ -511,6 +511,7 @@ summary {
 .boxed summary {
   list-style: none;
   padding: 0.5em 1em;
+  position: relative;
 }
 
 .boxed[open] summary {
@@ -518,28 +519,30 @@ summary {
   margin-bottom: 1em;
 }
 
+.boxed summary:before,
 .boxed summary:after {
   display: block;
   content: "·";
-  border: 1px solid var(--subtleBorder);
-  border-top-right-radius: 8px;
-  background-color: var(--background);
+  color: #000;
+  padding: 0.5em 1em;
+  position: absolute;
+  top: 0;
+  right: -1px;
+}
+
+.boxed summary:before {
+  border-left: 1px solid var(--subtleBorder);
+}
+
+.boxed summary:after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M7,0 v10 l-5,-5 z' fill='black' /%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: 1em 1em;
-  padding: 0.5em 1em;
-  float: right;
-  margin-top: calc(-0.5em - 1px);
-  margin-right: calc(-1em - 1px);
 }
 
 .boxed[open] summary:after {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M0,3 h10 l-5,5 z' fill='black' /%3E%3C/svg%3E");
-}
-
-.boxed:not([open]) summary:after {
-  border-bottom-right-radius: 8px;
+  transform: rotate(-90deg);
 }
 
 button.download:first-of-type {
@@ -933,10 +936,6 @@ th,
   }
 
   .boxed summary:after {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M7,0 v10 l-5,-5 z' fill='white' /%3E%3C/svg%3E");
-  }
-
-  .boxed[open] summary:after {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M0,3 h10 l-5,5 z' fill='white' /%3E%3C/svg%3E");
+    filter: invert(1);
   }
 }
