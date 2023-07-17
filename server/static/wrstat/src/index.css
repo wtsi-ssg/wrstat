@@ -393,9 +393,19 @@ rect+use+text {
   display: inline-block;
 }
 
-#multi_unix {
-  max-height: 100px;
-  overflow: hidden;
+#multi_unix>ul>li:nth-child(n+13) {
+  display: none;
+}
+
+#multi_unix>ul>li:nth-child(12) {
+  visibility: hidden;
+}
+
+#multi_unix>ul>li:nth-child(12):before {
+  content: "…";
+  display: inline-block;
+  visibility: visible;
+  pointer-events: none;
 }
 
 .multiInput ul {
