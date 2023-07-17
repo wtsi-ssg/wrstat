@@ -191,7 +191,7 @@ rect+use+text {
   padding-right: 1em;
 }
 
-#usageTable tbody td:nth-child(9) {
+#usageTable tbody td:nth-child(10) {
   text-align: center;
   white-space: nowrap;
 }
