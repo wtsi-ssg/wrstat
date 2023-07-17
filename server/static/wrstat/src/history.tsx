@@ -52,11 +52,6 @@ const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path:
 					selected: inodeHistory,
 				}
 			]} />
-			<HistoryGraph history={history.map(h => ({ Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize }))} width={historyWidth} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
-				const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
-
-				return maxAmount = order * Math.ceil(maxAmount / order);
-			} : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
 			{
 				!inodeHistory && exceedSize === 0 ? <div className="exceeded">Size Quota has been reached.</div> :
 					!inodeHistory && exceedSize !== Infinity ? <div style={{ [`--warningProx` as any]: (100 * Math.min(maxWarningDay, (exceedSize - daysToday)) / maxWarningDay) + "%" }} className="exceed">Expected to exceed size quota in {formatNumber(exceedSize - daysToday)} days.</div> : <></>
@@ -65,6 +60,11 @@ const HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path:
 				inodeHistory && exceedInode === 0 ? <div className="exceeded">Inode Quota has been reached.</div> :
 					inodeHistory && exceedInode !== Infinity ? <div style={{ [`--warningProx` as any]: (100 * Math.min(maxWarningDay, (exceedInode - daysToday)) / maxWarningDay) + "%" }} className="exceed">Expected to exceed inode quota in {formatNumber(exceedInode - daysToday)} days.</div> : <></>
 			}
+			<HistoryGraph history={history.map(h => ({ Date: h.Date, Usage: inodeHistory ? h.UsageInodes : h.UsageSize, Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize }))} width={historyWidth} height={500} yFormatter={inodeHistory ? formatLargeNumber : formatBytes} secondaryFormatter={inodeHistory ? formatNumber : (num: number) => formatNumber(num) + " Bytes"} yRounder={inodeHistory ? (maxAmount: number) => {
+				const order = Math.pow(10, Math.max(Math.floor(Math.log10(maxAmount)), 1));
+
+				return maxAmount = order * Math.ceil(maxAmount / order);
+			} : (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)))} />
 		</details>
 	</>
 };
