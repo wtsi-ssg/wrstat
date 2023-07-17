@@ -101,7 +101,7 @@ const colours = [
 		["> 2 years", 730]
 	] as const;
 
-const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, groups }: { id: number; name: string; owner: string; path: string; isUser: boolean; filter: Filter<Usage>; users: Map<number, string>; groups: Map<number, string> }) => {
+const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, groups, selectedClicked }: { id: number; name: string; owner: string; path: string; isUser: boolean; filter: Filter<Usage>; users: Map<number, string>; groups: Map<number, string>; selectedClicked: number }) => {
 	const [treePath, setTreePath] = useSavedState("treePath", "/"),
 		[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 		[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
@@ -116,7 +116,7 @@ const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, gr
 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
-	useEffect(() => setTreePath(path || "/"), [path]);
+	useEffect(() => setTreePath(path || "/"), [path, selectedClicked]);
 
 	useEffect(() => {
 		RPC.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))

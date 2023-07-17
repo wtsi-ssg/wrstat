@@ -1,5 +1,5 @@
 import type { Usage } from './rpc';
-import type { ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import { downloadGroups, downloadUsers } from './download';
 import { asDaysAgoStr, formatBytes, formatNumber } from './format';
 import PathDetails from './pathDetails';
@@ -38,7 +38,8 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, sele
 	const [perPage, setPerPage] = useSavedState("perPage", 10),
 		userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
 		groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname])),
-		selectedRow = usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir)[0];
+		selectedRow = usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir)[0],
+		[selectedClicked, setSelectedClicked] = useState(0);
 
 	return <>
 		<details open className="boxed">
@@ -60,10 +61,9 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, sele
 			}} perPage={perPage} filter={filter} onRowClick={(data: Usage) => {
 				const id = byUser ? data.UID : data.GID;
 
-				if (selectedDir !== data.BaseDir || selectedID !== id) {
-					setSelectedDir(data.BaseDir);
-					setSelectedID(id);
-				}
+				setSelectedDir(data.BaseDir);
+				setSelectedID(id);
+				setSelectedClicked(selectedClicked + 1);
 			}} cols={[
 				{
 					title: "Path",
@@ -146,7 +146,7 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, sele
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 		</details>
-		<PathDetails id={selectedID} name={selectedRow?.Name} owner={selectedRow?.Owner} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} filter={filter} />
+		<PathDetails id={selectedID} name={selectedRow?.Name} owner={selectedRow?.Owner} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} selectedClicked={selectedClicked} filter={filter} />
 	</>
 };
 
