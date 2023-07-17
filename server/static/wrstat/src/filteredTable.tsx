@@ -34,7 +34,7 @@ const stringSort = new Intl.Collator().compare,
 		null,
 	] as const;
 
-const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, selectedDir, setSelectedID, setSelectedDir, ...filter }: Filter<Usage> & { byUser: boolean; selectedID: number; setSelectedID: (id: number) => void; selectedDir: string; setSelectedDir: (dir: string) => void; usage: Usage[], users: Map<string, number>, groups: Map<string, number> }) => {
+const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, selectedDir, setSelectedID, setSelectedDir, filter }: { byUser: boolean; selectedID: number; setSelectedID: (id: number) => void; selectedDir: string; setSelectedDir: (dir: string) => void; usage: Usage[], users: Map<string, number>, groups: Map<string, number>; filter: Filter<Usage> }) => {
 	const [perPage, setPerPage] = useSavedState("perPage", 10),
 		userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
 		groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname])),

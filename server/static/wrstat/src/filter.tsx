@@ -178,7 +178,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 				}} />
 			</div>
 		</details >
-		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} {...tableFilter} />
+		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} filter={tableFilter} />
 	</>
 };
 
