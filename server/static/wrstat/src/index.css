@@ -859,9 +859,9 @@ th,
     --paginationNonClickableFont: currentColor;
     --paginationNonClickableBorder: currentColor;
 
-    --tableHoverBG: #440;
+    --tableHoverBG: #445;
     --tableHoverFont: currentColor;
-    --tableSelectedBG: #442;
+    --tableSelectedBG: #446;
     --tableSelectedFont: currentColor;
     --tableOddBG: var(--background);
     --tableOddFont: currentColor;
