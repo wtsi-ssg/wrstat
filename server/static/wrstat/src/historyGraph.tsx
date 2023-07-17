@@ -136,13 +136,13 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 			</defs>
 			<rect x={paddingXL} y={paddingYT} width={width - paddingXL - paddingXR} height={height - paddingYT - paddingYB} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
 			{
-				Array.from({ length: 4 }, (_, n) => <line x1={paddingXL} x2={width - paddingXR} y1={amountToY((n + 1) * maxAmount / 5)} y2={amountToY((n + 1) * maxAmount / 5)} stroke="#fff" />)
+				Array.from({ length: 4 }, (_, n) => <line x1={paddingXL} x2={width - paddingXR} y1={amountToY((n + 1) * maxAmount / 5)} y2={amountToY((n + 1) * maxAmount / 5)} className="graphLines" />)
 			}
 			{
 				Array.from({ length: 6 }, (_, n) => <text x={paddingXL - 3} y={amountToY(maxAmount - (n * maxAmount) / 5) + 5} fill="currentColor" text-anchor="end"><title>{secondaryFormatter(maxAmount * (5 - n) / 5)}</title>{yFormatter(maxAmount * (5 - n) / 5)}</text>)
 			}
 			{
-				Array.from({ length: 4 }, (_, n) => <line x1={dateToX(minDate + (n + 1) * dateDiff / 5)} x2={dateToX(minDate + (n + 1) * dateDiff / 5)} y1={paddingYT} y2={height - paddingYB} stroke="#fff" />)
+				Array.from({ length: 4 }, (_, n) => <line x1={dateToX(minDate + (n + 1) * dateDiff / 5)} x2={dateToX(minDate + (n + 1) * dateDiff / 5)} y1={paddingYT} y2={height - paddingYB} className="graphLines" />)
 			}
 			{
 				Array.from({ length: 6 }, (_, n) => <text transform={`translate(${dateToX(minDate + n * dateDiff / 5)} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" text-anchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)

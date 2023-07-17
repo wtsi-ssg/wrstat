@@ -566,6 +566,10 @@ summary {
   fill-opacity: 1;
 }
 
+.graphLines {
+  stroke: var(--graphLines);
+}
+
 .treeFilter>select {
   grid-column: 2 / span 2;
 }
@@ -766,6 +770,7 @@ th,
     --graphQuota: #00c9cf;
     --graphUsage: #fb8c80;
     --graphBack: #efefef;
+    --graphLines: #fff;
 
     --inputAccent: #428bca;
 
@@ -833,6 +838,7 @@ th,
     --graphQuota: #00c9cf;
     --graphUsage: #fb8c80;
     --graphBack: #444;
+    --graphLines: #000;
 
     --inputAccent: #d2ecf5;
 

@@ -164,13 +164,13 @@ const ScatterComponent = ({ data, width, height, logX = false, logY = false, set
 		</defs>
 		<rect className="back" x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
 		{
-			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(nonLogFractionToDate(0), false) - innerPadding} x2={dateToX(nonLogFractionToDate(1), false) + innerPadding} y1={sizeToY(nonLogFractionToSize(n / 5), false)} y2={sizeToY(nonLogFractionToSize(n / 5), false)} stroke="#fff" />)
+			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(nonLogFractionToDate(0), false) - innerPadding} x2={dateToX(nonLogFractionToDate(1), false) + innerPadding} y1={sizeToY(nonLogFractionToSize(n / 5), false)} y2={sizeToY(nonLogFractionToSize(n / 5), false)} className="graphLines" />)
 		}
 		{
 			Array.from({ length: 6 }, (_, n) => <text x={dateToX(nonLogFractionToDate(0), false) - innerPadding - 5} y={Math.max(sizeToY(nonLogFractionToSize(n / 5), false), paddingYT) + 5} fill="currentColor" textAnchor="end">{formatBytes(fractionToSize(n / 5))}</text>)
 		}
 		{
-			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(nonLogFractionToDate(n / 5), false)} x2={dateToX(nonLogFractionToDate(n / 5), false)} y1={sizeToY(nonLogFractionToSize(1), false) - innerPadding} y2={sizeToY(nonLogFractionToSize(0), false) + innerPadding} stroke="#fff" />)
+			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(nonLogFractionToDate(n / 5), false)} x2={dateToX(nonLogFractionToDate(n / 5), false)} y1={sizeToY(nonLogFractionToSize(1), false) - innerPadding} y2={sizeToY(nonLogFractionToSize(0), false) + innerPadding} className="graphLines" />)
 		}
 		{
 			Array.from({ length: 6 }, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(nonLogFractionToDate(n / 5), false)} ${sizeToY(nonLogFractionToSize(0), false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatNumber(fractionToDate(n / 5))}</text>)
