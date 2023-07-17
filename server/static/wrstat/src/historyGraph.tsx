@@ -121,7 +121,7 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 		x = (latestHistory.Quota - c) / m;
 		y = latestHistory.Quota;
 
-		infoBoxes.push(<div style={{ left: dateToX(x) + "px", top: amountToY(maxY) + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
+		infoBoxes.push(<div style={{ left: dateToX(x) + "px", top: amountToY(y) + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
 			Fill Quota Data: {formatDate(x)}
 		</div>)
 	}
