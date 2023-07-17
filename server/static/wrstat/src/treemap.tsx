@@ -136,13 +136,13 @@ const TreemapComponent = ({ table, width, height, noAuth = false, onmouseout }: 
 
 	if (filteredTable.length === 0) {
 		return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-			<rect width="100%" height="100%" stroke="#000" fill="#fff" />
+			<rect width="100%" height="100%" stroke="currentColor" style={{ fill: "var(--background)" }} />
 			{
 				noAuth ?
 					<>
-						<svg height={150} transform={`translate(0 ${(height - 200) / 2})`} viewBox="0 0 100 100" style={{ stroke: "#000" }} stroke-width={2} stroke-linejoin="round">
-							<rect rx="15" x="5" y="38" width="90" height="62" fill="#000" />
-							<path d="M27,40 v-10 a1,1 0,0,1 46,0 v10" fill="none" stroke="#000" stroke-width="12" />
+						<svg height={150} transform={`translate(0 ${(height - 200) / 2})`} viewBox="0 0 100 100" stroke="currentColor" stroke-width={2} stroke-linejoin="round">
+							<rect rx="15" x="5" y="38" width="90" height="62" fill="currentColor" />
+							<path d="M27,40 v-10 a1,1 0,0,1 46,0 v10" fill="none" stroke-width="12" />
 						</svg>
 					</> :
 					<text text-anchor="middle" x={width / 2} y={height / 2} >—No Sub-Directories—</text>
