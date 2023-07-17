@@ -667,6 +667,7 @@ button.download:first-of-type {
   margin: 0;
   white-space: nowrap;
   user-select: none;
+  pointer-events: none;
 }
 
 .tabs:after {
@@ -683,10 +684,8 @@ button.download:first-of-type {
 }
 
 .tabs>li {
-  text-decoration: none
-}
-
-.tabs>li {
+  text-decoration: none;
+  pointer-events: all;
   border-width: 1px;
   border-style: solid;
   display: inline-block;
