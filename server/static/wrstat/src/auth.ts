@@ -14,11 +14,8 @@ export const getCookie = (toFind: string) => {
 	return "";
 },
 	logout = () => {
-		const expireNow = "=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/";
-
-		for (const cookie of document.cookie.split("; ")) {
-			document.cookie = cookie.split("=")[0] + expireNow;
-		}
+		document.cookie = "jwt=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/tree";
+		document.cookie = "okta-hosted-login-session-store=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/";
 
 		window.location.reload();
 	};
@@ -43,7 +40,7 @@ const AuthComponent = () => {
 				if (xh.status === 200) {
 					const token = JSON.parse(xh.response);
 
-					document.cookie = `jwt=${token};samesite=strict;path=/`
+					document.cookie = `jwt=${token};samesite=strict;path=/tree`
 
 					successFn(usernameFromJWT(token));
 				} else {
