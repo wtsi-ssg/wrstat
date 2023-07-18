@@ -2,6 +2,21 @@ import { useEffect, useState } from "react";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import { firstRender, restoring } from "./state";
 
+type ScatterParams = {
+	data: Data[];
+	width: number;
+	height: number;
+	logX?: boolean;
+	logY?: boolean;
+	minX: number;
+	maxX: number;
+	minY: number;
+	maxY: number;
+	setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void;
+	previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void;
+	isSelected: (u: Data) => boolean;
+}
+
 type Data = {
 	UsageSize: number;
 	Mtime: string;
@@ -17,7 +32,20 @@ const minDaysAgo = (date: string) => {
 	return daysAgo;
 };
 
-const ScatterComponent = ({ data, width, height, logX = false, logY = false, setLimits, previewLimits, minX, maxX, minY, maxY, isSelected }: { data: Data[], width: number, height: number, logX?: boolean, logY?: boolean, minX: number, maxX: number, minY: number, maxY: number, setLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void, previewLimits: (minSize: number, maxSize: number, minDate: number, maxDate: number) => void; isSelected: (u: Data) => boolean }) => {
+const ScatterComponent = ({
+	data,
+	width,
+	height,
+	logX = false,
+	logY = false,
+	setLimits,
+	previewLimits,
+	minX,
+	maxX,
+	minY,
+	maxY,
+	isSelected
+}: ScatterParams) => {
 	const paddingXL = 80,
 		paddingXR = 10,
 		paddingYT = 10,

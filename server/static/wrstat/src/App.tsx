@@ -9,7 +9,7 @@ import Tabs from "./tabs";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { asDaysAgo } from "./format";
 import { fitlerTableRows } from "./Table";
-import Scatter from "./scatter";
+import Scatter from "./Scatter";
 
 const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),
