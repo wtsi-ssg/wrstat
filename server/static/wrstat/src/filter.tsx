@@ -1,12 +1,15 @@
 import type { Usage } from "./rpc";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import FilteredTable from "./filteredTable";
+import PathDetails from './DiskTree';
+import FilteredTable from "./FilteredTable";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
+import History from './History';
+import Minmax from "./minmax";
 import MultiSelect, { type Listener } from "./multiselect";
 import Scatter from "./scatter";
 import { clearState, useSavedState } from './state';
-import { fitlerTableRows } from "./table";
-import Minmax from "./minmax";
+import SubDirs from './subdirs';
+import { fitlerTableRows } from "./Table";
 import Tabs from "./tabs";
 
 const stringSort = new Intl.Collator().compare,
@@ -35,10 +38,14 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		[selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
 		usage = byUser ? userUsage : groupUsage,
+		selectedRow = usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir)[0],
+		[treePath, setTreePath] = useSavedState("treePath", "/"),
 		primaryFilter = useRef<HTMLDivElement>(null),
 		groupNameToIDMap = new Map<string, number>(groupUsage.map(({ GID, Name }) => [Name || (GID + ""), GID])),
 		groupIDToNameMap = new Map<number, string>(groupUsage.map(({ GID, Name }) => [GID, Name || (GID + "")])),
 		userNameToIDMap = new Map<string, number>(userUsage.map(({ UID, Name }) => [Name || (UID + ""), UID])),
+		userMap = new Map(Array.from(userNameToIDMap).map(([username, uid]) => [uid, username])),
+		groupMap = new Map(Array.from(groupNameToIDMap).map(([groupname, gid]) => [gid, groupname])),
 		basefilter = {
 			UID: byUser ? users : undefined,
 			GID: byUser ? undefined : groups,
@@ -178,7 +185,10 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 				}} />
 			</div>
 		</details >
-		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} filter={tableFilter} />
+		<FilteredTable userMap={userMap} groupMap={groupMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir, setTreePath }} filter={tableFilter} />
+		<PathDetails userMap={userMap} groupMap={groupMap} treePath={treePath} setTreePath={setTreePath} filter={tableFilter} />
+		<SubDirs id={selectedID} path={selectedDir} isUser={byUser} setPath={setTreePath} />
+		<History id={selectedID} path={selectedDir} isUser={byUser} name={selectedRow?.Name} owner={selectedRow?.Owner} />
 	</>
 };
 

@@ -1,4 +1,4 @@
-import { type CSSProperties } from "react";
+import React, { type CSSProperties } from "react";
 import Pagination from "./pagination";
 import { useSavedState } from "./state";
 
@@ -40,6 +40,45 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 		}
 
 		return col["reverseFn"] ?? reverseSort(col["sortFn"] ?? noopSort);
+	},
+	makeRows = <T extends Record<string, any>>(rows: T[], cols: Column<T>[], onRowClick: (row: T) => void, rowExtra?: (row: T) => Record<string, any>) => {
+		let moved = false,
+			clicking = -1,
+			downTime = 0;
+
+		const onmousedown = (e: React.MouseEvent) => {
+			if (e.button !== 0) {
+				return;
+			}
+
+			moved = false;
+			window.addEventListener("mousemove", () => moved = true, { "once": true });
+			downTime = Date.now();
+		},
+			onmouseupFn = (row: T) => {
+				return (e: React.MouseEvent) => {
+					if (e.button !== 0) {
+						return;
+					}
+
+					if (!moved || Date.now() - downTime < 100) {
+						if (clicking === -1) {
+							clicking = window.setTimeout(() => {
+								onRowClick(row);
+								clicking = -1;
+							}, 200);
+						} else {
+							clearTimeout(clicking);
+							clicking = -2;
+							window.setTimeout(() => clicking = -1, 200);
+						}
+					}
+				}
+			}
+
+		return rows.map(row => <tr onMouseDown={onmousedown} onMouseUp={onmouseupFn(row)} {...(rowExtra?.(row) ?? {})}>
+			{cols.map(col => <td {...(col.extra?.(row[col.key], row) ?? {})}>{(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)}
+		</tr>)
 	};
 
 export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filter: Filter<T>) => {
@@ -77,18 +116,15 @@ const TableComponent = <T extends Record<string, any>>({ table, cols, onRowClick
 		[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
 		rows = fitlerTableRows(table, filter),
 		maxPages = Math.ceil(rows.length / perPage),
-		currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1);
+		currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1),
+		pageClicker = (e: React.MouseEvent) => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"));
 
 	if (sortBy >= 0) {
 		rows.sort(getSorter(cols[sortBy], sortReverse));
 	}
 
-	let moved = false,
-		clicking = -1,
-		downTime = 0;
-
 	return <>
-		<Pagination currentPage={currPage} onClick={e => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"))} totalPages={maxPages} />
+		<Pagination currentPage={currPage} onClick={pageClicker} totalPages={maxPages} />
 		<table id={id} {...additional}>
 			<colgroup>
 				{cols.map(() => <col />)}
@@ -106,34 +142,7 @@ const TableComponent = <T extends Record<string, any>>({ table, cols, onRowClick
 				</tr>
 			</thead>
 			<tbody>
-				{rows.slice(currPage * perPage, (currPage + 1) * perPage).map(row => <tr onMouseDown={e => {
-					if (e.button !== 0) {
-						return;
-					}
-
-					moved = false;
-					window.addEventListener("mousemove", () => moved = true, { "once": true });
-					downTime = Date.now();
-				}} onMouseUp={e => {
-					if (e.button !== 0) {
-						return;
-					}
-
-					if (!moved || Date.now() - downTime < 100) {
-						if (clicking === -1) {
-							clicking = window.setTimeout(() => {
-								onRowClick(row);
-								clicking = -1;
-							}, 200);
-						} else {
-							clearTimeout(clicking);
-							clicking = -2;
-							window.setTimeout(() => clicking = -1, 200);
-						}
-					}
-				}} {...(rowExtra?.(row) ?? {})}>
-					{cols.map(col => <td {...(col.extra?.(row[col.key], row) ?? {})}>{(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)}
-				</tr>)}
+				{makeRows(rows.slice(currPage * perPage, (currPage + 1) * perPage), cols, onRowClick, rowExtra)}
 			</tbody>
 		</table>
 	</>

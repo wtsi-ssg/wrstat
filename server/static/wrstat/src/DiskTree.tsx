@@ -4,9 +4,17 @@ import { useEffect, useState } from "react"
 import MultiSelect from './multiselect';
 import RPC from "./rpc";
 import { useSavedState } from './state';
-import type { Filter } from './table';
+import type { Filter } from './Table';
 import TreeDetails from "./TreeDetails";
 import Treemap from "./Treemap";
+
+type DiskTreeParams = {
+	treePath: string;
+	filter: Filter<Usage>;
+	userMap: Map<number, string>;
+	groupMap: Map<number, string>;
+	setTreePath: (v: string) => void;
+}
 
 const colours = [
 	"#d73027",
@@ -102,7 +110,7 @@ const colours = [
 
 let renders = 0
 
-const PathdetailsComponent = ({ treePath, filter, users, groups, setTreePath }: { treePath: string; filter: Filter<Usage>; users: Map<number, string>; groups: Map<number, string>; setTreePath: (v: string) => void }) => {
+const PathdetailsComponent = ({ treePath, filter, userMap, groupMap, setTreePath }: DiskTreeParams) => {
 	const [treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 		[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
 		[childDetails, setChildDetails] = useState<Child | null>(null),
@@ -119,7 +127,7 @@ const PathdetailsComponent = ({ treePath, filter, users, groups, setTreePath }: 
 	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
 	useEffect(() => {
-		RPC.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
+		RPC.getChildren(makeFilter(treePath, filter, filterFileTypes, userMap, groupMap))
 			.then(children => {
 				const entries: Entry[] = [],
 					since = Date.now() - sinceLastAccess * 86_400_000;

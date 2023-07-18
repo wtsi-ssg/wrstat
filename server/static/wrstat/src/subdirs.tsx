@@ -1,7 +1,7 @@
 import type { SubDir } from "./rpc";
 import { useEffect, useState } from "react";
 import { asDaysAgoStr, formatBytes, formatNumber } from './format';
-import Table from './table';
+import Table from './Table';
 import RPC from './rpc';
 
 const pathJoin = (base: string, sub: string) => {

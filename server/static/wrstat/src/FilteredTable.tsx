@@ -1,12 +1,22 @@
 import type { Usage } from './rpc';
-import { useState, type ChangeEvent } from "react";
+import type { ChangeEvent } from "react";
 import { downloadGroups, downloadUsers } from './download';
 import { asDaysAgoStr, formatBytes, formatNumber } from './format';
-import History from './History';
-import PathDetails from './DiskTree';
-import SubDirs from './subdirs';
 import { useSavedState } from './state';
-import Table, { type Filter, fitlerTableRows } from './table';
+import Table, { type Filter, fitlerTableRows } from './Table';
+
+type FilterTableParams = {
+	byUser: boolean;
+	selectedID: number;
+	setSelectedID: (id: number) => void;
+	selectedDir: string;
+	setSelectedDir: (dir: string) => void;
+	setTreePath: (v: string) => void;
+	usage: Usage[];
+	userMap: Map<number, string>;
+	groupMap: Map<number, string>;
+	filter: Filter<Usage>;
+}
 
 const stringSort = new Intl.Collator().compare,
 	sorters = [
@@ -36,12 +46,8 @@ const stringSort = new Intl.Collator().compare,
 		null,
 	] as const;
 
-const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, selectedDir, setSelectedID, setSelectedDir, filter }: { byUser: boolean; selectedID: number; setSelectedID: (id: number) => void; selectedDir: string; setSelectedDir: (dir: string) => void; usage: Usage[], users: Map<string, number>, groups: Map<string, number>; filter: Filter<Usage> }) => {
-	const [perPage, setPerPage] = useSavedState("perPage", 10),
-		userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
-		groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname])),
-		selectedRow = usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir)[0],
-		[treePath, setTreePath] = useSavedState("treePath", "/")
+const FilteredTableComponent = ({ usage, byUser, groupMap, userMap, selectedID, selectedDir, setSelectedID, setSelectedDir, setTreePath, filter }: FilterTableParams) => {
+	const [perPage, setPerPage] = useSavedState("perPage", 10);
 
 	return <>
 		<details open className="boxed">
@@ -74,7 +80,11 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, sele
 						title: path +
 							(row.Owner ? "\nPI: " + row.Owner : "") +
 							"\n" + (byUser ? "User: " : "Group: ") + row.Name +
-							"\n" + (byUser ? "Groups: " : "Users: ") + (byUser ? row.GIDs : row.UIDs).map(id => (byUser ? groupMap : userMap).get(id) ?? "").filter(n => n).join(", ")
+							"\n" + (byUser ? "Groups: " : "Users: ") +
+							(byUser ? row.GIDs : row.UIDs)
+								.map(id => (byUser ? groupMap : userMap).get(id) ?? "")
+								.filter(n => n)
+								.join(", ")
 					}),
 					sortFn: sorters[2]
 				},
@@ -141,16 +151,15 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, sele
 					title: "Status",
 					key: "status",
 					extra: title => ({ title }),
-					formatter: status => <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "1em", height: "1em" }}><use href={status === "OK" ? "#ok" : "#notok"} /></svg>,
+					formatter: status => <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "1em", height: "1em" }}>
+						<use href={status === "OK" ? "#ok" : "#notok"} />
+					</svg>,
 					sortFn: sorters[10]
 				}
 			]} table={usage} id="usageTable" className={"prettyTable " + (byUser ? "user" : "group")} />
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 		</details>
-		<PathDetails users={userMap} groups={groupMap} treePath={treePath} setTreePath={setTreePath} filter={filter} />
-		<SubDirs id={selectedID} path={selectedDir} isUser={byUser} setPath={setTreePath} />
-		<History id={selectedID} path={selectedDir} isUser={byUser} name={selectedRow?.Name} owner={selectedRow?.Owner} />
 	</>
 };
 
