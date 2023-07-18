@@ -1,5 +1,5 @@
 import React, { type CSSProperties } from "react";
-import Pagination from "./pagination";
+import Pagination from "./Pagination";
 import { useSavedState } from "./state";
 
 type Column<T> = {
