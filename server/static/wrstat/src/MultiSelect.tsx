@@ -83,7 +83,11 @@ const MultiSelectComponent = ({
 						}
 					}
 				}} onChange={e => setFilter(e.target.value)} />
-				<ul tabIndex={-1}>
+				<ul tabIndex={-1} onKeyDown={e => {
+					if (e.key === "Escape") {
+						(e.target as HTMLInputElement).blur();
+					}
+				}}>
 					{
 						filteredList.map(e => <li>
 							<label><input type="checkbox" checked={selectedSet.has(e)} onChange={() => {
