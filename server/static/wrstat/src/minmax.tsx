@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const MinmaxComponent = ({ min = 0, max = min + 1, minValue = min, maxValue = max, width, ticks = 5, noOverlap = true, formatter }:
+const MinmaxComponent = ({ min = 0, max = min + 1, minValue = min, maxValue = max, onchange, width, ticks = 5, noOverlap = true, formatter }:
 	{
 		min?: number; max?: number; minValue?: number; maxValue?: number; ticks?: number, width: number,
 		onchange: (min: number, max: number) => void, noOverlap?: boolean, formatter: (val: number) => string
@@ -14,14 +14,6 @@ const MinmaxComponent = ({ min = 0, max = min + 1, minValue = min, maxValue = ma
 		safeMax = Math.max(Math.min(max, sliderMax), Math.min(min, max)),
 		minX = width * (sliderMin / max),
 		maxX = width * (sliderMax / max);
-
-	if (minValue < min) {
-		minValue = min;
-	}
-
-	if (maxValue > max) {
-		maxValue = max;
-	}
 
 	useEffect(() => {
 		setSliderMin(Math.max(min, minValue));
