@@ -1,6 +1,6 @@
 import 'jest-canvas-mock';
 import { render } from '@testing-library/react';
-import TreeMap, { type Table } from './treemap';
+import TreeMap, { type Table } from './Treemap';
 
 const testData: Table = [
 	{

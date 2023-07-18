@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react';
 import { formatDate } from './format';
 
+type HistoryGraphParams = {
+	history: UsageHistory[];
+	width: number;
+	height: number;
+	yFormatter: (num: number) => string;
+	secondaryFormatter: (num: number) => string;
+	yRounder: (num: number) => number;
+}
+
 type UsageHistory = {
 	Quota: number;
 	Usage: number;
 	Date: string;
 }
 
-const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, yRounder }: { history: UsageHistory[], width: number, height: number, yFormatter: (num: number) => string, secondaryFormatter: (num: number) => string, yRounder: (num: number) => number }) => {
+const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, yRounder }: HistoryGraphParams) => {
 	const [infoBox, setInfoBox] = useState(-1),
 		amountToY = (amount: number) => paddingYT + maxY - amount * yScale,
 		dateToX = (date: number) => paddingXL + (date - minDate) * xScale;
