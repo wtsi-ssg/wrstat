@@ -1,9 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { useSavedState } from "./state";
 
+type MultiSelectParams = {
+	id: string;
+	disabled?: boolean;
+	list: readonly string[];
+	selectedList?: readonly string[];
+	listener?: (cb: Listener) => void;
+	onchange: (list: string[], deleted: string | null) => (void | boolean);
+}
+
 export type Listener = (values: string[], deleted: boolean) => void;
 
-const MultiselectComponent = ({ id, list, disabled = false, selectedList, listener, onchange }: { id: string; disabled?: boolean; list: readonly string[]; selectedList?: readonly string[]; listener?: (cb: Listener) => void; onchange: (list: string[], deleted: string | null) => (void | boolean) }) => {
+const MultiSelectComponent = ({
+	id,
+	list,
+	disabled = false,
+	selectedList,
+	listener,
+	onchange
+}: MultiSelectParams) => {
 	let [selected, setSelected] = useSavedState<string[]>(id + "Multi", []);
 
 	useEffect(() => { onchange(Array.from(selected), null) }, [JSON.stringify(selected)]);
@@ -94,4 +110,4 @@ const MultiselectComponent = ({ id, list, disabled = false, selectedList, listen
 	</div>
 };
 
-export default MultiselectComponent;
+export default MultiSelectComponent;

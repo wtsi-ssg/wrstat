@@ -30,6 +30,35 @@ type Params<T> = {
 	style?: CSSProperties;
 }
 
+export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filter: Filter<T>) => {
+	const toRet: T[] = [],
+		filterKeys = Object.keys(filter) as (keyof Filter<T>)[];
+
+	FilterLoop:
+	for (const row of table) {
+		for (const f of filterKeys) {
+			const toFilter = filter[f];
+			if (toFilter instanceof Array) {
+				if (toFilter.length && !toFilter.includes(row[f])) {
+					continue FilterLoop;
+				}
+			} else if (toFilter instanceof Function) {
+				if (!toFilter(row[f])) {
+					continue FilterLoop;
+				}
+			} else if (toFilter) {
+				if (row[f] < toFilter.min || row[f] > toFilter.max) {
+					continue FilterLoop;
+				}
+			}
+		}
+
+		toRet.push(row);
+	}
+
+	return toRet;
+};
+
 const noopFormatter = (a: { toString(): string }) => a + "",
 	noop = () => { },
 	noopSort = () => 0,
@@ -79,73 +108,52 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 		return rows.map(row => <tr onMouseDown={onmousedown} onMouseUp={onmouseupFn(row)} {...(rowExtra?.(row) ?? {})}>
 			{cols.map(col => <td {...(col.extra?.(row[col.key], row) ?? {})}>{(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)}
 		</tr>)
-	};
+	},
+	TableComponent = <T extends Record<string, any>>({
+		table,
+		cols,
+		onRowClick,
+		perPage = Infinity,
+		filter = {},
+		id,
+		rowExtra,
+		...additional
+	}: Params<T>) => {
+		const [page, setPage] = useSavedState(id + "Page", 0),
+			[sortBy, setSortBy] = useSavedState(id + "Sort", -1),
+			[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
+			rows = fitlerTableRows(table, filter),
+			maxPages = Math.ceil(rows.length / perPage),
+			currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1),
+			pageClicker = (e: React.MouseEvent) => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"));
 
-export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filter: Filter<T>) => {
-	const toRet: T[] = [],
-		filterKeys = Object.keys(filter) as (keyof Filter<T>)[];
-
-	FilterLoop:
-	for (const row of table) {
-		for (const f of filterKeys) {
-			const toFilter = filter[f];
-			if (toFilter instanceof Array) {
-				if (toFilter.length && !toFilter.includes(row[f])) {
-					continue FilterLoop;
-				}
-			} else if (toFilter instanceof Function) {
-				if (!toFilter(row[f])) {
-					continue FilterLoop;
-				}
-			} else if (toFilter) {
-				if (row[f] < toFilter.min || row[f] > toFilter.max) {
-					continue FilterLoop;
-				}
-			}
+		if (sortBy >= 0) {
+			rows.sort(getSorter(cols[sortBy], sortReverse));
 		}
 
-		toRet.push(row);
-	}
-
-	return toRet;
-};
-
-const TableComponent = <T extends Record<string, any>>({ table, cols, onRowClick, perPage = Infinity, filter = {}, id, rowExtra, ...additional }: Params<T>) => {
-	const [page, setPage] = useSavedState(id + "Page", 0),
-		[sortBy, setSortBy] = useSavedState(id + "Sort", -1),
-		[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
-		rows = fitlerTableRows(table, filter),
-		maxPages = Math.ceil(rows.length / perPage),
-		currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1),
-		pageClicker = (e: React.MouseEvent) => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"));
-
-	if (sortBy >= 0) {
-		rows.sort(getSorter(cols[sortBy], sortReverse));
-	}
-
-	return <>
-		<Pagination currentPage={currPage} onClick={pageClicker} totalPages={maxPages} />
-		<table id={id} {...additional}>
-			<colgroup>
-				{cols.map(() => <col />)}
-			</colgroup>
-			<thead>
-				<tr>
-					{cols.map((c, n) => <th className={c.sortFn ? "sortable" + (sortBy === n ? " sort" + (sortReverse ? " reverse" : "") : "") : ""} onClick={c.sortFn ? () => {
-						if (sortBy === n) {
-							setSortReverse(!sortReverse);
-						} else {
-							setSortBy(n);
-							setSortReverse(cols[n].startReverse ?? false);
-						}
-					} : noop}>{c.title}</th>)}
-				</tr>
-			</thead>
-			<tbody>
-				{makeRows(rows.slice(currPage * perPage, (currPage + 1) * perPage), cols, onRowClick, rowExtra)}
-			</tbody>
-		</table>
-	</>
-};
+		return <>
+			<Pagination currentPage={currPage} onClick={pageClicker} totalPages={maxPages} />
+			<table id={id} {...additional}>
+				<colgroup>
+					{cols.map(() => <col />)}
+				</colgroup>
+				<thead>
+					<tr>
+						{cols.map((c, n) => <th className={c.sortFn ? "sortable" + (sortBy === n ? " sort" + (sortReverse ? " reverse" : "") : "") : ""} onClick={c.sortFn ? () => {
+							if (sortBy === n) {
+								setSortReverse(!sortReverse);
+							} else {
+								setSortBy(n);
+								setSortReverse(cols[n].startReverse ?? false);
+							}
+						} : noop}>{c.title}</th>)}
+					</tr>
+				</thead>
+				<tbody>
+					{makeRows(rows.slice(currPage * perPage, (currPage + 1) * perPage), cols, onRowClick, rowExtra)}
+				</tbody>
+			</table>
+		</>
+	};
 
 export default TableComponent;

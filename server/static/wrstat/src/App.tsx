@@ -44,7 +44,7 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 			GIDs: byUser ? (gids: number[]) => groups.length ? gids.some(gid => groups.includes(gid)) : true : undefined,
 			Owner: byUser ? [] : owners
 		},
-		tableFilter = Object.assign({
+		filter = Object.assign({
 			UsageSize: { min: Math.max(filterMinSize, axisMinSize), max: Math.min(filterMaxSize, axisMaxSize) },
 			Mtime: (mtime: string) => {
 				const daysAgo = asDaysAgo(mtime);
@@ -67,7 +67,7 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 		}, baseFilter),
 		preview = savedMinSize !== filterMinSize || savedMaxSize !== filterMaxSize || savedMinDaysAgo !== filterMinDaysAgo || savedMaxDaysAgo !== filterMaxDaysAgo;
 
-	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), tableFilter).length === 0) {
+	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), filter).length === 0) {
 		setSelectedDir("");
 		setSelectedID(-1);
 	}
@@ -132,27 +132,66 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 					groupNameToIDMap,
 					userNameToIDMap
 				})} />
-				<Scatter width={scatterWidth} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} isSelected={(u: any) => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir} setLimits={(minS, maxS, minD, maxD) => {
-					setSavedMinSize(minS);
-					setSavedMaxSize(maxS);
-					setSavedMinDaysAgo(minD);
-					setSavedMaxDaysAgo(maxD);
-					setFilterMinSize(minS);
-					setFilterMaxSize(maxS);
-					setFilterMinDaysAgo(minD);
-					setFilterMaxDaysAgo(maxD);
-				}} previewLimits={(minS, maxS, minD, maxD) => {
-					setFilterMinSize(minS);
-					setFilterMaxSize(maxS);
-					setFilterMinDaysAgo(minD);
-					setFilterMaxDaysAgo(maxD);
-				}} />
+				<Scatter
+					width={scatterWidth}
+					height={400}
+					data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)}
+					logX={scaleDays}
+					logY={scaleSize}
+					minX={savedMinDaysAgo}
+					maxX={savedMaxDaysAgo}
+					minY={savedMinSize}
+					maxY={savedMaxSize}
+					isSelected={(u: any) => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir}
+					setLimits={(minS, maxS, minD, maxD) => {
+						setSavedMinSize(minS);
+						setSavedMaxSize(maxS);
+						setSavedMinDaysAgo(minD);
+						setSavedMaxDaysAgo(maxD);
+						setFilterMinSize(minS);
+						setFilterMaxSize(maxS);
+						setFilterMinDaysAgo(minD);
+						setFilterMaxDaysAgo(maxD);
+					}} previewLimits={(minS, maxS, minD, maxD) => {
+						setFilterMinSize(minS);
+						setFilterMaxSize(maxS);
+						setFilterMinDaysAgo(minD);
+						setFilterMaxDaysAgo(maxD);
+					}} />
 			</div>
 		</details >
-		<FilteredTable userMap={userMap} groupMap={groupMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir, setTreePath }} filter={tableFilter} />
-		<DiskTree userMap={userMap} groupMap={groupMap} treePath={treePath} setTreePath={setTreePath} filter={tableFilter} />
-		<SubDirs id={selectedID} path={selectedDir} isUser={byUser} setPath={setTreePath} />
-		<History id={selectedID} path={selectedDir} isUser={byUser} name={selectedRow?.Name} owner={selectedRow?.Owner} />
+		<FilteredTable
+			{...{
+				userMap,
+				groupMap,
+				usage,
+				byUser,
+				selectedID,
+				setSelectedID,
+				selectedDir,
+				setSelectedDir,
+				setTreePath,
+				filter
+			}} />
+		<DiskTree
+			{...{
+				userMap,
+				groupMap,
+				treePath,
+				setTreePath,
+				filter
+			}} />
+		<SubDirs
+			id={selectedID}
+			path={selectedDir}
+			isUser={byUser}
+			setPath={setTreePath} />
+		<History
+			id={selectedID}
+			path={selectedDir}
+			isUser={byUser}
+			name={selectedRow?.Name}
+			owner={selectedRow?.Owner} />
 	</>
 };
 

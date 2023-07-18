@@ -1,5 +1,13 @@
 import type { MouseEventHandler } from "react";
 
+type TreeMapParams = {
+	table: Table | null;
+	width: number;
+	height: number;
+	noAuth?: boolean;
+	onmouseout?: MouseEventHandler;
+}
+
 export type Entry = {
 	key?: string;
 	name: string;
@@ -144,48 +152,52 @@ const phi = (1 + Math.sqrt(5)) / 2,
 
 			return { width, height };
 		};
-	})();
-
-const maxTableEntries = 1000;
-
-const TreemapComponent = ({ table, width, height, noAuth = false, onmouseout }: { table: Table | null; width: number; height: number; noAuth?: boolean; onmouseout?: MouseEventHandler }) => {
-	if (table === null) {
-		return <></>
-	}
-
-	const filteredTable: Table = [];
-
-	for (const entry of table) {
-		if (entry.value > 0) {
-			if (filteredTable.length === maxTableEntries) {
-				break;
-			}
-
-			filteredTable.push(entry);
+	})(),
+	maxTableEntries = 1000,
+	TreemapComponent = ({
+		table,
+		width,
+		height,
+		noAuth = false,
+		onmouseout
+	}: TreeMapParams) => {
+		if (table === null) {
+			return <></>
 		}
-	}
 
-	if (filteredTable.length === 0) {
-		return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
-			<rect width="100%" height="100%" stroke="currentColor" style={{ fill: "var(--background)" }} />
-			{
-				noAuth ?
-					<use href="#lock" height={150} transform={`translate(0 ${(height - 200) / 2})`} /> :
-					<use href="#emptyDirectory" height={150} transform={`translate(0 ${(height - 200) / 2})`} />
+		const filteredTable: Table = [];
+
+		for (const entry of table) {
+			if (entry.value > 0) {
+				if (filteredTable.length === maxTableEntries) {
+					break;
+				}
+
+				filteredTable.push(entry);
 			}
-		</svg>;
-	}
+		}
 
-	const box: Box = {
-		"left": 0,
-		"top": 0,
-		"right": width,
-		"bottom": height
+		if (filteredTable.length === 0) {
+			return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+				<rect width="100%" height="100%" stroke="currentColor" style={{ fill: "var(--background)" }} />
+				{
+					noAuth ?
+						<use href="#lock" height={150} transform={`translate(0 ${(height - 200) / 2})`} /> :
+						<use href="#emptyDirectory" height={150} transform={`translate(0 ${(height - 200) / 2})`} />
+				}
+			</svg>;
+		}
+
+		const box: Box = {
+			"left": 0,
+			"top": 0,
+			"right": width,
+			"bottom": height
+		};
+
+		return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
+			{buildTree(table, box)}
+		</svg>
 	};
-
-	return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
-		{buildTree(table, box)}
-	</svg>
-};
 
 export default TreemapComponent;
