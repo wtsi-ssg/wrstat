@@ -15,6 +15,14 @@ const MinmaxComponent = ({ min = 0, max = min + 1, minValue = min, maxValue = ma
 		minX = width * (sliderMin / max),
 		maxX = width * (sliderMax / max);
 
+	if (minValue < min) {
+		minValue = min;
+	}
+
+	if (maxValue > max) {
+		maxValue = max;
+	}
+
 	useEffect(() => {
 		setSliderMin(Math.max(min, minValue));
 		setSliderMax(Math.min(max, maxValue));

@@ -2,10 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import Auth, { logout } from './auth';
+import Filter from './filter';
 import ready from './ready';
 import RPC from './rpc';
-import { BrowserRouter } from "react-router-dom";
-import App from "./App";
 
 const auth = ready.then(Auth),
 	now = Date.now(),
@@ -49,27 +48,35 @@ auth.then(username => Promise.all([
 	RPC.getUserUsageData(),
 	RPC.getChildren({ path: "/" })
 ])
-	.then(([groupUsage, userUsage, { areas }]) => {
-		createRoot(document.body).render(
-			<StrictMode>
-				<svg xmlns="http://www.w3.org/2000/svg" style={{ width: 0, height: 0 }}>
-					<symbol id="ok" viewBox="0 0 100 100">
-						<circle cx="50" cy="50" r="45" stroke="currentColor" fill="none" stroke-width="10" />
-						<path d="M31,50 l13,13 l26,-26" stroke="currentColor" fill="none" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-					</symbol>
-					<symbol id="notok" viewBox="0 0 100 100">
-						<circle cx="50" cy="50" r="45" stroke="currentColor" fill="none" stroke-width="10" />
-						<path d="M35,35 l30,30 M35,65 l30,-30" stroke="currentColor" fill="none" stroke-width="10" stroke-linecap="round" />
-					</symbol>
-				</svg>
+	.then(([groupUsage, userUsage, { areas }]) => createRoot(document.body).render(
+		<StrictMode>
+			<svg xmlns="http://www.w3.org/2000/svg" style={{ width: 0, height: 0 }}>
+				<symbol id="ok" viewBox="0 0 100 100">
+					<circle cx="50" cy="50" r="45" stroke="currentColor" fill="none" stroke-width="10" />
+					<path d="M31,50 l13,13 l26,-26" stroke="currentColor" fill="none" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+				</symbol>
+				<symbol id="notok" viewBox="0 0 100 100">
+					<circle cx="50" cy="50" r="45" stroke="currentColor" fill="none" stroke-width="10" />
+					<path d="M35,35 l30,30 M35,65 l30,-30" stroke="currentColor" fill="none" stroke-width="10" stroke-linecap="round" />
+				</symbol>
+			</svg>
+			<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
+			<Filter groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
+		</StrictMode>
+	)));
 
-				<BrowserRouter>
-					<div id="auth">
-						{username} - <button onClick={logout}> Logout </button>
-					</div>
 
-					<App groupUsage={groupUsage} userUsage={userUsage} />
-				</BrowserRouter>
-			</StrictMode>
-		)
-	}));
+// const stringSort = new Intl.Collator().compare
+
+// export default function App({ groupUsage, userUsage }: { groupUsage: Usage[], userUsage: Usage[] }) {
+// 	const users = Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)
+
+// 	return <>
+// 		<details open className="boxed">
+// 			<summary>Filter</summary>
+// 			<div className="primaryFilter">
+// 				<Filter users={users} />
+// 			</div>
+// 		</details>
+// 	</>
+// }

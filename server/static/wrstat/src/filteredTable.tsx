@@ -2,7 +2,9 @@ import type { Usage } from './rpc';
 import { useState, type ChangeEvent } from "react";
 import { downloadGroups, downloadUsers } from './download';
 import { asDaysAgoStr, formatBytes, formatNumber } from './format';
-import PathDetails from './pathDetails';
+import History from './History';
+import PathDetails from './DiskTree';
+import SubDirs from './subdirs';
 import { useSavedState } from './state';
 import Table, { type Filter, fitlerTableRows } from './table';
 
@@ -39,7 +41,7 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, sele
 		userMap = new Map(Array.from(users).map(([username, uid]) => [uid, username])),
 		groupMap = new Map(Array.from(groups).map(([groupname, gid]) => [gid, groupname])),
 		selectedRow = usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir)[0],
-		[selectedClicked, setSelectedClicked] = useState(0);
+		[treePath, setTreePath] = useSavedState("treePath", "/")
 
 	return <>
 		<details open className="boxed">
@@ -63,7 +65,7 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, sele
 
 				setSelectedDir(data.BaseDir);
 				setSelectedID(id);
-				setSelectedClicked(selectedClicked + 1);
+				setTreePath(data.BaseDir);
 			}} cols={[
 				{
 					title: "Path",
@@ -146,7 +148,9 @@ const FilteredTableComponent = ({ usage, byUser, groups, users, selectedID, sele
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 			<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 		</details>
-		<PathDetails id={selectedID} name={selectedRow?.Name} owner={selectedRow?.Owner} users={userMap} groups={groupMap} path={selectedDir} isUser={byUser} selectedClicked={selectedClicked} filter={filter} />
+		<PathDetails users={userMap} groups={groupMap} treePath={treePath} setTreePath={setTreePath} filter={filter} />
+		<SubDirs id={selectedID} path={selectedDir} isUser={byUser} setPath={setTreePath} />
+		<History id={selectedID} path={selectedDir} isUser={byUser} name={selectedRow?.Name} owner={selectedRow?.Owner} />
 	</>
 };
 

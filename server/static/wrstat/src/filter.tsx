@@ -4,12 +4,13 @@ import FilteredTable from "./filteredTable";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import MultiSelect, { type Listener } from "./multiselect";
 import Scatter from "./scatter";
-import { clearState, firstRender, useSavedState } from './state';
+import { clearState, useSavedState } from './state';
 import { fitlerTableRows } from "./table";
 import Minmax from "./minmax";
+import Tabs from "./tabs";
 
 const stringSort = new Intl.Collator().compare,
-	calculateSliderWidth = (div: HTMLDivElement) => Math.min(500, getComputedStyle(div).gridTemplateColumns.split(" ").slice(1).map(e => parseInt(e)).reduce((a, b) => a + b, 0) - 10);
+	calculateScatterWidth = (div: HTMLDivElement) => Math.min(Math.max(300, parseInt(getComputedStyle(div).gridTemplateColumns.split(" ")[1]) - 40), 1500);
 
 const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),
@@ -30,10 +31,11 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		[filterMaxSize, setFilterMaxSize] = useSavedState("filterMaxSize", Infinity),
 		[filterMinDaysAgo, setFilterMinDaysAgo] = useSavedState("filterMinDaysAgo", -Infinity),
 		[filterMaxDaysAgo, setFilterMaxDaysAgo] = useSavedState("filterMaxDaysAgo", Infinity),
-		[sliderWidth, setSliderWidth] = useState(300),
+		[scatterWidth, setScatterWidth] = useState(300),
 		[selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
-		treeFilter = useRef<HTMLDivElement>(null),
+		usage = byUser ? userUsage : groupUsage,
+		primaryFilter = useRef<HTMLDivElement>(null),
 		groupNameToIDMap = new Map<string, number>(groupUsage.map(({ GID, Name }) => [Name || (GID + ""), GID])),
 		groupIDToNameMap = new Map<number, string>(groupUsage.map(({ GID, Name }) => [GID, Name || (GID + "")])),
 		userNameToIDMap = new Map<string, number>(userUsage.map(({ UID, Name }) => [Name || (UID + ""), UID])),
@@ -64,7 +66,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 		selectedBOMs = Object.entries(areas).map(([bom, groups]) => groups.every(g => groupNameToIDMap.get(g) === undefined || groupSet.has(groupNameToIDMap.get(g)!)) ? bom : "").filter(b => b).sort(stringSort),
 		preview = savedMinSize !== minSize || savedMaxSize !== maxSize || savedMinDaysAgo !== minDaysAgo || savedMaxDaysAgo !== maxDaysAgo;
 
-	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows((byUser ? userUsage : groupUsage).filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), tableFilter).length === 0) {
+	if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), tableFilter).length === 0) {
 		setSelectedDir("");
 		setSelectedID(-1);
 	}
@@ -77,58 +79,46 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 	}, [savedMinDaysAgo, savedMaxDaysAgo, savedMinSize, savedMaxSize]);
 
 	useEffect(() => {
-		if (firstRender) {
-			return
-		}
-
-		setSavedMinSize(-Infinity);
-		setSavedMaxSize(Infinity);
-		setSavedMinDaysAgo(-Infinity);
-		setSavedMaxDaysAgo(Infinity);
-		setMinSize(-Infinity);
-		setMaxSize(Infinity);
-		setMinDaysAgo(-Infinity);
-		setMaxDaysAgo(Infinity);
-
-		setSelectedDir("");
-		setSelectedID(-1);
-	}, [byUser]);
-
-	useEffect(() => {
 		window.addEventListener("resize", () => {
-			if (treeFilter.current) {
-				setSliderWidth(calculateSliderWidth(treeFilter.current));
+			if (primaryFilter.current) {
+				setScatterWidth(calculateScatterWidth(primaryFilter.current));
 			}
 		});
 	}, []);
 
 	useLayoutEffect(() => {
-		if (treeFilter.current) {
-			setSliderWidth(calculateSliderWidth(treeFilter.current));
+		if (primaryFilter.current) {
+			setScatterWidth(calculateScatterWidth(primaryFilter.current));
 		}
 	});
 
 	let groupPipe: Listener | null = null;
 
 	return <>
+		<Tabs id="mainTabs" tabs={[
+			{
+				title: "By Group",
+				onClick: () => {
+					clearState();
+					setBy(false);
+				},
+				selected: !byUser
+			},
+			{
+				title: "By User",
+				onClick: () => {
+					clearState();
+					setBy(true);
+				},
+				selected: byUser
+			},
+		]} />
 		<details open className="boxed">
 			<summary>Filter</summary>
-			<div className="primaryFilter">
-				<div className="treeFilter" ref={treeFilter}>
-					<label htmlFor="byGroup">By Group</label>
-					<input type="radio" name="by" id="byGroup" checked={!byUser} onChange={e => {
-						clearState();
-						setBy(!e.target.checked);
-					}} />
-					<label htmlFor="byUser">By User</label>
-					<input type="radio" name="by" id="byUser" checked={byUser} onChange={e => {
-						clearState();
-						setBy(e.target.checked);
-					}} />
-					<label htmlFor="username">Username</label>
-					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
-					<label htmlFor="unix">Unix Group</label>
-					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} listener={(cb: Listener) => groupPipe = cb} onchange={groups => setGroups(groups.map(groupname => groupNameToIDMap.get(groupname) ?? -1))} />
+			<div className="primaryFilter" ref={primaryFilter}>
+				<div className="treeFilter">
+					<label htmlFor="owners">Owners</label>
+					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} disabled={byUser} />
 					<label htmlFor="bom">Group Areas</label>
 					<MultiSelect id="bom" list={Object.keys(areas).sort(stringSort)} selectedList={selectedBOMs} onchange={(boms, deleted) => {
 						if (deleted) {
@@ -151,15 +141,17 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 
 						return false;
 					}} />
-					<label htmlFor="owners">Owners</label>
-					<MultiSelect id="owners" list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)} onchange={setOwners} disabled={byUser} />
+					<label htmlFor="unix">Unix Group</label>
+					<MultiSelect id="unix" list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)} listener={(cb: Listener) => groupPipe = cb} onchange={groups => setGroups(groups.map(groupname => groupNameToIDMap.get(groupname) ?? -1))} />
+					<label htmlFor="username">Username</label>
+					<MultiSelect id="username" list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)} onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
 					<label>Size </label>
-					<Minmax max={userUsage.concat(groupUsage).map(u => u.UsageSize).reduce((max, curr) => Math.max(max, curr), 0)} width={sliderWidth} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
+					<Minmax max={usage.reduce((max, curr) => Math.max(max, curr.UsageSize), 0)} width={300} minValue={filterMinSize} maxValue={filterMaxSize} onchange={(min: number, max: number) => {
 						setFilterMinSize(min);
 						setFilterMaxSize(max);
 					}} formatter={formatBytes} />
 					<label>Last Modified</label>
-					<Minmax max={userUsage.concat(groupUsage).map(e => asDaysAgo(e.Mtime)).reduce((curr, next) => Math.max(curr, next), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={sliderWidth} onchange={(min: number, max: number) => {
+					<Minmax max={usage.reduce((curr, next) => Math.max(curr, asDaysAgo(next.Mtime)), 0)} minValue={filterMinDaysAgo} maxValue={filterMaxDaysAgo} width={300} onchange={(min: number, max: number) => {
 						setFilterMinDaysAgo(min);
 						setFilterMaxDaysAgo(max);
 					}} formatter={formatNumber} />
@@ -169,7 +161,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 					<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 					<button onClick={clearState}>Reset Filter</button>
 				</div>
-				<Scatter width={900} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} isSelected={(u: any) => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir} setLimits={(minS, maxS, minD, maxD) => {
+				<Scatter width={scatterWidth} height={400} data={fitlerTableRows(byUser ? userUsage : groupUsage, scatterFilter)} logX={scaleDays} logY={scaleSize} minX={savedMinDaysAgo} maxX={savedMaxDaysAgo} minY={savedMinSize} maxY={savedMaxSize} isSelected={(u: any) => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir} setLimits={(minS, maxS, minD, maxD) => {
 					setSavedMinSize(minS);
 					setSavedMaxSize(maxS);
 					setSavedMinDaysAgo(minD);
@@ -186,7 +178,7 @@ const FilterComponent = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[]
 				}} />
 			</div>
 		</details >
-		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={byUser ? userUsage : groupUsage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} {...tableFilter} />
+		<FilteredTable users={userNameToIDMap} groups={groupNameToIDMap} usage={usage} {...{ byUser, selectedID, setSelectedID, selectedDir, setSelectedDir }} filter={tableFilter} />
 	</>
 };
 

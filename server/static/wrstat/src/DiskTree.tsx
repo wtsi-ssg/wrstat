@@ -1,11 +1,9 @@
 import type { Child, Usage } from './rpc';
 import type { Entry } from './treemap';
 import { useEffect, useState } from "react"
-import History from './history';
 import MultiSelect from './multiselect';
 import RPC from "./rpc";
 import { useSavedState } from './state';
-import SubDirs from './subdirs';
 import type { Filter } from './table';
 import TreeDetails from "./treedetails";
 import Treemap from "./treemap";
@@ -101,9 +99,11 @@ const colours = [
 		["> 2 years", 730]
 	] as const;
 
-const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, groups, selectedClicked }: { id: number; name: string; owner: string; path: string; isUser: boolean; filter: Filter<Usage>; users: Map<number, string>; groups: Map<number, string>; selectedClicked: number }) => {
-	const [treePath, setTreePath] = useSavedState("treePath", "/"),
-		[treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
+
+let renders = 0
+
+const PathdetailsComponent = ({ treePath, filter, users, groups, setTreePath }: { treePath: string; filter: Filter<Usage>; users: Map<number, string>; groups: Map<number, string>; setTreePath: (v: string) => void }) => {
+	const [treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 		[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
 		[childDetails, setChildDetails] = useState<Child | null>(null),
 		[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
@@ -114,9 +114,9 @@ const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, gr
 		[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
 		[hasAuth, setHasAuth] = useState(true);
 
-	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
+	console.log(renders++)
 
-	useEffect(() => setTreePath(path || "/"), [path, selectedClicked]);
+	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
 	useEffect(() => {
 		RPC.getChildren(makeFilter(treePath, filter, filterFileTypes, users, groups))
@@ -196,8 +196,6 @@ const PathdetailsComponent = ({ id, name, owner, path, isUser, filter, users, gr
 				</div>
 			</div>
 		</details>
-		<SubDirs id={id} path={path} isUser={isUser} setPath={setTreePath} />
-		<History id={id} path={path} isUser={isUser} name={name} owner={owner} />
 	</>
 };
 
