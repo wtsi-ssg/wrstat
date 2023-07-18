@@ -5,7 +5,7 @@ import RPC from "./rpc";
 import { useSavedState } from "./state";
 import { formatBytes, formatLargeNumber, formatNumber } from "./format";
 import { exceedDates } from "./trend";
-import Tabs from "./tabs";
+import Tabs from "./Tabs";
 
 const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 	maxWarningDay = 25,

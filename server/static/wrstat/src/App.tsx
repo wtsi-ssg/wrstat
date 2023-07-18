@@ -2,10 +2,10 @@ import DiskTree from "./DiskTree";
 import FilteredTable from "./FilteredTable";
 import Filter from "./Filter"
 import History from './History';
-import SubDirs from './subdirs';
+import SubDirs from './SubDirs';
 import type { Usage } from "./rpc"
 import { clearState, useSavedState } from "./state";
-import Tabs from "./tabs";
+import Tabs from "./Tabs";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { asDaysAgo } from "./format";
 import { fitlerTableRows } from "./Table";
