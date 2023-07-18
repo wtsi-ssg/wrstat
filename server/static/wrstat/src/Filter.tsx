@@ -1,7 +1,7 @@
 import type { Usage } from "./rpc";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
-import Minmax from "./minmax";
-import MultiSelect, { type Listener } from "./multiselect";
+import Minmax from "./MinMax";
+import MultiSelect, { type Listener } from "./MultiSelect";
 import { clearState } from './state';
 
 type FilterParams = {

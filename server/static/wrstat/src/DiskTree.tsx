@@ -1,7 +1,7 @@
 import type { Child, Usage } from './rpc';
 import type { Entry } from './Treemap';
 import { useEffect, useState } from "react"
-import MultiSelect from './multiselect';
+import MultiSelect from './MultiSelect';
 import RPC from "./rpc";
 import { useSavedState } from './state';
 import type { Filter } from './Table';
