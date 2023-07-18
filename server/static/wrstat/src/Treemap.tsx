@@ -39,7 +39,8 @@ const phi = (1 + Math.sqrt(5)) / 2,
 
 			let total = table[pos].value,
 				split = pos + 1,
-				lastDR = phi - boxWidth * (isRow ? 1 : total / remainingTotal) / (boxHeight * (isRow ? total / remainingTotal : 1)),
+				totalRatio = total / remainingTotal,
+				lastDR = phi - boxWidth * (isRow ? 1 : totalRatio) / (boxHeight * (isRow ? totalRatio : 1)),
 				d = isRow ? box.left : box.top;
 
 			for (let i = split; i < table.length; i++) {
@@ -63,8 +64,9 @@ const phi = (1 + Math.sqrt(5)) / 2,
 					top = isRow ? box.top : d,
 					left = isRow ? d : box.left,
 					colWidth = isRow ? boxWidth * entry.value / total : boxWidth * total / remainingTotal,
-					rowHeight = isRow ? boxHeight * total / remainingTotal : boxHeight * entry.value / total,
-					bbox = getTextBB((entry.noauth ? "W" : "") + entry.name),
+					rowHeight = isRow ? boxHeight * total / remainingTotal :
+						boxHeight * entry.value / total,
+					bbox = getTextBB((entry.onclick ? "" : "W") + entry.name),
 					xScale = colWidth / bbox.width,
 					yScale = rowHeight / bbox.height,
 					minScale = lastFontSize = Math.min(xScale, yScale, lastFontSize);
@@ -72,9 +74,45 @@ const phi = (1 + Math.sqrt(5)) / 2,
 				d += isRow ? colWidth : rowHeight;
 
 				toRet.push(
-					<rect key={entry.key ? `rect_${entry.key}` : ""} x={left} y={top} width={colWidth} height={rowHeight} stroke="#000" fill={entry.backgroundColour ?? "#fff"} className={entry.onclick ? "hasClick box" : "box"} onClick={entry.onclick} onMouseOver={entry.onmouseover}><title>{entry.name}</title></rect>,
-					entry.noauth ? <use key={entry.key ? `lock_${entry.key}` : ""} x={left + (colWidth - bbox.width * minScale + minScale * 0.45) / 2} y={top + (rowHeight - minScale * 0.40) / 2} href="#lock" width="0.5em" height="0.5em" style={{ fontSize: `${minScale * 0.9}px` }} /> : <></>,
-					<text key={entry.key ? `text_${entry.key}` : ""} fontSize={minScale * 0.9} fontFamily={font} x={(entry.noauth ? minScale * 0.225 : 0) + left + colWidth / 2} y={top + rowHeight / 2 + 0.225 * minScale * bbox.height} textAnchor="middle" fill={entry.colour ?? "#000"}>{entry.name}</text>
+					<rect
+						key={entry.key ? `rect_${entry.key}` : ""}
+						x={left}
+						y={top}
+						width={colWidth}
+						height={rowHeight}
+						stroke="#000"
+						fill={entry.backgroundColour ?? "#fff"}
+						className={entry.onclick ? "hasClick box" : "box"}
+						onClick={entry.onclick}
+						onMouseOver={entry.onmouseover}
+					><title>{entry.name}</title></rect>,
+					entry.onclick ? <></> :
+						entry.noauth ?
+							<use
+								key={entry.key ? `lock_${entry.key}` : ""}
+								x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
+								y={top + (rowHeight - minScale * 0.40) / 2}
+								href="#lock"
+								width="0.5em"
+								height="0.5em"
+								style={{ fontSize: `${minScale * 0.9}px` }} /> :
+							<use
+								key={entry.key ? `empty_${entry.key}` : ""}
+								x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
+								y={top + (rowHeight - minScale * 0.40) / 2}
+								href="#emptyDirectory"
+								width="0.5em"
+								height="0.3846em"
+								style={{ fontSize: `${minScale * 0.9}px` }} />,
+					<text
+						key={entry.key ? `text_${entry.key}` : ""}
+						fontSize={minScale * 0.9}
+						fontFamily={font}
+						x={(entry.noauth ? minScale * 0.225 : 0) + left + colWidth / 2}
+						y={top + rowHeight / 2 + 0.225 * minScale * bbox.height}
+						textAnchor="middle"
+						fill={entry.colour ?? "#000"}
+					>{entry.name}</text>
 				);
 			}
 
@@ -132,13 +170,8 @@ const TreemapComponent = ({ table, width, height, noAuth = false, onmouseout }: 
 			<rect width="100%" height="100%" stroke="currentColor" style={{ fill: "var(--background)" }} />
 			{
 				noAuth ?
-					<>
-						<svg height={150} transform={`translate(0 ${(height - 200) / 2})`} viewBox="0 0 100 100" stroke="currentColor" stroke-width={2} stroke-linejoin="round">
-							<rect rx="15" x="5" y="38" width="90" height="62" fill="currentColor" />
-							<path d="M27,40 v-10 a1,1 0,0,1 46,0 v10" fill="none" stroke-width="12" />
-						</svg>
-					</> :
-					<text text-anchor="middle" x={width / 2} y={height / 2} >—No Sub-Directories—</text>
+					<use href="#lock" height={150} transform={`translate(0 ${(height - 200) / 2})`} /> :
+					<use href="#emptyDirectory" height={150} transform={`translate(0 ${(height - 200) / 2})`} />
 			}
 		</svg>;
 	}
@@ -151,12 +184,6 @@ const TreemapComponent = ({ table, width, height, noAuth = false, onmouseout }: 
 	};
 
 	return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
-		<defs>
-			<symbol id="lock" viewBox="0 0 100 100">
-				<rect rx="15" x="5" y="38" width="90" height="62" fill="#000" />
-				<path d="M27,40 v-10 a1,1 0,0,1 46,0 v10" fill="none" stroke="#000" stroke-width="12" />
-			</symbol>
-		</defs>
 		{buildTree(table, box)}
 	</svg>
 };
