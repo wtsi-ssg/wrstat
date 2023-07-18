@@ -7,8 +7,6 @@ import RPC from './rpc';
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 
-const stringSort = new Intl.Collator().compare
-
 const auth = ready.then(Auth),
 	now = Date.now(),
 	day = 86_400_000,
@@ -52,8 +50,6 @@ auth.then(username => Promise.all([
 	RPC.getChildren({ path: "/" })
 ])
 	.then(([groupUsage, userUsage, { areas }]) => {
-		const users = Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)
-
 		createRoot(document.body).render(
 			<StrictMode>
 				<svg xmlns="http://www.w3.org/2000/svg" style={{ width: 0, height: 0 }}>
@@ -72,7 +68,7 @@ auth.then(username => Promise.all([
 						{username} - <button onClick={logout}> Logout </button>
 					</div>
 
-					<App users={users} />
+					<App groupUsage={groupUsage} userUsage={userUsage} />
 				</BrowserRouter>
 			</StrictMode>
 		)

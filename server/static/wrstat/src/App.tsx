@@ -1,6 +1,10 @@
 import Filter from './Filter';
 
-export default function App({ users }: { users: string[] }) {
+const stringSort = new Intl.Collator().compare
+
+export default function App({ groupUsage, userUsage }: { groupUsage: Usage[], userUsage: Usage[] }) {
+    const users = Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)
+
     return <>
         <details open className="boxed">
             <summary>Filter</summary>
