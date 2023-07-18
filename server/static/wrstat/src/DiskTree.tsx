@@ -5,7 +5,7 @@ import MultiSelect from './multiselect';
 import RPC from "./rpc";
 import { useSavedState } from './state';
 import type { Filter } from './table';
-import TreeDetails from "./treedetails";
+import TreeDetails from "./TreeDetails";
 import Treemap from "./Treemap";
 
 const colours = [
