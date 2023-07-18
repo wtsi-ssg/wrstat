@@ -105,106 +105,99 @@ const colours = [
 		["> 10 months", 300],
 		["> 1 year", 365],
 		["> 2 years", 730]
-	] as const;
+	] as const,
+	PathdetailsComponent = ({ treePath, filter, userMap, groupMap, setTreePath }: DiskTreeParams) => {
+		const [treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
+			[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
+			[childDetails, setChildDetails] = useState<Child | null>(null),
+			[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
+			[useMTime, setUseMTime] = useSavedState("useMTime", false),
+			[useCount, setUseCount] = useSavedState("useCount", false),
+			[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
+			[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("treeTypes", []),
+			[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
+			[hasAuth, setHasAuth] = useState(true);
+		useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
+		useEffect(() => {
+			RPC.getChildren(makeFilter(treePath, filter, filterFileTypes, userMap, groupMap))
+				.then(children => {
+					const entries: Entry[] = [],
+						since = Date.now() - sinceLastAccess * 86_400_000;
 
-let renders = 0
+					setHasAuth(!children.noauth);
 
-const PathdetailsComponent = ({ treePath, filter, userMap, groupMap, setTreePath }: DiskTreeParams) => {
-	const [treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
-		[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
-		[childDetails, setChildDetails] = useState<Child | null>(null),
-		[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
-		[useMTime, setUseMTime] = useSavedState("useMTime", false),
-		[useCount, setUseCount] = useSavedState("useCount", false),
-		[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
-		[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("treeTypes", []),
-		[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
-		[hasAuth, setHasAuth] = useState(true);
+					for (const child of children.children ?? []) {
+						if (new Date(child.atime).valueOf() > since) {
+							continue;
+						}
 
-	console.log(renders++)
-
-	useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
-
-	useEffect(() => {
-		RPC.getChildren(makeFilter(treePath, filter, filterFileTypes, userMap, groupMap))
-			.then(children => {
-				const entries: Entry[] = [],
-					since = Date.now() - sinceLastAccess * 86_400_000;
-
-				setHasAuth(!children.noauth);
-
-				for (const child of children.children ?? []) {
-					if (new Date(child.atime).valueOf() > since) {
-						continue;
+						entries.push({
+							key: btoa(child.path),
+							name: child.name,
+							value: useCount ? child.count : child.size,
+							backgroundColour: colourFromAge(+(new Date(useMTime ? child.mtime : child.atime))),
+							onclick: child.has_children && !child.noauth ? () => setTreePath(child.path) : undefined,
+							onmouseover: () => setChildDetails(child),
+							noauth: child.noauth
+						});
 					}
 
-					entries.push({
-						key: btoa(child.path),
-						name: child.name,
-						value: useCount ? child.count : child.size,
-						backgroundColour: colourFromAge(+(new Date(useMTime ? child.mtime : child.atime))),
-						onclick: child.has_children && !child.noauth ? () => setTreePath(child.path) : undefined,
-						onmouseover: () => setChildDetails(child),
-						noauth: child.noauth
-					});
-				}
+					entries.sort((a, b) => b.value - a.value);
 
-				entries.sort((a, b) => b.value - a.value);
+					setTreeMapData(entries);
+					setChildDetails(children);
+					setDirDetails(children);
+				});
 
-				setTreeMapData(entries);
-				setChildDetails(children);
-				setDirDetails(children);
-			});
+			setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
+		}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, JSON.stringify(filter)]);
 
-		setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
-	}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, JSON.stringify(filter)]);
-
-	return <>
-		<details open className="boxed">
-			<summary>Disktree</summary>
-			<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
-			<div id="disktree">
-				<div>
-					<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
-					<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
-					<table id="treeKey">
-						<caption>
-							<span>Colour Key</span>
-							{useMTime ? "Least" : "Greatest"} time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
-						</caption>
-						<tbody>
-							<tr>
-								<td className="age_2years">&gt; 2 years</td>
-								<td className="age_1year">&gt; 1 year</td>
-								<td className="age_10months">&gt; 10 months</td>
-								<td className="age_8months">&gt; 8 months</td>
-								<td className="age_6months">&gt; 6 months</td>
-								<td className="age_3months">&gt; 3 months</td>
-								<td className="age_2months">&gt; 2 months</td>
-								<td className="age_1month">&gt; 1 month</td>
-								<td className="age_1week">&lt; 1 month</td>
-							</tr>
-						</tbody>
-					</table>
+		return <>
+			<details open className="boxed">
+				<summary>Disktree</summary>
+				<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
+				<div id="disktree">
+					<div>
+						<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
+						<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
+						<table id="treeKey">
+							<caption>
+								<span>Colour Key</span>
+								{useMTime ? "Least" : "Greatest"} time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
+							</caption>
+							<tbody>
+								<tr>
+									<td className="age_2years">&gt; 2 years</td>
+									<td className="age_1year">&gt; 1 year</td>
+									<td className="age_10months">&gt; 10 months</td>
+									<td className="age_8months">&gt; 8 months</td>
+									<td className="age_6months">&gt; 6 months</td>
+									<td className="age_3months">&gt; 3 months</td>
+									<td className="age_2months">&gt; 2 months</td>
+									<td className="age_1month">&gt; 1 month</td>
+									<td className="age_1week">&lt; 1 month</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+					<div className="treeFilter">
+						<h3>Colour</h3>
+						<label htmlFor="aTime">Use ATime</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
+						<label htmlFor="mTime">Use MTime</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
+						<h3>Area</h3>
+						<label htmlFor="useSize">Use Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
+						<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
+						<h3>Filter</h3>
+						<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
+						<label htmlFor="sinceAccess">Time Since Access</label>
+						<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
+							{timesSinceAccess.map(([l, t]) => <option selected={sinceLastAccess === t} value={t}>{l}</option>)}
+						</select>
+					</div>
 				</div>
-				<div className="treeFilter">
-					<h3>Colour</h3>
-					<label htmlFor="aTime">Use ATime</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
-					<label htmlFor="mTime">Use MTime</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
-					<h3>Area</h3>
-					<label htmlFor="useSize">Use Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
-					<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
-					<h3>Filter</h3>
-					<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
-					<label htmlFor="sinceAccess">Time Since Access</label>
-					<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
-						{timesSinceAccess.map(([l, t]) => <option selected={sinceLastAccess === t} value={t}>{l}</option>)}
-					</select>
-				</div>
-			</div>
-		</details>
-	</>
-};
+			</details>
+		</>
+	};
 
 export default PathdetailsComponent;
