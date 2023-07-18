@@ -119,10 +119,27 @@ const ScatterComponent = ({
 					mousemove(e, setLimits);
 					window.removeEventListener("mousemove", mousemove);
 					window.removeEventListener("mouseup", mouseup);
+					window.removeEventListener("keydown", keydown);
+				},
+				keydown = (e: KeyboardEvent) => {
+					if (e.key === "Escape") {
+						const x = dateToX(minX),
+							y = sizeToY(maxY),
+							width = dateToX(maxX) - x,
+							height = sizeToY(minY) - y;
+
+						setHighlightCoords([x - paddingXL, width, y - paddingYT, height]);
+						setLimits(minY, maxY, minX, maxX);
+
+						window.removeEventListener("mousemove", mousemove);
+						window.removeEventListener("mouseup", mouseup);
+						window.removeEventListener("keydown", keydown);
+					}
 				};
 
 			window.addEventListener("mousemove", mousemove);
 			window.addEventListener("mouseup", mouseup);
+			window.addEventListener("keydown", keydown);
 		};
 
 	useEffect(() => {
