@@ -498,7 +498,7 @@ summary {
   display: grid;
   width: 100%;
   gap: 0 3em;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(auto, 500px) 1fr;
   align-items: start;
 }
 

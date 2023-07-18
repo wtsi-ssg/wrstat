@@ -2,9 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import Auth, { logout } from './auth';
-import Filter from './filter';
 import ready from './ready';
 import RPC from './rpc';
+import App from './App';
 
 const auth = ready.then(Auth),
 	now = Date.now(),
@@ -69,22 +69,6 @@ auth.then(username => Promise.all([
 				</symbol>
 			</svg>
 			<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
-			<Filter groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
+			<App groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
 		</StrictMode>
 	)));
-
-
-// const stringSort = new Intl.Collator().compare
-
-// export default function App({ groupUsage, userUsage }: { groupUsage: Usage[], userUsage: Usage[] }) {
-// 	const users = Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)
-
-// 	return <>
-// 		<details open className="boxed">
-// 			<summary>Filter</summary>
-// 			<div className="primaryFilter">
-// 				<Filter users={users} />
-// 			</div>
-// 		</details>
-// 	</>
-// }
