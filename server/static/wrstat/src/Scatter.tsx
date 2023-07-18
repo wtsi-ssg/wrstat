@@ -149,7 +149,7 @@ const ScatterComponent = ({
 			height = sizeToY(minY) - y;
 
 		setHighlightCoords([x - paddingXL, width, y - paddingYT, height]);
-	}, [minX, minY, maxX, maxY, logX, logY]);
+	}, [minX, minY, maxX, maxY, logX, logY, width, height]);
 
 	useEffect(() => {
 		if (firstRender || restoring) {
