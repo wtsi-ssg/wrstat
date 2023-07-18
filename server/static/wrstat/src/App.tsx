@@ -1,8 +1,13 @@
 import Filter from './Filter';
 
-export default function App() {
+export default function App({ users }: { users: string[] }) {
     return <>
-        <Filter />
+        <details open className="boxed">
+            <summary>Filter</summary>
+            <div className="primaryFilter">
+                <Filter users={users} />
+            </div>
+        </details>
     </>
 }
 

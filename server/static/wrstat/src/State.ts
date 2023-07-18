@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
 
-export function useSearchParamsState<T>(
+export default function useURLState<T>(
     searchParamName: string,
     defaultValue: T
 ): readonly [
@@ -32,4 +32,9 @@ export function useSearchParamsState<T>(
         console.log('setSerachParams(%s)', JSON.stringify(next))
     };
     return [searchParamsState, setSearchParamsState];
+}
+
+export function useClearState() {
+    const [_, setSearchParams] = useSearchParams();
+    setSearchParams(undefined)
 }
