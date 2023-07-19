@@ -434,6 +434,7 @@ rect+use+text {
 
 #multi_unix>ul>li:nth-child(12):before {
   content: "…";
+  padding-left: 1em;
   display: inline-block;
   visibility: visible;
   pointer-events: none;
@@ -449,11 +450,12 @@ rect+use+text {
   display: inline-block;
 }
 
-.multiInput>ul li:not(:first-child) {
+.multiInput>ul li:not(:first-child) button {
   margin-left: 1em;
   padding: 0 0.5em;
   cursor: cell;
   border: 1px solid currentColor;
+  background-color: var(--background);
 }
 
 .multiInput>div {
