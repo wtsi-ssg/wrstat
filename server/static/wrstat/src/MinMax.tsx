@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 
 type MinMaxParams = {
 	min?: number;
@@ -49,20 +49,19 @@ const MinmaxComponent = ({
 	let draggingMin = false,
 		offsetLeft = 0;
 
-	const getMinMax = (e: MouseEvent) => {
-		const val = ticks * Math.round((max - min) * (e.clientX - offsetLeft) / (width * ticks));
+	const getMinMax = (e: MouseEvent) => getSafeMinMax(ticks * Math.round((max - min) * (e.clientX - offsetLeft) / (width * ticks))),
+		getSafeMinMax = (val: number) => {
+			let amin = safeMin,
+				amax = safeMax;
 
-		let amin = safeMin,
-			amax = safeMax;
+			if (draggingMin) {
+				amin = Math.min(Math.max(val, min), max, amax - +noOverlap * ticks);
+			} else {
+				amax = Math.max(Math.min(val, max), min, amin + +noOverlap * ticks);
+			}
 
-		if (draggingMin) {
-			amin = Math.min(Math.max(val, min), max, amax - +noOverlap * ticks);
-		} else {
-			amax = Math.max(Math.min(val, max), min, amin + +noOverlap * ticks);
-		}
-
-		return [amin, amax];
-	},
+			return [amin, amax];
+		},
 		mousedown = (e: React.MouseEvent<HTMLDivElement, MouseEvent>, which: boolean) => {
 			if (e.button !== 0) {
 				return;
@@ -94,14 +93,28 @@ const MinmaxComponent = ({
 			setSliderMin(min);
 			setSliderMax(max);
 		},
-		minAndMax = [
-			<div className="minmax_minSlider" onMouseDown={e => mousedown(e, true)} style={{ left: `calc(${minX}px - 0.5em)` }} />,
-			<div className="minmax_maxSlider" onMouseDown={e => mousedown(e, false)} style={{ left: `calc(${maxX}px - 0.5em)` }} />
-		];
+		onkeyup = (e: KeyboardEvent) => {
+			if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") {
+				return;
+			}
 
-	if (sliderMin - min > max - sliderMax) {
-		minAndMax.reverse();
-	}
+			onchange(sliderMin, sliderMax);
+		},
+		onkeydown = (e: KeyboardEvent) => {
+			if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" || e.altKey || e.metaKey || e.ctrlKey) {
+				return;
+			}
+
+			e.preventDefault();
+
+			draggingMin = (e.target as HTMLElement)?.className.includes("minmax_minSlider");
+
+			const [smin, smax] = getSafeMinMax(ticks * Math.round((max - min) * (((draggingMin ? minX : maxX) + (e.key === "ArrowLeft" ? -1 : 1)) - offsetLeft) / (width * ticks)));
+
+			setSliderMin(smin);
+			setSliderMax(smax);
+
+		};
 
 	return <div className="minmax" style={{ width: width + "px" }}>
 		<div className="minmax_min">{formatter(min)}</div>
@@ -110,7 +123,8 @@ const MinmaxComponent = ({
 		<div className="minmax_setLine" style={{ left: minX + "px", right: (width - maxX) + "px" }} />
 		<div className="minmax_minValue" style={{ right: (width - minX) + "px" }}>{formatter(sliderMin)}</div>
 		<div className="minmax_maxValue" style={{ left: maxX + "px" }}>{formatter(sliderMax)}</div>
-		{minAndMax}
+		<div className="minmax_minSlider" tabIndex={0} onKeyDown={onkeydown} onKeyUp={onkeyup} onMouseDown={e => mousedown(e, true)} style={{ left: `calc(${minX}px - 0.5em)`, "zIndex": sliderMin - min > max - sliderMax ? 2 : 1 }} />,
+		<div className="minmax_maxSlider" tabIndex={0} onKeyDown={onkeydown} onKeyUp={onkeyup} onMouseDown={e => mousedown(e, false)} style={{ left: `calc(${maxX}px - 0.5em)`, "zIndex": sliderMin - min > max - sliderMax ? 1 : 2 }} />
 	</div>
 };
 
