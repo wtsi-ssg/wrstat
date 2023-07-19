@@ -10,6 +10,7 @@ type MinMaxParams = {
 	onchange: (min: number, max: number) => void;
 	noOverlap?: boolean;
 	formatter: (val: number) => string;
+	label?: string;
 }
 
 const MinmaxComponent = ({
@@ -21,7 +22,8 @@ const MinmaxComponent = ({
 	width,
 	ticks = 5,
 	noOverlap = true,
-	formatter
+	formatter,
+	label = ""
 }: MinMaxParams) => {
 
 	width = Math.max(width, 100)
@@ -123,8 +125,8 @@ const MinmaxComponent = ({
 		<div className="minmax_setLine" style={{ left: minX + "px", right: (width - maxX) + "px" }} />
 		<div className="minmax_minValue" style={{ right: (width - minX) + "px" }}>{formatter(sliderMin)}</div>
 		<div className="minmax_maxValue" style={{ left: maxX + "px" }}>{formatter(sliderMax)}</div>
-		<div className="minmax_minSlider" tabIndex={0} onKeyDown={onkeydown} onKeyUp={onkeyup} onMouseDown={e => mousedown(e, true)} style={{ left: `calc(${minX}px - 0.5em)`, "zIndex": sliderMin - min > max - sliderMax ? 2 : 1 }} />,
-		<div className="minmax_maxSlider" tabIndex={0} onKeyDown={onkeydown} onKeyUp={onkeyup} onMouseDown={e => mousedown(e, false)} style={{ left: `calc(${maxX}px - 0.5em)`, "zIndex": sliderMin - min > max - sliderMax ? 1 : 2 }} />
+		<div className="minmax_minSlider" role="slider" aria-label={`Minimum ${label}`} aria-valuemin={min} aria-valuetext={formatter(minValue)} aria-valuenow={minValue} aria-valuemax={maxValue} tabIndex={0} onKeyDown={onkeydown} onKeyUp={onkeyup} onMouseDown={e => mousedown(e, true)} style={{ left: `calc(${minX}px - 0.5em)`, "zIndex": sliderMin - min > max - sliderMax ? 2 : 1 }} />,
+		<div className="minmax_maxSlider" role="slider" aria-label={`Maximum ${label}`} aria-valuemin={minValue} aria-valuetext={formatter(maxValue)} aria-valuenow={maxValue} aria-valuemax={max} tabIndex={0} onKeyDown={onkeydown} onKeyUp={onkeyup} onMouseDown={e => mousedown(e, false)} style={{ left: `calc(${maxX}px - 0.5em)`, "zIndex": sliderMin - min > max - sliderMax ? 1 : 2 }} />
 	</div>
 };
 

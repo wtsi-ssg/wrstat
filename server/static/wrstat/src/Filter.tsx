@@ -101,7 +101,7 @@ const stringSort = new Intl.Collator().compare,
 					id="username"
 					list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)}
 					onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
-				<label>Size </label>
+				<label>Size</label>
 				<Minmax
 					max={usage.reduce((max, curr) => Math.max(max, curr.UsageSize), 0)}
 					width={300}
@@ -111,7 +111,8 @@ const stringSort = new Intl.Collator().compare,
 						setAxisMinSize(min);
 						setAxisMaxSize(max);
 					}}
-					formatter={formatBytes} />
+					formatter={formatBytes}
+					label="Size Filter" />
 				<label>Last Modified</label>
 				<Minmax
 					max={usage.reduce((curr, next) => Math.max(curr, asDaysAgo(next.Mtime)), 0)}
@@ -122,7 +123,8 @@ const stringSort = new Intl.Collator().compare,
 						setAxisMinDaysAgo(min);
 						setAxisMaxDaysAgo(max);
 					}}
-					formatter={formatNumber} />
+					formatter={formatNumber}
+					label="Days since last modified" />
 				<label htmlFor="scaleSize">Log Size Axis</label>
 				<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
 				<label htmlFor="scaleDays">Log Days Axis</label>
