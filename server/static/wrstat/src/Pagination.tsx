@@ -15,7 +15,15 @@ const paginationEnd = 3,
 		}
 
 		for (let p = from; p <= to; p++) {
-			ret.push(<li className={currPage === p ? "pagination_selected" : "pagination_link"} onClick={currPage === p ? noop : onClick} data-page={p}>{p + 1}</li>);
+			ret.push(<li
+				tabIndex={0}
+				role={currPage === p ? undefined : "button"}
+				aria-label={currPage === p ? "Current Table Page" : `Go to Table Page ${p + 1}`}
+				aria-current={currPage === p ? "page" : undefined}
+				className={currPage === p ? "pagination_selected" : "pagination_link"}
+				onClick={currPage === p ? noop : onClick}
+				data-page={p}
+			>{p + 1}</li>);
 		}
 	},
 	PaginationComponent = ({ totalPages, currentPage, onClick }: PaginationParams) => {
@@ -50,17 +58,21 @@ const paginationEnd = 3,
 
 		return <ul className="pagination">
 			<li
+				tabIndex={0}
+				aria-label={`Go to Previous Table Page`}
 				className={"pagination_prev" + (currentPage === 0 ? "" : " pagination_link")}
 				onClick={currentPage === 0 ? noop : onClick}
 				data-page={currentPage - 1}
 			>Previous</li>
 			{ret}
 			<li
+				tabIndex={0}
+				aria-label={`Go to Next Table Page`}
 				className={"pagination_next" + (currentPage === lastPage ? "" : " pagination_link")}
 				onClick={currentPage === lastPage ? noop : onClick}
 				data-page={currentPage + 1}
 			>Next</li>
-		</ul>
+		</ul >
 	};
 
 export default PaginationComponent;
