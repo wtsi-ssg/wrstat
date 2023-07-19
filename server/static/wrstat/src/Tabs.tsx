@@ -7,7 +7,8 @@ type TabData = {
 const Tabs = ({ id, tabs }: { id: string, tabs: TabData[] }) => <ul id={id} className="tabs">
 	{tabs.map(tab => <li
 		tabIndex={0}
-		role="button"
+		role="tab"
+		aria-selected={tab.selected ? "true" : "false"}
 		className={tab.selected ? "selected" : ""}
 		onClick={tab.selected ? undefined : () => tab.onClick(tab.title)}
 		onKeyDown={tab.selected ? undefined : e => {
