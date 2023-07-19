@@ -54,7 +54,7 @@ const colours = [
 		return colours[8];
 	},
 	makeBreadcrumb = (path: string, part: string, setPath: (path: string) => void) => {
-		return <li><button onClick={() => setPath(path)}>{part}</button></li>;
+		return <li><button title={`Jump To: ${part}`} onClick={() => setPath(path)}>{part}</button></li>;
 	},
 	makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
 		let last = 0;
@@ -75,14 +75,14 @@ const colours = [
 			last = pos;
 		}
 
-		breadcrumbs.push(<span>{path.slice(last + 1) || "/"}</span>);
+		breadcrumbs.push(<span tabIndex={0} aria-current="location">{path.slice(last + 1) || "/"}</span>);
 
 		return breadcrumbs;
 	},
 	determineTreeWidth = () => {
 		const width = window.innerWidth;
 
-		return Math.max(width - 400, 400);
+		return Math.max(width - 420, 400);
 	},
 	makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => {
 		return {
@@ -117,6 +117,7 @@ const colours = [
 			[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("treeTypes", []),
 			[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
 			[hasAuth, setHasAuth] = useState(true);
+
 		useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
 		useEffect(() => {
@@ -182,12 +183,12 @@ const colours = [
 						</table>
 					</div>
 					<div className="treeFilter">
-						<h3>Colour</h3>
-						<label htmlFor="aTime">Use ATime</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
-						<label htmlFor="mTime">Use MTime</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
-						<h3>Area</h3>
-						<label htmlFor="useSize">Use Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
-						<label htmlFor="useCount">Use Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
+						<h3>Colour By</h3>
+						<label htmlFor="aTime">Access Time</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
+						<label htmlFor="mTime">Modified Time</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
+						<h3>Area Represents</h3>
+						<label htmlFor="useSize">File Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
+						<label htmlFor="useCount">File Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
 						<h3>Filter</h3>
 						<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
 						<label htmlFor="sinceAccess">Time Since Access</label>
