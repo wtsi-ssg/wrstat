@@ -45,103 +45,111 @@ const stringSort = new Intl.Collator().compare,
 						<option selected={perPage === 100}>100</option>
 					</select>
 					Entries</span>
-				<Table rowExtra={row => {
-					if ((byUser ? row.UID : row.GID) === selectedID && row.BaseDir === selectedDir) {
-						return { "class": "selected" };
-					}
+				<Table
+					caption={`${byUser ? "User" : " Group"} Usage Table`}
+					rowExtra={row => {
+						if ((byUser ? row.UID : row.GID) === selectedID && row.BaseDir === selectedDir) {
+							return { "class": "selected" };
+						}
 
-					return {};
-				}} perPage={perPage} filter={filter} onRowClick={(data: Usage) => {
-					const id = byUser ? data.UID : data.GID;
+						return {};
+					}}
+					perPage={perPage} filter={filter} onRowClick={(data: Usage) => {
+						const id = byUser ? data.UID : data.GID;
 
-					setSelectedDir(data.BaseDir);
-					setSelectedID(id);
-					setTreePath(data.BaseDir);
-				}} cols={[
-					{
-						title: "Path",
-						key: "BaseDir",
-						extra: (path, row) => ({
-							title: path +
-								(row.Owner ? "\nPI: " + row.Owner : "") +
-								"\n" + (byUser ? "User: " : "Group: ") + row.Name +
-								"\n" + (byUser ? "Groups: " : "Users: ") +
-								(byUser ? row.GIDs : row.UIDs)
-									.map(id => (byUser ? groupMap : userMap).get(id) ?? "")
-									.filter(n => n)
-									.join(", ")
-						}),
-						sortFn: sortBaseDirs
-					},
-					{
-						title: byUser ? "User" : "Group",
-						key: "Name",
-						extra: title => ({ title }),
-						sortFn: sortNames
-					},
-					{
-						title: "Space Used",
-						key: "UsageSize",
-						extra: used => ({ title: formatNumber(used) + " Bytes" }),
-						sortFn: sortUsageSize,
-						startReverse: true,
-						formatter: formatBytes
-					},
-					{
-						title: "Space Quota",
-						key: "QuotaSize",
-						extra: quota => ({ title: formatNumber(quota) + " Bytes" }),
-						sortFn: sortQuotaSize,
-						startReverse: true,
-						formatter: formatBytes
-					},
-					{
-						title: "Space Usage (%)",
-						key: "percentSize",
-						sortFn: sortPercentSize,
-						reverseFn: reverseSortPercentSize,
-						startReverse: true,
-						formatter: (p: number | undefined) => p ? formatNumber(p) : "0"
-					},
-					{
-						title: "Num. Files",
-						key: "UsageInodes",
-						sortFn: sortUsageInodes,
-						startReverse: true,
-						formatter: formatNumber
-					},
-					{
-						title: "Max Files",
-						key: "QuotaInodes",
-						sortFn: sortQuotaInodes,
-						startReverse: true,
-						formatter: formatNumber
-					},
-					{
-						title: "File Usage (%)",
-						key: "percentInodes",
-						sortFn: sortPercentInodes,
-						reverseFn: reverseSortPercentInodes,
-						startReverse: true,
-						formatter: (p: number | undefined) => p ? formatNumber(p) : "0"
-					},
-					{
-						title: "Last Modified (days)",
-						key: "Mtime",
-						extra: title => ({ title }),
-						sortFn: sortMTime,
-						formatter: asDaysAgoStr
-					},
-					{
-						title: "Status",
-						key: "status",
-						extra: title => ({ title }),
-						formatter: status => <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "1em", height: "1em" }}>
-							<use href={status === "OK" ? "#ok" : "#notok"} />
-						</svg>,
-						sortFn: sortStatus
-					}
-				]} table={usage} id="usageTable" className={"prettyTable " + (byUser ? "user" : "group")} />
+						setSelectedDir(data.BaseDir);
+						setSelectedID(id);
+						setTreePath(data.BaseDir);
+					}}
+					cols={[
+						{
+							title: "Path",
+							key: "BaseDir",
+							extra: (path, row) => ({
+								title: path +
+									(row.Owner ? "\nPI: " + row.Owner : "") +
+									"\n" + (byUser ? "User: " : "Group: ") + row.Name +
+									"\n" + (byUser ? "Groups: " : "Users: ") +
+									(byUser ? row.GIDs : row.UIDs)
+										.map(id => (byUser ? groupMap : userMap).get(id) ?? "")
+										.filter(n => n)
+										.join(", ")
+							}),
+							sortFn: sortBaseDirs
+						},
+						{
+							title: byUser ? "User" : "Group",
+							key: "Name",
+							extra: title => ({ title }),
+							sortFn: sortNames
+						},
+						{
+							title: "Space Used",
+							key: "UsageSize",
+							extra: used => ({ title: formatNumber(used) + " Bytes" }),
+							sortFn: sortUsageSize,
+							startReverse: true,
+							formatter: formatBytes
+						},
+						{
+							title: "Space Quota",
+							key: "QuotaSize",
+							extra: quota => ({ title: formatNumber(quota) + " Bytes" }),
+							sortFn: sortQuotaSize,
+							startReverse: true,
+							formatter: formatBytes
+						},
+						{
+							title: "Space Usage (%)",
+							key: "percentSize",
+							sortFn: sortPercentSize,
+							reverseFn: reverseSortPercentSize,
+							startReverse: true,
+							formatter: (p: number | undefined) => p ? formatNumber(p) : "0"
+						},
+						{
+							title: "Num. Files",
+							key: "UsageInodes",
+							sortFn: sortUsageInodes,
+							startReverse: true,
+							formatter: formatNumber
+						},
+						{
+							title: "Max Files",
+							key: "QuotaInodes",
+							sortFn: sortQuotaInodes,
+							startReverse: true,
+							formatter: formatNumber
+						},
+						{
+							title: "File Usage (%)",
+							key: "percentInodes",
+							sortFn: sortPercentInodes,
+							reverseFn: reverseSortPercentInodes,
+							startReverse: true,
+							formatter: (p: number | undefined) => p ? formatNumber(p) : "0"
+						},
+						{
+							title: "Last Modified (days)",
+							key: "Mtime",
+							extra: title => ({ title }),
+							sortFn: sortMTime,
+							formatter: asDaysAgoStr
+						},
+						{
+							title: "Status",
+							key: "status",
+							extra: title => ({ title }),
+							formatter: status => <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "1em", height: "1em" }}>
+								<use href={status === "OK" ? "#ok" : "#notok"} />
+							</svg>,
+							sortFn: sortStatus
+						}
+					]}
+					table={usage}
+					id="usageTable"
+					className={"prettyTable " + (byUser ? "user" : "group")}
+				/>
 				<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 				<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
 			</details>
