@@ -68,8 +68,8 @@ const MultiSelectComponent = ({
 
 	return <div className="multiSelect" id={`multi_${id}`}>
 		<ul>
-			<li><button id={id} disabled={disabled} onClick={() => filterRef.current?.focus()}>+</button></li>
-			{(disabled ? [] : Array.from(selected)).map(e => <li><button onClick={() => {
+			<li><button id={id} aria-haspopup="listbox" aria-label="Select/Deselect" disabled={disabled} onClick={() => filterRef.current?.focus()}>+</button></li>
+			{(disabled ? [] : Array.from(selected)).map(e => <li><button tabIndex={-1} aria-label={`Deselect ${e}`} onClick={() => {
 				selectedSet.delete(e);
 
 				const selected = Array.from(selectedSet);
@@ -81,7 +81,7 @@ const MultiSelectComponent = ({
 		</ul>
 		<div>
 			<div>
-				<input ref={filterRef} tabIndex={-1} value={filter} onKeyDown={e => {
+				<input ref={filterRef} aria-label="Filter List" tabIndex={-1} value={filter} onKeyDown={e => {
 					if (e.key === "Escape") {
 						(e.target as HTMLInputElement).blur();
 					} else if (e.key === "Enter") {
