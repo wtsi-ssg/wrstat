@@ -773,7 +773,7 @@ button.download:first-of-type {
 .tabs .selected {
   z-index: 2;
   cursor: default !important;
-  border-bottom-color: var(--tabSelectedBG);
+  border-bottom-color: var(--tabSelectedBG) !important;
   background: var(--tabSelectedBG) !important;
 }
 
@@ -783,6 +783,14 @@ button.download:first-of-type {
 
 .tabs .selected:after {
   box-shadow: -2px 2px 0 var(--tabSelectedBG);
+}
+
+#historyTabs,
+#historyTabs:after,
+#historyTabs>li,
+#historyTabs>li:before,
+#historyTabs>li:after {
+  border-color: var(--subtleBorder);
 }
 
 .exceed,
