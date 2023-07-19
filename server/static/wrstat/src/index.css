@@ -738,7 +738,8 @@ button.download:first-of-type {
   border-color: currentColor;
 }
 
-.tabs>li:hover {
+.tabs>li:hover,
+.tabs>li:focus {
   cursor: pointer;
   outline: none;
   background: linear-gradient(to bottom, var(--tabHoverBGFrom) 1%, var(--tabHoverBGMid) 50%, var(--tabHoverBGTo) 100%);
