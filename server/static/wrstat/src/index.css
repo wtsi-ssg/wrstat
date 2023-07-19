@@ -872,8 +872,8 @@ th,
     --tabFont: currentColor;
     --tabBGFrom: #ececec;
     --tabBGTo: #d1d1d1;
-    --tabHoverBGFrom: #faa;
-    --tabHoverBGMid: #ffecec;
+    --tabHoverBGFrom: var(--inputAccent);
+    --tabHoverBGMid: color-mix(in srgb, var(--inputAccent) 25%, #fff);
     --tabHoverBGTo: #d1d1d1;
     --tabShadow: #d1d1d1;
     --tabSelectedBG: var(--background);
@@ -940,8 +940,8 @@ th,
     --tabFont: currentColor;
     --tabBGFrom: #777;
     --tabBGTo: #111;
-    --tabHoverBGFrom: #f22;
-    --tabHoverBGMid: #a77;
+    --tabHoverBGFrom: var(--inputAccent);
+    --tabHoverBGMid: color-mix(in srgb, var(--inputAccent) 25%, #000);
     --tabHoverBGTo: #111;
     --tabShadow: #2e2e2e;
     --tabSelectedBG: var(--background);
