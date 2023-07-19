@@ -440,17 +440,17 @@ rect+use+text {
   pointer-events: none;
 }
 
-.multiInput ul {
+.multiSelect ul {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.multiInput>ul li {
+.multiSelect>ul li {
   display: inline-block;
 }
 
-.multiInput>ul li:not(:first-child) button {
+.multiSelect>ul li:not(:first-child) button {
   margin-left: 1em;
   padding: 0 0.5em;
   cursor: cell;
@@ -458,28 +458,28 @@ rect+use+text {
   background-color: var(--background);
 }
 
-.multiInput>div {
+.multiSelect>div {
   height: 0px;
   position: relative;
   z-index: 10;
 }
 
-.multiInput>div:not(:focus-within) {
+.multiSelect>div:not(:focus-within) {
   overflow: hidden;
 }
 
-.multiInput>div>div {
+.multiSelect>div>div {
   position: absolute;
-  background-color: var(--multiInputBG);
-  color: var(--multiInputFont);
+  background-color: var(--multiSelectBG);
+  color: var(--multiSelectFont);
 }
 
-.multiInput>div>div>input {
+.multiSelect>div>div>input {
   box-sizing: border-box;
   width: 100%;
 }
 
-.multiInput>div>div ul {
+.multiSelect>div>div ul {
   max-height: 20em;
   overflow-y: scroll;
   border: 0 1px 1px 1px solid currentColor;
@@ -580,7 +580,7 @@ button.download:first-of-type {
   content: ":";
 }
 
-.treeFilter>.multiInput {
+.treeFilter>.multiSelect {
   grid-column: 2 / span 3;
 }
 
@@ -802,7 +802,7 @@ summary,
 label,
 text,
 th,
-.multiInput,
+.multiSelect,
 .minmax {
   user-select: none;
 }
@@ -829,8 +829,8 @@ th,
     --minmaxStaticFont: currentColor;
     --minmaxSlide: #888;
 
-    --multiInputBG: var(--background);
-    --multiInputFont: currentColor;
+    --multiSelectBG: var(--background);
+    --multiSelectFont: currentColor;
 
     --paginationClickableBG: var(--inputAccent);
     --paginationClickableFont: #fff;
@@ -897,8 +897,8 @@ th,
     --minmaxStaticFont: currentColor;
     --minmaxSlide: #666;
 
-    --multiInputBG: var(--background);
-    --multiInputFont: currentColor;
+    --multiSelectBG: var(--background);
+    --multiSelectFont: currentColor;
 
     --paginationClickableBG: var(--inputAccent);
     --paginationClickableFont: #000;
