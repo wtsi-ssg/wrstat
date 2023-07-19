@@ -28,6 +28,7 @@ type Params<T> = {
 	className?: string;
 	id: string;
 	style?: CSSProperties;
+	caption?: string;
 }
 
 export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filter: Filter<T>) => {
@@ -60,7 +61,6 @@ export const fitlerTableRows = <T extends Record<string, any>>(table: T[], filte
 };
 
 const noopFormatter = (a: { toString(): string }) => a + "",
-	noop = () => { },
 	noopSort = () => 0,
 	reverseSort = <T extends Record<string, any>,>(fn: (a: T, b: T) => number) => (a: T, b: T) => fn(b, a),
 	getSorter = <T extends Record<string, any>>(col: Column<T>, reverse = false) => {
@@ -105,9 +105,20 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 				}
 			}
 
-		return rows.map(row => <tr onMouseDown={onmousedown} onMouseUp={onmouseupFn(row)} {...(rowExtra?.(row) ?? {})}>
-			{cols.map(col => <td {...(col.extra?.(row[col.key], row) ?? {})}>{(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)}
-		</tr>)
+		return rows.map(row => <tr
+			role="button"
+			onKeyPress={e => {
+				if (e.key === "Enter") {
+					onRowClick(row);
+				}
+			}}
+			onMouseDown={onmousedown}
+			onMouseUp={onmouseupFn(row)}
+			{...(rowExtra?.(row) ?? {})}
+		>
+			{cols.map(col => <td aria-label={col.title} {...(col.extra?.(row[col.key], row) ?? {})} > {(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)
+			}
+		</tr >)
 	},
 	TableComponent = <T extends Record<string, any>>({
 		table,
@@ -117,6 +128,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 		filter = {},
 		id,
 		rowExtra,
+		caption,
 		...additional
 	}: Params<T>) => {
 		const [page, setPage] = useSavedState(id + "Page", 0),
@@ -133,20 +145,32 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 
 		return <>
 			<Pagination currentPage={currPage} onClick={pageClicker} totalPages={maxPages} />
-			<table id={id} {...additional}>
+			<table aria-label={caption} tabIndex={0} id={id} {...additional}>
 				<colgroup>
 					{cols.map(() => <col />)}
 				</colgroup>
 				<thead>
 					<tr>
-						{cols.map((c, n) => <th className={c.sortFn ? "sortable" + (sortBy === n ? " sort" + (sortReverse ? " reverse" : "") : "") : ""} onClick={c.sortFn ? () => {
-							if (sortBy === n) {
-								setSortReverse(!sortReverse);
-							} else {
-								setSortBy(n);
-								setSortReverse(cols[n].startReverse ?? false);
-							}
-						} : noop}>{c.title}</th>)}
+						{cols.map((c, n) => <th
+							scope="col"
+							role="button"
+							tabIndex={0}
+							aria-sort={sortBy === n ? sortReverse ? "descending" : "ascending" : undefined}
+							className={c.sortFn ? "sortable" + (sortBy === n ? " sort" + (sortReverse ? " reverse" : "") : "") : ""}
+							onKeyPress={e => {
+								if (e.key === "Enter") {
+									(e.target as HTMLElement)?.click();
+								}
+							}}
+							onClick={c.sortFn ? () => {
+								if (sortBy === n) {
+									setSortReverse(!sortReverse);
+								} else {
+									setSortBy(n);
+									setSortReverse(cols[n].startReverse ?? false);
+								}
+							} : undefined}
+						>{c.title}</th>)}
 					</tr>
 				</thead>
 				<tbody>
