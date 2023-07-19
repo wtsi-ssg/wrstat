@@ -584,8 +584,13 @@ button.download:first-of-type {
   grid-column: 2 / span 3;
 }
 
+#treeBreadcrumbs,
+#disktree {
+  padding-left: 1em;
+}
+
 #disktree .treeFilter {
-  margin-right: 1.5em;
+  margin-right: 2em;
 }
 
 #scatter {
@@ -621,7 +626,6 @@ button.download:first-of-type {
 
 .age_2years {
   background-color: rgba(215, 48, 39, 0.75);
-  border-bottom-left-radius: 4px;
 }
 
 .age_1year {
