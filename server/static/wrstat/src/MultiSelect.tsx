@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useSavedState } from "./state";
 
 type MultiSelectParams = {
@@ -31,7 +31,20 @@ const MultiSelectComponent = ({
 	const filterRef = useRef<HTMLInputElement>(null),
 		[filter, setFilter] = useState(""),
 		selectedSet = new Set(selected),
-		filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase()));
+		filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase())),
+		keypress = (e: KeyboardEvent) => {
+			if (e.key === "Tab") {
+				const elmPP = (e.target as HTMLInputElement)?.parentElement?.parentElement,
+					elm = elmPP?.[e.shiftKey ? "previousElementSibling" : "nextElementSibling"]?.firstElementChild?.firstElementChild ??
+						elmPP?.parentElement?.parentElement?.firstElementChild;
+
+				if (elm instanceof HTMLInputElement) {
+					elm.focus();
+
+					e.preventDefault();
+				}
+			}
+		};
 
 	listener?.((values: string[], deleted: boolean) => {
 		const valueSet = new Set(selected);
@@ -68,7 +81,7 @@ const MultiSelectComponent = ({
 		</ul>
 		<div>
 			<div>
-				<input ref={filterRef} value={filter} onKeyDown={e => {
+				<input ref={filterRef} tabIndex={-1} value={filter} onKeyDown={e => {
 					if (e.key === "Escape") {
 						(e.target as HTMLInputElement).blur();
 					} else if (e.key === "Enter") {
@@ -81,6 +94,14 @@ const MultiSelectComponent = ({
 								setSelected(selected);
 							}
 						}
+					} else if (e.key === "Tab") {
+						e.preventDefault();
+
+						const input = (e.target as HTMLElement)?.nextElementSibling?.[e.shiftKey ? "lastElementChild" : "firstElementChild"]?.firstElementChild?.firstElementChild;
+
+						if (input instanceof HTMLInputElement) {
+							input.focus();
+						}
 					}
 				}} onChange={e => setFilter(e.target.value)} />
 				<ul tabIndex={-1} onKeyDown={e => {
@@ -90,7 +111,7 @@ const MultiSelectComponent = ({
 				}}>
 					{
 						filteredList.map(e => <li>
-							<label><input type="checkbox" checked={selectedSet.has(e)} onChange={() => {
+							<label><input tabIndex={-1} type="checkbox" checked={selectedSet.has(e)} onChange={() => {
 								let deleted: null | string = null;
 
 								if (selectedSet.has(e)) {
@@ -105,7 +126,7 @@ const MultiSelectComponent = ({
 								if (onchange(selected, deleted) !== false) {
 									setSelected(selected);
 								}
-							}} />{e}</label>
+							}} onKeyDown={keypress} />{e}</label>
 						</li>)
 					}
 				</ul>
