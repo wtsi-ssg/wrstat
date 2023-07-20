@@ -211,9 +211,11 @@ rect+use+text {
 }
 
 #usageTable tbody td:nth-child(3),
+#usageTable tfoot td:nth-child(3),
 #usageTable tbody td:nth-child(4),
 #usageTable tbody td:nth-child(5),
 #usageTable tbody td:nth-child(6),
+#usageTable tfoot td:nth-child(6),
 #usageTable tbody td:nth-child(7),
 #usageTable tbody td:nth-child(8),
 #usageTable tbody td:nth-child(9),
@@ -227,6 +229,11 @@ rect+use+text {
 #usageTable tbody td:nth-child(10) {
   text-align: center;
   white-space: nowrap;
+}
+
+#usageTable tfoot>tr>td:not(:empty) {
+  border-top: 3px double currentColor;
+  padding: 0.5em 1em;
 }
 
 #historyTable {

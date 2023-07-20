@@ -11,6 +11,7 @@ type Column<T> = {
 		sortFn?: (a: T, b: T) => number;
 		reverseFn?: (a: T, b: T) => number;
 		startReverse?: boolean;
+		sum?: (vals: T[K][]) => string;
 	}
 }[Extract<keyof T, string>];
 
@@ -148,6 +149,8 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 			rows.sort(getSorter(cols[sortBy], sortReverse));
 		}
 
+		const pagedRows = rows.slice(currPage * perPage, (currPage + 1) * perPage);
+
 		return <>
 			<Pagination currentPage={currPage} onClick={pageClicker} totalPages={maxPages} />
 			<table aria-label={caption} tabIndex={0} id={id} {...additional}>
@@ -180,8 +183,22 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 					</tr>
 				</thead>
 				<tbody>
-					{makeRows(rows.slice(currPage * perPage, (currPage + 1) * perPage), cols, onRowClick, rowExtra)}
+					{makeRows(pagedRows, cols, onRowClick, rowExtra)}
 				</tbody>
+				{
+					cols.some(c => c.sum) ?
+						<tfoot>
+							<tr>
+								{cols.map(c => <td aria-label={`Total ${c.title}`}>{
+									c.sum ?
+										c.sum(pagedRows.map(row => row[c.key])) :
+										<></>
+								}</td>)}
+							</tr>
+						</tfoot>
+						:
+						<></>
+				}
 			</table>
 		</>
 	};

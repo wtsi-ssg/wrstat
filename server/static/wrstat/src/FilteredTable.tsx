@@ -1,5 +1,4 @@
 import type { Usage } from './rpc';
-import type { ChangeEvent } from "react";
 import { downloadGroups, downloadUsers } from './download';
 import { asDaysAgoStr, formatBytes, formatNumber } from './format';
 import { useSavedState } from './state';
@@ -39,9 +38,9 @@ const stringSort = new Intl.Collator().compare,
 			<details open className="boxed" id="usage">
 				<summary><h1>{byUser ? "User" : "Group"} Base Directories</h1></summary>
 				<span id="perPage">Show
-					<select defaultValue={perPage} onChange={(e: ChangeEvent<HTMLSelectElement>) => { setPerPage(parseInt(e.target.value) ?? 10) }}>
+					<select value={perPage} onChange={e => { setPerPage(parseInt(e.target.value) ?? 10) }}>
 						<option>10</option>
-						<option>25</option>
+						<option>20</option>
 						<option>50</option>
 						<option>100</option>
 					</select>
@@ -90,7 +89,8 @@ const stringSort = new Intl.Collator().compare,
 							extra: used => ({ title: formatNumber(used) + " Bytes" }),
 							sortFn: sortUsageSize,
 							startReverse: true,
-							formatter: formatBytes
+							formatter: formatBytes,
+							sum: values => formatBytes(values.reduce((a, b) => a + b, 0))
 						},
 						{
 							title: "Space Quota",
@@ -113,7 +113,8 @@ const stringSort = new Intl.Collator().compare,
 							key: "UsageInodes",
 							sortFn: sortUsageInodes,
 							startReverse: true,
-							formatter: formatNumber
+							formatter: formatNumber,
+							sum: values => formatNumber(values.reduce((a, b) => a + b, 0))
 						},
 						{
 							title: "Max Files",
