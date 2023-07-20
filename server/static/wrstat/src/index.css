@@ -996,7 +996,7 @@ th,
     --tabBGFrom: #777;
     --tabBGTo: #111;
     --tabHoverBGFrom: var(--inputAccent);
-    --tabHoverBGMid: color-mix(in srgb, var(--inputAccent) 25%, #000);
+    --tabHoverBGMid: color-mix(in srgb, var(--inputAccent) 50%, #000);
     --tabHoverBGTo: #111;
     --tabShadow: #2e2e2e;
     --tabSelectedBG: var(--background);
