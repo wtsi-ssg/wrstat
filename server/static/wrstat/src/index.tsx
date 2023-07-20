@@ -48,7 +48,7 @@ auth.then(username => Promise.all([
 	RPC.getUserUsageData(),
 	RPC.getChildren({ path: "/" })
 ])
-	.then(([groupUsage, userUsage, { areas }]) => createRoot(document.body).render(
+	.then(([groupUsage, userUsage, { areas }]) => createRoot(document.body.firstElementChild!).render(
 		<StrictMode>
 			<svg xmlns="http://www.w3.org/2000/svg" style={{ width: 0, height: 0 }}>
 				<symbol id="ok" viewBox="0 0 100 100">
