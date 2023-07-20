@@ -571,8 +571,19 @@ button.download:first-of-type {
   padding: 1em;
 }
 
-.treeFilter h3 {
+#disktree .treeFilter .title {
   grid-column: 1 / span 4;
+  font-size: 1em;
+  text-align: center;
+  font-weight: bold;
+}
+
+#disktree .treeFilter .title:not(:first-child) {
+  margin-top: 1em;
+}
+
+#disktree .treeFilter .title {
+  margin-bottom: 1em;
 }
 
 .treeFilter label {

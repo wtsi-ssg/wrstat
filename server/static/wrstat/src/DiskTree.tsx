@@ -183,13 +183,13 @@ const colours = [
 						</table>
 					</div>
 					<div className="treeFilter">
-						<h3>Colour By</h3>
+						<div className="title">Colour By</div>
 						<label htmlFor="aTime">Access Time</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
 						<label htmlFor="mTime">Modified Time</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
-						<h3>Area Represents</h3>
+						<div className="title">Area Represents</div>
 						<label htmlFor="useSize">File Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
 						<label htmlFor="useCount">File Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
-						<h3>Filter</h3>
+						<div className="title">Filter</div>
 						<label htmlFor="filetypes">File Types: </label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
 						<label htmlFor="sinceAccess">Time Since Access</label>
 						<select onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
