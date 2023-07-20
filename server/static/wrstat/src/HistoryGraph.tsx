@@ -73,21 +73,22 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 		yScale = (height - paddingYT - paddingYB) / maxAmount,
 		maxY = maxAmount * yScale;
 
-	let first = true;
+	let first = true,
+		n = 0;
 
 	for (const h of history) {
 		const d = new Date(h.Date).valueOf(),
 			x = dateToX(d),
 			quotaY = amountToY(h.Quota),
 			sizeY = amountToY(h.Usage),
-			quotaBox = infoBoxes.push(<div key={`quota`} style={{ left: x + "px", top: quotaY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
+			quotaBox = infoBoxes.push(<div key={`quota_${n}`} style={{ left: x + "px", top: quotaY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
 				{yFormatter(h.Quota)}
 				<br />
 				{secondaryFormatter(h.Quota)}
 				<br />
 				{formatDate(h.Date)}
 			</div>) - 1,
-			sizeBox = infoBoxes.push(<div style={{ left: x + "px", top: sizeY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
+			sizeBox = infoBoxes.push(<div key={`amount_${n}`} style={{ left: x + "px", top: sizeY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
 				{yFormatter(h.Usage)}
 				<br />
 				{secondaryFormatter(h.Usage)}
@@ -103,8 +104,8 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 		quotaPath += `${x},${quotaY}`;
 		usagePath += `${x},${sizeY}`;
 
-		quotaPoints.push(<use href="#point" style={{ fill: "var(--graphQuota)" }} x={x} y={quotaY} onMouseOver={() => setInfoBox(quotaBox)} onMouseOut={() => setInfoBox(-1)} />)
-		usagePoints.push(<use href="#point" style={{ fill: "var(--graphUsage)" }} x={x} y={sizeY} onMouseOver={() => setInfoBox(sizeBox)} onMouseOut={() => setInfoBox(-1)} />)
+		quotaPoints.push(<use key={`point_quota_${n}`} href="#point" style={{ fill: "var(--graphQuota)" }} x={x} y={quotaY} onMouseOver={() => setInfoBox(quotaBox)} onMouseOut={() => setInfoBox(-1)} />)
+		usagePoints.push(<use key={`point_usage_${n++}`} href="#point" style={{ fill: "var(--graphUsage)" }} x={x} y={sizeY} onMouseOver={() => setInfoBox(sizeBox)} onMouseOut={() => setInfoBox(-1)} />)
 
 		first = false;
 	}
@@ -145,16 +146,16 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 			</defs>
 			<rect x={paddingXL} y={paddingYT} width={width - paddingXL - paddingXR} height={height - paddingYT - paddingYB} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
 			{
-				Array.from({ length: 4 }, (_, n) => <line x1={paddingXL} x2={width - paddingXR} y1={amountToY((n + 1) * maxAmount / 5)} y2={amountToY((n + 1) * maxAmount / 5)} className="graphLines" />)
+				Array.from({ length: 4 }, (_, n) => <line key={`graph_lh_${n}`} x1={paddingXL} x2={width - paddingXR} y1={amountToY((n + 1) * maxAmount / 5)} y2={amountToY((n + 1) * maxAmount / 5)} className="graphLines" />)
 			}
 			{
-				Array.from({ length: 6 }, (_, n) => <text x={paddingXL - 3} y={amountToY(maxAmount - (n * maxAmount) / 5) + 5} fill="currentColor" textAnchor="end"><title>{secondaryFormatter(maxAmount * (5 - n) / 5)}</title>{yFormatter(maxAmount * (5 - n) / 5)}</text>)
+				Array.from({ length: 6 }, (_, n) => <text key={`graph_th_${n}`} x={paddingXL - 3} y={amountToY(maxAmount - (n * maxAmount) / 5) + 5} fill="currentColor" textAnchor="end"><title>{secondaryFormatter(maxAmount * (5 - n) / 5)}</title>{yFormatter(maxAmount * (5 - n) / 5)}</text>)
 			}
 			{
-				Array.from({ length: 4 }, (_, n) => <line x1={dateToX(minDate + (n + 1) * dateDiff / 5)} x2={dateToX(minDate + (n + 1) * dateDiff / 5)} y1={paddingYT} y2={height - paddingYB} className="graphLines" />)
+				Array.from({ length: 4 }, (_, n) => <line key={`graph_lv_${n}`} x1={dateToX(minDate + (n + 1) * dateDiff / 5)} x2={dateToX(minDate + (n + 1) * dateDiff / 5)} y1={paddingYT} y2={height - paddingYB} className="graphLines" />)
 			}
 			{
-				Array.from({ length: 6 }, (_, n) => <text transform={`translate(${dateToX(minDate + n * dateDiff / 5)} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)
+				Array.from({ length: 6 }, (_, n) => <text key={`graph_tv_${n}`} transform={`translate(${dateToX(minDate + n * dateDiff / 5)} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)
 			}
 			<path d={quotaPath} style={{ stroke: "var(--graphQuota)" }} fill="none" />
 			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Quota)} L${dateToX(projectDate)},${amountToY(latestHistory.Quota)}`} style={{ stroke: "var(--graphQuota)" }} fill="none" strokeWidth="3" strokeDasharray="3" />
