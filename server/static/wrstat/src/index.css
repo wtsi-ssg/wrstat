@@ -470,8 +470,9 @@ rect+use+text {
   margin-left: 1em;
   padding: 0 0.5em;
   cursor: pointer;
-  border: 1px solid currentColor;
+  border: 1px solid var(--colour);
   background-color: var(--background);
+  color: var(--colour);
   position: relative;
 }
 
