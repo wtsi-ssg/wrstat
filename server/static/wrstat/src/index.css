@@ -46,8 +46,8 @@ input[type=checkbox] {
 
 #usageTable {
   table-layout: fixed;
-  width: 100%;
-  padding: 0 1em;
+  width: calc(100% - 2em);
+  margin: 4em 1em 1em 1em;
 }
 
 caption {
@@ -152,6 +152,8 @@ rect+use+text {
   clear: both;
   border-collapse: separate;
   border-spacing: 0;
+  border: 1px solid var(--tableBorder);
+  border-radius: 4px;
 }
 
 .prettyTable thead th {
@@ -228,13 +230,9 @@ rect+use+text {
 }
 
 #historyTable {
-  margin-top: 1em;
-  border-collapse: collapse;
   overflow: hidden;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
   width: calc(100% - 2em);
-  margin: 0 1em;
+  margin: 1em 1em;
 }
 
 .pagination {
@@ -325,6 +323,7 @@ rect+use+text {
   background-size: 1.5em 1.5em;
   padding: 0.5em 1em 0.5em 3.5em;
   margin-left: 1em;
+  margin-bottom: 1em;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M40,0 v35 h-20 l30,30 l30,-30 h-20 v-35 z M0,70 v25 h100 v-25 h-30 l-20,15 l-20,-15 z' fill='%23000' stroke-linejoin='round' stroke-width='5' stroke='%23000' /%3E%3C/svg%3E");
 }
 
@@ -894,6 +893,7 @@ th,
     --paginationNonClickableFont: currentColor;
     --paginationNonClickableBorder: currentColor;
 
+    --tableBorder: #ccc;
     --tableHoverBG: #c0cee9;
     --tableHoverFont: currentColor;
     --tableSelectedBG: #b0bed9;
@@ -962,6 +962,7 @@ th,
     --paginationNonClickableFont: currentColor;
     --paginationNonClickableBorder: currentColor;
 
+    --tableBorder: #aaa;
     --tableHoverBG: #445;
     --tableHoverFont: currentColor;
     --tableSelectedBG: #446;
