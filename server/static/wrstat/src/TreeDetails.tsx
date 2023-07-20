@@ -9,6 +9,7 @@ const TreedetailsComponent = ({ details, ...rest }: { details: Child | null } & 
 	return <div id="details" {...rest}>
 		{details.path}
 		<table>
+			<caption>Path Details</caption>
 			<tbody>
 				<tr>
 					<th>Size</th>
