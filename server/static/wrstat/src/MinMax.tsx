@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { type KeyboardEvent, useState, useLayoutEffect } from "react";
 
 type MinMaxParams = {
 	min?: number;
@@ -43,7 +43,7 @@ const MinmaxComponent = ({
 		maxValue = max;
 	}
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		setSliderMin(Math.max(min, minValue));
 		setSliderMax(Math.min(max, maxValue));
 	}, [minValue, maxValue]);
