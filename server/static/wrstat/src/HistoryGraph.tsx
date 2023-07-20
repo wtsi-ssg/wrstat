@@ -81,17 +81,31 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 			x = dateToX(d),
 			quotaY = amountToY(h.Quota),
 			sizeY = amountToY(h.Usage),
+			qFormatted = yFormatter(h.Quota),
+			qSFormatted = secondaryFormatter(h.Quota),
 			quotaBox = infoBoxes.push(<div key={`quota_${n}`} style={{ left: x + "px", top: quotaY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
-				{yFormatter(h.Quota)}
-				<br />
-				{secondaryFormatter(h.Quota)}
+				{qFormatted}
+				{qFormatted !== qSFormatted ?
+					<>
+						<br />
+						{qSFormatted}
+					</> :
+					<></>
+				}
 				<br />
 				{formatDate(h.Date)}
 			</div>) - 1,
-			sizeBox = infoBoxes.push(<div key={`amount_${n}`} style={{ left: x + "px", top: sizeY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
-				{yFormatter(h.Usage)}
-				<br />
-				{secondaryFormatter(h.Usage)}
+			uFormatted = yFormatter(h.Usage),
+			uSFormatted = secondaryFormatter(h.Usage),
+			usageBox = infoBoxes.push(<div key={`amount_${n}`} style={{ left: x + "px", top: sizeY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
+				{uFormatted}
+				{uFormatted !== uSFormatted ?
+					<>
+						<br />
+						{uSFormatted}
+					</> :
+					<></>
+				}
 				<br />
 				{formatDate(h.Date)}
 			</div>) - 1;
@@ -105,7 +119,7 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 		usagePath += `${x},${sizeY}`;
 
 		quotaPoints.push(<use key={`point_quota_${n}`} href="#point" style={{ fill: "var(--graphQuota)" }} x={x} y={quotaY} onMouseOver={() => setInfoBox(quotaBox)} onMouseOut={() => setInfoBox(-1)} />)
-		usagePoints.push(<use key={`point_usage_${n++}`} href="#point" style={{ fill: "var(--graphUsage)" }} x={x} y={sizeY} onMouseOver={() => setInfoBox(sizeBox)} onMouseOut={() => setInfoBox(-1)} />)
+		usagePoints.push(<use key={`point_usage_${n++}`} href="#point" style={{ fill: "var(--graphUsage)" }} x={x} y={sizeY} onMouseOver={() => setInfoBox(usageBox)} onMouseOut={() => setInfoBox(-1)} />)
 
 		first = false;
 	}
