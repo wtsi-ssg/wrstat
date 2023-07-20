@@ -63,42 +63,48 @@ const pathJoin = (base: string, sub: string) => {
 
 		return <details open className="boxed">
 			<summary><h1>Sub-Directories</h1></summary>
-			<Table id="historyTable" table={subdirs} className="prettyTable" onRowClick={(row: SubDir) => setPath(pathJoin(path, row.SubDir))} cols={[
-				{
-					title: "Path",
-					key: "SubDir",
-					sortFn: sorters[0],
-					formatter: (subdir: string) => pathJoin(path, subdir)
-				},
-				{
-					title: "Number of Files",
-					key: "NumFiles",
-					sortFn: sorters[1],
-					startReverse: true,
-					formatter: formatNumber
-				},
-				{
-					title: "Size",
-					key: "SizeFiles",
-					extra: size => ({ title: formatNumber(size) + " Bytes" }),
-					sortFn: sorters[2],
-					startReverse: true,
-					formatter: formatBytes
-				},
-				{
-					title: "Last Modified (days)",
-					key: "LastModified",
-					extra: title => ({ title }),
-					sortFn: sorters[3],
-					startReverse: true,
-					formatter: asDaysAgoStr
-				},
-				{
-					title: "File Usage",
-					key: "FileUsage",
-					formatter: (files: Record<number, number>) => Object.entries(files).sort((a, b) => b[1] - a[1]).map(e => `${fileTypes[parseInt(e[0])]}: ${formatBytes(e[1])}`).join(", ")
-				}
-			]} />
+			<Table
+				id="historyTable"
+				table={subdirs}
+				className="prettyTable"
+				onRowClick={(row: SubDir) => setPath(pathJoin(path, row.SubDir))}
+				caption="Sub Directories"
+				cols={[
+					{
+						title: "Path",
+						key: "SubDir",
+						sortFn: sorters[0],
+						formatter: (subdir: string) => pathJoin(path, subdir)
+					},
+					{
+						title: "Number of Files",
+						key: "NumFiles",
+						sortFn: sorters[1],
+						startReverse: true,
+						formatter: formatNumber
+					},
+					{
+						title: "Size",
+						key: "SizeFiles",
+						extra: size => ({ title: formatNumber(size) + " Bytes" }),
+						sortFn: sorters[2],
+						startReverse: true,
+						formatter: formatBytes
+					},
+					{
+						title: "Last Modified (days)",
+						key: "LastModified",
+						extra: title => ({ title }),
+						sortFn: sorters[3],
+						startReverse: true,
+						formatter: asDaysAgoStr
+					},
+					{
+						title: "File Usage",
+						key: "FileUsage",
+						formatter: (files: Record<number, number>) => Object.entries(files).sort((a, b) => b[1] - a[1]).map(e => `${fileTypes[parseInt(e[0])]}: ${formatBytes(e[1])}`).join(", ")
+					}
+				]} />
 		</details>
 	};
 
