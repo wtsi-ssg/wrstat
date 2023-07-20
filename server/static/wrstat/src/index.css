@@ -822,9 +822,11 @@ button.download:first-of-type {
   border-color: var(--subtleBorder);
 }
 
-summary~h2,
-summary~h3 {
+summary~h2:before,
+summary~h3:before {
   padding-left: 1em;
+  content: " ";
+  font-size: 14px;
 }
 
 .exceed,
