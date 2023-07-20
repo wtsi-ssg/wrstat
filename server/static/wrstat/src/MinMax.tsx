@@ -103,7 +103,7 @@ const MinmaxComponent = ({
 			onchange(sliderMin, sliderMax);
 		},
 		onkeydown = (e: KeyboardEvent) => {
-			if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" || e.altKey || e.metaKey || e.ctrlKey) {
+			if ((e.key !== "ArrowLeft" && e.key !== "ArrowRight") || e.altKey || e.metaKey || e.ctrlKey) {
 				return;
 			}
 
