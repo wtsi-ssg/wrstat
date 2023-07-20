@@ -703,6 +703,7 @@ button.download:first-of-type {
 #treeKey caption {
   padding-bottom: 5px;
   text-align: left;
+  visibility: visible;
 }
 
 #treeKey span {
