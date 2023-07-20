@@ -168,8 +168,8 @@ const colours = [
 						<div className="title">Filter</div>
 						<label htmlFor="filetypes">File Types</label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
 						<label htmlFor="sinceAccess">Time Since Access</label>
-						<select id="sinceAccess" onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
-							{timesSinceAccess.map(([l, t]) => <option selected={sinceLastAccess === t} value={t}>{l}</option>)}
+						<select defaultValue={sinceLastAccess} id="sinceAccess" onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
+							{timesSinceAccess.map(([l, t]) => <option value={t}>{l}</option>)}
 						</select>
 					</div>
 					<ul id="treeBreadcrumbs">{breadcrumbs}</ul>

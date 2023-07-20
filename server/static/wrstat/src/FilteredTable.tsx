@@ -39,18 +39,18 @@ const stringSort = new Intl.Collator().compare,
 			<details open className="boxed" id="usage">
 				<summary><h1>{byUser ? "User" : "Group"} Base Directories</h1></summary>
 				<span id="perPage">Show
-					<select onChange={(e: ChangeEvent<HTMLSelectElement>) => { setPerPage(parseInt(e.target.value) ?? 10) }}>
-						<option selected={perPage === 10}>10</option>
-						<option selected={perPage === 25}>25</option>
-						<option selected={perPage === 50}>50</option>
-						<option selected={perPage === 100}>100</option>
+					<select defaultValue={perPage} onChange={(e: ChangeEvent<HTMLSelectElement>) => { setPerPage(parseInt(e.target.value) ?? 10) }}>
+						<option>10</option>
+						<option>25</option>
+						<option>50</option>
+						<option>100</option>
 					</select>
 					Entries</span>
 				<Table
 					caption={`${byUser ? "User" : " Group"} Usage Table`}
 					rowExtra={row => {
 						if ((byUser ? row.UID : row.GID) === selectedID && row.BaseDir === selectedDir) {
-							return { "class": "selected" };
+							return { "className": "selected" };
 						}
 
 						return {};

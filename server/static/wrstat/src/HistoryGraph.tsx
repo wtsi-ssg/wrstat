@@ -148,18 +148,18 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 				Array.from({ length: 4 }, (_, n) => <line x1={paddingXL} x2={width - paddingXR} y1={amountToY((n + 1) * maxAmount / 5)} y2={amountToY((n + 1) * maxAmount / 5)} className="graphLines" />)
 			}
 			{
-				Array.from({ length: 6 }, (_, n) => <text x={paddingXL - 3} y={amountToY(maxAmount - (n * maxAmount) / 5) + 5} fill="currentColor" text-anchor="end"><title>{secondaryFormatter(maxAmount * (5 - n) / 5)}</title>{yFormatter(maxAmount * (5 - n) / 5)}</text>)
+				Array.from({ length: 6 }, (_, n) => <text x={paddingXL - 3} y={amountToY(maxAmount - (n * maxAmount) / 5) + 5} fill="currentColor" textAnchor="end"><title>{secondaryFormatter(maxAmount * (5 - n) / 5)}</title>{yFormatter(maxAmount * (5 - n) / 5)}</text>)
 			}
 			{
 				Array.from({ length: 4 }, (_, n) => <line x1={dateToX(minDate + (n + 1) * dateDiff / 5)} x2={dateToX(minDate + (n + 1) * dateDiff / 5)} y1={paddingYT} y2={height - paddingYB} className="graphLines" />)
 			}
 			{
-				Array.from({ length: 6 }, (_, n) => <text transform={`translate(${dateToX(minDate + n * dateDiff / 5)} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" text-anchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)
+				Array.from({ length: 6 }, (_, n) => <text transform={`translate(${dateToX(minDate + n * dateDiff / 5)} ${height - paddingYB + 15}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatDate(minDate + dateDiff * n / 5)}</text>)
 			}
 			<path d={quotaPath} style={{ stroke: "var(--graphQuota)" }} fill="none" />
-			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Quota)} L${dateToX(projectDate)},${amountToY(latestHistory.Quota)}`} style={{ stroke: "var(--graphQuota)" }} fill="none" stroke-width="3" stroke-dasharray="3" />
+			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Quota)} L${dateToX(projectDate)},${amountToY(latestHistory.Quota)}`} style={{ stroke: "var(--graphQuota)" }} fill="none" strokeWidth="3" strokeDasharray="3" />
 			<path d={usagePath} style={{ stroke: "var(--graphUsage)" }} fill="none" />
-			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Usage)} L${dateToX(x)},${amountToY(y)}`} style={{ stroke: "var(--graphUsage)" }} fill="none" stroke-width="3" stroke-dasharray="3" />
+			<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Usage)} L${dateToX(x)},${amountToY(y)}`} style={{ stroke: "var(--graphUsage)" }} fill="none" strokeWidth="3" strokeDasharray="3" />
 			{quotaPoints}
 			{usagePoints}
 			{
