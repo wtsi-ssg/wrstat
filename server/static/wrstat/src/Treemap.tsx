@@ -70,14 +70,14 @@ const phi = (1 + Math.sqrt(5)) / 2,
 							href="#lock"
 							width="0.5em"
 							height="0.5em"
-							style={{ fontSize: `${minScale * 0.9}px` }} /> :
+							style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} /> :
 						<use
 							x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
 							y={top + (rowHeight - minScale * 0.40) / 2}
 							href="#emptyDirectory"
 							width="0.5em"
 							height="0.3846em"
-							style={{ fontSize: `${minScale * 0.9}px` }} />
+							style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} />
 			}
 			<text
 				fontSize={minScale * 0.9}
