@@ -274,8 +274,7 @@ rect+use+text {
   border-radius: 4px;
 }
 
-.pagination_selected,
-#perPage {
+.pagination_selected {
   font-weight: bold;
 }
 
@@ -292,7 +291,6 @@ rect+use+text {
   padding: 5px;
   background-color: transparent;
   padding: 4px;
-  font-weight: bold;
 }
 
 #details {
