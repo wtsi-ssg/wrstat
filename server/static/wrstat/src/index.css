@@ -1,7 +1,8 @@
 body {
   padding: 0;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 14px;
+  --fontSize: 14px;
+  font-size: var(--fontSize);
 }
 
 html,
@@ -826,7 +827,7 @@ summary~h2:before,
 summary~h3:before {
   padding-left: 1em;
   content: " ";
-  font-size: 14px;
+  font-size: var(--fontSize);
 }
 
 .exceed,
