@@ -209,22 +209,22 @@ const ScatterComponent = ({
 		</defs>
 		<rect className="back" x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
 		{
-			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(nonLogFractionToDate(0), false) - innerPadding} x2={dateToX(nonLogFractionToDate(1), false) + innerPadding} y1={sizeToY(nonLogFractionToSize(n / 5), false)} y2={sizeToY(nonLogFractionToSize(n / 5), false)} className="graphLines" />)
+			Array.from({ length: 6 }, (_, n) => <line key={`scatter_hl_${n}`} x1={dateToX(nonLogFractionToDate(0), false) - innerPadding} x2={dateToX(nonLogFractionToDate(1), false) + innerPadding} y1={sizeToY(nonLogFractionToSize(n / 5), false)} y2={sizeToY(nonLogFractionToSize(n / 5), false)} className="graphLines" />)
 		}
 		{
-			Array.from({ length: 6 }, (_, n) => <text x={dateToX(nonLogFractionToDate(0), false) - innerPadding - 5} y={Math.max(sizeToY(nonLogFractionToSize(n / 5), false), paddingYT) + 5} fill="currentColor" textAnchor="end">{formatBytes(fractionToSize(n / 5))}</text>)
+			Array.from({ length: 6 }, (_, n) => <text key={`scatter_ht_${n}`} x={dateToX(nonLogFractionToDate(0), false) - innerPadding - 5} y={Math.max(sizeToY(nonLogFractionToSize(n / 5), false), paddingYT) + 5} fill="currentColor" textAnchor="end">{formatBytes(fractionToSize(n / 5))}</text>)
 		}
 		{
-			Array.from({ length: 6 }, (_, n) => <line x1={dateToX(nonLogFractionToDate(n / 5), false)} x2={dateToX(nonLogFractionToDate(n / 5), false)} y1={sizeToY(nonLogFractionToSize(1), false) - innerPadding} y2={sizeToY(nonLogFractionToSize(0), false) + innerPadding} className="graphLines" />)
+			Array.from({ length: 6 }, (_, n) => <line key={`scatter_vl_${n}`} x1={dateToX(nonLogFractionToDate(n / 5), false)} x2={dateToX(nonLogFractionToDate(n / 5), false)} y1={sizeToY(nonLogFractionToSize(1), false) - innerPadding} y2={sizeToY(nonLogFractionToSize(0), false) + innerPadding} className="graphLines" />)
 		}
 		{
-			Array.from({ length: 6 }, (_, n) => <text x={-10} y={20} transform={`translate(${dateToX(nonLogFractionToDate(n / 5), false)} ${sizeToY(nonLogFractionToSize(0), false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatNumber(fractionToDate(n / 5))}</text>)
+			Array.from({ length: 6 }, (_, n) => <text key={`scatter_vt_${n}`} x={-10} y={20} transform={`translate(${dateToX(nonLogFractionToDate(n / 5), false)} ${sizeToY(nonLogFractionToSize(0), false)}) rotate(-45)`} fill="currentColor" textAnchor="end">{formatNumber(fractionToDate(n / 5))}</text>)
 		}
 		{
 			highlightCoords ? <rect className="back" x={highlightCoords[0] + paddingXL} width={highlightCoords[1]} y={highlightCoords[2] + paddingYT} height={highlightCoords[3]} fill="#9cf" fillOpacity={0.25} stroke="#036" strokeOpacity={0.25} /> : []
 		}
 		{
-			data.map(d => <use className={isSelected(d) ? "selected" : ""} href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => {
+			data.map((d, n) => <use key={`scatter_${d.UsageSize}_${d.Mtime}_${n}`} className={isSelected(d) ? "selected" : ""} href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => {
 				setLimits(d.UsageSize, d.UsageSize, asDaysAgo(d.Mtime), asDaysAgo(d.Mtime));
 				setHighlightCoords(null);
 			}} />)

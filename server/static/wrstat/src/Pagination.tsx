@@ -11,11 +11,12 @@ const paginationEnd = 3,
 	noop = () => { },
 	processPaginationSection = (ret: JSX.Element[], currPage: number, from: number, to: number, onClick: MouseEventHandler) => {
 		if (ret.length !== 0) {
-			ret.push(<li>…</li>);
+			ret.push(<li key={`pagination_gap_${from}`}>…</li>);
 		}
 
 		for (let p = from; p <= to; p++) {
 			ret.push(<li
+				key={`pagination_page_${p}`}
 				tabIndex={0}
 				role={currPage === p ? undefined : "button"}
 				aria-label={currPage === p ? "Current Table Page" : `Go to Table Page ${p + 1}`}
@@ -58,6 +59,7 @@ const paginationEnd = 3,
 
 		return <ul className="pagination">
 			<li
+				key={`pagination_prev`}
 				tabIndex={0}
 				aria-label={`Go to Previous Table Page`}
 				className={"pagination_prev" + (currentPage === 0 ? "" : " pagination_link")}
@@ -66,6 +68,7 @@ const paginationEnd = 3,
 			>Previous</li>
 			{ret}
 			<li
+				key={`pagination_next`}
 				tabIndex={0}
 				aria-label={`Go to Next Table Page`}
 				className={"pagination_next" + (currentPage === lastPage ? "" : " pagination_link")}

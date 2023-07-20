@@ -105,7 +105,8 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 				}
 			}
 
-		return rows.map(row => <tr
+		return rows.map((row, n) => <tr
+			key={`table_row_${n}`}
 			role="button"
 			onKeyPress={e => {
 				if (e.key === "Enter") {
@@ -116,7 +117,11 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 			onMouseUp={onmouseupFn(row)}
 			{...(rowExtra?.(row) ?? {})}
 		>
-			{cols.map(col => <td aria-label={col.title} {...(col.extra?.(row[col.key], row) ?? {})} > {(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)
+			{cols.map((col, m) => <td
+				key={`table_cell_${n}_${m}`}
+				aria-label={col.title}
+				{...(col.extra?.(row[col.key], row) ?? {})}
+			> {(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)
 			}
 		</tr >)
 	},
@@ -147,11 +152,12 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 			<Pagination currentPage={currPage} onClick={pageClicker} totalPages={maxPages} />
 			<table aria-label={caption} tabIndex={0} id={id} {...additional}>
 				<colgroup>
-					{cols.map(() => <col />)}
+					{cols.map((_, n) => <col key={`table_${id}_col_${n}`} />)}
 				</colgroup>
 				<thead>
 					<tr>
 						{cols.map((c, n) => <th
+							key={`table_${id}_th_${n}`}
 							scope="col"
 							role="button"
 							tabIndex={0}

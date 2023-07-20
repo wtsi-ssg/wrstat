@@ -5,8 +5,9 @@ type TabData = {
 }
 
 const Tabs = ({ id, tabs }: { id: string, tabs: TabData[] }) => <ul id={id} className="tabs">
-	{tabs.map(tab => <li
+	{tabs.map((tab, n) => <li
 		tabIndex={0}
+		key={`tab_${id}_${n}`}
 		role="tab"
 		aria-selected={tab.selected ? "true" : "false"}
 		className={tab.selected ? "selected" : ""}

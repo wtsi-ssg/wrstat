@@ -80,7 +80,7 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 			x = dateToX(d),
 			quotaY = amountToY(h.Quota),
 			sizeY = amountToY(h.Usage),
-			quotaBox = infoBoxes.push(<div style={{ left: x + "px", top: quotaY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
+			quotaBox = infoBoxes.push(<div key={`quota`} style={{ left: x + "px", top: quotaY + "px", display: infoBoxes.length === infoBox ? "inline-block" : "" }}>
 				{yFormatter(h.Quota)}
 				<br />
 				{secondaryFormatter(h.Quota)}

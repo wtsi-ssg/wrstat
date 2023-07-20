@@ -53,14 +53,14 @@ const colours = [
 		}
 		return colours[8];
 	},
-	makeBreadcrumb = (path: string, part: string, setPath: (path: string) => void) => {
+	Breadcrumb = ({ path, part, setPath }: { path: string; part: string; setPath: (path: string) => void }) => {
 		return <li><button title={`Jump To: ${part}`} onClick={() => setPath(path)}>{part}</button></li>;
 	},
 	makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
 		let last = 0;
 
 		const breadcrumbs = [
-			makeBreadcrumb("/", "Root", setPath)
+			<Breadcrumb key={`breadcrumb_root`} path="/" part="Root" setPath={setPath} />
 		];
 
 		while (true) {
@@ -70,12 +70,12 @@ const colours = [
 				break;
 			}
 
-			breadcrumbs.push(makeBreadcrumb(path.slice(0, pos), path.slice(last + 1, pos), setPath));
+			breadcrumbs.push(<Breadcrumb key={`breadcrumb_${breadcrumbs.length}`} path={path.slice(0, pos)} part={path.slice(last + 1, pos)} setPath={setPath} />);
 
 			last = pos;
 		}
 
-		breadcrumbs.push(<span tabIndex={0} aria-current="location">{path.slice(last + 1) || "/"}</span>);
+		breadcrumbs.push(<span key={`breadcrumb_${breadcrumbs.length}`} tabIndex={0} aria-current="location">{path.slice(last + 1) || "/"}</span>);
 
 		return breadcrumbs;
 	},
@@ -169,7 +169,7 @@ const colours = [
 						<label htmlFor="filetypes">File Types</label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
 						<label htmlFor="sinceAccess">Time Since Access</label>
 						<select defaultValue={sinceLastAccess} id="sinceAccess" onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
-							{timesSinceAccess.map(([l, t]) => <option value={t}>{l}</option>)}
+							{timesSinceAccess.map(([l, t]) => <option key={`tsa_${t}`} value={t}>{l}</option>)}
 						</select>
 					</div>
 					<ul id="treeBreadcrumbs">{breadcrumbs}</ul>

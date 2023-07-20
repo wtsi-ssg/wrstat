@@ -69,7 +69,7 @@ const MultiSelectComponent = ({
 	return <div className="multiSelect" id={`multi_${id}`}>
 		<ul>
 			<li><button id={id} aria-haspopup="listbox" aria-label="Select/Deselect" disabled={disabled} onClick={() => filterRef.current?.focus()}>+</button></li>
-			{(disabled ? [] : Array.from(selected)).map(e => <li><button tabIndex={-1} aria-label={`Deselect ${e}`} onClick={() => {
+			{(disabled ? [] : Array.from(selected)).map(e => <li key={`ms_${id}_s_${e}`}><button tabIndex={-1} aria-label={`Deselect ${e}`} onClick={() => {
 				selectedSet.delete(e);
 
 				const selected = Array.from(selectedSet);
@@ -110,7 +110,7 @@ const MultiSelectComponent = ({
 					}
 				}}>
 					{
-						filteredList.map(e => <li>
+						filteredList.map(e => <li key={`ms_${id}_${e}`}>
 							<label><input tabIndex={-1} type="checkbox" checked={selectedSet.has(e)} onChange={() => {
 								let deleted: null | string = null;
 
