@@ -118,6 +118,9 @@ rect+use+text {
 #treeBreadcrumbs {
   list-style: none;
   padding: 0;
+  margin-bottom: 0;
+  grid-row: 1;
+  grid-column: 1 / span 2;
 }
 
 #treeBreadcrumbs li {
@@ -706,10 +709,6 @@ button.download:first-of-type {
   fill-opacity: 0.8;
 }
 
-#treeBreadcrumbs {
-  margin-bottom: 0;
-}
-
 #disktree {
   margin-top: 0.25em;
   display: grid;
@@ -717,6 +716,11 @@ button.download:first-of-type {
   gap: 1em;
   grid-template-columns: 1fr auto;
   align-items: start;
+}
+
+#disktree .treeFilter {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .tabs {
