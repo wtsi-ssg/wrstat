@@ -156,7 +156,7 @@ const colours = [
 
 		return <>
 			<details open className="boxed">
-				<summary>Disktree</summary>
+				<summary><h1>Disktree</h1></summary>
 				<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 				<div id="disktree">
 					<div>

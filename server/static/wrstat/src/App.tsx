@@ -113,7 +113,7 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 			},
 		]} />
 		<details open className="boxed">
-			<summary>Filter</summary>
+			<summary><h1>Filter</h1></summary>
 			<div className="primaryFilter" ref={primaryFilter}>
 				<Filter {...({
 					userUsage,

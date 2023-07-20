@@ -84,7 +84,7 @@ const HistoryWarning = ({ isInodes, history }: { isInodes: boolean, history: His
 
 		return <>
 			<details open className="boxed">
-				<summary>History</summary>
+				<summary><h1>Usage History</h1></summary>
 				<h2>Usage | {name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
 				<h3>History/Future Predictions</h3>
 				<Tabs id="historyTabs" tabs={[

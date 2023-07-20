@@ -500,6 +500,12 @@ summary {
   cursor: pointer;
 }
 
+summary>h1 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: normal;
+}
+
 .primaryFilter {
   display: grid;
   width: 100%;
