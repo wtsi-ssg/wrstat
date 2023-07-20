@@ -1,4 +1,4 @@
-import DiskTree from "./DiskTree";
+import DiskTreeComponent from "./DiskTree";
 import FilteredTable from "./FilteredTable";
 import Filter from "./Filter"
 import History from './History';
@@ -174,7 +174,7 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 				setTreePath,
 				filter
 			}} />
-		<DiskTree
+		<DiskTreeComponent
 			{...{
 				userMap,
 				groupMap,

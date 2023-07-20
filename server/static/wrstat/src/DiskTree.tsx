@@ -106,7 +106,7 @@ const colours = [
 		["> 1 year", 365],
 		["> 2 years", 730]
 	] as const,
-	PathdetailsComponent = ({ treePath, filter, userMap, groupMap, setTreePath }: DiskTreeParams) => {
+	DiskTreeComponent = ({ treePath, filter, userMap, groupMap, setTreePath }: DiskTreeParams) => {
 		const [treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 			[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
 			[childDetails, setChildDetails] = useState<Child | null>(null),
@@ -201,4 +201,4 @@ const colours = [
 		</>
 	};
 
-export default PathdetailsComponent;
+export default DiskTreeComponent;
