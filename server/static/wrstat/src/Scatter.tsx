@@ -140,7 +140,8 @@ const ScatterComponent = ({
 			window.addEventListener("mousemove", mousemove);
 			window.addEventListener("mouseup", mouseup);
 			window.addEventListener("keydown", keydown);
-		};
+		},
+		dataStr = JSON.stringify(data);
 
 	useEffect(() => {
 		const x = dateToX(minX),
@@ -158,7 +159,7 @@ const ScatterComponent = ({
 
 		setHighlightCoords(null);
 		setLimits(-Infinity, Infinity, -Infinity, Infinity);
-	}, [JSON.stringify(data)]);
+	}, [dataStr]);
 
 	if (data.length === 0) {
 		return <svg id="scatter" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
