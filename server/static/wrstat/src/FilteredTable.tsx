@@ -43,6 +43,7 @@ const stringSort = new Intl.Collator().compare,
 						<option>20</option>
 						<option>50</option>
 						<option>100</option>
+						<option value={Number.MAX_SAFE_INTEGER}>All</option>
 					</select>
 					Entries</span>
 				<Table
