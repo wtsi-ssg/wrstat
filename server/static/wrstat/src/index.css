@@ -44,14 +44,10 @@ input[type=checkbox] {
   right: 0;
 }
 
-#usageTable,
-#subdirs table {
-  padding: 0 1em;
-}
-
 #usageTable {
   table-layout: fixed;
   width: 100%;
+  padding: 0 1em;
 }
 
 caption {
@@ -232,12 +228,13 @@ rect+use+text {
 }
 
 #historyTable {
-  margin-top: 2em;
+  margin-top: 1em;
   border-collapse: collapse;
   overflow: hidden;
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
-  width: 100%;
+  width: calc(100% - 2em);
+  margin: 0 1em;
 }
 
 .pagination {
