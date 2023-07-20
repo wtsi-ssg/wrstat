@@ -37,12 +37,13 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 		userNameToIDMap = new Map<string, number>(userUsage.map(({ UID, Name }) => [Name || (UID + ""), UID])),
 		userMap = new Map(Array.from(userNameToIDMap).map(([username, uid]) => [uid, username])),
 		groupMap = new Map(Array.from(groupNameToIDMap).map(([groupname, gid]) => [gid, groupname])),
-		baseFilter = {
-			UID: byUser ? users : undefined,
-			GID: byUser ? undefined : groups,
-			UIDs: byUser ? undefined : (uids: number[]) => users.length ? uids.some(uid => users.includes(uid)) : true,
-			GIDs: byUser ? (gids: number[]) => groups.length ? gids.some(gid => groups.includes(gid)) : true : undefined,
-			Owner: byUser ? [] : owners
+		baseFilter = byUser ? {
+			UID: users,
+			GIDs: (gids: number[]) => groups.length ? gids.some(gid => groups.includes(gid)) : true,
+		} : {
+			GID: groups,
+			UIDs: (uids: number[]) => users.length ? uids.some(uid => users.includes(uid)) : true,
+			Owner: owners
 		},
 		filter = Object.assign({
 			UsageSize: { min: Math.max(filterMinSize, axisMinSize), max: Math.min(filterMaxSize, axisMaxSize) },
