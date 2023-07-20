@@ -142,6 +142,7 @@ const stringSort = new Intl.Collator().compare,
 							key: "status",
 							extra: title => ({ title }),
 							formatter: status => <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "1em", height: "1em" }}>
+								<title>{status}</title>
 								<use href={status === "OK" ? "#ok" : "#notok"} />
 							</svg>,
 							sortFn: sortStatus
