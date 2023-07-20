@@ -111,11 +111,10 @@ const MinmaxComponent = ({
 
 			draggingMin = (e.target as HTMLElement)?.className.includes("minmax_minSlider");
 
-			const [smin, smax] = getSafeMinMax(ticks * Math.round((max - min) * (((draggingMin ? minX : maxX) + (e.key === "ArrowLeft" ? -1 : 1)) - offsetLeft) / (width * ticks)));
+			const [smin, smax] = getSafeMinMax(ticks * Math.round((max - min) * (((draggingMin ? minX : maxX) + (e.key === "ArrowLeft" ? -1 : 1) * (e.shiftKey ? 10 : 1)) - offsetLeft) / (width * ticks)));
 
 			setSliderMin(smin);
 			setSliderMax(smax);
-
 		};
 
 	return <div className="minmax" style={{ width: width + "px" }}>
