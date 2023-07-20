@@ -609,7 +609,6 @@ button.download:first-of-type {
   grid-column: 2 / span 3;
 }
 
-#treeBreadcrumbs,
 #disktree {
   padding-left: 1em;
 }
