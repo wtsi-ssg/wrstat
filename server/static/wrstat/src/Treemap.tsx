@@ -39,7 +39,7 @@ type BoxParams = {
 }
 
 const phi = (1 + Math.sqrt(5)) / 2,
-	Box = ({ entry, top, left, colWidth, rowHeight, minScale, bbox }: BoxParams) => {
+	DirBox = ({ entry, top, left, colWidth, rowHeight, minScale, bbox }: BoxParams) => {
 		return <>
 			<rect
 				x={left}
@@ -141,7 +141,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 
 				d += isRow ? colWidth : rowHeight;
 
-				toRet.push(<Box key={entry.key ? `box_${entry.key}` : `box_${i}`} {...{ entry, top, left, colWidth, rowHeight, minScale, bbox }} />);
+				toRet.push(<DirBox key={entry.key ? `box_${entry.key}` : `box_${i}`} {...{ entry, top, left, colWidth, rowHeight, minScale, bbox }} />);
 			}
 
 			if (isRow) {
