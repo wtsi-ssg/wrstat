@@ -44,6 +44,11 @@ input[type=checkbox] {
   right: 0;
 }
 
+#usage,
+#subdirs {
+  padding: 0 1em;
+}
+
 #usageTable {
   table-layout: fixed;
   width: 100%;
@@ -232,6 +237,7 @@ rect+use+text {
   overflow: hidden;
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
+  width: 100%;
 }
 
 .pagination {
@@ -570,10 +576,6 @@ summary>h1 {
 
 .boxed[open] summary:after {
   transform: rotate(-90deg);
-}
-
-button.download:first-of-type {
-  border-bottom-left-radius: 8px;
 }
 
 .primaryFilter .treeFilter {

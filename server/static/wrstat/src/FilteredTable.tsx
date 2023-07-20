@@ -36,7 +36,7 @@ const stringSort = new Intl.Collator().compare,
 			hasQuota = usage.some(u => u.QuotaSize || u.QuotaInodes);
 
 		return <>
-			<details open className="boxed">
+			<details open className="boxed" id="usage">
 				<summary><h1>{byUser ? "User" : "Group"} Base Directories</h1></summary>
 				<span id="perPage">Show
 					<select onChange={(e: ChangeEvent<HTMLSelectElement>) => { setPerPage(parseInt(e.target.value) ?? 10) }}>
