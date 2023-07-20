@@ -461,9 +461,20 @@ rect+use+text {
 .multiSelect>ul li:not(:first-child) button {
   margin-left: 1em;
   padding: 0 0.5em;
-  cursor: cell;
+  cursor: pointer;
   border: 1px solid currentColor;
   background-color: var(--background);
+  position: relative;
+}
+
+.multiSelect>ul li:not(:first-child) button:hover:after {
+  content: "X";
+  color: var(--exceedWarning);
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 0.75em;
+  font-weight: bold;
 }
 
 .multiSelect>div {
