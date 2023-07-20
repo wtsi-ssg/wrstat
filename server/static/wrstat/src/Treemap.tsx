@@ -1,4 +1,4 @@
-import type { MouseEventHandler } from "react";
+import type { EventHandler, KeyboardEvent, MouseEventHandler, MouseEvent } from "react";
 
 type TreeMapParams = {
 	table: Table | null;
@@ -14,7 +14,7 @@ export type Entry = {
 	value: number;
 	colour?: string;
 	backgroundColour?: string;
-	onclick?: MouseEventHandler<SVGRectElement>;
+	onclick?: EventHandler<MouseEvent<SVGRectElement> | KeyboardEvent<SVGRectElement>>;
 	onmouseover?: MouseEventHandler<SVGRectElement>;
 	noauth: boolean;
 }
@@ -88,10 +88,17 @@ const phi = (1 + Math.sqrt(5)) / 2,
 						y={top}
 						width={colWidth}
 						height={rowHeight}
+						tabIndex={0}
+						aria-label={entry.name + (entry.onclick ? "" : entry.noauth ? "; No authorisation to view" : "; No children with current filter")}
 						stroke="#000"
 						fill={entry.backgroundColour ?? "#fff"}
 						className={entry.onclick ? "hasClick box" : "box"}
 						onClick={entry.onclick}
+						onKeyPress={entry.onclick ? e => {
+							if (e.key === "Enter") {
+								entry.onclick?.(e);
+							}
+						} : undefined}
 						onMouseOver={entry.onmouseover}
 					><title>{entry.name}</title></rect>,
 					entry.onclick ? <></> :
@@ -182,8 +189,8 @@ const phi = (1 + Math.sqrt(5)) / 2,
 				<rect width="100%" height="100%" stroke="currentColor" style={{ fill: "var(--background)" }} />
 				{
 					noAuth ?
-						<use href="#lock" height={150} transform={`translate(0 ${(height - 200) / 2})`} /> :
-						<use href="#emptyDirectory" height={150} transform={`translate(0 ${(height - 200) / 2})`} />
+						<use tabIndex={0} aria-label="Not authorised to access this directory" href="#lock" height={150} transform={`translate(0 ${(height - 200) / 2})`} /> :
+						<use tabIndex={0} aria-label="Directory has no children with current filter" href="#emptyDirectory" height={150} transform={`translate(0 ${(height - 200) / 2})`} />
 				}
 			</svg>;
 		}
