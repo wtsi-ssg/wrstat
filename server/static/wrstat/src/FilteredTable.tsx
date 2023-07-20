@@ -32,7 +32,8 @@ const stringSort = new Intl.Collator().compare,
 	reverseSortPercentSize = (a: Usage, b: Usage) => !a.QuotaSize ? 1 : !b.QuotaSize ? -1 : sortPercentSize(b, a),
 	reverseSortPercentInodes = (a: Usage, b: Usage) => !a.QuotaInodes ? 1 : !b.QuotaInodes ? -1 : sortPercentInodes(b, a),
 	FilteredTableComponent = ({ usage, byUser, groupMap, userMap, selectedID, selectedDir, setSelectedID, setSelectedDir, setTreePath, filter }: FilterTableParams) => {
-		const [perPage, setPerPage] = useSavedState("perPage", 10);
+		const [perPage, setPerPage] = useSavedState("perPage", 10),
+			hasQuota = usage.some(u => u.QuotaSize || u.QuotaInodes);
 
 		return <>
 			<details open className="boxed">
@@ -148,7 +149,7 @@ const stringSort = new Intl.Collator().compare,
 					]}
 					table={usage}
 					id="usageTable"
-					className={"prettyTable " + (byUser ? "user" : "group")}
+					className={"prettyTable " + (hasQuota ? undefined : "noQuota")}
 				/>
 				<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
 				<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>

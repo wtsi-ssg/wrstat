@@ -89,19 +89,19 @@ input[type=checkbox] {
   width: 9em;
 }
 
-#usageTable.user tr> :nth-child(4),
-#usageTable.user tr> :nth-child(5),
-#usageTable.user tr> :nth-child(7),
-#usageTable.user tr> :nth-child(8),
-#usageTable.user tr> :nth-child(10) {
+#usageTable.noQuota tr> :nth-child(4),
+#usageTable.noQuota tr> :nth-child(5),
+#usageTable.noQuota tr> :nth-child(7),
+#usageTable.noQuota tr> :nth-child(8),
+#usageTable.noQuota tr> :nth-child(10) {
   visibility: hidden;
 }
 
-#usageTable.user col:nth-child(4),
-#usageTable.user col:nth-child(5),
-#usageTable.user col:nth-child(7),
-#usageTable.user col:nth-child(8),
-#usageTable.user col:nth-child(10) {
+#usageTable.noQuota col:nth-child(4),
+#usageTable.noQuota col:nth-child(5),
+#usageTable.noQuota col:nth-child(7),
+#usageTable.noQuota col:nth-child(8),
+#usageTable.noQuota col:nth-child(10) {
   width: 0;
 }
 
