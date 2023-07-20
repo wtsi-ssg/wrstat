@@ -49,6 +49,11 @@ input[type=checkbox] {
   padding: 0 1em;
 }
 
+#usage>summary,
+#subdirs>summary {
+  margin: 0 -1em;
+}
+
 #usageTable {
   table-layout: fixed;
   width: 100%;
