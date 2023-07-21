@@ -17,6 +17,7 @@ auth.catch(() => createRoot(document.body).render(<StrictMode>
 </StrictMode>));
 
 auth.then(username => Promise.all([
+	username,
 	RPC.getGroupUsageData().then(gud => {
 		for (const d of gud) {
 			d.percentSize = Math.round(10000 * d.UsageSize / d.QuotaSize) / 100;
@@ -45,8 +46,8 @@ auth.then(username => Promise.all([
 	}),
 	RPC.getUserUsageData(),
 	RPC.getChildren({ path: "/" })
-])
-	.then(([groupUsage, userUsage, { areas }]) => createRoot(document.body.firstElementChild!).render(<StrictMode>
+]))
+	.then(([username, groupUsage, userUsage, { areas }]) => createRoot(document.body.firstElementChild!).render(<StrictMode>
 		<svg xmlns="http://www.w3.org/2000/svg" style={{ width: 0, height: 0 }}>
 			<symbol id="ok" viewBox="0 0 100 100">
 				<circle cx="50" cy="50" r="45" stroke="currentColor" fill="none" strokeWidth="10" />
@@ -67,4 +68,4 @@ auth.then(username => Promise.all([
 		</svg>
 		<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
 		<App groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
-	</StrictMode>)));
+	</StrictMode>));
