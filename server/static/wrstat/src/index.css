@@ -111,12 +111,12 @@ summary>h1 {
   grid-column: 2 / span 3;
 }
 
-.graphLines {
-  stroke: var(--graphLines);
-}
-
 .treeFilter>select {
   grid-column: 2 / span 2;
+}
+
+.graphLines {
+  stroke: var(--graphLines);
 }
 
 summary,
