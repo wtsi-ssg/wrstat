@@ -39,56 +39,54 @@ type BoxParams = {
 }
 
 const phi = (1 + Math.sqrt(5)) / 2,
-	DirBox = ({ entry, top, left, colWidth, rowHeight, minScale, bbox }: BoxParams) => {
-		return <>
-			<rect
-				x={left}
-				y={top}
-				width={colWidth}
-				height={rowHeight}
-				tabIndex={0}
-				aria-label={entry.name + (entry.onclick ? "" : entry.noauth ? "; No authorisation to view" : "; No children with current filter")}
-				stroke="#000"
-				fill={entry.backgroundColour ?? "#fff"}
-				className={entry.onclick ? "hasClick box" : "box"}
-				onClick={entry.onclick}
-				onKeyPress={entry.onclick ? e => {
-					if (e.key === "Enter") {
-						entry.onclick?.(e);
-					}
-				} : undefined}
-				onMouseOver={entry.onmouseover}
-			>
-				<title>{entry.name}</title>
-			</rect>
-			{
-				entry.onclick ? <></> :
-					entry.noauth ?
-						<use
-							x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
-							y={top + (rowHeight - minScale * 0.40) / 2}
-							href="#lock"
-							width="0.5em"
-							height="0.5em"
-							style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} /> :
-						<use
-							x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
-							y={top + (rowHeight - minScale * 0.40) / 2}
-							href="#emptyDirectory"
-							width="0.5em"
-							height="0.3846em"
-							style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} />
-			}
-			<text
-				fontSize={minScale * 0.9}
-				fontFamily={font}
-				x={(entry.noauth ? minScale * 0.225 : 0) + left + colWidth / 2}
-				y={top + rowHeight / 2 + 0.225 * minScale * bbox.height}
-				textAnchor="middle"
-				fill={entry.colour ?? "#000"}
-			>{entry.name}</text>
-		</>
-	},
+	DirBox = ({ entry, top, left, colWidth, rowHeight, minScale, bbox }: BoxParams) => <>
+		<rect
+			x={left}
+			y={top}
+			width={colWidth}
+			height={rowHeight}
+			tabIndex={0}
+			aria-label={entry.name + (entry.onclick ? "" : entry.noauth ? "; No authorisation to view" : "; No children with current filter")}
+			stroke="#000"
+			fill={entry.backgroundColour ?? "#fff"}
+			className={entry.onclick ? "hasClick box" : "box"}
+			onClick={entry.onclick}
+			onKeyPress={entry.onclick ? e => {
+				if (e.key === "Enter") {
+					entry.onclick?.(e);
+				}
+			} : undefined}
+			onMouseOver={entry.onmouseover}
+		>
+			<title>{entry.name}</title>
+		</rect>
+		{
+			entry.onclick ? <></> :
+				entry.noauth ?
+					<use
+						x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
+						y={top + (rowHeight - minScale * 0.40) / 2}
+						href="#lock"
+						width="0.5em"
+						height="0.5em"
+						style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} /> :
+					<use
+						x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
+						y={top + (rowHeight - minScale * 0.40) / 2}
+						href="#emptyDirectory"
+						width="0.5em"
+						height="0.3846em"
+						style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} />
+		}
+		<text
+			fontSize={minScale * 0.9}
+			fontFamily={font}
+			x={(entry.noauth ? minScale * 0.225 : 0) + left + colWidth / 2}
+			y={top + rowHeight / 2 + 0.225 * minScale * bbox.height}
+			textAnchor="middle"
+			fill={entry.colour ?? "#000"}
+		>{entry.name}</text>
+	</>,
 	buildTree = (table: Table, box: Box) => {
 		let lastFontSize = Infinity,
 			remainingTotal = 0,
@@ -185,7 +183,13 @@ const phi = (1 + Math.sqrt(5)) / 2,
 			return <></>
 		}
 
-		const filteredTable: Table = [];
+		const filteredTable: Table = [],
+			box: Box = {
+				"left": 0,
+				"top": 0,
+				"right": width,
+				"bottom": height
+			};
 
 		for (const entry of table) {
 			if (entry.value > 0) {
@@ -207,13 +211,6 @@ const phi = (1 + Math.sqrt(5)) / 2,
 				}
 			</svg>;
 		}
-
-		const box: Box = {
-			"left": 0,
-			"top": 0,
-			"right": width,
-			"bottom": height
-		};
 
 		return <svg className="treeMap" xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} onMouseOut={onmouseout}>
 			{buildTree(table, box)}

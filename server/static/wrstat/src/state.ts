@@ -52,6 +52,7 @@ window.addEventListener("popstate", () => {
 	getStateFromQuery();
 
 	restoring = true;
+
 	window.setTimeout(() => restoring = false, 1);
 
 	for (const [key, [v, fn]] of setters) {
@@ -68,6 +69,7 @@ let firstSet = -1;
 
 export const useSavedState = <T>(name: string, v: T) => {
 	const [val, setter] = useState<T>(restoreState(name, v));
+
 	setters.set(name, [v, setter]);
 
 	if (firstRender) {

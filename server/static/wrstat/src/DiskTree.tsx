@@ -28,11 +28,10 @@ const colours = [
 	"#1a9850",
 	"#fff"
 ] as const,
+	day = 24 * 60 * 60 * 1000,
 	now = +Date.now(),
 	colourFromAge = (lm: number) => {
 		const diff = now - lm;
-
-		const day = 24 * 60 * 60 * 1000;
 
 		if (diff > 2 * 365 * day) {
 			return colours[0];
@@ -53,9 +52,9 @@ const colours = [
 		}
 		return colours[8];
 	},
-	Breadcrumb = ({ path, part, setPath }: { path: string; part: string; setPath: (path: string) => void }) => {
-		return <li><button title={`Jump To: ${part}`} onClick={() => setPath(path)}>{part}</button></li>;
-	},
+	Breadcrumb = ({ path, part, setPath }: { path: string; part: string; setPath: (path: string) => void }) => <li>
+		<button title={`Jump To: ${part}`} onClick={() => setPath(path)}>{part}</button>
+	</li>,
 	makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
 		let last = 0;
 
@@ -79,22 +78,18 @@ const colours = [
 
 		return breadcrumbs;
 	},
-	determineTreeWidth = () => {
-		const width = window.innerWidth;
-
-		return Math.max(width - 420, 400);
-	},
-	makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => {
-		return {
-			path,
-			"users": (filter.UID as null | number[])?.map(uid => users.get(uid) ?? -1).join(",") ?? "",
-			"groups": (filter.GID as null | number[])?.map(gid => groups.get(gid) ?? -1).join(",") ?? "",
-			"types": filetypes.join(",")
-		};
-	},
-	fileTypes = ["other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
+	determineTreeWidth = () => Math.max(window.innerWidth - 420, 400),
+	makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => ({
+		path,
+		"users": (filter.UID as null | number[])?.map(uid => users.get(uid) ?? -1).join(",") ?? "",
+		"groups": (filter.GID as null | number[])?.map(gid => groups.get(gid) ?? -1).join(",") ?? "",
+		"types": filetypes.join(",")
+	}),
+	fileTypes = [
+		"other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
 		"cram", "fasta", "fastq", "fastq.gz", "ped/bed", "compressed", "text",
-		"log", "dir"] as const,
+		"log", "dir"
+	] as const,
 	timesSinceAccess = [
 		["> 0 days", 0],
 		["> 1 month", 30],

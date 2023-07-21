@@ -19,23 +19,23 @@ type UsageHistory = {
 const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, yRounder }: HistoryGraphParams) => {
 	const [infoBox, setInfoBox] = useState(-1),
 		amountToY = (amount: number) => paddingYT + maxY - amount * yScale,
-		dateToX = (date: number) => paddingXL + (date - minDate) * xScale;
+		dateToX = (date: number) => paddingXL + (date - minDate) * xScale,
+		quotaPoints: JSX.Element[] = [],
+		usagePoints: JSX.Element[] = [],
+		infoBoxes: JSX.Element[] = [];
 
 	let minDate = Infinity,
 		maxDate = -Infinity,
 		maxAmount = 0,
 		quotaPath = "M",
-		usagePath = "M";
+		usagePath = "M",
+		n = 0;
 
 	useEffect(() => setInfoBox(-1), [history, width, height]);
 
 	if (history.length === 0) {
 		return <></>
 	}
-
-	const quotaPoints: JSX.Element[] = [],
-		usagePoints: JSX.Element[] = [],
-		infoBoxes: JSX.Element[] = [];
 
 	for (const h of history) {
 		if (h.Quota > maxAmount) {
@@ -73,9 +73,6 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 		yScale = (height - paddingYT - paddingYB) / maxAmount,
 		maxY = maxAmount * yScale;
 
-	let first = true,
-		n = 0;
-
 	for (const h of history) {
 		const d = new Date(h.Date).valueOf(),
 			x = dateToX(d),
@@ -110,7 +107,7 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 				{formatDate(h.Date)}
 			</div>) - 1;
 
-		if (!first) {
+		if (quotaPath.length > 1) {
 			quotaPath += " L"
 			usagePath += " L";
 		}
@@ -120,8 +117,6 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 
 		quotaPoints.push(<use key={`point_quota_${n}`} href="#point" style={{ fill: "var(--graphQuota)" }} x={x} y={quotaY} onMouseOver={() => setInfoBox(quotaBox)} onMouseOut={() => setInfoBox(-1)} />)
 		usagePoints.push(<use key={`point_usage_${n++}`} href="#point" style={{ fill: "var(--graphUsage)" }} x={x} y={sizeY} onMouseOver={() => setInfoBox(usageBox)} onMouseOut={() => setInfoBox(-1)} />)
-
-		first = false;
 	}
 
 	const previousHistory = history.at(-3) ?? history.at(0)!,

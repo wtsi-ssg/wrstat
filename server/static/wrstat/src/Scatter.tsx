@@ -24,7 +24,6 @@ type Data = {
 
 const minDaysAgo = (date: string) => {
 	const daysAgo = asDaysAgo(date);
-
 	if (daysAgo < 0) {
 		return 0;
 	}
@@ -77,40 +76,35 @@ const ScatterComponent = ({
 				graphLeft = coords.left + paddingXL,
 				graphTop = coords.top + paddingYT,
 				startX = e.clientX - graphLeft,
-				startY = e.clientY - graphTop;
+				startY = e.clientY - graphTop,
+				mousemove = (e: MouseEvent, cb = previewLimits) => {
+					const x = e.clientX - graphLeft,
+						y = e.clientY - graphTop,
+						minX = Math.max(Math.min(x, startX), 0),
+						maxX = Math.min(Math.max(x, startX), graphWidth + 2 * innerPadding),
+						minY = Math.max(Math.min(y, startY), 0),
+						maxY = Math.min(Math.max(y, startY), graphHeight + 2 * innerPadding);
 
-			if (startX < 0 || startX > graphWidth + 2 * innerPadding || startY < 0 || startY > graphHeight + 2 * innerPadding) {
-				return;
-			}
+					if (minX === maxX || minY === maxY) {
+						setHighlightCoords(null);
+						cb(-Infinity, Infinity, -Infinity, Infinity);
 
-			const mousemove = (e: MouseEvent, cb = previewLimits) => {
-				const x = e.clientX - graphLeft,
-					y = e.clientY - graphTop,
-					minX = Math.max(Math.min(x, startX), 0),
-					maxX = Math.min(Math.max(x, startX), graphWidth + 2 * innerPadding),
-					minY = Math.max(Math.min(y, startY), 0),
-					maxY = Math.min(Math.max(y, startY), graphHeight + 2 * innerPadding);
+						return;
+					}
 
-				if (minX === maxX || minY === maxY) {
-					setHighlightCoords(null);
-					cb(-Infinity, Infinity, -Infinity, Infinity);
+					setHighlightCoords([minX, maxX - minX, minY, maxY - minY]);
 
-					return;
-				}
+					const fMinX = Math.max(0, minX - innerPadding) / graphWidth,
+						fMaxX = Math.min(graphWidth, maxX - innerPadding) / graphWidth,
+						fMinY = Math.max(0, graphHeight - maxY + innerPadding) / graphHeight,
+						fMaxY = Math.min(graphHeight, graphHeight - minY + innerPadding) / graphHeight,
+						minDaysAgo = fractionToDate(fMinX),
+						maxDaysAgo = fractionToDate(fMaxX),
+						minFileSize = fractionToSize(fMinY),
+						maxFileSize = fractionToSize(fMaxY);
 
-				setHighlightCoords([minX, maxX - minX, minY, maxY - minY]);
-
-				const fMinX = Math.max(0, minX - innerPadding) / graphWidth,
-					fMaxX = Math.min(graphWidth, maxX - innerPadding) / graphWidth,
-					fMinY = Math.max(0, graphHeight - maxY + innerPadding) / graphHeight,
-					fMaxY = Math.min(graphHeight, graphHeight - minY + innerPadding) / graphHeight,
-					minDaysAgo = fractionToDate(fMinX),
-					maxDaysAgo = fractionToDate(fMaxX),
-					minFileSize = fractionToSize(fMinY),
-					maxFileSize = fractionToSize(fMaxY);
-
-				cb(minFileSize, maxFileSize, minDaysAgo, maxDaysAgo);
-			},
+					cb(minFileSize, maxFileSize, minDaysAgo, maxDaysAgo);
+				},
 				mouseup = (e: MouseEvent) => {
 					if (e.button !== 0) {
 						return;
@@ -136,6 +130,10 @@ const ScatterComponent = ({
 						window.removeEventListener("keydown", keydown);
 					}
 				};
+
+			if (startX < 0 || startX > graphWidth + 2 * innerPadding || startY < 0 || startY > graphHeight + 2 * innerPadding) {
+				return;
+			}
 
 			window.addEventListener("mousemove", mousemove);
 			window.addEventListener("mouseup", mouseup);

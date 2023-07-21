@@ -26,7 +26,6 @@ const MinmaxComponent = ({
 	formatter,
 	label = ""
 }: MinMaxParams) => {
-
 	width = Math.max(width, 100)
 
 	const [sliderMin, setSliderMin] = useState(Math.max(min, minValue)),
@@ -34,25 +33,8 @@ const MinmaxComponent = ({
 		safeMin = Math.min(Math.max(min, sliderMin), Math.max(max, min)),
 		safeMax = Math.max(Math.min(max, sliderMax), Math.min(min, max)),
 		minX = width * (sliderMin / max),
-		maxX = width * (sliderMax / max);
-
-	if (minValue < min) {
-		minValue = min;
-	}
-
-	if (maxValue > max) {
-		maxValue = max;
-	}
-
-	useLayoutEffect(() => {
-		setSliderMin(Math.max(min, minValue));
-		setSliderMax(Math.min(max, maxValue));
-	}, [minValue, maxValue]);
-
-	let draggingMin = false,
-		offsetLeft = 0;
-
-	const getMinMax = (e: MouseEvent) => getSafeMinMax(ticks * Math.round((max - min) * (e.clientX - offsetLeft) / (width * ticks))),
+		maxX = width * (sliderMax / max),
+		getMinMax = (e: MouseEvent) => getSafeMinMax(ticks * Math.round((max - min) * (e.clientX - offsetLeft) / (width * ticks))),
 		getSafeMinMax = (val: number) => {
 			let amin = safeMin,
 				amax = safeMax;
@@ -117,6 +99,22 @@ const MinmaxComponent = ({
 			setSliderMin(smin);
 			setSliderMax(smax);
 		};
+
+	let draggingMin = false,
+		offsetLeft = 0;
+
+	if (minValue < min) {
+		minValue = min;
+	}
+
+	if (maxValue > max) {
+		maxValue = max;
+	}
+
+	useLayoutEffect(() => {
+		setSliderMin(Math.max(min, minValue));
+		setSliderMax(Math.min(max, maxValue));
+	}, [minValue, maxValue]);
 
 	return <div className="minmax" style={{ width: width + "px" }}>
 		<div className="minmax_min">{formatter(min)}</div>

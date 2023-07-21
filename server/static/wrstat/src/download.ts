@@ -8,7 +8,8 @@ const escapeQuote = (str: string) => str.replaceAll('"', '""'),
 		a.click();
 	};
 
-export const downloadGroups = (table: Usage[]) => download("PI,Group,Path,Space,SQuota,Inodes,IQuota,LastMod,Status\n" +
+export const downloadGroups = (table: Usage[]) => download(
+	"PI,Group,Path,Space,SQuota,Inodes,IQuota,LastMod,Status\n" +
 	table.map(row => `"${escapeQuote(row.Owner)
 		}","${escapeQuote(row.Name)
 		}","${escapeQuote(row.BaseDir)
@@ -21,7 +22,8 @@ export const downloadGroups = (table: Usage[]) => download("PI,Group,Path,Space,
 		}"`).join("\r\n"),
 	"groups.csv"
 ),
-	downloadUsers = (table: Usage[]) => download("User,Path,Space,Inodes,LastMod\n" +
+	downloadUsers = (table: Usage[]) => download(
+		"User,Path,Space,Inodes,LastMod\n" +
 		table.map(row => `"${escapeQuote(row.Name)
 			}","${escapeQuote(row.BaseDir)
 			}",${row.UsageSize

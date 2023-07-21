@@ -11,13 +11,7 @@ type SubDirParams = {
 	setPath: (path: string) => void;
 }
 
-const pathJoin = (base: string, sub: string) => {
-	if (sub === ".") {
-		return base;
-	}
-
-	return base + "/" + sub;
-},
+const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" + sub,
 	fileTypes = [
 		"other",
 		"temp",

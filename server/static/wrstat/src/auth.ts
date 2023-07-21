@@ -1,6 +1,4 @@
-const usernameFromJWT = (jwt: string): string => {
-	return JSON.parse(atob(jwt.split('.')[1])).Username;
-},
+const usernameFromJWT = (jwt: string): string => JSON.parse(atob(jwt.split('.')[1])).Username,
 	getJWT = () => new Promise<string>((successFn, errorFn) => {
 		const xh = new XMLHttpRequest();
 
@@ -40,13 +38,13 @@ export const getCookie = (toFind: string) => {
 	};
 
 const AuthComponent = () => {
-	const jwt = getCookie("jwt");
+	const jwt = getCookie("jwt"),
+		oidc = getCookie("okta-hosted-login-session-store");
 
 	if (jwt) {
 		return Promise.resolve(usernameFromJWT(jwt));
 	}
 
-	const oidc = getCookie("okta-hosted-login-session-store");
 	if (!oidc) {
 		return Promise.reject();
 	}

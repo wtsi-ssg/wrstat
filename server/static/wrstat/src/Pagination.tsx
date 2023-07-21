@@ -30,6 +30,7 @@ const paginationEnd = 3,
 	PaginationComponent = ({ totalPages, currentPage, onClick }: PaginationParams) => {
 		const ret: JSX.Element[] = [],
 			lastPage = totalPages - 1;
+
 		if (lastPage < 1) {
 			return <></>
 		}

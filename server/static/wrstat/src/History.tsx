@@ -7,6 +7,14 @@ import RPC from "./rpc";
 import { useSavedState } from "./state";
 import { exceedDates } from "./trend";
 
+type HistoryParams = {
+	id: number;
+	path: string;
+	name: string;
+	owner: string;
+	isUser: boolean;
+}
+
 const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 	maxWarningDay = 25,
 	daysToday = Math.round(Date.now() / 86_400_000),
@@ -16,47 +24,52 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 
 		return order * Math.ceil(maxAmount / order);
 	},
-	formatLog2 = (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100)));
+	formatLog2 = (maxAmount: number) => 100 * Math.pow(2, Math.ceil(Math.log2(maxAmount / 100))),
+	HistoryWarning = ({ isInodes, history }: { isInodes: boolean, history: History[] }) => {
+		const [exceedSize, exceedInode] = exceedDates(history);
 
-const HistoryWarning = ({ isInodes, history }: { isInodes: boolean, history: History[] }) => {
-	const [exceedSize, exceedInode] = exceedDates(history);
+		if (isInodes) {
+			if (exceedInode === 0) {
+				return <div className="exceeded">Inode Quota has been reached.</div>
+			}
+			if (exceedInode !== Infinity) {
+				const prox = 100 * Math.min(maxWarningDay, (exceedInode - daysToday)) / maxWarningDay;
+				return <div
+					style={{
+						[`--warningProx` as any]: prox + "%"
+					}}
+					className="exceed"
+				>Expected to exceed inode quota in {formatNumber(exceedInode - daysToday)} days.</div>
+			}
 
-	if (isInodes) {
-		if (exceedInode === 0) {
-			return <div className="exceeded">Inode Quota has been reached.</div>
+			return <></>
 		}
-		if (exceedInode !== Infinity) {
-			const prox = 100 * Math.min(maxWarningDay, (exceedInode - daysToday)) / maxWarningDay;
+
+		if (exceedSize === 0) {
+			return <div className="exceeded">Size Quota has been reached.</div>
+		}
+
+		if (exceedSize !== Infinity) {
+			const prox = 100 * Math.min(maxWarningDay, (exceedSize - daysToday)) / maxWarningDay;
+
 			return <div
-				style={{
-					[`--warningProx` as any]: prox + "%"
-				}}
+				style={{ [`--warningProx` as any]: prox + "%" }}
 				className="exceed"
-			>Expected to exceed inode quota in {formatNumber(exceedInode - daysToday)} days.</div>
+			>Expected to exceed size quota in {formatNumber(exceedSize - daysToday)} days.</div>
 		}
+
 
 		return <></>
-	}
-
-	if (exceedSize === 0) {
-		return <div className="exceeded">Size Quota has been reached.</div>
-	}
-	if (exceedSize !== Infinity) {
-		const prox = 100 * Math.min(maxWarningDay, (exceedSize - daysToday)) / maxWarningDay;
-
-		return <div
-			style={{ [`--warningProx` as any]: prox + "%" }}
-			className="exceed"
-		>Expected to exceed size quota in {formatNumber(exceedSize - daysToday)} days.</div>
-	}
-
-
-	return <></>
-},
-	HistoryComponent = ({ id, path, name, owner, isUser }: { id: number; path: string; name: string; owner: string; isUser: boolean }) => {
+	},
+	HistoryComponent = ({ id, path, name, owner, isUser }: HistoryParams) => {
 		const [inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
 			[history, setHistory] = useState<History[]>([]),
-			[historyWidth, setHistoryWidth] = useState(960);
+			[historyWidth, setHistoryWidth] = useState(960),
+			graphData = history.map(h => ({
+				Date: h.Date,
+				Usage: inodeHistory ? h.UsageInodes : h.UsageSize,
+				Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize
+			}));
 
 		useEffect(() => {
 			if (id === -1 || path === "") {
@@ -75,12 +88,6 @@ const HistoryWarning = ({ isInodes, history }: { isInodes: boolean, history: His
 		if (history.length === 0 || isUser) {
 			return <></>
 		}
-
-		const graphData = history.map(h => ({
-			Date: h.Date,
-			Usage: inodeHistory ? h.UsageInodes : h.UsageSize,
-			Quota: inodeHistory ? h.QuotaInodes : h.QuotaSize
-		}));
 
 		return <>
 			<details open className="boxed">

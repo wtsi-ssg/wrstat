@@ -30,9 +30,13 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 		[filterMaxSize, setFilterMaxSize] = useState(savedMaxSize),
 		[selectedDir, setSelectedDir] = useSavedState("selectedDir", ""),
 		[selectedID, setSelectedID] = useSavedState("selectedID", -1),
+		[treePath, setTreePath] = useSavedState("treePath", "/"),
+		primaryFilter = useRef<HTMLDivElement>(null),
+		[scaleSize, setScaleSize] = useSavedState("scaleSize", false),
+		[scaleDays, setScaleDays] = useSavedState("scaleDays", false),
+		[scatterWidth, setScatterWidth] = useState(300),
 		usage = byUser ? userUsage : groupUsage,
 		selectedRow = usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir)[0],
-		[treePath, setTreePath] = useSavedState("treePath", "/"),
 		groupNameToIDMap = new Map<string, number>(groupUsage.map(({ GID, Name }) => [Name || (GID + ""), GID])),
 		userNameToIDMap = new Map<string, number>(userUsage.map(({ UID, Name }) => [Name || (UID + ""), UID])),
 		userMap = new Map(Array.from(userNameToIDMap).map(([username, uid]) => [uid, username])),
@@ -53,11 +57,7 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 				return daysAgo >= Math.max(filterMinDaysAgo, axisMinDaysAgo) && daysAgo <= Math.min(filterMaxDaysAgo, axisMaxDaysAgo);
 			}
 		}, baseFilter),
-		primaryFilter = useRef<HTMLDivElement>(null),
 		calculateScatterWidth = (div: HTMLDivElement) => Math.min(Math.max(300, parseInt(getComputedStyle(div).gridTemplateColumns.split(" ")[1]) - 40), 1500),
-		[scaleSize, setScaleSize] = useSavedState("scaleSize", false),
-		[scaleDays, setScaleDays] = useSavedState("scaleDays", false),
-		[scatterWidth, setScatterWidth] = useState(300),
 		scatterFilter = Object.assign({
 			UsageSize: { min: axisMinSize, max: axisMaxSize },
 			Mtime: (mtime: string) => {
