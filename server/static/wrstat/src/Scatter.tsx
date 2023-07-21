@@ -35,6 +35,8 @@ const minDaysAgo = (date: string) => {
 	paddingYT = 1,
 	paddingYB = 65,
 	innerPadding = 10,
+	logRatio = (value: number, min: number, max: number) => min ? Math.log(value / min) / Math.log(max / min) : Math.log(value + 1) / Math.log(max + 1),
+	logRatioToValue = (r: number, min: number, max: number) => Math.pow(Math.E, (min ? Math.log(max / min) : Math.log(max + 1)) * r) * (min || 1) - (min || 1),
 	ScatterComponent = ({
 		data,
 		width,
@@ -57,14 +59,12 @@ const minDaysAgo = (date: string) => {
 			nonLogDateToX = (days: number) => xScale * (days - minDate),
 			logSizeToY = (size: number) => graphHeight - graphHeight * logRatio(size, minSize, maxSize),
 			logDateToX = (days: number) => graphWidth * logRatio(days, minDate, maxDate),
-			logRatio = (value: number, min: number, max: number) => min ? Math.log(value / min) / Math.log(max / min) : Math.log(value + 1) / Math.log(max + 1),
 			fractionToSize = (f: number) => Math.round((logY ? logFractionToSize : nonLogFractionToSize)(f)),
 			fractionToDate = (f: number) => Math.round((logX ? logFractionToDate : nonLogFractionToDate)(f)),
 			nonLogFractionToSize = (f: number) => minSize + f * (maxSize - minSize),
 			nonLogFractionToDate = (f: number) => minDate + f * (maxDate - minDate),
 			logFractionToSize = (f: number) => minSize + logRatioToValue(f, minSize, maxSize),
 			logFractionToDate = (f: number) => minDate + logRatioToValue(f, minDate, maxDate),
-			logRatioToValue = (r: number, min: number, max: number) => Math.pow(Math.E, (min ? Math.log(max / min) : Math.log(max + 1)) * r) * (min || 1) - (min || 1),
 			[highlightCoords, setHighlightCoords] = useState<null | [number, number, number, number]>(null),
 			onDrag = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
 				if (e.button !== 0) {
