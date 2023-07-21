@@ -1,5 +1,5 @@
 import type { History } from "./rpc";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import HistoryGraph from "./HistoryGraph";
 import Tabs from "./Tabs";
 import { formatBytes, formatLargeNumber, formatNumber } from "./format";
@@ -64,7 +64,7 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 	HistoryComponent = ({ id, path, name, owner, isUser }: HistoryParams) => {
 		const [inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
 			[history, setHistory] = useState<History[]>([]),
-			[historyWidth, setHistoryWidth] = useState(960),
+			[historyWidth, setHistoryWidth] = useState(determineGraphWidth()),
 			graphData = history.map(h => ({
 				Date: h.Date,
 				Usage: inodeHistory ? h.UsageInodes : h.UsageSize,
@@ -82,8 +82,6 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 		}, [id, path]);
 
 		useEffect(() => window.addEventListener("resize", () => setHistoryWidth(determineGraphWidth())), []);
-
-		useLayoutEffect(() => setHistoryWidth(determineGraphWidth()), []);
 
 		if (history.length === 0 || isUser) {
 			return <></>
