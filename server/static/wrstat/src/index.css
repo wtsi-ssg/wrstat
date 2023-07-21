@@ -233,7 +233,7 @@ rect+use+text {
 
 #usageTable tfoot>tr>td:not(:empty) {
   border-top: 3px double currentColor;
-  padding: 0.5em 1em;
+  padding: 0.5em 1em 0.5em 0.25em;
 }
 
 #historyTable {
