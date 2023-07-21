@@ -34,10 +34,6 @@ caption {
   visibility: hidden;
 }
 
-summary {
-  cursor: pointer;
-}
-
 summary>h1 {
   margin: 0;
   font-size: inherit;
@@ -54,6 +50,7 @@ details summary {
   list-style: none;
   padding: 0.5em 1em;
   position: relative;
+  cursor: pointer;
 }
 
 details summary::-webkit-details-marker {
