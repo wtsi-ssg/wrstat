@@ -83,7 +83,7 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 
 		useEffect(() => window.addEventListener("resize", () => setHistoryWidth(determineGraphWidth())), []);
 
-		useLayoutEffect(() => setHistoryWidth(determineGraphWidth()));
+		useLayoutEffect(() => setHistoryWidth(determineGraphWidth()), []);
 
 		if (history.length === 0 || isUser) {
 			return <></>
