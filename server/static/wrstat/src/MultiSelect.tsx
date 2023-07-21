@@ -20,27 +20,29 @@ type ItemParams = {
 
 type SelectItemParams = ItemParams & {
 	keypress: (e: KeyboardEvent) => void;
+	disabled: boolean;
 }
 
 export type Listener = (values: string[], deleted: boolean) => void;
 
-const SelectItem = ({ item, selectedSet, setSelected, onchange, keypress }: SelectItemParams) => <li>
-	<label><input tabIndex={-1} type="checkbox" checked={selectedSet.has(item)} onChange={() => {
-		let deleted: null | string = null;
+const SelectItem = ({ item, selectedSet, disabled, setSelected, onchange, keypress }: SelectItemParams) => <li>
+	<label>
+		<input tabIndex={-1} type="checkbox" disabled={disabled} checked={selectedSet.has(item)} onChange={() => {
+			let deleted: null | string = null;
 
-		if (selectedSet.has(item)) {
-			selectedSet.delete(item);
-			deleted = item;
-		} else {
-			selectedSet.add(item);
-		}
+			if (selectedSet.has(item)) {
+				selectedSet.delete(item);
+				deleted = item;
+			} else {
+				selectedSet.add(item);
+			}
 
-		const selected = Array.from(selectedSet);
+			const selected = Array.from(selectedSet);
 
-		if (onchange(selected, deleted) !== false) {
-			setSelected(selected);
-		}
-	}} onKeyDown={keypress} />{item}</label>
+			if (onchange(selected, deleted) !== false) {
+				setSelected(selected);
+			}
+		}} onKeyDown={keypress} />{item}</label>
 </li>,
 	RemoveItem = ({ item, selectedSet, onchange, setSelected }: ItemParams) => <li>
 		<button tabIndex={-1} title={`Deselect ${item}`} onClick={() => {
@@ -111,7 +113,15 @@ const SelectItem = ({ item, selectedSet, setSelected, onchange, keypress }: Sele
 
 		return <div className="multiSelect" id={`multi_${id}`}>
 			<ul>
-				<li><button id={id} aria-haspopup="listbox" aria-label="Select/Deselect" disabled={disabled} onClick={() => filterRef.current?.focus()}>+</button></li>
+				<li>
+					<button
+						id={id}
+						aria-haspopup="listbox"
+						aria-label="Select/Deselect"
+						disabled={disabled}
+						onClick={() => filterRef.current?.focus()}
+					>+</button>
+				</li>
 				{disabled ? <></> : Array.from(selected).map(item => <RemoveItem
 					key={`ms_${id}_s_${item}`}
 					item={item}
@@ -122,29 +132,38 @@ const SelectItem = ({ item, selectedSet, setSelected, onchange, keypress }: Sele
 			</ul>
 			<div>
 				<div>
-					<input ref={filterRef} placeholder="Filter" aria-label="Filter List" tabIndex={-1} value={filter} onKeyDown={e => {
-						if (e.key === "Escape") {
-							(e.target as HTMLInputElement).blur();
-						} else if (e.key === "Enter") {
-							if (filteredList.length === 1) {
-								selectedSet.add(filteredList[0]);
+					<input
+						ref={filterRef}
+						placeholder="Filter"
+						disabled={disabled}
+						aria-label="Filter List"
+						tabIndex={-1}
+						value={filter}
+						onKeyDown={e => {
+							if (e.key === "Escape") {
+								(e.target as HTMLInputElement).blur();
+							} else if (e.key === "Enter") {
+								if (filteredList.length === 1) {
+									selectedSet.add(filteredList[0]);
 
-								const selected = Array.from(selectedSet);
+									const selected = Array.from(selectedSet);
 
-								if (onchange(selected, null) !== false) {
-									setSelected(selected);
+									if (onchange(selected, null) !== false) {
+										setSelected(selected);
+									}
+								}
+							} else if (e.key === "Tab") {
+								e.preventDefault();
+
+								const input = (e.target as HTMLElement)?.nextElementSibling?.[e.shiftKey ? "lastElementChild" : "firstElementChild"]?.firstElementChild?.firstElementChild;
+
+								if (input instanceof HTMLInputElement) {
+									input.focus();
 								}
 							}
-						} else if (e.key === "Tab") {
-							e.preventDefault();
-
-							const input = (e.target as HTMLElement)?.nextElementSibling?.[e.shiftKey ? "lastElementChild" : "firstElementChild"]?.firstElementChild?.firstElementChild;
-
-							if (input instanceof HTMLInputElement) {
-								input.focus();
-							}
-						}
-					}} onChange={e => setFilter(e.target.value)} />
+						}}
+						onChange={e => setFilter(e.target.value)}
+					/>
 					<ul tabIndex={-1} onKeyDown={e => {
 						if (e.key === "Escape") {
 							(e.target as HTMLInputElement).blur();
@@ -154,6 +173,7 @@ const SelectItem = ({ item, selectedSet, setSelected, onchange, keypress }: Sele
 							filteredList.map(item => <SelectItem
 								key={`ms_${id}_${item}`}
 								item={item}
+								disabled={disabled}
 								selectedSet={selectedSet}
 								setSelected={setSelected}
 								onchange={onchange}
