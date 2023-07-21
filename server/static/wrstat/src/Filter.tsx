@@ -28,6 +28,7 @@ type FilterParams = {
 	scaleDays: boolean;
 	setScaleDays: (v: boolean) => void;
 	groupNameToIDMap: Map<string, number>;
+	groupIDToNameMap: Map<number, string>;
 	userNameToIDMap: Map<string, number>;
 }
 
@@ -47,11 +48,11 @@ const stringSort = new Intl.Collator().compare,
 		scaleSize, setScaleSize,
 		scaleDays, setScaleDays,
 		groupNameToIDMap,
+		groupIDToNameMap,
 		userNameToIDMap
 
 	}: FilterParams) => {
-		const groupIDToNameMap = new Map<number, string>(groupUsage.map(({ GID, Name }) => [GID, Name || (GID + "")])),
-			groupSet = new Set(groups),
+		const groupSet = new Set(groups),
 			selectedBOMs = Object.entries(areas).map(([bom, groups]) => groups.every(g => groupNameToIDMap.get(g) === undefined || groupSet.has(groupNameToIDMap.get(g)!)) ? bom : "").filter(b => b).sort(stringSort),
 			usage = byUser ? userUsage : groupUsage;
 
@@ -132,7 +133,6 @@ const stringSort = new Intl.Collator().compare,
 				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 				<button onClick={clearState}>Reset Filter</button>
 			</div>
-
 		</>
 	};
 
