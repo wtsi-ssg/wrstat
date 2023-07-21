@@ -114,7 +114,7 @@ const MinmaxComponent = ({
 	useLayoutEffect(() => {
 		setSliderMin(Math.max(min, minValue));
 		setSliderMax(Math.min(max, maxValue));
-	}, [minValue, maxValue]);
+	}, [min, max, minValue, maxValue]);
 
 	return <div className="minmax" style={{ width: width + "px" }}>
 		<div className="minmax_min">{formatter(min)}</div>
