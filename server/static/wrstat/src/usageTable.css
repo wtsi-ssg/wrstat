@@ -2,6 +2,7 @@
 	table-layout: fixed;
 	width: calc(100% - 2em);
 	margin: 4em 1em 1em 1em;
+	overflow: hidden;
 }
 
 #usageTable tbody {
