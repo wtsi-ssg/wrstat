@@ -10,129 +10,157 @@ type MultiSelectParams = {
 	onchange: (list: string[], deleted: string | null) => (void | boolean);
 }
 
+type ItemParams = {
+	item: string;
+	selectedSet: Set<string>;
+	onchange: (list: string[], deleted: string | null) => (void | boolean);
+	setSelected: (v: string[]) => void;
+}
+
+type SelectItemParams = ItemParams & {
+	keypress: (e: KeyboardEvent) => void;
+}
+
 export type Listener = (values: string[], deleted: boolean) => void;
 
-const MultiSelectComponent = ({
-	id,
-	list,
-	disabled = false,
-	selectedList,
-	listener,
-	onchange
-}: MultiSelectParams) => {
-	let [selected, setSelected] = useSavedState<string[]>(id + "Multi", []);
+const SelectItem = ({ item, selectedSet, setSelected, onchange, keypress }: SelectItemParams) => <li>
+	<label><input tabIndex={-1} type="checkbox" checked={selectedSet.has(item)} onChange={() => {
+		let deleted: null | string = null;
 
-	useEffect(() => { onchange(Array.from(selected), null) }, [JSON.stringify(selected)]);
-
-	if (selectedList) {
-		selected = Array.from(new Set(selected.concat(selectedList)));
-	}
-
-	const filterRef = useRef<HTMLInputElement>(null),
-		[filter, setFilter] = useState(""),
-		selectedSet = new Set(selected),
-		filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase())),
-		keypress = (e: KeyboardEvent) => {
-			if (e.key === "Tab") {
-				const elmPP = (e.target as HTMLInputElement)?.parentElement?.parentElement,
-					elm = elmPP?.[e.shiftKey ? "previousElementSibling" : "nextElementSibling"]?.firstElementChild?.firstElementChild ??
-						elmPP?.parentElement?.parentElement?.firstElementChild;
-
-				if (elm instanceof HTMLInputElement) {
-					elm.focus();
-
-					e.preventDefault();
-				}
-			}
-		};
-
-	listener?.((values: string[], deleted: boolean) => {
-		const valueSet = new Set(selected);
-
-		if (deleted) {
-			for (const v of values) {
-				valueSet.delete(v);
-			}
+		if (selectedSet.has(item)) {
+			selectedSet.delete(item);
+			deleted = item;
 		} else {
-			for (const v of values) {
-				valueSet.add(v);
+			selectedSet.add(item);
+		}
+
+		const selected = Array.from(selectedSet);
+
+		if (onchange(selected, deleted) !== false) {
+			setSelected(selected);
+		}
+	}} onKeyDown={keypress} />{item}</label>
+</li>,
+	RemoveItem = ({ item, selectedSet, onchange, setSelected }: ItemParams) => <li>
+		<button tabIndex={-1} title={`Deselect ${item}`} onClick={() => {
+			selectedSet.delete(item);
+
+			const selected = Array.from(selectedSet);
+
+			if (onchange(selected, item) !== false) {
+				setSelected(selected);
 			}
+		}}>{item}</button>
+	</li>,
+	MultiSelectComponent = ({
+		id,
+		list,
+		disabled = false,
+		selectedList,
+		listener,
+		onchange
+	}: MultiSelectParams) => {
+		let [selected, setSelected] = useSavedState<string[]>(id + "Multi", []);
+
+		useEffect(() => { onchange(Array.from(selected), null) }, [JSON.stringify(selected)]);
+
+		if (selectedList) {
+			selected = Array.from(new Set(selected.concat(selectedList)));
 		}
 
-		const newSelected = Array.from(valueSet);
+		const filterRef = useRef<HTMLInputElement>(null),
+			[filter, setFilter] = useState(""),
+			selectedSet = new Set(selected),
+			filteredList = list.filter(e => e.toLowerCase().includes(filter.toLowerCase())),
+			keypress = (e: KeyboardEvent) => {
+				if (e.key === "Tab") {
+					const elmPP = (e.target as HTMLInputElement)?.parentElement?.parentElement,
+						elm = elmPP?.[e.shiftKey ? "previousElementSibling" : "nextElementSibling"]?.firstElementChild?.firstElementChild ??
+							elmPP?.parentElement?.parentElement?.firstElementChild;
 
-		if (onchange(newSelected, null) !== false) {
-			setSelected(newSelected);
-		}
-	});
+					if (elm instanceof HTMLInputElement) {
+						elm.focus();
 
-	return <div className="multiSelect" id={`multi_${id}`}>
-		<ul>
-			<li><button id={id} aria-haspopup="listbox" aria-label="Select/Deselect" disabled={disabled} onClick={() => filterRef.current?.focus()}>+</button></li>
-			{(disabled ? [] : Array.from(selected)).map(e => <li key={`ms_${id}_s_${e}`}><button tabIndex={-1} title={`Deselect ${e}`} onClick={() => {
-				selectedSet.delete(e);
-
-				const selected = Array.from(selectedSet);
-
-				if (onchange(selected, e) !== false) {
-					setSelected(selected);
-				}
-			}}>{e}</button></li>)}
-		</ul>
-		<div>
-			<div>
-				<input ref={filterRef} aria-label="Filter List" tabIndex={-1} value={filter} onKeyDown={e => {
-					if (e.key === "Escape") {
-						(e.target as HTMLInputElement).blur();
-					} else if (e.key === "Enter") {
-						if (filteredList.length === 1) {
-							selectedSet.add(filteredList[0]);
-
-							const selected = Array.from(selectedSet);
-
-							if (onchange(selected, null) !== false) {
-								setSelected(selected);
-							}
-						}
-					} else if (e.key === "Tab") {
 						e.preventDefault();
-
-						const input = (e.target as HTMLElement)?.nextElementSibling?.[e.shiftKey ? "lastElementChild" : "firstElementChild"]?.firstElementChild?.firstElementChild;
-
-						if (input instanceof HTMLInputElement) {
-							input.focus();
-						}
 					}
-				}} onChange={e => setFilter(e.target.value)} />
-				<ul tabIndex={-1} onKeyDown={e => {
-					if (e.key === "Escape") {
-						(e.target as HTMLInputElement).blur();
-					}
-				}}>
-					{
-						filteredList.map(e => <li key={`ms_${id}_${e}`}>
-							<label><input tabIndex={-1} type="checkbox" checked={selectedSet.has(e)} onChange={() => {
-								let deleted: null | string = null;
+				}
+			};
 
-								if (selectedSet.has(e)) {
-									selectedSet.delete(e);
-									deleted = e;
-								} else {
-									selectedSet.add(e);
-								}
+		listener?.((values: string[], deleted: boolean) => {
+			const valueSet = new Set(selected);
+
+			if (deleted) {
+				for (const v of values) {
+					valueSet.delete(v);
+				}
+			} else {
+				for (const v of values) {
+					valueSet.add(v);
+				}
+			}
+
+			const newSelected = Array.from(valueSet);
+
+			if (onchange(newSelected, null) !== false) {
+				setSelected(newSelected);
+			}
+		});
+
+		return <div className="multiSelect" id={`multi_${id}`}>
+			<ul>
+				<li><button id={id} aria-haspopup="listbox" aria-label="Select/Deselect" disabled={disabled} onClick={() => filterRef.current?.focus()}>+</button></li>
+				{disabled ? <></> : Array.from(selected).map(item => <RemoveItem
+					key={`ms_${id}_s_${item}`}
+					item={item}
+					selectedSet={selectedSet}
+					setSelected={setSelected}
+					onchange={onchange}
+				/>)}
+			</ul>
+			<div>
+				<div>
+					<input ref={filterRef} aria-label="Filter List" tabIndex={-1} value={filter} onKeyDown={e => {
+						if (e.key === "Escape") {
+							(e.target as HTMLInputElement).blur();
+						} else if (e.key === "Enter") {
+							if (filteredList.length === 1) {
+								selectedSet.add(filteredList[0]);
 
 								const selected = Array.from(selectedSet);
 
-								if (onchange(selected, deleted) !== false) {
+								if (onchange(selected, null) !== false) {
 									setSelected(selected);
 								}
-							}} onKeyDown={keypress} />{e}</label>
-						</li>)
-					}
-				</ul>
+							}
+						} else if (e.key === "Tab") {
+							e.preventDefault();
+
+							const input = (e.target as HTMLElement)?.nextElementSibling?.[e.shiftKey ? "lastElementChild" : "firstElementChild"]?.firstElementChild?.firstElementChild;
+
+							if (input instanceof HTMLInputElement) {
+								input.focus();
+							}
+						}
+					}} onChange={e => setFilter(e.target.value)} />
+					<ul tabIndex={-1} onKeyDown={e => {
+						if (e.key === "Escape") {
+							(e.target as HTMLInputElement).blur();
+						}
+					}}>
+						{
+							filteredList.map(item => <SelectItem
+								key={`ms_${id}_${item}`}
+								item={item}
+								selectedSet={selectedSet}
+								setSelected={setSelected}
+								onchange={onchange}
+								keypress={keypress}
+							/>)
+						}
+					</ul>
+				</div>
 			</div>
 		</div>
-	</div>
-};
+	};
 
 export default MultiSelectComponent;
