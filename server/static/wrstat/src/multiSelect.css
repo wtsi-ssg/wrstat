@@ -1,0 +1,56 @@
+.multiSelect ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.multiSelect>ul li {
+	display: inline-block;
+}
+
+.multiSelect>ul li:not(:first-child) button {
+	margin-left: 1em;
+	padding: 0 0.5em;
+	cursor: pointer;
+	border: 1px solid var(--colour);
+	background-color: var(--background);
+	color: var(--colour);
+	position: relative;
+}
+
+.multiSelect>ul li:not(:first-child) button:hover:after {
+	content: "X";
+	color: var(--multiSelectRemove);
+	position: absolute;
+	top: 0;
+	right: 0;
+	font-size: 0.75em;
+	font-weight: bold;
+}
+
+.multiSelect>div {
+	height: 0px;
+	position: relative;
+	z-index: 10;
+}
+
+.multiSelect>div:not(:focus-within) {
+	overflow: hidden;
+}
+
+.multiSelect>div>div {
+	position: absolute;
+	background-color: var(--multiSelectBG);
+	color: var(--multiSelectFont);
+}
+
+.multiSelect>div>div>input {
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.multiSelect>div>div ul {
+	max-height: 20em;
+	overflow-y: scroll;
+	border: 0 1px 1px 1px solid currentColor;
+}

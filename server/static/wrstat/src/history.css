@@ -1,0 +1,57 @@
+#history {
+	z-index: 1;
+}
+
+#history use {
+	cursor: crosshair;
+}
+
+#historyInfo {
+	position: relative;
+	height: 0;
+	margin-top: 1.5em;
+}
+
+#historyInfo div {
+	display: none;
+	position: relative;
+	z-index: 2;
+	border-radius: 5px;
+	padding: 5px;
+	border: 1px solid var(--historyInfoBorder);
+	background-color: var(--historyInfoBG);
+	color: var(--historyInfoFont);
+}
+
+#historyInfo div:hover {
+	display: inline-block;
+}
+
+#historyTabs,
+#historyTabs:after,
+#historyTabs>li,
+#historyTabs>li:before,
+#historyTabs>li:after {
+	border-color: var(--subtleBorder);
+}
+
+summary~h2:before,
+summary~h3:before {
+	padding-left: 1em;
+	content: " ";
+	font-size: var(--fontSize);
+}
+
+.exceed,
+.exceeded {
+	padding: 1em;
+}
+
+.exceeded {
+	color: var(--exceedWarning);
+	font-weight: bold;
+}
+
+.exceed {
+	color: color-mix(in srgb, currentColor var(--warningProx), var(--exceedWarning));
+}

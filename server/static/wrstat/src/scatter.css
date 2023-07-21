@@ -1,0 +1,22 @@
+#scatter {
+	justify-self: end;
+	padding-right: 0.5em;
+}
+
+#scatter use {
+	cursor: pointer;
+}
+
+#scatter .back {
+	cursor: crosshair;
+}
+
+#scatter use {
+	fill: currentColor;
+	fill-opacity: 0.4;
+}
+
+#scatter use.selected {
+	fill: var(--scatterHighlight);
+	fill-opacity: 1;
+}

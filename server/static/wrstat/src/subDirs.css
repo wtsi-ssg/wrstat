@@ -1,0 +1,5 @@
+#historyTable {
+	overflow: hidden;
+	width: calc(100% - 2em);
+	margin: 1em 1em;
+}

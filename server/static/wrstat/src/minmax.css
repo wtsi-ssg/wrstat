@@ -1,0 +1,83 @@
+.minmax {
+	position: relative;
+	display: block;
+	margin: 0 1em;
+	height: calc(1em + 4px + 1em + 1px);
+	grid-column: 2 / span 3;
+}
+
+.minmax_min,
+.minmax_max,
+.minmax_minValue,
+.minmax_maxValue {
+	position: absolute;
+	top: 0;
+}
+
+.minmax_min,
+.minmax_max {
+	padding: 2px;
+	margin-top: -6px;
+	background-color: #aaa;
+}
+
+.minmax_min,
+.minmax_max {
+	background-color: var(--minmaxStaticBG);
+	color: var(--minmaxStaticFont);
+}
+
+.minmax_setLine,
+.minmax_minValue,
+.minmax_maxValue {
+	color: var(--minmaxRangeFont);
+	background-color: var(--minmaxRangeBG);
+}
+
+.minmax_min {
+	right: 100%;
+}
+
+.minmax_max {
+	left: 100%;
+}
+
+.minmax_line,
+.minmax_setLine {
+	position: absolute;
+	top: calc(1em + 4px + 0.5em - 5px);
+	bottom: 5px;
+}
+
+.minmax_line {
+	left: 0;
+	right: 0;
+	border-radius: 1em;
+	background-color: var(--minmaxLine);
+}
+
+.minmax_minValue,
+.minmax_maxValue {
+	padding: 2px;
+	margin-top: -6px;
+	border-radius: 3px;
+}
+
+.minmax_minSlider,
+.minmax_maxSlider {
+	position: absolute;
+	top: calc(1em + 2px);
+	width: 1em;
+	height: 1em;
+	border-radius: 1em;
+	cursor: ew-resize;
+	border: 1px solid currentColor;
+	background-color: var(--minmaxSlide);
+}
+
+.minmax_min,
+.minmax_max,
+.minmax_minValue,
+.minmax_maxValue {
+	white-space: nowrap;
+}

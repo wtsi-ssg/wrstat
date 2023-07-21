@@ -1,0 +1,27 @@
+#login input {
+	display: block;
+	box-sizing: border-box;
+	width: calc(100vw - 4em);
+	font-size: 3em;
+	padding: 1em 2em;
+	margin: 0 2em;
+	border: 0.5em outset #000;
+	cursor: pointer;
+	color: #000;
+	background-color: var(--inputAccent);
+}
+
+#login input:hover {
+	color: #fff;
+}
+
+#login input:active {
+	border-style: inset;
+	padding: 0.9em 2.1em 1.1em 1.9em;
+}
+
+
+#auth {
+	position: absolute;
+	right: 0;
+}
