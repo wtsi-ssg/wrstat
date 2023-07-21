@@ -190,7 +190,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 					cols.some(c => c.sum) ?
 						<tfoot>
 							<tr>
-								{cols.map(c => <td aria-label={c.sum && `Total ${c.title}`}>{
+								{cols.map((c, n) => <td key={`total_${n}`} aria-label={c.sum && `Total ${c.title}`}>{
 									c.sum ?
 										c.sum(pagedRows.map(row => row[c.key])) :
 										<></>
