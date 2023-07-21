@@ -1,15 +1,15 @@
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import DiskTreeComponent from "./DiskTree";
 import Filter from "./Filter"
 import History from './History';
+import Scatter from "./Scatter";
 import SubDirs from './SubDirs';
+import Tabs from "./Tabs";
+import { fitlerTableRows } from "./Table";
 import UsageTable from "./UsageTable";
+import { asDaysAgo } from "./format";
 import type { Usage } from "./rpc"
 import { clearState, useSavedState } from "./state";
-import Tabs from "./Tabs";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { asDaysAgo } from "./format";
-import { fitlerTableRows } from "./Table";
-import Scatter from "./Scatter";
 
 const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
 	const [byUser, setBy] = useSavedState("byUser", false),

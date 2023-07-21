@@ -1,10 +1,10 @@
+import './index.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import './index.css';
+import App from './App';
 import Auth, { logout } from './auth';
 import ready from './ready';
 import RPC from './rpc';
-import App from './App';
 
 const auth = ready.then(Auth),
 	now = Date.now(),

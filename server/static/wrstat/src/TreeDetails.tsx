@@ -1,5 +1,5 @@
-import { formatBytes, formatDate, formatNumber } from "./format";
 import type { Child } from "./rpc";
+import { formatBytes, formatDate, formatNumber } from "./format";
 
 const TreedetailsComponent = ({ details, ...rest }: { details: Child | null } & Record<string, any>) => {
 	if (!details) {

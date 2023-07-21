@@ -1,12 +1,12 @@
 import type { Child, Usage } from './rpc';
+import type { Filter } from './Table';
 import type { Entry } from './Treemap';
 import { useEffect, useState } from "react"
 import MultiSelect from './MultiSelect';
-import RPC from "./rpc";
-import { useSavedState } from './state';
-import type { Filter } from './Table';
 import TreeDetails from "./TreeDetails";
 import Treemap from "./Treemap";
+import RPC from "./rpc";
+import { useSavedState } from './state';
 
 type DiskTreeParams = {
 	treePath: string;

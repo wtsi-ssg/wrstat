@@ -1,8 +1,10 @@
 import type { Usage } from './rpc';
+import type { Filter, } from './Table';
+import Table, { fitlerTableRows } from './Table';
 import { downloadGroups, downloadUsers } from './download';
 import { asDaysAgoStr, formatBytes, formatNumber } from './format';
 import { useSavedState } from './state';
-import Table, { type Filter, fitlerTableRows } from './Table';
+
 
 type FilterTableParams = {
 	byUser: boolean;

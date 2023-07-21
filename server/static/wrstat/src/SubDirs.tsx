@@ -1,7 +1,7 @@
 import type { SubDir } from "./rpc";
 import { useEffect, useState } from "react";
-import { asDaysAgoStr, formatBytes, formatNumber } from './format';
 import Table from './Table';
+import { asDaysAgoStr, formatBytes, formatNumber } from './format';
 import RPC from './rpc';
 
 type SubDirParams = {

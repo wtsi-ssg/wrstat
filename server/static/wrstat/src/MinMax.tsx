@@ -1,4 +1,5 @@
-import { type KeyboardEvent, useState, useLayoutEffect } from "react";
+import type { KeyboardEvent } from "react";
+import { useState, useLayoutEffect } from "react";
 
 type MinMaxParams = {
 	min?: number;
