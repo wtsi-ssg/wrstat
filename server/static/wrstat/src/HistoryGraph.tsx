@@ -175,10 +175,10 @@ const paddingXL = 80,
 				{
 					y === latestHistory.Quota ? <path d="M5,5 L-5,-5 M-5,5 L5,-5" stroke="#f00" stroke-width={2} transform={`translate(${paddingXL + (x - minDate) * xScale} ${amountToY(y)})`} onMouseOver={() => setInfoBox(infoBoxes.length - 1)} onMouseOut={() => setInfoBox(-1)} /> : []
 				}
-				<rect x={width - 70} y={paddingYT + 10} width={69} height={43} stroke="currentColor" fill="none" />
-				<rect x={width - 65} y={paddingYT + 15} width={10} height={10} stroke="currentColor" style={{ fill: "var(--graphQuota)" }} />
+				<rect rx={4} x={width - 70} y={paddingYT + 10} width={69} height={43} stroke="currentColor" fill="none" />
+				<rect rx={2} x={width - 65} y={paddingYT + 15} width={10} height={10} stroke="currentColor" style={{ fill: "var(--graphQuota)" }} />
 				<text x={width - 48} y={paddingYT + 25} fill="currentColor">Quota</text>
-				<rect x={width - 65} y={paddingYT + 35} width={10} height={10} stroke="currentColor" style={{ fill: "var(--graphUsage)" }} />
+				<rect rx={2} x={width - 65} y={paddingYT + 35} width={10} height={10} stroke="currentColor" style={{ fill: "var(--graphUsage)" }} />
 				<text x={width - 48} y={paddingYT + 45} fill="currentColor">Usage</text>
 			</svg>
 		</>
