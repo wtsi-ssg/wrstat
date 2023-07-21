@@ -120,7 +120,7 @@ const SelectItem = ({ item, selectedSet, setSelected, onchange, keypress }: Sele
 			</ul>
 			<div>
 				<div>
-					<input ref={filterRef} aria-label="Filter List" tabIndex={-1} value={filter} onKeyDown={e => {
+					<input ref={filterRef} placeholder="Filter" aria-label="Filter List" tabIndex={-1} value={filter} onKeyDown={e => {
 						if (e.key === "Escape") {
 							(e.target as HTMLInputElement).blur();
 						} else if (e.key === "Enter") {
