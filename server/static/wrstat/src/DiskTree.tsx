@@ -151,7 +151,7 @@ const colours = [
 		}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, filterStr]);
 
 		return <>
-			<details open className="boxed">
+			<details open>
 				<summary><h1>Disktree</h1></summary>
 				<div id="disktree">
 					<div className="treeFilter">

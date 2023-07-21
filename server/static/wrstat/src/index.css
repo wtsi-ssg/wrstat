@@ -44,29 +44,29 @@ summary>h1 {
   font-weight: normal;
 }
 
-.boxed {
+details {
   border: 1px solid var(--subtleBorder);
   border-radius: 8px;
   margin: 1em;
 }
 
-.boxed summary {
+details summary {
   list-style: none;
   padding: 0.5em 1em;
   position: relative;
 }
 
-.boxed summary::-webkit-details-marker {
+details summary::-webkit-details-marker {
   display: none
 }
 
-.boxed[open] summary {
+details[open] summary {
   border-bottom: 1px solid var(--subtleBorder);
   margin-bottom: 1em;
 }
 
-.boxed summary:before,
-.boxed summary:after {
+details summary:before,
+details summary:after {
   display: block;
   content: "·";
   color: #000;
@@ -76,18 +76,18 @@ summary>h1 {
   right: -1px;
 }
 
-.boxed summary:before {
+details summary:before {
   border-left: 1px solid var(--subtleBorder);
 }
 
-.boxed summary:after {
+details summary:after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M7,0 v10 l-5,-5 z' fill='black' /%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: center center;
   background-size: 1em 1em;
 }
 
-.boxed[open] summary:after {
+details[open] summary:after {
   transform: rotate(-90deg);
 }
 
@@ -271,7 +271,7 @@ th,
     --exceedWarning: #f00;
   }
 
-  .boxed summary:after {
+  details summary:after {
     filter: invert(1);
   }
 }

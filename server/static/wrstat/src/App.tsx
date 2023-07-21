@@ -125,7 +125,7 @@ const groupNameToIDMap = new Map<string, number>(),
 					selected: byUser
 				},
 			]} />
-			<details open className="boxed">
+			<details open>
 				<summary><h1>Filter</h1></summary>
 				<div className="primaryFilter" ref={primaryFilter}>
 					<Filter {...({

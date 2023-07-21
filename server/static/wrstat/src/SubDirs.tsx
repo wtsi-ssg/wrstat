@@ -53,7 +53,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 			return <></>
 		}
 
-		return <details open className="boxed" id="subdirs">
+		return <details open id="subdirs">
 			<summary><h1>Sub-Directories</h1></summary>
 			<Table
 				id="historyTable"

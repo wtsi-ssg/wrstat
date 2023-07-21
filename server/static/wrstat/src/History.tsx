@@ -88,7 +88,7 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 		}
 
 		return <>
-			<details open className="boxed">
+			<details open>
 				<summary><h1>Usage History</h1></summary>
 				<h2>Usage | {name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
 				<h3>History/Future Predictions</h3>
