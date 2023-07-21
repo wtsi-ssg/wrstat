@@ -1,7 +1,6 @@
 @import url("auth.css");
 @import url("diskTree.css");
 @import url("filter.css");
-@import url("filteredTable.css");
 @import url("history.css");
 @import url("minmax.css");
 @import url("multiSelect.css");
@@ -10,6 +9,7 @@
 @import url("table.css");
 @import url("tabs.css");
 @import url("treeMap.css");
+@import url("usageTable.css");
 
 body {
   padding: 0;

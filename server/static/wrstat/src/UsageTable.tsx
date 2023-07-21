@@ -30,7 +30,7 @@ const stringSort = new Intl.Collator().compare,
 	sortStatus = (a: Usage, b: Usage) => stringSort(a.status ?? "", b.status ?? "") || stringSort(a.BaseDir, b.BaseDir),
 	reverseSortPercentSize = (a: Usage, b: Usage) => !a.QuotaSize ? 1 : !b.QuotaSize ? -1 : sortPercentSize(b, a),
 	reverseSortPercentInodes = (a: Usage, b: Usage) => !a.QuotaInodes ? 1 : !b.QuotaInodes ? -1 : sortPercentInodes(b, a),
-	FilteredTableComponent = ({ usage, byUser, groupMap, userMap, selectedID, selectedDir, setSelectedID, setSelectedDir, setTreePath, filter }: FilterTableParams) => {
+	UsageTableComponent = ({ usage, byUser, groupMap, userMap, selectedID, selectedDir, setSelectedID, setSelectedDir, setTreePath, filter }: FilterTableParams) => {
 		const [perPage, setPerPage] = useSavedState("perPage", 10),
 			hasQuota = usage.some(u => u.QuotaSize || u.QuotaInodes);
 
@@ -160,4 +160,4 @@ const stringSort = new Intl.Collator().compare,
 		</>
 	};
 
-export default FilteredTableComponent;
+export default UsageTableComponent;

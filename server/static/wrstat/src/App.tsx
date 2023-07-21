@@ -1,8 +1,8 @@
 import DiskTreeComponent from "./DiskTree";
-import FilteredTable from "./FilteredTable";
 import Filter from "./Filter"
 import History from './History';
 import SubDirs from './SubDirs';
+import UsageTable from "./UsageTable";
 import type { Usage } from "./rpc"
 import { clearState, useSavedState } from "./state";
 import Tabs from "./Tabs";
@@ -161,7 +161,7 @@ const App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage:
 					}} />
 			</div>
 		</details >
-		<FilteredTable
+		<UsageTable
 			{...{
 				userMap,
 				groupMap,
