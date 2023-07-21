@@ -208,7 +208,7 @@ const ScatterComponent = ({
 		<defs>
 			<circle id="marker" r="2.5" />
 		</defs>
-		<rect className="back" x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
+		<rect rx={4} className="back" x={paddingXL} y={paddingYT} width={graphWidth + 2 * innerPadding} height={graphHeight + 2 * innerPadding} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
 		{
 			Array.from({ length: 6 }, (_, n) => <line key={`scatter_hl_${n}`} x1={dateToX(nonLogFractionToDate(0), false) - innerPadding} x2={dateToX(nonLogFractionToDate(1), false) + innerPadding} y1={sizeToY(nonLogFractionToSize(n / 5), false)} y2={sizeToY(nonLogFractionToSize(n / 5), false)} className="graphLines" />)
 		}

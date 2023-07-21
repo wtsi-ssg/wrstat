@@ -158,7 +158,7 @@ const HistoryGraph = ({ history, width, height, yFormatter, secondaryFormatter, 
 			<defs>
 				<path id="point" d="M0,5 L5,0 0,-5 -5,0 Z" />
 			</defs>
-			<rect x={paddingXL} y={paddingYT} width={width - paddingXL - paddingXR} height={height - paddingYT - paddingYB} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
+			<rect rx={4} x={paddingXL} y={paddingYT} width={width - paddingXL - paddingXR} height={height - paddingYT - paddingYB} style={{ "fill": "var(--graphBack, #ddd)" }} stroke="currentColor" />
 			{
 				Array.from({ length: 4 }, (_, n) => <line key={`graph_lh_${n}`} x1={paddingXL} x2={width - paddingXR} y1={amountToY((n + 1) * maxAmount / 5)} y2={amountToY((n + 1) * maxAmount / 5)} className="graphLines" />)
 			}
