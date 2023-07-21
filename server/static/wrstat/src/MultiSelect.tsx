@@ -61,9 +61,10 @@ const SelectItem = ({ item, selectedSet, setSelected, onchange, keypress }: Sele
 		listener,
 		onchange
 	}: MultiSelectParams) => {
-		let [selected, setSelected] = useSavedState<string[]>(id + "Multi", []);
+		let [selected, setSelected] = useSavedState<string[]>(id + "Multi", []),
+			selectedStr = JSON.stringify(selected);
 
-		useEffect(() => { onchange(Array.from(selected), null) }, [JSON.stringify(selected)]);
+		useEffect(() => { onchange(Array.from(selected), null) }, [selectedStr]);
 
 		if (selectedList) {
 			selected = Array.from(new Set(selected.concat(selectedList)));
