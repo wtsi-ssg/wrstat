@@ -31,12 +31,10 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 		"dir"
 	] as const,
 	stringSort = new Intl.Collator().compare,
-	sorters = [
-		(a: SubDir, b: SubDir) => stringSort(a.SubDir, b.SubDir),
-		(a: SubDir, b: SubDir) => a.NumFiles - b.NumFiles,
-		(a: SubDir, b: SubDir) => a.SizeFiles - b.SizeFiles,
-		(a: SubDir, b: SubDir) => new Date(b.LastModified).valueOf() - new Date(a.LastModified).valueOf(),
-	] as const,
+	sortPath = (a: SubDir, b: SubDir) => stringSort(a.SubDir, b.SubDir),
+	sortNumFiles = (a: SubDir, b: SubDir) => a.NumFiles - b.NumFiles,
+	sortSizeFiles = (a: SubDir, b: SubDir) => a.SizeFiles - b.SizeFiles,
+	sortLastModifed = (a: SubDir, b: SubDir) => new Date(b.LastModified).valueOf() - new Date(a.LastModified).valueOf(),
 	SubdirsComponent = ({ id, path, isUser, setPath }: SubDirParams) => {
 		const [subdirs, setSubdirs] = useState<SubDir[]>([]);
 
@@ -67,13 +65,13 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 					{
 						title: "Path",
 						key: "SubDir",
-						sortFn: sorters[0],
+						sortFn: sortPath,
 						formatter: (subdir: string) => pathJoin(path, subdir)
 					},
 					{
 						title: "Number of Files",
 						key: "NumFiles",
-						sortFn: sorters[1],
+						sortFn: sortNumFiles,
 						startReverse: true,
 						formatter: formatNumber
 					},
@@ -81,7 +79,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 						title: "Size",
 						key: "SizeFiles",
 						extra: size => ({ title: formatNumber(size) + " Bytes" }),
-						sortFn: sorters[2],
+						sortFn: sortSizeFiles,
 						startReverse: true,
 						formatter: formatBytes
 					},
@@ -89,7 +87,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 						title: "Last Modified (days)",
 						key: "LastModified",
 						extra: title => ({ title }),
-						sortFn: sorters[3],
+						sortFn: sortLastModifed,
 						startReverse: true,
 						formatter: asDaysAgoStr
 					},
