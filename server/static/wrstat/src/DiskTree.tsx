@@ -74,7 +74,7 @@ const colours = [
 			last = pos;
 		}
 
-		breadcrumbs.push(<span key={`breadcrumb_${breadcrumbs.length}`} tabIndex={0} aria-current="location">{path.slice(last + 1) || "/"}</span>);
+		breadcrumbs.push(<li key={`breadcrumb_${breadcrumbs.length}`} tabIndex={0} aria-current="location">{path.slice(last + 1) || "/"}</li>);
 
 		return breadcrumbs;
 	},
