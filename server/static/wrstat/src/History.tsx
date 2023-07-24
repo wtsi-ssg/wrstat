@@ -90,8 +90,6 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 		return <>
 			<details open>
 				<summary><h1>Usage History</h1></summary>
-				<h2>Usage | {name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
-				<h3>History/Future Predictions</h3>
 				<Tabs id="historyTabs" tabs={[
 					{
 						title: "Size",
@@ -104,6 +102,7 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 						selected: inodeHistory,
 					}
 				]} />
+				<h2>{name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
 				<HistoryWarning isInodes={inodeHistory} history={history} />
 				<HistoryGraph
 					history={graphData}

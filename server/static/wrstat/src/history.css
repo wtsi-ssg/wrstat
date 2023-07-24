@@ -35,11 +35,8 @@
 	border-color: var(--subtleBorder);
 }
 
-summary~h2:before,
-summary~h3:before {
-	padding-left: 1em;
-	content: " ";
-	font-size: var(--fontSize);
+#historyTabs~h2 {
+	text-align: center;
 }
 
 .exceed,
