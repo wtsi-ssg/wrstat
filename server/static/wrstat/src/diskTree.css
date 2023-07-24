@@ -135,8 +135,8 @@
 }
 
 #treeKey span {
-	background-color: #007DC1;
-	color: #fff;
+	background-color: var(--colourKeyBG);
+	color: var(--colourKeyFont);
 	padding: 5px;
 	border-radius: 8px;
 	margin-right: 0.5em;

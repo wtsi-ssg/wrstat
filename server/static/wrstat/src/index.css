@@ -180,6 +180,9 @@ th,
     --diskTreeDetailsBorder: #aaa;
     --diskTreeDetailsFont: currentColor;
 
+    --colourKeyBG: var(--inputAccent);
+    --colourKeyFont: #fff;
+
     --historyInfoFont: currentColor;
     --historyInfoBorder: currentColor;
     --historyInfoBG: var(--background);
@@ -249,6 +252,9 @@ th,
     --diskTreeDetailsBG: #444;
     --diskTreeDetailsBorder: #888;
     --diskTreeDetailsFont: currentColor;
+
+    --colourKeyBG: var(--inputAccent);
+    --colourKeyFont: #fff;
 
     --historyInfoFont: currentColor;
     --historyInfoBorder: currentColor;
