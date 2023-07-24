@@ -88,48 +88,52 @@
 	margin-top: 1em;
 }
 
-.age_2years {
+.age_2years:before {
 	background-color: rgba(215, 48, 39, 0.75);
 }
 
-.age_1year {
+.age_1year:before {
 	background-color: rgba(244, 109, 67, 0.75);
 }
 
-.age_10months {
+.age_10months:before {
 	background-color: rgba(253, 174, 97, 0.75);
 }
 
-.age_8months {
+.age_8months:before {
 	background-color: rgba(254, 224, 139, 0.75);
 }
 
-.age_6months {
+.age_6months:before {
 	background-color: rgba(255, 255, 191, 0.75);
 }
 
-.age_3months {
+.age_3months:before {
 	background-color: rgba(217, 239, 139, 0.75);
 }
 
-.age_2months {
+.age_2months:before {
 	background-color: rgba(166, 217, 106, 0.75);
 }
 
-.age_1month {
+.age_1month:before {
 	background-color: rgba(102, 189, 99, 0.75);
 }
 
-.age_1week {
+.age_1week:before {
 	background-color: rgba(26, 152, 80, 0.75);
 }
 
 #treeKey {
 	margin-top: 1em;
 	font: 12px sans-serif;
+	background-color: var(--subtleBG);
+	border: 1px solid var(--subtleBorder);
+	border-radius: 8px;
+	padding: 1em;
 }
 
-#treeKey caption {
+#treeKey div {
 	padding-bottom: 5px;
 	text-align: left;
 	visibility: visible;
@@ -145,10 +149,22 @@
 	float: left;
 }
 
-#treeKey {
-	border-spacing: 0;
+#treeKey ol {
+	margin: 0;
+	list-style: none;
+	padding: 0;
 }
 
-#treeKey td {
-	padding: 1em;
+#treeKey li {
+	margin-bottom: 0.25em;
+}
+
+#treeKey li:before {
+	content: " ";
+	display: inline-block;
+	border: 1px solid currentColor;
+	border-radius: 2px;
+	padding: 0.5em;
+	margin-right: 1em;
+	margin-bottom: -0.25em;
 }

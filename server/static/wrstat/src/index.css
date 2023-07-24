@@ -254,7 +254,7 @@ th,
     --diskTreeDetailsFont: currentColor;
 
     --colourKeyBG: var(--inputAccent);
-    --colourKeyFont: #fff;
+    --colourKeyFont: #000;
 
     --historyInfoFont: currentColor;
     --historyInfoBorder: currentColor;
