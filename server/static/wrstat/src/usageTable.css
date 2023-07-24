@@ -18,6 +18,14 @@
 	white-space: normal;
 }
 
+#usageTable {
+	min-width: 64em;
+}
+
+#usageTable.noQuota {
+	min-width: 32em;
+}
+
 #usageTable td:first-child,
 #usageTable td:nth-child(2) {
 	text-overflow: ellipsis;
