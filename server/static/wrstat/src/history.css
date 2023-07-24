@@ -50,5 +50,5 @@
 }
 
 .exceed {
-	color: color-mix(in srgb, currentColor var(--warningProx), var(--exceedWarning));
+	color: color-mix(in srgb, var(--colour) var(--warningProx), var(--exceedWarning));
 }
