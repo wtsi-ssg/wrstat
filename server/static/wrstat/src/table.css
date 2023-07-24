@@ -7,7 +7,7 @@
 }
 
 .prettyTable thead th {
-	padding-right: 1em;
+	padding-right: 1.25em;
 	border-bottom: 1px solid currentColor;
 }
 
@@ -16,10 +16,15 @@
 	cursor: pointer;
 }
 
+.prettyTable tbody td:not(:first-child),
+.prettyTable thead th:not(:first-child) {
+	border-left: 1px solid var(--tableBorder);
+}
+
 .prettyTable .sortable {
-	height: 2em;
+	min-height: 2em;
 	background-repeat: no-repeat;
-	background-position: right 0 center;
+	background-position: right 0.25em;
 	background-size: 1em 2em;
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 82'%3E%3Cpath d='M1,23 h38 l-19,18 z' fill='%23aaa'  fill-opacity='0.25' stroke='none' stroke-linejoin='round' /%3E%3Cpath d='M1,20 h38 l-19,-18 z' fill='%23aaa' fill-opacity='0.25' stroke='none' stroke-linejoin='round' /%3E%3C/svg%3E%0A");
 }
