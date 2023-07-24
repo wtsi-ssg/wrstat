@@ -27,9 +27,12 @@
 #usageTable col:nth-child(3),
 #usageTable col:nth-child(4),
 #usageTable col:nth-child(8),
-#usageTable col:nth-child(9),
 #usageTable col:nth-child(10) {
 	width: 5em;
+}
+
+#usageTable col:nth-child(9) {
+	width: 6em;
 }
 
 #usageTable col:nth-child(2),
