@@ -8,7 +8,7 @@
 
 .prettyTable thead th {
 	padding-right: 1.25em;
-	border-bottom: 1px solid currentColor;
+	border-bottom: 1px solid var(--tableBorder);
 }
 
 .prettyTable thead th.sortable:hover {
