@@ -70,7 +70,7 @@
 	align-items: start;
 }
 
-#disktree div:first-child {
+#disktree>div:first-child {
 	grid-column: 2;
 	grid-row: 2;
 	margin-right: 2em;
