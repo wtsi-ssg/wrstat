@@ -47,6 +47,10 @@
 	border-right: 1px solid var(--tableBorder);
 }
 
+#usageTable tbody tr:last-child td {
+	border-bottom: 1px solid var(--tableBorder);
+}
+
 #usageTable tbody tr:last-child td:first-child {
 	border-left: 1px solid var(--tableBorder);
 	border-bottom-left-radius: 4px;
@@ -127,10 +131,6 @@
 #usageTable tbody td:nth-child(10) {
 	text-align: center;
 	white-space: nowrap;
-}
-
-#usageTable tfoot>tr>td:empty {
-	border-top: 1px solid var(--tableBorder);
 }
 
 #usageTable tfoot>tr>td:not(:empty) {
