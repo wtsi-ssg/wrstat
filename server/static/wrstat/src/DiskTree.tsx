@@ -154,24 +154,21 @@ const colours = [
 			<details open>
 				<summary><h1>Disktree</h1></summary>
 				<div id="disktree">
-					<div className="treeFilter">
-						<div className="title">Colour By</div>
-						<label aria-label="Colour by Oldest Access Time" title="Oldest Access Time" htmlFor="aTime">Access Time</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
-						<label aria-label="Colour by Latest Modified Time" title="Latest Modified Time" htmlFor="mTime">Modified Time</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
-						<div className="title">Area Represents</div>
-						<label aria-label="Area represents File Size" htmlFor="useSize">File Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
-						<label aria-label="Area represents File Count" htmlFor="useCount">File Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
-						<div className="title">Filter</div>
-						<label htmlFor="filetypes">File Types</label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
-						<label htmlFor="sinceAccess">Time Since Access</label>
-						<select value={sinceLastAccess} id="sinceAccess" onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
-							{timesSinceAccess.map(([l, t]) => <option key={`tsa_${t}`} value={t}>{l}</option>)}
-						</select>
-					</div>
-					<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 					<div>
-						<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
-						<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
+						<div className="treeFilter">
+							<div className="title">Colour By</div>
+							<label aria-label="Colour by Oldest Access Time" title="Oldest Access Time" htmlFor="aTime">Access Time</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
+							<label aria-label="Colour by Latest Modified Time" title="Latest Modified Time" htmlFor="mTime">Modified Time</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
+							<div className="title">Area Represents</div>
+							<label aria-label="Area represents File Size" htmlFor="useSize">File Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
+							<label aria-label="Area represents File Count" htmlFor="useCount">File Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
+							<div className="title">Filter</div>
+							<label htmlFor="filetypes">File Types</label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
+							<label htmlFor="sinceAccess">Time Since Access</label>
+							<select value={sinceLastAccess} id="sinceAccess" onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
+								{timesSinceAccess.map(([l, t]) => <option key={`tsa_${t}`} value={t}>{l}</option>)}
+							</select>
+						</div>
 						<table id="treeKey">
 							<caption>
 								<span>Colour Key</span>
@@ -182,15 +179,24 @@ const colours = [
 									<td className="age_2years">&gt; 2 years</td>
 									<td className="age_1year">&gt; 1 year</td>
 									<td className="age_10months">&gt; 10 months</td>
+								</tr>
+								<tr>
 									<td className="age_8months">&gt; 8 months</td>
 									<td className="age_6months">&gt; 6 months</td>
 									<td className="age_3months">&gt; 3 months</td>
+								</tr>
+								<tr>
 									<td className="age_2months">&gt; 2 months</td>
 									<td className="age_1month">&gt; 1 month</td>
 									<td className="age_1week">&lt; 1 month</td>
 								</tr>
 							</tbody>
 						</table>
+					</div>
+					<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
+					<div>
+						<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
+						<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
 					</div>
 				</div>
 			</details>
