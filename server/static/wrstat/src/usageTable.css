@@ -138,6 +138,10 @@
 	padding: 0.5em 1em 0.5em 0.25em;
 }
 
+#usageTable.noQuota tfoot td:nth-child(6) {
+	border-left: 1px solid var(--tableBorder);
+}
+
 #perPage {
 	float: left;
 	padding-left: 1em;
