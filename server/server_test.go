@@ -537,6 +537,8 @@ func TestServer(t *testing.T) {
 				dbPath, ownersPath, err := createExampleBasedirsDB(t, tree)
 				So(err, ShouldBeNil)
 
+				s.tree = tree
+
 				Convey("You can get results after calling LoadBasedirsDB", func() {
 					err = s.LoadBasedirsDB(dbPath, ownersPath)
 					So(err, ShouldBeNil)
@@ -1179,7 +1181,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					Get(EndPointAuthBasedirSubdirGroup)
 				So(err, ShouldBeNil)
 				So(resp.Result(), ShouldNotBeNil)
-				So(len(subdirs), ShouldEqual, 2)
+				So(len(subdirs), ShouldEqual, 0)
 
 				resp, err = r.SetResult(&subdirs).
 					ForceContentType("application/json").
@@ -1190,7 +1192,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					Get(EndPointAuthBasedirSubdirUser)
 				So(err, ShouldBeNil)
 				So(resp.Result(), ShouldNotBeNil)
-				So(len(subdirs), ShouldEqual, 2)
+				So(len(subdirs), ShouldEqual, 0)
 
 				var history []basedirs.History
 
@@ -1203,6 +1205,36 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 					Get(EndPointAuthBasedirHistory)
 				So(err, ShouldBeNil)
 				So(resp.Result(), ShouldNotBeNil)
+
+				Convey("and can read subdirs from a different group if you're on the whitelist", func() {
+					s.WhiteListGroups(func(_ string) bool {
+						return true
+					})
+
+					s.userToGIDs = make(map[string][]string)
+
+					resp, err = r.SetResult(&subdirs).
+						ForceContentType("application/json").
+						SetQueryParams(map[string]string{
+							"id":      fmt.Sprintf("%d", usage[0].GID),
+							"basedir": usage[0].BaseDir,
+						}).
+						Get(EndPointAuthBasedirSubdirGroup)
+					So(err, ShouldBeNil)
+					So(resp.Result(), ShouldNotBeNil)
+					So(len(subdirs), ShouldEqual, 2)
+
+					resp, err = r.SetResult(&subdirs).
+						ForceContentType("application/json").
+						SetQueryParams(map[string]string{
+							"id":      fmt.Sprintf("%d", userUsageUID),
+							"basedir": userUsageBasedir,
+						}).
+						Get(EndPointAuthBasedirSubdirUser)
+					So(err, ShouldBeNil)
+					So(resp.Result(), ShouldNotBeNil)
+					So(len(subdirs), ShouldEqual, 2)
+				})
 			})
 		})
 	})
