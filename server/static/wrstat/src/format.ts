@@ -31,7 +31,6 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 
 		return formatNumber(n) + " " + byteUnits[unit];
 	},
-	asGB = (num: number) => formatNumber(Math.round(num / (1024 * 1024 * 10.24)) / 100),
 	asDaysAgo = (date: string) => Math.max(0, Math.round((now - new Date(date).valueOf()) / msInDay)),
 	asDaysAgoStr = (date: string) => formatNumber(asDaysAgo(date)),
 	formatDate = (dStr: string | number) => {
