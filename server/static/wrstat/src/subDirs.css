@@ -1,9 +1,16 @@
-#historyTable {
+#subDirsTable {
 	overflow: hidden;
 	width: calc(100% - 2em);
 	margin: 1em 1em;
 }
 
-#historyTable td:nth-child(3) {
+#subDirsTable tbody td:nth-child(2),
+#subDirsTable tbody td:nth-child(3),
+#subDirsTable tbody td:nth-child(4) {
+	text-align: right;
+	padding-right: 1em;
+}
+
+#subDirsTable td:nth-child(3) {
 	white-space: nowrap;
 }

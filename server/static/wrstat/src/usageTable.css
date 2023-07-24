@@ -120,10 +120,7 @@
 #usageTable tfoot td:nth-child(6),
 #usageTable tbody td:nth-child(7),
 #usageTable tbody td:nth-child(8),
-#usageTable tbody td:nth-child(9),
-#subDirsTable tbody td:nth-child(2),
-#subDirsTable tbody td:nth-child(3),
-#subDirsTable tbody td:nth-child(4) {
+#usageTable tbody td:nth-child(9) {
 	text-align: right;
 	padding-right: 1em;
 }
