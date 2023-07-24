@@ -90,6 +90,10 @@
 	white-space: nowrap;
 }
 
+#usageTable tfoot>tr>td:empty {
+	border-top: 1px solid var(--tableBorder);
+}
+
 #usageTable tfoot>tr>td:not(:empty) {
 	border-top: 3px double currentColor;
 	padding: 0.5em 1em 0.5em 0.25em;
