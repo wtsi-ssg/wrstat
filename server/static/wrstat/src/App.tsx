@@ -187,6 +187,17 @@ const groupNameToIDMap = new Map<string, number>(),
 					setTreePath,
 					filter
 				}} />
+			<History
+				id={selectedID}
+				path={selectedDir}
+				isUser={byUser}
+				name={selectedRow?.Name}
+				owner={selectedRow?.Owner} />
+			<SubDirs
+				id={selectedID}
+				path={selectedDir}
+				isUser={byUser}
+				setPath={setTreePath} />
 			<DiskTreeComponent
 				{...{
 					userMap: userIDToNameMap,
@@ -195,17 +206,6 @@ const groupNameToIDMap = new Map<string, number>(),
 					setTreePath,
 					filter
 				}} />
-			<SubDirs
-				id={selectedID}
-				path={selectedDir}
-				isUser={byUser}
-				setPath={setTreePath} />
-			<History
-				id={selectedID}
-				path={selectedDir}
-				isUser={byUser}
-				name={selectedRow?.Name}
-				owner={selectedRow?.Owner} />
 		</>
 	};
 
