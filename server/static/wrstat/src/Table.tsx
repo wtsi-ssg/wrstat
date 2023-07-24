@@ -73,40 +73,6 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 		return col["reverseFn"] ?? reverseSort(col["sortFn"] ?? noopSort);
 	},
 	makeRows = <T extends Record<string, any>>(rows: T[], cols: Column<T>[], onRowClick: (row: T) => void, rowExtra?: (row: T) => Record<string, any>) => {
-		let moved = false,
-			clicking = -1,
-			downTime = 0;
-
-		const onmousedown = (e: React.MouseEvent) => {
-			if (e.button !== 0) {
-				return;
-			}
-
-			moved = false;
-			window.addEventListener("mousemove", () => moved = true, { "once": true });
-			downTime = Date.now();
-		},
-			onmouseupFn = (row: T) => {
-				return (e: React.MouseEvent) => {
-					if (e.button !== 0) {
-						return;
-					}
-
-					if (!moved || Date.now() - downTime < 100) {
-						if (clicking === -1) {
-							clicking = window.setTimeout(() => {
-								onRowClick(row);
-								clicking = -1;
-							}, 200);
-						} else {
-							clearTimeout(clicking);
-							clicking = -2;
-							window.setTimeout(() => clicking = -1, 200);
-						}
-					}
-				}
-			}
-
 		return rows.map((row, n) => <tr
 			key={`table_row_${n}`}
 			role="button"
@@ -115,8 +81,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 					onRowClick(row);
 				}
 			}}
-			onMouseDown={onmousedown}
-			onMouseUp={onmouseupFn(row)}
+			onClick={() => onRowClick(row)}
 			{...(rowExtra?.(row) ?? {})}
 		>
 			{cols.map((col, m) => <td
