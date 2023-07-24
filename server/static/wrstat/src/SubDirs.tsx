@@ -56,7 +56,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 		return <details open id="subdirs">
 			<summary><h1>Sub-Directories</h1></summary>
 			<Table
-				id="historyTable"
+				id="subDirsTable"
 				table={subdirs}
 				className="prettyTable"
 				onRowClick={(row: SubDir) => setPath(pathJoin(path, row.SubDir))}

@@ -121,9 +121,9 @@
 #usageTable tbody td:nth-child(7),
 #usageTable tbody td:nth-child(8),
 #usageTable tbody td:nth-child(9),
-#historyTable tbody td:nth-child(2),
-#historyTable tbody td:nth-child(3),
-#historyTable tbody td:nth-child(4) {
+#subDirsTable tbody td:nth-child(2),
+#subDirsTable tbody td:nth-child(3),
+#subDirsTable tbody td:nth-child(4) {
 	text-align: right;
 	padding-right: 1em;
 }
