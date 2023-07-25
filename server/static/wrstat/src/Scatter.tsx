@@ -147,7 +147,7 @@ const minDaysAgo = (date: string) => {
 				height = sizeToY(minY) - y;
 
 			setHighlightCoords([x - paddingXL, width, y - paddingYT, height]);
-		}, [minX, minY, maxX, maxY, logX, logY, width, height]);
+		}, [minX, minY, maxX, maxY, width, height]);
 
 		useEffect(() => {
 			if (firstRender || restoring) {
