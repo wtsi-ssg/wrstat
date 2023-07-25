@@ -5,7 +5,7 @@ import App from './App';
 import Auth, { logout } from './auth';
 import ready from './ready';
 import RPC from './rpc';
-import { formatDateTime } from './format';
+import { formatTimeAgo } from './format';
 
 const auth = ready.then(Auth),
 	now = Date.now(),
@@ -68,6 +68,6 @@ auth.then(username => Promise.all([
 			</symbol>
 		</svg>
 		<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
-		<div id="timestamp">Database updated: {formatDateTime(timestamp)}</div>
+		<div id="timestamp" title={timestamp}>Database updated: {formatTimeAgo(timestamp)}</div>
 		<App groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
 	</StrictMode>));
