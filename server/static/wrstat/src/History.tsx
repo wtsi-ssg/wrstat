@@ -50,12 +50,13 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 		}
 
 		if (exceedSize !== Infinity) {
-			const prox = 100 * Math.min(maxWarningDay, (exceedSize - daysToday)) / maxWarningDay;
+			const daysLeft = exceedSize - daysToday,
+				prox = 100 * Math.min(maxWarningDay, daysLeft) / maxWarningDay;
 
 			return <div
 				style={{ [`--warningProx` as any]: prox + "%" }}
 				className="exceed"
-			>Expected to exceed size quota in {formatNumber(exceedSize - daysToday)} days.</div>
+			>Expected to exceed size quota in {formatNumber(daysLeft)} day{daysLeft === 1 ? "" : "s"}.</div>
 		}
 
 
