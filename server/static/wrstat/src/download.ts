@@ -18,8 +18,8 @@ export const downloadGroups = (table: Usage[]) => download(
 		},${row.UsageInodes
 		},${row.QuotaInodes
 		},"${escapeQuote(row.Mtime)
-		},${row.status
-		}"`).join("\r\n"),
+		}",${row.status
+		}`).join("\r\n"),
 	"groups.csv"
 ),
 	downloadUsers = (table: Usage[]) => download(
