@@ -33,6 +33,17 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 	},
 	asDaysAgo = (date: string) => Math.max(0, Math.round((now - new Date(date).valueOf()) / msInDay)),
 	asDaysAgoStr = (date: string) => formatNumber(asDaysAgo(date)),
+	formatDateTime = (dStr: string | number) => {
+		const d = new Date(dStr);
+
+		return `${d.getFullYear()
+			}-${(d.getMonth() + 1 + "").padStart(2, "0")
+			}-${(d.getDate() + "").padStart(2, "0")
+			} ${(d.getHours() + "").padStart(2, "0")
+			}:${(d.getMinutes() + "").padStart(2, "")
+			}:${(d.getSeconds() + "").padStart(2, "")
+			}`;
+	},
 	formatDate = (dStr: string | number) => {
 		const d = new Date(dStr);
 
