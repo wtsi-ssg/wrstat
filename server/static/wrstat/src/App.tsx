@@ -125,7 +125,7 @@ const groupNameToIDMap = new Map<string, number>(),
 		return <>
 			<Tabs id="mainTabs" tabs={[
 				{
-					title: "By Group",
+					title: "Group Base Directories",
 					onClick: () => {
 						clearState();
 						setByUser(false);
@@ -133,7 +133,7 @@ const groupNameToIDMap = new Map<string, number>(),
 					selected: !byUser
 				},
 				{
-					title: "By User",
+					title: "User Base Directories",
 					onClick: () => {
 						clearState();
 						setByUser(true);
@@ -182,7 +182,7 @@ const groupNameToIDMap = new Map<string, number>(),
 							setFilterMaxDaysAgo(maxD);
 						}} />
 				</div>
-			</details >
+			</details>
 			<UsageTable
 				{...{
 					userMap: userIDToNameMap,
