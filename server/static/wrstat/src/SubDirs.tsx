@@ -8,7 +8,8 @@ type SubDirParams = {
 	id: number;
 	path: string;
 	isUser: boolean;
-	setPath: (path: string) => void;
+	treePath: string;
+	setTreePath: (path: string) => void;
 }
 
 const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" + sub,
@@ -35,7 +36,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 	sortNumFiles = (a: SubDir, b: SubDir) => a.NumFiles - b.NumFiles,
 	sortSizeFiles = (a: SubDir, b: SubDir) => a.SizeFiles - b.SizeFiles,
 	sortLastModifed = (a: SubDir, b: SubDir) => new Date(b.LastModified).valueOf() - new Date(a.LastModified).valueOf(),
-	SubdirsComponent = ({ id, path, isUser, setPath }: SubDirParams) => {
+	SubdirsComponent = ({ id, path, isUser, treePath, setTreePath }: SubDirParams) => {
 		const [subdirs, setSubdirs] = useState<SubDir[]>([]);
 
 		useEffect(() => {
@@ -59,8 +60,9 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 				id="subDirsTable"
 				table={subdirs}
 				className="prettyTable"
-				onRowClick={(row: SubDir) => setPath(pathJoin(path, row.SubDir))}
+				onRowClick={(row: SubDir) => setTreePath(pathJoin(path, row.SubDir))}
 				caption="Sub Directories"
+				rowExtra={row => ({ "className": pathJoin(path, row.SubDir) === treePath ? "selected" : undefined })}
 				cols={[
 					{
 						title: "Path",

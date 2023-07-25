@@ -205,7 +205,8 @@ const groupNameToIDMap = new Map<string, number>(),
 				id={selectedID}
 				path={selectedDir}
 				isUser={byUser}
-				setPath={setTreePath} />
+				treePath={treePath}
+				setTreePath={setTreePath} />
 			<DiskTreeComponent
 				{...{
 					userMap: userIDToNameMap,
