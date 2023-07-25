@@ -30,8 +30,8 @@ const groupNameToIDMap = new Map<string, number>(),
 		}
 
 		const [byUser, setBy] = useSavedState("byUser", false),
-			[users, setUsers] = useState<number[]>([]),
-			[groups, setGroups] = useState<number[]>([]),
+			[users, setUsers] = useSavedState<number[]>("users", []),
+			[groups, setGroups] = useSavedState<number[]>("groups", []),
 			[owners, setOwners] = useSavedState<string[]>("owners", []),
 			[axisMinSize, setAxisMinSize] = useSavedState("filterMinSize", -Infinity),
 			[axisMaxSize, setAxisMaxSize] = useSavedState("filterMaxSize", Infinity),
@@ -78,7 +78,23 @@ const groupNameToIDMap = new Map<string, number>(),
 					return daysAgo >= axisMinDaysAgo && daysAgo <= axisMaxDaysAgo;
 				}
 			}, baseFilter),
-			preview = savedMinSize !== filterMinSize || savedMaxSize !== filterMaxSize || savedMinDaysAgo !== filterMinDaysAgo || savedMaxDaysAgo !== filterMaxDaysAgo;
+			preview = savedMinSize !== filterMinSize || savedMaxSize !== filterMaxSize || savedMinDaysAgo !== filterMinDaysAgo || savedMaxDaysAgo !== filterMaxDaysAgo,
+			guf = {
+				groupUsage,
+				userUsage,
+				byUser,
+				areas,
+				groupNameToIDMap,
+				groupIDToNameMap,
+				userNameToIDMap,
+				userIDToNameMap,
+				users,
+				setUsers,
+				groups,
+				setGroups,
+				owners,
+				setOwners,
+			};
 
 		if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), filter).length === 0) {
 			setSelectedDir("");
@@ -129,22 +145,14 @@ const groupNameToIDMap = new Map<string, number>(),
 				<summary><h1>Filter</h1></summary>
 				<div className="primaryFilter" ref={primaryFilter}>
 					<Filter {...({
-						userUsage,
-						groupUsage,
-						areas,
-						byUser,
-						users, setUsers,
-						groups, setGroups,
-						owners, setOwners,
+						usage: byUser ? userUsage : groupUsage,
 						axisMinSize, setAxisMinSize,
 						axisMaxSize, setAxisMaxSize,
 						axisMinDaysAgo, setAxisMinDaysAgo,
 						axisMaxDaysAgo, setAxisMaxDaysAgo,
 						scaleSize, setScaleSize,
 						scaleDays, setScaleDays,
-						groupNameToIDMap,
-						groupIDToNameMap,
-						userNameToIDMap
+						guf
 					})} />
 					<Scatter
 						width={scatterWidth}
@@ -204,6 +212,7 @@ const groupNameToIDMap = new Map<string, number>(),
 					groupMap: groupIDToNameMap,
 					treePath,
 					setTreePath,
+					guf,
 					filter
 				}} />
 		</>

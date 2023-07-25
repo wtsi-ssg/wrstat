@@ -10,19 +10,3 @@
 	margin-left: 1em;
 	padding-right: 3em;
 }
-
-#multi_unix>ul>li:nth-child(n+13) {
-	display: none;
-}
-
-#multi_unix>ul>li:nth-child(12) {
-	visibility: hidden;
-}
-
-#multi_unix>ul>li:nth-child(12):before {
-	content: "…";
-	padding-left: 1em;
-	display: inline-block;
-	visibility: visible;
-	pointer-events: none;
-}

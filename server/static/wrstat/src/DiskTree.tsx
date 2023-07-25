@@ -1,7 +1,9 @@
+import type { GroupUserFilterParams } from './GroupUserFilter';
 import type { Child, Usage } from './rpc';
 import type { Filter } from './Table';
 import type { Entry } from './Treemap';
 import { useEffect, useState } from "react"
+import GroupUserFilter from './GroupUserFilter';
 import MultiSelect from './MultiSelect';
 import TreeDetails from "./TreeDetails";
 import Treemap from "./Treemap";
@@ -14,6 +16,7 @@ type DiskTreeParams = {
 	userMap: Map<number, string>;
 	groupMap: Map<number, string>;
 	setTreePath: (v: string) => void;
+	guf: GroupUserFilterParams;
 }
 
 const colours = [
@@ -101,7 +104,7 @@ const colours = [
 		["> 1 year", 365],
 		["> 2 years", 730]
 	] as const,
-	DiskTreeComponent = ({ treePath, filter, userMap, groupMap, setTreePath }: DiskTreeParams) => {
+	DiskTreeComponent = ({ treePath, filter, userMap, groupMap, setTreePath, guf }: DiskTreeParams) => {
 		const [treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 			[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
 			[childDetails, setChildDetails] = useState<Child | null>(null),
@@ -163,11 +166,13 @@ const colours = [
 							<label aria-label="Area represents File Size" htmlFor="useSize">File Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
 							<label aria-label="Area represents File Count" htmlFor="useCount">File Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
 							<div className="title">Filter</div>
-							<label htmlFor="filetypes">File Types</label><MultiSelect id="filetypes" list={fileTypes} onchange={setFilterFileTypes} />
+							<label htmlFor="filetypes">File Types</label><MultiSelect id="filetypes" list={fileTypes} selected={filterFileTypes} onchange={setFilterFileTypes} />
 							<label htmlFor="sinceAccess">Time Since Access</label>
 							<select value={sinceLastAccess} id="sinceAccess" onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
 								{timesSinceAccess.map(([l, t]) => <option key={`tsa_${t}`} value={t}>{l}</option>)}
 							</select>
+							<br />
+							<GroupUserFilter {...guf} num={1} />
 						</div>
 						<div id="treeKey">
 							<div>

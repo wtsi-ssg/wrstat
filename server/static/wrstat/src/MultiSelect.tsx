@@ -1,21 +1,19 @@
 import type { KeyboardEvent } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useSavedState } from "./state";
 
 type MultiSelectParams = {
 	id: string;
 	disabled?: boolean;
 	list: readonly string[];
-	selectedList?: readonly string[];
+	selected: readonly string[];
 	listener?: (cb: Listener) => void;
-	onchange: (list: string[], deleted: string | null) => (void | boolean);
+	onchange: (list: string[], deleted: string | null) => void;
 }
 
 type ItemParams = {
 	item: string;
 	selectedSet: Set<string>;
 	onchange: (list: string[], deleted: string | null) => (void | boolean);
-	setSelected: (v: string[]) => void;
 }
 
 type SelectItemParams = ItemParams & {
@@ -25,7 +23,7 @@ type SelectItemParams = ItemParams & {
 
 export type Listener = (values: string[], deleted: boolean) => void;
 
-const SelectItem = ({ item, selectedSet, disabled, setSelected, onchange, keypress }: SelectItemParams) => <li>
+const SelectItem = ({ item, selectedSet, disabled, onchange, keypress }: SelectItemParams) => <li>
 	<label>
 		<input tabIndex={-1} type="checkbox" disabled={disabled} checked={selectedSet.has(item)} onChange={() => {
 			let deleted: null | string = null;
@@ -39,39 +37,26 @@ const SelectItem = ({ item, selectedSet, disabled, setSelected, onchange, keypre
 
 			const selected = Array.from(selectedSet);
 
-			if (onchange(selected, deleted) !== false) {
-				setSelected(selected);
-			}
+			onchange(selected, deleted);
 		}} onKeyDown={keypress} />{item}</label>
 </li>,
-	RemoveItem = ({ item, selectedSet, onchange, setSelected }: ItemParams) => <li>
+	RemoveItem = ({ item, selectedSet, onchange }: ItemParams) => <li>
 		<button tabIndex={-1} title={`Deselect ${item}`} onClick={() => {
 			selectedSet.delete(item);
 
 			const selected = Array.from(selectedSet);
 
-			if (onchange(selected, item) !== false) {
-				setSelected(selected);
-			}
+			onchange(selected, item);
 		}}>{item}</button>
 	</li>,
 	MultiSelectComponent = ({
 		id,
 		list,
+		selected,
 		disabled = false,
-		selectedList,
 		listener,
 		onchange
 	}: MultiSelectParams) => {
-		let [selected, setSelected] = useSavedState<string[]>(id + "Multi", []);
-
-		const selectedStr = JSON.stringify(selected);
-
-		useEffect(() => { onchange(Array.from(selected), null) }, [selectedStr]);
-
-		if (selectedList) {
-			selected = Array.from(new Set(selected.concat(selectedList)));
-		}
 
 		const filterRef = useRef<HTMLInputElement>(null),
 			[filter, setFilter] = useState(""),
@@ -106,9 +91,7 @@ const SelectItem = ({ item, selectedSet, disabled, setSelected, onchange, keypre
 
 			const newSelected = Array.from(valueSet);
 
-			if (onchange(newSelected, null) !== false) {
-				setSelected(newSelected);
-			}
+			onchange(newSelected, null);
 		});
 
 		return <div className="multiSelect" id={`multi_${id}`}>
@@ -126,7 +109,6 @@ const SelectItem = ({ item, selectedSet, disabled, setSelected, onchange, keypre
 					key={`ms_${id}_s_${item}`}
 					item={item}
 					selectedSet={selectedSet}
-					setSelected={setSelected}
 					onchange={onchange}
 				/>)}
 			</ul>
@@ -148,9 +130,7 @@ const SelectItem = ({ item, selectedSet, disabled, setSelected, onchange, keypre
 
 									const selected = Array.from(selectedSet);
 
-									if (onchange(selected, null) !== false) {
-										setSelected(selected);
-									}
+									onchange(selected, null);
 								}
 							} else if (e.key === "Tab") {
 								e.preventDefault();
@@ -175,7 +155,6 @@ const SelectItem = ({ item, selectedSet, disabled, setSelected, onchange, keypre
 								item={item}
 								disabled={disabled}
 								selectedSet={selectedSet}
-								setSelected={setSelected}
 								onchange={onchange}
 								keypress={keypress}
 							/>)
