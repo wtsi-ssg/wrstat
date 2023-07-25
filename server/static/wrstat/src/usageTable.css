@@ -1,7 +1,7 @@
 #usageTable {
 	table-layout: fixed;
 	width: calc(100% - 2em);
-	margin: 4em 1em 1em 1em;
+	margin: 4em 1em 0 1em;
 	overflow: hidden;
 	border-width: 0;
 }
