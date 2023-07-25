@@ -2,6 +2,7 @@ import type { Usage } from "./rpc";
 import Minmax from "./MinMax";
 import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import GroupUserFilter, { type GroupUserFilterParams } from "./GroupUserFilter";
+import { clearState } from "./state";
 
 type FilterParams = {
 	usage: Usage[];
@@ -18,6 +19,7 @@ type FilterParams = {
 	scaleDays: boolean;
 	setScaleDays: (v: boolean) => void;
 	guf: GroupUserFilterParams;
+	setByUser: (v: boolean) => void;
 }
 
 const FilterComponent = ({
@@ -28,8 +30,8 @@ const FilterComponent = ({
 	axisMaxDaysAgo, setAxisMaxDaysAgo,
 	scaleSize, setScaleSize,
 	scaleDays, setScaleDays,
-	guf
-
+	guf,
+	setByUser
 }: FilterParams) => {
 	return <>
 		<div className="treeFilter">
@@ -63,14 +65,9 @@ const FilterComponent = ({
 			<label htmlFor="scaleDays">Log Days Axis</label>
 			<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
 			<button onClick={() => {
-				setAxisMinSize(-Infinity);
-				setAxisMaxSize(Infinity);
-				setAxisMinDaysAgo(-Infinity);
-				setAxisMaxDaysAgo(Infinity);
-				guf.setOwners([]);
-				guf.setGroups([]);
-				guf.setUsers([]);
-			}}>Reset Filter</button>
+				clearState();
+				setByUser(guf.byUser);
+			}}>Reset</button>
 		</div>
 	</>
 };

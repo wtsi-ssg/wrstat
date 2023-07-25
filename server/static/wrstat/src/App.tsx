@@ -29,7 +29,7 @@ const groupNameToIDMap = new Map<string, number>(),
 			}
 		}
 
-		const [byUser, setBy] = useSavedState("byUser", false),
+		const [byUser, setByUser] = useSavedState("byUser", false),
 			[users, setUsers] = useSavedState<number[]>("users", []),
 			[groups, setGroups] = useSavedState<number[]>("groups", []),
 			[owners, setOwners] = useSavedState<string[]>("owners", []),
@@ -128,7 +128,7 @@ const groupNameToIDMap = new Map<string, number>(),
 					title: "By Group",
 					onClick: () => {
 						clearState();
-						setBy(false);
+						setByUser(false);
 					},
 					selected: !byUser
 				},
@@ -136,7 +136,7 @@ const groupNameToIDMap = new Map<string, number>(),
 					title: "By User",
 					onClick: () => {
 						clearState();
-						setBy(true);
+						setByUser(true);
 					},
 					selected: byUser
 				},
@@ -152,7 +152,8 @@ const groupNameToIDMap = new Map<string, number>(),
 						axisMaxDaysAgo, setAxisMaxDaysAgo,
 						scaleSize, setScaleSize,
 						scaleDays, setScaleDays,
-						guf
+						guf,
+						setByUser
 					})} />
 					<Scatter
 						width={scatterWidth}
