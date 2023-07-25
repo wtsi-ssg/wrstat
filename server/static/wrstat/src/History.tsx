@@ -102,8 +102,10 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 						selected: inodeHistory,
 					}
 				]} />
-				<h2>{name} {owner && `(${owner})`} | {path.split("/")[2]}</h2>
-				<HistoryWarning isInodes={inodeHistory} history={history} />
+				<div>
+					{name} {owner && `(${owner})`} | {path.split("/")[2]}
+					<HistoryWarning isInodes={inodeHistory} history={history} />
+				</div>
 				<HistoryGraph
 					history={graphData}
 					width={historyWidth}

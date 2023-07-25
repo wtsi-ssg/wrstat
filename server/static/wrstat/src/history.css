@@ -9,7 +9,6 @@
 #historyInfo {
 	position: relative;
 	height: 0;
-	margin-top: 1.5em;
 }
 
 #historyInfo div {
@@ -35,13 +34,20 @@
 	border-color: var(--subtleBorder);
 }
 
-#historyTabs~h2 {
+#historyTabs+div {
+	padding-top: 1em;
 	text-align: center;
+	margin-bottom: -0.5em;
 }
 
-.exceed,
-.exceeded {
-	padding: 1em;
+#historyTabs+div>div {
+	display: inline-block;
+}
+
+#historyTabs+div>div:before {
+	display: inline-block;
+	content: "-";
+	padding: 0 1em;
 }
 
 .exceeded {
