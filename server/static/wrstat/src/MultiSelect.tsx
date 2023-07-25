@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 type MultiSelectParams = {
 	id: string;
