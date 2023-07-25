@@ -4,14 +4,11 @@ import type { Usage } from "./rpc";
 export type GroupUserFilterParams = {
 	groupUsage: Usage[];
 	userUsage: Usage[];
-	byUser: boolean;
 	areas: Record<string, string[]>;
 	users: number[];
 	setUsers: (v: number[]) => void;
 	groups: number[];
 	setGroups: (v: number[]) => void;
-	owners: string[];
-	setOwners: (v: string[]) => void;
 	groupNameToIDMap: Map<string, number>;
 	groupIDToNameMap: Map<number, string>;
 	userNameToIDMap: Map<string, number>;
@@ -23,7 +20,6 @@ const stringSort = new Intl.Collator().compare,
 	GroupUserFilter = ({
 		groupUsage,
 		userUsage,
-		byUser,
 		areas,
 		groupNameToIDMap,
 		groupIDToNameMap,
@@ -33,8 +29,6 @@ const stringSort = new Intl.Collator().compare,
 		setUsers,
 		groups,
 		setGroups,
-		owners,
-		setOwners,
 		num
 	}: GroupUserFilterParams & { num: number }) => {
 		const selectedGroups = groups.map(gid => groupIDToNameMap.get(gid) ?? "").sort(stringSort).filter(g => g),
@@ -42,13 +36,6 @@ const stringSort = new Intl.Collator().compare,
 			selectedBOMs = Object.entries(areas).map(([bom, groups]) => groups.every(g => groupNameToIDMap.get(g) === undefined || selectedGroups.includes(g)) ? bom : "").filter(b => b).sort(stringSort);
 
 		return <>
-			<label htmlFor={`owners_${num}`}>Owners</label>
-			<MultiSelect
-				id={`owners_${num}`}
-				list={Array.from(new Set(groupUsage.map(e => e.Owner).filter(o => o)).values()).sort(stringSort)}
-				selected={owners}
-				onchange={setOwners}
-				disabled={byUser} />
 			<label htmlFor={`bom_${num}`}>Group Areas</label>
 			<MultiSelect
 				id={`bom_${num}`}

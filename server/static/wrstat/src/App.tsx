@@ -83,7 +83,6 @@ const groupNameToIDMap = new Map<string, number>(),
 			guf = {
 				groupUsage,
 				userUsage,
-				byUser,
 				areas,
 				groupNameToIDMap,
 				groupIDToNameMap,
@@ -92,9 +91,7 @@ const groupNameToIDMap = new Map<string, number>(),
 				users,
 				setUsers,
 				groups,
-				setGroups,
-				owners,
-				setOwners,
+				setGroups
 			},
 			justDisktree = just.toLowerCase() === "disktree";
 
@@ -155,6 +152,7 @@ const groupNameToIDMap = new Map<string, number>(),
 				<div className="primaryFilter" ref={primaryFilter}>
 					<Filter {...({
 						usage: byUser ? userUsage : groupUsage,
+						groupUsage,
 						axisMinSize, setAxisMinSize,
 						axisMaxSize, setAxisMaxSize,
 						axisMinDaysAgo, setAxisMinDaysAgo,
@@ -162,6 +160,9 @@ const groupNameToIDMap = new Map<string, number>(),
 						scaleSize, setScaleSize,
 						scaleDays, setScaleDays,
 						guf,
+						owners,
+						setOwners,
+						byUser,
 						setByUser
 					})} />
 					<Scatter
