@@ -131,6 +131,8 @@ const SelectItem = ({ item, selectedSet, disabled, onchange, keypress }: SelectI
 									const selected = Array.from(selectedSet);
 
 									onchange(selected, null);
+								} else if (filteredList.includes(filter)) {
+									onchange([filter], null);
 								}
 							} else if (e.key === "Tab") {
 								e.preventDefault();
