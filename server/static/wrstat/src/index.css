@@ -35,6 +35,10 @@ caption {
   visibility: hidden;
 }
 
+#timestamp {
+  float: right;
+}
+
 summary>h1 {
   margin: 0;
   font-size: inherit;

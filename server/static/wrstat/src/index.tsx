@@ -5,6 +5,7 @@ import App from './App';
 import Auth, { logout } from './auth';
 import ready from './ready';
 import RPC from './rpc';
+import { formatDateTime } from './format';
 
 const auth = ready.then(Auth),
 	now = Date.now(),
@@ -47,7 +48,7 @@ auth.then(username => Promise.all([
 	RPC.getUserUsageData(),
 	RPC.getChildren({ path: "/" })
 ]))
-	.then(([username, groupUsage, userUsage, { areas }]) => createRoot(document.body.firstElementChild!).render(<StrictMode>
+	.then(([username, groupUsage, userUsage, { areas, timestamp }]) => createRoot(document.body.firstElementChild!).render(<StrictMode>
 		<svg xmlns="http://www.w3.org/2000/svg" style={{ width: 0, height: 0 }}>
 			<symbol id="ok" viewBox="0 0 100 100">
 				<circle cx="50" cy="50" r="45" stroke="currentColor" fill="none" strokeWidth="10" />
@@ -67,5 +68,6 @@ auth.then(username => Promise.all([
 			</symbol>
 		</svg>
 		<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
+		<div id="timestamp">Database updated: {formatDateTime(timestamp)}</div>
 		<App groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
 	</StrictMode>));
