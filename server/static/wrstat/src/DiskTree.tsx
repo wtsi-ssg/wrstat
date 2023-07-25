@@ -173,6 +173,13 @@ const colours = [
 							</select>
 							<br />
 							<GroupUserFilter {...guf} num={1} />
+							<button onClick={() => {
+								setFilterFileTypes([]);
+								setSinceLastAccess(0);
+								guf.setOwners([]);
+								guf.setGroups([]);
+								guf.setUsers([]);
+							}}>Reset Filter</button>
 						</div>
 						<div id="treeKey">
 							<div>
