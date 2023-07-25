@@ -17,6 +17,7 @@ type FilterTableParams = {
 	userMap: Map<number, string>;
 	groupMap: Map<number, string>;
 	filter: Filter<Usage>;
+	justDisktree: boolean;
 }
 
 const stringSort = new Intl.Collator().compare,
@@ -32,12 +33,12 @@ const stringSort = new Intl.Collator().compare,
 	sortStatus = (a: Usage, b: Usage) => stringSort(a.status ?? "", b.status ?? "") || stringSort(a.BaseDir, b.BaseDir),
 	reverseSortPercentSize = (a: Usage, b: Usage) => !a.QuotaSize ? 1 : !b.QuotaSize ? -1 : sortPercentSize(b, a),
 	reverseSortPercentInodes = (a: Usage, b: Usage) => !a.QuotaInodes ? 1 : !b.QuotaInodes ? -1 : sortPercentInodes(b, a),
-	UsageTableComponent = ({ usage, byUser, groupMap, userMap, selectedID, selectedDir, setSelectedID, setSelectedDir, setTreePath, filter }: FilterTableParams) => {
+	UsageTableComponent = ({ usage, byUser, groupMap, userMap, selectedID, selectedDir, setSelectedID, setSelectedDir, setTreePath, filter, justDisktree }: FilterTableParams) => {
 		const [perPage, setPerPage] = useSavedState("perPage", 10),
 			hasQuota = usage.some(u => u.QuotaSize || u.QuotaInodes);
 
 		return <>
-			<details open id="usage">
+			<details open id="usage" style={justDisktree ? { display: "none" } : undefined}>
 				<summary><h1>{byUser ? "User" : "Group"} Usage Table</h1></summary>
 				<span id="perPage">Show
 					<select value={perPage} onChange={e => { setPerPage(parseInt(e.target.value) ?? 10) }}>

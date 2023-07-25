@@ -9,6 +9,7 @@ type SubDirParams = {
 	path: string;
 	isUser: boolean;
 	treePath: string;
+	justDisktree: boolean;
 	setTreePath: (path: string) => void;
 }
 
@@ -36,7 +37,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 	sortNumFiles = (a: SubDir, b: SubDir) => a.NumFiles - b.NumFiles,
 	sortSizeFiles = (a: SubDir, b: SubDir) => a.SizeFiles - b.SizeFiles,
 	sortLastModifed = (a: SubDir, b: SubDir) => new Date(b.LastModified).valueOf() - new Date(a.LastModified).valueOf(),
-	SubdirsComponent = ({ id, path, isUser, treePath, setTreePath }: SubDirParams) => {
+	SubdirsComponent = ({ id, path, isUser, treePath, setTreePath, justDisktree }: SubDirParams) => {
 		const [subdirs, setSubdirs] = useState<SubDir[]>([]);
 
 		useEffect(() => {
@@ -54,7 +55,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 			return <></>
 		}
 
-		return <details open id="subdirs">
+		return <details open id="subdirs" style={justDisktree ? { display: "none" } : undefined}>
 			<summary><h1>Sub-Directories</h1></summary>
 			<Table
 				id="subDirsTable"

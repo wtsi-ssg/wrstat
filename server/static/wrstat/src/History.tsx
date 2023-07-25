@@ -13,6 +13,7 @@ type HistoryParams = {
 	name: string;
 	owner: string;
 	isUser: boolean;
+	justDisktree: boolean;
 }
 
 const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
@@ -62,7 +63,7 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 
 		return <></>
 	},
-	HistoryComponent = ({ id, path, name, owner, isUser }: HistoryParams) => {
+	HistoryComponent = ({ id, path, name, owner, isUser, justDisktree }: HistoryParams) => {
 		const [inodeHistory, setInodeHistory] = useSavedState("inodeHistory", false),
 			[history, setHistory] = useState<History[]>([]),
 			[historyWidth, setHistoryWidth] = useState(determineGraphWidth()),
@@ -89,7 +90,7 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 		}
 
 		return <>
-			<details open>
+			<details open style={justDisktree ? { display: "none" } : undefined}>
 				<summary><h1>Usage History</h1></summary>
 				<Tabs id="historyTabs" tabs={[
 					{

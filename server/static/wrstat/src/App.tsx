@@ -30,6 +30,7 @@ const groupNameToIDMap = new Map<string, number>(),
 		}
 
 		const [byUser, setByUser] = useSavedState("byUser", false),
+			[just, setJust] = useSavedState("just", ""),
 			[users, setUsers] = useSavedState<number[]>("users", []),
 			[groups, setGroups] = useSavedState<number[]>("groups", []),
 			[owners, setOwners] = useSavedState<string[]>("owners", []),
@@ -94,7 +95,8 @@ const groupNameToIDMap = new Map<string, number>(),
 				setGroups,
 				owners,
 				setOwners,
-			};
+			},
+			justDisktree = just.toLowerCase() === "disktree";
 
 		if (!preview && selectedDir !== "" && selectedID !== -1 && fitlerTableRows(usage.filter(u => (byUser ? u.UID : u.GID) === selectedID && u.BaseDir === selectedDir), filter).length === 0) {
 			setSelectedDir("");
@@ -129,19 +131,26 @@ const groupNameToIDMap = new Map<string, number>(),
 					onClick: () => {
 						clearState();
 						setByUser(false);
+						setJust("");
 					},
-					selected: !byUser
+					selected: !justDisktree && !byUser
 				},
 				{
 					title: "User Base Directories",
 					onClick: () => {
 						clearState();
 						setByUser(true);
+						setJust("");
 					},
-					selected: byUser
+					selected: !justDisktree && byUser
 				},
+				{
+					title: "Just DiskTree",
+					onClick: () => setJust("disktree"),
+					selected: justDisktree
+				}
 			]} />
-			<details open>
+			<details open style={justDisktree ? { display: "none" } : undefined}>
 				<summary><h1>Filter</h1></summary>
 				<div className="primaryFilter" ref={primaryFilter}>
 					<Filter {...({
@@ -194,21 +203,27 @@ const groupNameToIDMap = new Map<string, number>(),
 					selectedDir,
 					setSelectedDir,
 					setTreePath,
-					filter
+					filter,
+					justDisktree
 				}} />
+
 			<History
 				id={selectedID}
 				path={selectedDir}
 				isUser={byUser}
 				name={selectedRow?.Name}
-				owner={selectedRow?.Owner} />
+				owner={selectedRow?.Owner}
+				justDisktree={justDisktree}
+			/>
 			<SubDirs
 				id={selectedID}
 				path={selectedDir}
 				isUser={byUser}
 				treePath={treePath}
-				setTreePath={setTreePath} />
-			<DiskTreeComponent
+				setTreePath={setTreePath}
+				justDisktree={justDisktree}
+			/>
+			{justDisktree ? <DiskTreeComponent
 				{...{
 					userMap: userIDToNameMap,
 					groupMap: groupIDToNameMap,
@@ -216,7 +231,20 @@ const groupNameToIDMap = new Map<string, number>(),
 					setTreePath,
 					guf,
 					filter
-				}} />
+				}} /> :
+				<details open>
+					<summary><h1>Disktree</h1></summary>
+					<DiskTreeComponent
+						{...{
+							userMap: userIDToNameMap,
+							groupMap: groupIDToNameMap,
+							treePath,
+							setTreePath,
+							guf,
+							filter
+						}} />
+				</details>
+			}
 		</>
 	};
 
