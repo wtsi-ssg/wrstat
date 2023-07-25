@@ -38,7 +38,7 @@ const stringSort = new Intl.Collator().compare,
 
 		return <>
 			<details open id="usage">
-				<summary><h1>{byUser ? "User" : "Group"} Base Directories</h1></summary>
+				<summary><h1>{byUser ? "User" : "Group"} Usage Table</h1></summary>
 				<span id="perPage">Show
 					<select value={perPage} onChange={e => { setPerPage(parseInt(e.target.value) ?? 10) }}>
 						<option>10</option>
