@@ -30,7 +30,7 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 
 		if (isInodes) {
 			if (exceedInode === 0) {
-				return <div className="exceeded">Inode Quota has been reached.</div>
+				return <div className="exceeded">Inode Quota has been reached</div>
 			}
 			if (exceedInode !== Infinity) {
 				const prox = 100 * Math.min(maxWarningDay, (exceedInode - daysToday)) / maxWarningDay;
@@ -39,14 +39,14 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 						[`--warningProx` as any]: prox + "%"
 					}}
 					className="exceed"
-				>Expected to exceed inode quota in {formatNumber(exceedInode - daysToday)} days.</div>
+				>Expected to exceed inode quota in {formatNumber(exceedInode - daysToday)} days</div>
 			}
 
 			return <></>
 		}
 
 		if (exceedSize === 0) {
-			return <div className="exceeded">Size Quota has been reached.</div>
+			return <div className="exceeded">Size Quota has been reached</div>
 		}
 
 		if (exceedSize !== Infinity) {
@@ -56,7 +56,7 @@ const determineGraphWidth = () => Math.max(500, window.innerWidth - 60),
 			return <div
 				style={{ [`--warningProx` as any]: prox + "%" }}
 				className="exceed"
-			>Expected to exceed size quota in {formatNumber(daysLeft)} day{daysLeft === 1 ? "" : "s"}.</div>
+			>Expected to exceed size quota in {formatNumber(daysLeft)} day{daysLeft === 1 ? "" : "s"}</div>
 		}
 
 
