@@ -173,7 +173,7 @@ const paddingXL = 80,
 				{quotaPoints}
 				{usagePoints}
 				{
-					y === latestHistory.Quota ? <path d="M5,5 L-5,-5 M-5,5 L5,-5" stroke="#f00" stroke-width={2} transform={`translate(${paddingXL + (x - minDate) * xScale} ${amountToY(y)})`} onMouseOver={() => setInfoBox(infoBoxes.length - 1)} onMouseOut={() => setInfoBox(-1)} /> : []
+					y === latestHistory.Quota ? <path d="M5,5 L-5,-5 M-5,5 L5,-5" stroke="#f00" strokeWidth={2} transform={`translate(${paddingXL + (x - minDate) * xScale} ${amountToY(y)})`} onMouseOver={() => setInfoBox(infoBoxes.length - 1)} onMouseOut={() => setInfoBox(-1)} /> : []
 				}
 				<rect rx={4} x={width - 70} y={paddingYT} width={69} height={43} stroke="currentColor" fill="none" />
 				<rect rx={2} x={width - 65} y={paddingYT + 5} width={10} height={10} stroke="currentColor" style={{ fill: "var(--graphQuota)" }} />
