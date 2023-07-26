@@ -1,8 +1,8 @@
 import type { Usage } from "./rpc";
 import Minmax from "./MinMax";
-import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import GroupUserFilter, { type GroupUserFilterParams } from "./GroupUserFilter";
 import MultiSelect from "./MultiSelect";
+import { asDaysAgo, formatBytes, formatNumber } from "./format";
 import { clearState } from "./state";
 
 type FilterParams = {

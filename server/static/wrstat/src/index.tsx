@@ -3,9 +3,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import Auth, { logout } from './auth';
+import { formatTimeAgo } from './format';
 import ready from './ready';
 import RPC from './rpc';
-import { formatTimeAgo } from './format';
 
 const auth = ready.then(Auth),
 	now = Date.now(),
