@@ -174,7 +174,6 @@ const colours = [
 						<button onClick={() => {
 							setFilterFileTypes([]);
 							setSinceLastAccess(0);
-							guf.setOwners([]);
 							guf.setGroups([]);
 							guf.setUsers([]);
 						}}>Reset Filter</button>
