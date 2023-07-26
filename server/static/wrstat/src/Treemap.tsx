@@ -1,4 +1,4 @@
-import type { EventHandler, KeyboardEvent, MouseEventHandler, MouseEvent } from "react";
+import type { MouseEventHandler } from "react";
 
 type TreeMapParams = {
 	table: Table | null;
@@ -15,7 +15,7 @@ export type Entry = {
 	colour?: string;
 	backgroundColour?: string;
 	onclick?: () => void;
-	onmouseover?: MouseEventHandler<SVGRectElement>;
+	onmouseover?: () => void;
 	noauth: boolean;
 }
 
