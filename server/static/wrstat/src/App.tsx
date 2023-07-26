@@ -142,7 +142,7 @@ const groupNameToIDMap = new Map<string, number>(),
 					selected: !justDisktree && byUser
 				},
 				{
-					title: "Just DiskTree",
+					title: "Just Disktree",
 					onClick: () => setJust("disktree"),
 					selected: justDisktree
 				}
