@@ -40,7 +40,7 @@
 @import url("usageTable.css");
 
 body {
-  padding: 0;
+  padding: 2px 0 0 0;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --fontSize: 14px;
   font-size: var(--fontSize);
@@ -51,6 +51,11 @@ body {
   color: var(--colour);
   background-color: var(--background);
   margin: 0;
+}
+
+#copyright {
+  padding: 0 2px 2px 0;
+  text-align: right;
 }
 
 input[type=radio],
@@ -64,6 +69,7 @@ caption {
 
 #timestamp {
   float: right;
+  padding-right: 2px;
 }
 
 summary>h1 {
