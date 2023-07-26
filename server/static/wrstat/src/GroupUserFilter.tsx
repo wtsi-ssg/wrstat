@@ -66,7 +66,7 @@ const stringSort = new Intl.Collator().compare,
 
 					return false;
 				}} />
-			<label htmlFor="{`unix_${num}`}">Unix Group</label>
+			<label htmlFor={`unix_${num}`}>Unix Group</label >
 			<MultiSelect
 				id={`unix_${num}`}
 				list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)}
