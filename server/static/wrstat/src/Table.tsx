@@ -81,7 +81,13 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 					onRowClick(row);
 				}
 			}}
-			onClick={() => onRowClick(row)}
+			onClick={e => {
+				if (e.button !== 0) {
+					return;
+				}
+
+				onRowClick(row);
+			}}
 			{...(rowExtra?.(row) ?? {})}
 		>
 			{cols.map((col, m) => <td
@@ -137,7 +143,11 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 									(e.target as HTMLElement)?.click();
 								}
 							}}
-							onClick={c.sortFn ? () => {
+							onClick={c.sortFn ? e => {
+								if (e.button !== 0) {
+									return;
+								}
+
 								if (sortBy === n) {
 									setSortReverse(!sortReverse);
 								} else {

@@ -11,7 +11,13 @@ const Tabs = ({ id, tabs }: { id: string, tabs: TabData[] }) => <ul id={id} clas
 		role="tab"
 		aria-selected={tab.selected ? "true" : "false"}
 		className={tab.selected ? "selected" : ""}
-		onClick={tab.selected ? undefined : () => tab.onClick(tab.title)}
+		onClick={tab.selected ? undefined : e => {
+			if (e.button !== 0) {
+				return;
+			}
+
+			tab.onClick(tab.title);
+		}}
 		onKeyDown={tab.selected ? undefined : e => {
 			if (e.key === "Enter") {
 				tab.onClick(tab.title);

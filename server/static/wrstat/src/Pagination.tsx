@@ -22,7 +22,13 @@ const paginationEnd = 3,
 				aria-label={currPage === p ? "Current Table Page" : `Go to Table Page ${p + 1}`}
 				aria-current={currPage === p ? "page" : undefined}
 				className={currPage === p ? "pagination_selected" : "pagination_link"}
-				onClick={currPage === p ? noop : onClick}
+				onClick={currPage === p ? noop : e => {
+					if (e.button !== 0) {
+						return;
+					}
+
+					onClick(e);
+				}}
 				data-page={p}
 			>{p + 1}</li>);
 		}
@@ -64,7 +70,13 @@ const paginationEnd = 3,
 				tabIndex={0}
 				aria-label={`Go to Previous Table Page`}
 				className={"pagination_prev" + (currentPage === 0 ? "" : " pagination_link")}
-				onClick={currentPage === 0 ? noop : onClick}
+				onClick={currentPage === 0 ? noop : e => {
+					if (e.button !== 0) {
+						return;
+					}
+
+					onClick(e);
+				}}
 				data-page={currentPage - 1}
 			>Previous</li>
 			{ret}
@@ -73,7 +85,13 @@ const paginationEnd = 3,
 				tabIndex={0}
 				aria-label={`Go to Next Table Page`}
 				className={"pagination_next" + (currentPage === lastPage ? "" : " pagination_link")}
-				onClick={currentPage === lastPage ? noop : onClick}
+				onClick={currentPage === lastPage ? noop : e => {
+					if (e.button !== 0) {
+						return;
+					}
+
+					onClick(e);
+				}}
 				data-page={currentPage + 1}
 			>Next</li>
 		</ul >

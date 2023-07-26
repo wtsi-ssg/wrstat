@@ -157,8 +157,20 @@ const stringSort = new Intl.Collator().compare,
 					id="usageTable"
 					className={"prettyTable " + (hasQuota ? undefined : "noQuota")}
 				/>
-				<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(usage)}>Download Unfiltered Table</button>
-				<button className="download" onClick={() => (byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter))}>Download Filtered Table</button>
+				<button className="download" onClick={e => {
+					if (e.button !== 0) {
+						return;
+					}
+
+					(byUser ? downloadUsers : downloadGroups)(usage);
+				}}>Download Unfiltered Table</button>
+				<button className="download" onClick={e => {
+					if (e.button !== 0) {
+						return;
+					}
+
+					(byUser ? downloadUsers : downloadGroups)(fitlerTableRows(usage, filter));
+				}}>Download Filtered Table</button>
 			</details>
 		</>
 	};

@@ -222,7 +222,11 @@ const minDaysAgo = (date: string) => {
 				highlightCoords && highlightCoords.every(v => v !== -Infinity && v !== Infinity) ? <rect className="back" x={highlightCoords[0] + paddingXL} width={highlightCoords[1]} y={highlightCoords[2] + paddingYT} height={highlightCoords[3]} fill="#9cf" fillOpacity={0.25} stroke="#036" strokeOpacity={0.25} /> : []
 			}
 			{
-				data.map((d, n) => <use key={`scatter_${d.UsageSize}_${d.Mtime}_${n}`} className={isSelected(d) ? "selected" : ""} href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={() => {
+				data.map((d, n) => <use key={`scatter_${d.UsageSize}_${d.Mtime}_${n}`} className={isSelected(d) ? "selected" : ""} href="#marker" x={dateToX(minDaysAgo(d.Mtime))} y={sizeToY(d.UsageSize)} onClick={e => {
+					if (e.button !== 0) {
+						return;
+					}
+
 					setLimits(d.UsageSize, d.UsageSize, asDaysAgo(d.Mtime), asDaysAgo(d.Mtime));
 					setHighlightCoords(null);
 				}} />)

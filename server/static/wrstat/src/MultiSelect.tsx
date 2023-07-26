@@ -41,7 +41,11 @@ const SelectItem = ({ item, selectedSet, disabled, onchange, keypress }: SelectI
 		}} onKeyDown={keypress} />{item}</label>
 </li>,
 	RemoveItem = ({ item, selectedSet, onchange }: ItemParams) => <li>
-		<button tabIndex={-1} title={`Deselect ${item}`} onClick={() => {
+		<button tabIndex={-1} title={`Deselect ${item}`} onClick={e => {
+			if (e.button !== 0) {
+				return;
+			}
+
 			selectedSet.delete(item);
 
 			const selected = Array.from(selectedSet);
@@ -102,7 +106,13 @@ const SelectItem = ({ item, selectedSet, disabled, onchange, keypress }: SelectI
 						aria-haspopup="listbox"
 						aria-label="Select/Deselect"
 						disabled={disabled}
-						onClick={() => filterRef.current?.focus()}
+						onClick={e => {
+							if (e.button !== 0) {
+								return;
+							}
+
+							filterRef.current?.focus();
+						}}
 					>+</button>
 				</li>
 				{disabled ? <></> : Array.from(selected).map(item => <RemoveItem

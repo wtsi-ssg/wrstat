@@ -81,7 +81,11 @@ const stringSort = new Intl.Collator().compare,
 				<input type="checkbox" id="scaleSize" checked={scaleSize} onChange={e => setScaleSize(e.target.checked)} />
 				<label htmlFor="scaleDays">Log Days Axis</label>
 				<input type="checkbox" id="scaleDays" checked={scaleDays} onChange={e => setScaleDays(e.target.checked)} />
-				<button onClick={() => {
+				<button onClick={e => {
+					if (e.button !== 0) {
+						return;
+					}
+
 					clearState();
 					setByUser(byUser);
 				}}>Reset</button>

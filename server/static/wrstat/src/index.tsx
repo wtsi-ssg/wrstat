@@ -65,7 +65,13 @@ auth.then(username => Promise.all([
 				<path d="M103,10 l15,15 M118,10 l-15,15" stroke="currentColor" fill="none" strokeWidth="3" strokeLinecap="round" />
 			</symbol>
 		</svg>
-		<div id="auth">{username} - <button onClick={logout}>Logout</button></div>
+		<div id="auth">{username} - <button onClick={e => {
+			if (e.button !== 0) {
+				return;
+			}
+
+			logout();
+		}}>Logout</button></div>
 		<div id="timestamp" title={timestamp}>Database updated: {formatTimeAgo(timestamp)}</div>
 		<App groupUsage={groupUsage} userUsage={userUsage} areas={areas} />
 	</StrictMode>));

@@ -14,7 +14,7 @@ export type Entry = {
 	value: number;
 	colour?: string;
 	backgroundColour?: string;
-	onclick?: EventHandler<MouseEvent<SVGRectElement> | KeyboardEvent<SVGRectElement>>;
+	onclick?: () => void;
 	onmouseover?: MouseEventHandler<SVGRectElement>;
 	noauth: boolean;
 }
@@ -50,10 +50,16 @@ const phi = (1 + Math.sqrt(5)) / 2,
 			stroke="#000"
 			fill={entry.backgroundColour ?? "#fff"}
 			className={entry.onclick ? "hasClick box" : "box"}
-			onClick={entry.onclick}
+			onClick={e => {
+				if (e.button !== 0) {
+					return;
+				}
+
+				entry.onclick?.();
+			}}
 			onKeyPress={entry.onclick ? e => {
 				if (e.key === "Enter") {
-					entry.onclick?.(e);
+					entry.onclick?.();
 				}
 			} : undefined}
 			onMouseOver={entry.onmouseover}

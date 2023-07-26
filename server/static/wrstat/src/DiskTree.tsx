@@ -56,7 +56,13 @@ const colours = [
 		return colours[8];
 	},
 	Breadcrumb = ({ path, part, setPath }: { path: string; part: string; setPath: (path: string) => void }) => <li>
-		<button title={`Jump To: ${part}`} onClick={() => setPath(path)}>{part}</button>
+		<button title={`Jump To: ${part}`} onClick={e => {
+			if (e.button !== 0) {
+				return;
+			}
+
+			setPath(path);
+		}}>{part}</button>
 	</li>,
 	makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
 		let last = 0;
@@ -171,7 +177,11 @@ const colours = [
 						</select>
 						<br />
 						<GroupUserFilter {...guf} num={1} />
-						<button onClick={() => {
+						<button onClick={e => {
+							if (e.button !== 0) {
+								return;
+							}
+
 							setFilterFileTypes([]);
 							setSinceLastAccess(0);
 							guf.setGroups([]);
