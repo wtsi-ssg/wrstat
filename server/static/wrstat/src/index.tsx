@@ -28,15 +28,13 @@ auth.then(username => Promise.all([
 
 			if (d.DateNoSpace === nullDate) {
 				spaceOK = true
-			}
-			else {
+			} else {
 				spaceOK = daysUntilQuotaFull(d.DateNoSpace) > 3;
 			}
 
 			if (d.DateNoFiles === nullDate) {
 				filesOK = true
-			}
-			else {
+			} else {
 				filesOK = daysUntilQuotaFull(d.DateNoFiles) > 3;
 			}
 
