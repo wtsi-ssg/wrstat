@@ -25,7 +25,7 @@ install:
 
 test: export CGO_ENABLED = 1
 test:
-	@cd server/static/wrstat; npm install && npm run build:prod
+	@cd server/static/wrstat; npm install && CI= npm run build:prod
 	@go test -tags netgo --count 1 ./...
 	@cd server/static/wrstat; CI=1 npm test
 
