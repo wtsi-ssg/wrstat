@@ -11,12 +11,18 @@ import { asDaysAgo } from "./format";
 import type { Usage } from "./rpc"
 import { clearState, useSavedState } from "./state";
 
+type AppParams = {
+	groupUsage: Usage[];
+	userUsage: Usage[];
+	areas: Record<string, string[]>;
+}
+
 const groupNameToIDMap = new Map<string, number>(),
 	userNameToIDMap = new Map<string, number>(),
 	userIDToNameMap = new Map<number, string>(),
 	groupIDToNameMap = new Map<number, string>(),
 	calculateScatterWidth = (div: HTMLDivElement) => Math.min(Math.max(300, parseInt(getComputedStyle(div).gridTemplateColumns.split(" ")[1]) - 40), 1500),
-	App = ({ groupUsage, userUsage, areas }: { groupUsage: Usage[], userUsage: Usage[], areas: Record<string, string[]> }) => {
+	App = ({ groupUsage, userUsage, areas }: AppParams) => {
 		if (groupNameToIDMap.size === 0) {
 			for (const { GID, Name } of groupUsage) {
 				groupNameToIDMap.set(Name, GID);
