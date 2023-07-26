@@ -46,23 +46,23 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 		} else if (secs < 1.5 * minute) {
 			return "about a minute ago";
 		} else if (secs < 0.75 * hour) {
-			return `${Math.round(secs / minute)} minutes ago`;
+			return `about ${Math.round(secs / minute)} minutes ago`;
 		} else if (secs < 1.5 * hour) {
 			return "about an hour ago";
 		} else if (secs < day) {
-			return `${Math.round(secs / hour)} hours ago`;
+			return `about ${Math.round(secs / hour)} hours ago`;
 		} else if (secs < 1.75 * day) {
 			return "about a day ago";
 		} else if (secs < month) {
-			return `${Math.round(secs / day)} days ago`;
+			return `about ${Math.round(secs / day)} days ago`;
 		} else if (secs < 1.5 * month) {
 			return "about a month ago";
 		} else if (secs < year) {
-			return `${Math.round(secs / month)} months ago`;
+			return `about ${Math.round(secs / month)} months ago`;
 		} else if (secs < 1.5 * year) {
 			return "about a year ago";
 		} else {
-			return `${Math.round(secs / year)} years ago`;
+			return `about ${Math.round(secs / year)} years ago`;
 		}
 	},
 	formatDate = (dStr: string | number) => {
