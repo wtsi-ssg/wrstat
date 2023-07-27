@@ -112,10 +112,10 @@ const phi = (1 + Math.sqrt(5)) / 2,
 						style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} />
 		}
 		<text
-			fontSize={minScale * 0.9}
+			fontSize={minScale * 0.75}
 			fontFamily={font}
 			x={(entry.noauth ? minScale * 0.225 : 0) + left + colWidth / 2}
-			y={top + rowHeight / 2 + 0.225 * minScale * bbox.height}
+			y={top + (rowHeight + bbox.height * minScale / 2) / 2}
 			textAnchor="middle"
 			fill={entry.colour ?? "#000"}
 		>{entry.name}</text>
@@ -167,7 +167,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 						boxHeight * entry.value / total,
 					bbox = getTextBB((entry.onclick ? "" : "W") + entry.name),
 					xScale = colWidth / bbox.width,
-					yScale = rowHeight / bbox.height,
+					yScale = rowHeight / (bbox.height + bbox.depth),
 					minScale = lastFontSize = Math.min(xScale, yScale, lastFontSize);
 
 				d += isRow ? colWidth : rowHeight;
@@ -192,16 +192,16 @@ const phi = (1 + Math.sqrt(5)) / 2,
 		const ctx = document.createElement("canvas").getContext("2d");
 
 		if (!ctx) {
-			return () => ({ "width": 1, "height": 1 });
+			return () => ({ "width": 1, "height": 1, "depth": 1 });
 		}
 
-		ctx.font = "1px " + font;
+		ctx.font = "1000px " + font;
 		ctx.textBaseline = "bottom";
 
 		return (text: string) => {
-			const { width = 1, actualBoundingBoxAscent: height = 1 } = ctx.measureText(text) ?? { "width": 1, "height": 1 };
+			const { width = 1000, actualBoundingBoxAscent: height = 1000, actualBoundingBoxDescent: depth = 0 } = ctx.measureText(text) ?? { "width": 1000, "actualBoundingBoxAscent": 1000, "actualBoundingBoxDescent": 0 };
 
-			return { width, height };
+			return { width: width / 1000, height: height / 1000, depth: depth / 1000 };
 		};
 	})(),
 	maxTableEntries = 1000,
