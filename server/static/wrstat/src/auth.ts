@@ -44,13 +44,22 @@ const usernameFromJWT = (jwt: string): string => JSON.parse(atob(jwt.split('.')[
 		});
 		xh.open("POST", "/rest/v1/jwt");
 		xh.send(null);
-	});
+	}),
+	cookieCache = new Map<string, string>();
 
 export const getCookie = (toFind: string) => {
+	const cached = cookieCache.get(toFind);
+
+	if (cached !== undefined) {
+		return cached;
+	}
+
 	for (const cookie of document.cookie.split("; ")) {
 		const [name, value] = cookie.split("=");
 
 		if (name === toFind) {
+			cookieCache.set(toFind, value);
+
 			return value;
 		}
 	}
