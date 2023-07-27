@@ -43,7 +43,7 @@ const TreedetailsComponent = ({ details, ...rest }: { details: Child | null } & 
 					<td>{formatBytes(details.size)}</td>
 				</tr>
 				<tr>
-					<th>Count</th>
+					<th title="Files & Directories">Object Count</th>
 					<td>{formatNumber(details.count)}</td>
 				</tr>
 				<tr>
