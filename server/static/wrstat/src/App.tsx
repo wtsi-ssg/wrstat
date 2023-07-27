@@ -262,7 +262,6 @@ const groupNameToIDMap = new Map<string, number>(),
 					treePath,
 					setTreePath,
 					guf,
-					filter
 				}} /> :
 				<details open>
 					<summary><h1>Disktree</h1></summary>
@@ -273,7 +272,6 @@ const groupNameToIDMap = new Map<string, number>(),
 							treePath,
 							setTreePath,
 							guf,
-							filter
 						}} />
 				</details>
 			}
