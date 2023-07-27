@@ -25,23 +25,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-import type { MouseEventHandler } from "react";
-
 type PaginationParams = {
 	totalPages: number;
 	currentPage: number;
-	onClick: MouseEventHandler;
+	onClick: (page: number) => void;
 }
 
 const paginationEnd = 3,
 	paginationSurround = 3,
 	noop = () => { },
-	processPaginationSection = (ret: JSX.Element[], currPage: number, from: number, to: number, onClick: MouseEventHandler) => {
+	processPaginationSection = (ret: JSX.Element[], currPage: number, from: number, to: number, onClick: (page: number) => void) => {
 		if (ret.length !== 0) {
 			ret.push(<li key={`pagination_gap_${from}`}>…</li>);
 		}
 
 		for (let p = from; p <= to; p++) {
+			const page = p;
+
 			ret.push(<li
 				key={`pagination_page_${p}`}
 				tabIndex={0}
@@ -49,14 +49,18 @@ const paginationEnd = 3,
 				aria-label={currPage === p ? "Current Table Page" : `Go to Table Page ${p + 1}`}
 				aria-current={currPage === p ? "page" : undefined}
 				className={currPage === p ? "pagination_selected" : "pagination_link"}
-				onClick={currPage === p ? noop : e => {
+				onKeyPress={currPage === p ? undefined : e => {
+					if (e.key === "Enter") {
+						onClick(page);
+					}
+				}}
+				onClick={currPage === p ? undefined : e => {
 					if (e.button !== 0) {
 						return;
 					}
 
-					onClick(e);
+					onClick(page);
 				}}
-				data-page={p}
 			>{p + 1}</li>);
 		}
 	},
@@ -102,9 +106,8 @@ const paginationEnd = 3,
 						return;
 					}
 
-					onClick(e);
+					onClick(currentPage - 1);
 				}}
-				data-page={currentPage - 1}
 			>Previous</li>
 			{ret}
 			<li
@@ -117,9 +120,8 @@ const paginationEnd = 3,
 						return;
 					}
 
-					onClick(e);
+					onClick(currentPage + 1);
 				}}
-				data-page={currentPage + 1}
 			>Next</li>
 		</ul >
 	};

@@ -26,7 +26,6 @@
  ******************************************************************************/
 
 import type { CSSProperties } from "react";
-import React from "react";
 import Pagination from "./Pagination";
 import { useSavedState } from "./state";
 
@@ -141,8 +140,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 			[sortReverse, setSortReverse] = useSavedState(id + "Reverse", false),
 			rows = fitlerTableRows(table, filter),
 			maxPages = Math.ceil(rows.length / perPage),
-			currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1),
-			pageClicker = (e: React.MouseEvent) => setPage(parseInt((e.target as HTMLElement).dataset["page"] || "0"));
+			currPage = perPage === Infinity ? 0 : Math.min(page, maxPages - 1);
 
 		if (sortBy >= 0) {
 			rows.sort(getSorter(cols[sortBy], sortReverse));
@@ -151,7 +149,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 		const pagedRows = rows.slice(currPage * perPage, (currPage + 1) * perPage);
 
 		return <>
-			<Pagination currentPage={currPage} onClick={pageClicker} totalPages={maxPages} />
+			<Pagination currentPage={currPage} onClick={setPage} totalPages={maxPages} />
 			<table aria-label={caption} tabIndex={0} id={id} {...additional}>
 				<colgroup>
 					{cols.map((_, n) => <col key={`table_${id}_col_${n}`} />)}
