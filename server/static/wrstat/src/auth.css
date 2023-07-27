@@ -25,26 +25,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-#login input {
-	display: block;
-	box-sizing: border-box;
-	width: calc(100vw - 4em);
-	font-size: 3em;
-	padding: 1em 2em;
-	margin: 0 2em;
-	border: 0.5em outset #000;
-	cursor: pointer;
-	color: #000;
-	background-color: var(--inputAccent);
+#login {
+	text-align: center;
 }
 
-#login input:hover {
-	color: #fff;
+#login input {
+	box-sizing: border-box;
+	font-size: 1.5em;
+	margin-top: 1em;
+	padding: 0.5em 1em;
+	border: 2px outset var(--colour);
+	cursor: pointer;
+	color: var(--background);
+	background-color: var(--inputAccent);
 }
 
 #login input:active {
 	border-style: inset;
-	padding: 0.9em 2.1em 1.1em 1.9em;
 }
 
 #auth {
