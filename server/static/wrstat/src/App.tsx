@@ -114,8 +114,6 @@ const groupNameToIDMap = new Map<string, number>(),
 			}, baseFilter),
 			preview = savedMinSize !== filterMinSize || savedMaxSize !== filterMaxSize || savedMinDaysAgo !== filterMinDaysAgo || savedMaxDaysAgo !== filterMaxDaysAgo,
 			guf = {
-				groupUsage,
-				userUsage,
 				areas,
 				groupNameToIDMap,
 				groupIDToNameMap,

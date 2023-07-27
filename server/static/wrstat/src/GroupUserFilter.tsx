@@ -25,12 +25,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-import MultiSelect, { type Listener } from "./MultiSelect";
-import type { Usage } from "./rpc";
+import type { Listener } from "./MultiSelect";
+import MultiSelect from "./MultiSelect";
 
 export type GroupUserFilterParams = {
-	groupUsage: Usage[];
-	userUsage: Usage[];
 	areas: Record<string, string[]>;
 	users: number[];
 	setUsers: (v: number[]) => void;
@@ -45,8 +43,6 @@ export type GroupUserFilterParams = {
 const stringSort = new Intl.Collator().compare,
 	pipes: (Listener | null)[] = [null, null],
 	GroupUserFilter = ({
-		groupUsage,
-		userUsage,
 		areas,
 		groupNameToIDMap,
 		groupIDToNameMap,
@@ -96,14 +92,14 @@ const stringSort = new Intl.Collator().compare,
 			<label htmlFor={`unix_${num}`}>Unix Group</label >
 			<MultiSelect
 				id={`unix_${num}`}
-				list={Array.from(new Set(groupUsage.map(e => e.Name)).values()).sort(stringSort)}
+				list={Array.from(new Set(groupNameToIDMap.keys())).sort(stringSort)}
 				listener={(cb: Listener) => pipes[num] = cb}
 				selected={selectedGroups}
 				onchange={groups => setGroups(groups.map(groupname => groupNameToIDMap.get(groupname) ?? -1))} />
 			<label htmlFor={`username_${num}`}>Username</label>
 			<MultiSelect
 				id={`username_${num}`}
-				list={Array.from(new Set(userUsage.map(e => e.Name)).values()).sort(stringSort)}
+				list={Array.from(new Set(userNameToIDMap.keys())).sort(stringSort)}
 				selected={selectedUsers}
 				onchange={users => setUsers(users.map(username => userNameToIDMap.get(username) ?? -1))} />
 		</>
