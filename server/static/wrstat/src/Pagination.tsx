@@ -33,7 +33,6 @@ type PaginationParams = {
 
 const paginationEnd = 3,
 	paginationSurround = 3,
-	noop = () => { },
 	processPaginationSection = (ret: JSX.Element[], currPage: number, from: number, to: number, onClick: (page: number) => void) => {
 		if (ret.length !== 0) {
 			ret.push(<li key={`pagination_gap_${from}`}>…</li>);
@@ -101,7 +100,12 @@ const paginationEnd = 3,
 				tabIndex={0}
 				aria-label={`Go to Previous Table Page`}
 				className={"pagination_prev" + (currentPage === 0 ? "" : " pagination_link")}
-				onClick={currentPage === 0 ? noop : e => {
+				onKeyPress={currentPage === 0 ? undefined : e => {
+					if (e.key === "Enter") {
+						onClick(currentPage - 1);
+					}
+				}}
+				onClick={currentPage === 0 ? undefined : e => {
 					if (e.button !== 0) {
 						return;
 					}
@@ -115,7 +119,12 @@ const paginationEnd = 3,
 				tabIndex={0}
 				aria-label={`Go to Next Table Page`}
 				className={"pagination_next" + (currentPage === lastPage ? "" : " pagination_link")}
-				onClick={currentPage === lastPage ? noop : e => {
+				onKeyPress={currentPage === lastPage ? undefined : e => {
+					if (e.key === "Enter") {
+						onClick(currentPage + 1);
+					}
+				}}
+				onClick={currentPage === lastPage ? undefined : e => {
 					if (e.button !== 0) {
 						return;
 					}
