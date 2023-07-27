@@ -158,8 +158,6 @@ const colours = [
 					const entries: Entry[] = [],
 						since = Date.now() - sinceLastAccess * 86_400_000;
 
-					setHasAuth(!children.noauth);
-
 					for (const child of children.children ?? []) {
 						if (new Date(child.atime).valueOf() > since) {
 							continue;
@@ -178,6 +176,7 @@ const colours = [
 
 					entries.sort((a, b) => b.value - a.value);
 
+					setHasAuth(!children.noauth);
 					setTreeMapData(entries);
 					setChildDetails(children);
 					setDirDetails(children);
