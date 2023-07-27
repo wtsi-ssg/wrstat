@@ -33,6 +33,7 @@ race: export CGO_ENABLED = 1
 race:
 	@cd server/static/wrstat; npm install && CI= npm run build:prod
 	go test -tags netgo -race --count 1 ./...
+	@cd server/static/wrstat; CI=1 npm test
 
 bench: export CGO_ENABLED = 1
 bench:
