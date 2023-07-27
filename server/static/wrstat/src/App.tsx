@@ -152,7 +152,7 @@ const groupNameToIDMap = new Map<string, number>(),
 			if (primaryFilter.current) {
 				setScatterWidth(calculateScatterWidth(primaryFilter.current));
 			}
-		}, []);
+		}, [just]);
 
 		return <>
 			<Tabs id="mainTabs" tabs={[
