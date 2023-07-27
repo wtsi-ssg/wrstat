@@ -117,8 +117,8 @@ const colours = [
 	determineTreeWidth = () => Math.max(window.innerWidth - 420, 400),
 	makeFilter = (path: string, filter: Filter<Usage>, filetypes: string[], users: Map<number, string>, groups: Map<number, string>) => ({
 		path,
-		"users": (filter.UID as null | number[])?.map(uid => users.get(uid) ?? -1).join(",") ?? "",
-		"groups": (filter.GID as null | number[])?.map(gid => groups.get(gid) ?? -1).join(",") ?? "",
+		"users": (filter.UID as null | number[])?.map(uid => users.get(uid) ?? "").filter(u => u).join(",") ?? "",
+		"groups": (filter.GID as null | number[])?.map(gid => groups.get(gid) ?? "").filter(g => g).join(",") ?? "",
 		"types": filetypes.join(",")
 	}),
 	fileTypes = [
