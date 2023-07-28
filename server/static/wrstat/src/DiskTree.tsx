@@ -146,8 +146,7 @@ const colours = [
 			[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
 			[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("treeTypes", []),
 			[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
-			[hasAuth, setHasAuth] = useState(true),
-			filterStr = JSON.stringify(guf.users) + "|" + JSON.stringify(guf.groups);
+			[hasAuth, setHasAuth] = useState(true);
 
 		useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
@@ -182,7 +181,7 @@ const colours = [
 				});
 
 			setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
-		}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, filterStr]);
+		}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, guf.groups, guf.users]);
 
 		return <>
 			<div id="disktree">
