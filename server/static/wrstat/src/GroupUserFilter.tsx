@@ -25,7 +25,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-import type { Listener } from "./MultiSelect";
 import MultiSelect from "./MultiSelect";
 
 export type GroupUserFilterParams = {
@@ -41,7 +40,6 @@ export type GroupUserFilterParams = {
 }
 
 const stringSort = new Intl.Collator().compare,
-	pipes: (Listener | null)[] = [null, null],
 	GroupUserFilter = ({
 		areas,
 		groupNameToIDMap,
@@ -65,27 +63,18 @@ const stringSort = new Intl.Collator().compare,
 				list={Object.keys(areas).sort(stringSort)}
 				selected={selectedBOMs}
 				onchange={(boms, deleted) => {
-					if (deleted) {
-						for (const pipe of pipes) {
-							pipe?.(areas[deleted], true);
-						}
+					const existingGroups = new Set(groups);
 
-						return false;
-					}
-
-					const existingGroups = new Set(groups.map(gid => groupIDToNameMap.get(gid) ?? ""));
-
-					for (const bom of boms) {
+					for (const bom of deleted ? [deleted] : boms) {
 						for (const g of areas[bom] ?? []) {
-							if (groupNameToIDMap.has(g)) {
-								existingGroups.add(g);
+							const id = groupNameToIDMap.get(g);
+							if (id !== undefined) {
+								existingGroups[deleted ? "delete" : "add"](id);
 							}
 						}
 					}
 
-					for (const pipe of pipes) {
-						pipe?.(Array.from(existingGroups), false);
-					}
+					setGroups(Array.from(existingGroups));
 
 					return false;
 				}} />
@@ -93,7 +82,6 @@ const stringSort = new Intl.Collator().compare,
 			<MultiSelect
 				id={`unix_${num}`}
 				list={Array.from(new Set(groupNameToIDMap.keys())).sort(stringSort)}
-				listener={(cb: Listener) => pipes[num] = cb}
 				selected={selectedGroups}
 				onchange={groups => setGroups(groups.map(groupname => groupNameToIDMap.get(groupname) ?? -1))} />
 			<label htmlFor={`username_${num}`}>Username</label>

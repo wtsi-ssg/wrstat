@@ -33,7 +33,6 @@ type MultiSelectParams = {
 	disabled?: boolean;
 	list: readonly string[];
 	selected: readonly string[];
-	listener?: (cb: Listener) => void;
 	onchange: (list: string[], deleted: string | null) => void;
 }
 
@@ -47,8 +46,6 @@ type SelectItemParams = ItemParams & {
 	keypress: (e: KeyboardEvent) => void;
 	disabled: boolean;
 }
-
-export type Listener = (values: string[], deleted: boolean) => void;
 
 const SelectItem = ({ item, selectedSet, disabled, onchange, keypress }: SelectItemParams) => <li>
 	<label>
@@ -85,7 +82,6 @@ const SelectItem = ({ item, selectedSet, disabled, onchange, keypress }: SelectI
 		list,
 		selected,
 		disabled = false,
-		listener,
 		onchange
 	}: MultiSelectParams) => {
 
@@ -106,24 +102,6 @@ const SelectItem = ({ item, selectedSet, disabled, onchange, keypress }: SelectI
 					}
 				}
 			};
-
-		listener?.((values: string[], deleted: boolean) => {
-			const valueSet = new Set(selected);
-
-			if (deleted) {
-				for (const v of values) {
-					valueSet.delete(v);
-				}
-			} else {
-				for (const v of values) {
-					valueSet.add(v);
-				}
-			}
-
-			const newSelected = Array.from(valueSet);
-
-			onchange(newSelected, null);
-		});
 
 		return <div className="multiSelect" id={`multi_${id}`}>
 			<ul>
