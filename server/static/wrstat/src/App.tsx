@@ -275,6 +275,7 @@ const groupNameToIDMap = new Map<string, number>(),
 						}} />
 				</details>
 			}
+			<div id="copyright">&copy; 2023 Genome Research Ltd.</div>
 		</>
 	};
 
