@@ -135,6 +135,7 @@ const colours = [
 		["> 1 year", 365],
 		["> 2 years", 730]
 	] as const,
+	entrySort = (a: Entry, b: Entry) => b.value - a.value,
 	DiskTreeComponent = ({ treePath, userMap, groupMap, setTreePath, guf }: DiskTreeParams) => {
 		const [treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 			[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
@@ -172,7 +173,7 @@ const colours = [
 						});
 					}
 
-					entries.sort((a, b) => b.value - a.value);
+					entries.sort(entrySort);
 
 					setHasAuth(!children.noauth);
 					setTreeMapData(entries);
