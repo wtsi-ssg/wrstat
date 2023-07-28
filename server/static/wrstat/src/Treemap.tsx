@@ -97,22 +97,22 @@ const phi = (1 + Math.sqrt(5)) / 2,
 			entry.onclick ? <></> :
 				entry.noauth ?
 					<use
-						x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
-						y={top + (rowHeight - minScale * 0.40) / 2}
+						x={left + (colWidth - bbox.width * minScale) / 2}
+						y={top + (rowHeight - minScale * 0.6) / 2}
 						href="#lock"
 						width="0.5em"
 						height="0.5em"
-						style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} /> :
+						style={{ color: "#000", fontSize: `${minScale}px` }} /> :
 					<use
-						x={left + (colWidth - bbox.width * minScale * 0.9) / 2}
-						y={top + (rowHeight - minScale * 0.40) / 2}
+						x={left + (colWidth - bbox.width * minScale) / 2}
+						y={top + (rowHeight - minScale * 0.55) / 2}
 						href="#emptyDirectory"
 						width="0.5em"
 						height="0.3846em"
 						style={{ color: "#000", fontSize: `${minScale * 0.9}px` }} />
 		}
 		<text
-			fontSize={minScale * 0.75}
+			fontSize={minScale}
 			fontFamily={font}
 			x={(entry.noauth ? minScale * 0.225 : 0) + left + colWidth / 2}
 			y={top + (rowHeight + bbox.height * minScale / 2) / 2}
@@ -172,7 +172,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 
 				d += isRow ? colWidth : rowHeight;
 
-				toRet.push(<DirBox key={entry.key ? `box_${entry.key}` : `box_${i}`} {...{ entry, top, left, colWidth, rowHeight, minScale, bbox }} />);
+				toRet.push(<DirBox key={entry.key ? `box_${entry.key}` : `box_${i}`} {...{ entry, top, left, colWidth, rowHeight, minScale: minScale * 0.75, bbox }} />);
 			}
 
 			if (isRow) {
