@@ -658,23 +658,23 @@ func BenchmarkPrefixMap(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		checkPathParents(prefixMap)
+		for _, path := range prefixBenchmarkPaths {
+			checkPathParents(prefixMap, path)
+		}
 	}
 }
 
-func checkPathParents(prefixMap map[string]bool) {
-	for _, path := range prefixBenchmarkPaths {
-		dir := path
+func checkPathParents(prefixMap map[string]bool, path string) bool {
+	dir := path
 
-		for {
-			if prefixMap[dir] {
-				break
-			}
+	for {
+		if prefixMap[dir] {
+			return true
+		}
 
-			dir = filepath.Dir(dir)
-			if dir == "." {
-				break
-			}
+		dir = filepath.Dir(dir)
+		if dir == "." || dir == "/" {
+			return false
 		}
 	}
 }
@@ -693,7 +693,8 @@ func BenchmarkPrefixTree(b *testing.B) {
 
 type prefixTree struct {
 	children map[string]*prefixTree
-	leaf     bool
+	leaf     string
+	isLeaf   bool
 }
 
 func newPrefixTree() *prefixTree {
@@ -711,7 +712,8 @@ func (p *prefixTree) add(directory string) {
 		tree = tree.child(dir)
 	}
 
-	tree.leaf = true
+	tree.leaf = directory
+	tree.isLeaf = true
 }
 
 func splitDirectory(directory string) []string {
@@ -722,7 +724,7 @@ func splitDirectory(directory string) []string {
 	}
 
 	if len(dirs) > 0 && dirs[len(dirs)-1] == "" {
-		dirs = dirs[0 : len(dirs)-1]
+		dirs = dirs[:len(dirs)-1]
 	}
 
 	return dirs
@@ -740,26 +742,27 @@ func (p *prefixTree) child(directory string) *prefixTree {
 
 func (p *prefixTree) getPrefixForPath(path string) (string, bool) {
 	dirs := splitDirectory(path)
-	fmt.Printf("split %s to %+v\n", path, dirs)
+	// fmt.Printf("split %s to %+v\n", path, dirs)
 
 	tree := p
 	previousTree := p
-	prefixDirs := []string{"/"}
+	// prefixDirs := []string{"/"}
 	prefixDir := ""
 	found := false
 
 	for _, dir := range dirs {
-		fmt.Printf("checking %s\n", dir)
+		// fmt.Printf("checking %s\n", dir)
 		tree, found = tree.children[dir]
 		if !found {
-			fmt.Printf("not found\n")
-			if previousTree.leaf {
+			// fmt.Printf("not found\n")
+			if previousTree.isLeaf {
 				found = true
-				prefixDir = filepath.Join(prefixDirs...)
-				fmt.Printf("%s was a leaf, so found\n", prefixDir)
-			} else {
-				prefixDir = filepath.Join(prefixDirs...)
-				fmt.Printf("%s was NOT a leaf, so not found\n", prefixDir)
+				prefixDir = previousTree.leaf
+				// prefixDir = filepath.Join(prefixDirs...)
+				// fmt.Printf("%s was a leaf, so found\n", prefixDir)
+				// } else {
+				// prefixDir = filepath.Join(prefixDirs...)
+				// fmt.Printf("%s was NOT a leaf, so not found\n", prefixDir)
 			}
 
 			break
@@ -767,7 +770,7 @@ func (p *prefixTree) getPrefixForPath(path string) (string, bool) {
 
 		previousTree = tree
 
-		prefixDirs = append(prefixDirs, dir)
+		// prefixDirs = append(prefixDirs, dir)
 	}
 
 	return prefixDir, found
@@ -822,6 +825,23 @@ func checkPathsWithSuffixTree(tree *suffix.Tree) {
 // .
 func TestPrefixMatchers(t *testing.T) {
 	prefixBenchmarkSetup()
+
+	Convey("Map works", t, func() {
+		prefixMap := make(map[string]bool, prefixBenchmarkNumPrefixes)
+
+		for _, prefix := range prefixBenchmarkPrefixes {
+			prefixMap[prefix] = true
+		}
+
+		found := checkPathParents(prefixMap, "/9/file.txt")
+		So(found, ShouldBeFalse)
+
+		found = checkPathParents(prefixMap, "/0/file.txt")
+		So(found, ShouldBeFalse)
+
+		found = checkPathParents(prefixMap, filepath.Join(prefixBenchmarkPrefixes[0], "file.txt"))
+		So(found, ShouldBeTrue)
+	})
 
 	Convey("Tree works", t, func() {
 		tree := splitPrefixesToTree()
