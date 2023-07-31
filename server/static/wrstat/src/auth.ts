@@ -34,7 +34,7 @@ const usernameFromJWT = (jwt: string): string => JSON.parse(atob(jwt.split('.')[
 				if (xh.status === 200) {
 					const token = JSON.parse(xh.response);
 
-					document.cookie = `jwt=${token};samesite=strict;path=/tree`
+					document.cookie = `jwt=${token};samesite=strict;path=/`
 
 					successFn(usernameFromJWT(token));
 				} else {
@@ -67,7 +67,7 @@ export const getCookie = (toFind: string) => {
 	return "";
 },
 	logout = () => {
-		document.cookie = "jwt=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/tree";
+		document.cookie = "jwt=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/";
 		document.cookie = "okta-hosted-login-session-store=;expires=Thu, 1 Jan 1970 00:00:00 GMT;path=/";
 
 		window.location.reload();
