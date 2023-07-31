@@ -32,6 +32,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -534,24 +535,6 @@ func getFilePermissions(t *testing.T, path string) string {
 	return info.Mode().Perm().String()
 }
 
-// go test ./ch -run NONE -bench=BenchmarkPrefix -benchtime 10s
-// BenchmarkPrefixLoop-8   	       3	4177441684 ns/op
-// BenchmarkPrefixMap-8    	      22	 527689430 ns/op
-// BenchmarkPrefixTree-8   	     148	  79018583 ns/op
-// BenchmarkPrefixSuffixTree-8   	     274	  42758535 ns/op.
-func BenchmarkPrefixLoop(b *testing.B) {
-	prefixBenchmarkSetup()
-
-	// would normally sort prefixBenchmarkPrefixes longest to shortest, but ours
-	// are all the same length
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		loopPrefixes()
-	}
-}
-
 var prefixBenchmarkPaths []string
 
 const prefixBenchmarkNumPaths = 1000000
@@ -605,35 +588,57 @@ func makePrefixBenchmarkPaths() {
 	}
 }
 
-func makePrefixBenchmarkPrefixes() {
-	prefixBenchmarkPrefixes = make([]string, 0, prefixBenchmarkNumPrefixes)
+func makePrefixPath(path string, remaining int) {
+	if remaining == 0 {
+		prefixBenchmarkPrefixes = append(prefixBenchmarkPrefixes, path)
+
+		return
+	}
 
 	max := 5
 
 	for i := 0; i < max; i++ {
 		iDir := strconv.Itoa(i)
-		for j := 0; j < max; j++ {
-			jDir := strconv.Itoa(j)
-			for k := 0; k < max; k++ {
-				kDir := strconv.Itoa(k)
-				for l := 0; l < max; l++ {
-					lDir := strconv.Itoa(l)
-					for m := 0; m < max; m++ {
-						mDir := strconv.Itoa(m)
-						for n := 0; n < max; n++ {
-							nDir := strconv.Itoa(n)
-							prefixBenchmarkPrefixes = append(prefixBenchmarkPrefixes,
-								filepath.Join("/", iDir, jDir, kDir, lDir, mDir, nDir))
 
-							if len(prefixBenchmarkPrefixes) == prefixBenchmarkNumPrefixes {
-								return
-							}
-						}
-					}
-				}
-			}
-		}
+		makePrefixPath(filepath.Join(path, iDir), remaining-1)
 	}
+}
+
+func makePrefixBenchmarkPrefixes() {
+	prefixBenchmarkPrefixes = make([]string, 0, prefixBenchmarkNumPrefixes)
+
+	makePrefixPath("/", 8)
+	makePrefixPath("/", 6)
+	makePrefixPath("/", 5)
+	makePrefixPath("/", 4)
+	makePrefixPath("/", 3)
+
+	// max := 5
+
+	// for i := 0; i < max; i++ {
+	// 	iDir := strconv.Itoa(i)
+	// 	for j := 0; j < max; j++ {
+	// 		jDir := strconv.Itoa(j)
+	// 		for k := 0; k < max; k++ {
+	// 			kDir := strconv.Itoa(k)
+	// 			for l := 0; l < max; l++ {
+	// 				lDir := strconv.Itoa(l)
+	// 				for m := 0; m < max; m++ {
+	// 					mDir := strconv.Itoa(m)
+	// 					for n := 0; n < max; n++ {
+	// 						nDir := strconv.Itoa(n)
+	// 						prefixBenchmarkPrefixes = append(prefixBenchmarkPrefixes,
+	// 							filepath.Join("/", iDir, jDir, kDir, lDir, mDir, nDir))
+
+	// 						if len(prefixBenchmarkPrefixes) == prefixBenchmarkNumPrefixes {
+	// 							return
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 func loopPrefixes() {
@@ -821,6 +826,74 @@ func checkPathsWithSuffixTree(tree *suffix.Tree) {
 	}
 }
 
+func BenchmarkPrefixDepth(b *testing.B) {
+	prefixBenchmarkSetup()
+
+	d := generateDepth()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		for _, path := range prefixBenchmarkPaths {
+			getDepthPrefix(d, path)
+		}
+	}
+}
+
+type Depth struct {
+	prefixes map[string]struct{}
+	depths   []int
+}
+
+func generateDepth() *Depth {
+	d := &Depth{
+		prefixes: make(map[string]struct{}),
+	}
+
+	counts := make(map[int]struct{})
+
+	for _, path := range prefixBenchmarkPrefixes {
+		d.prefixes[path] = struct{}{}
+		counts[strings.Count(path, "/")] = struct{}{}
+	}
+
+	for count := range counts {
+		d.depths = append(d.depths, count)
+	}
+
+	sort.Sort(sort.Reverse(sort.IntSlice(d.depths)))
+
+	return d
+}
+
+func getNthSep(path string, sep byte, n int) string {
+	lastPos := 0
+	for i := 0; i < n; i++ {
+		pos := strings.IndexByte(path[lastPos+1:], sep)
+
+		if pos == -1 {
+			return ""
+		}
+
+		lastPos += pos + 1
+	}
+
+	return path[:lastPos]
+}
+
+func getDepthPrefix(d *Depth, path string) string {
+	for _, count := range d.depths {
+		cutPath := getNthSep(path, filepath.Separator, count)
+
+		_, ok := d.prefixes[cutPath]
+		if ok {
+			return cutPath
+		}
+	}
+
+	return ""
+}
+
 // go test ./ch -run TestPrefixMatchers
 // .
 func TestPrefixMatchers(t *testing.T) {
@@ -841,6 +914,19 @@ func TestPrefixMatchers(t *testing.T) {
 
 		found = checkPathParents(prefixMap, filepath.Join(prefixBenchmarkPrefixes[0], "file.txt"))
 		So(found, ShouldBeTrue)
+	})
+
+	Convey("Depth works", t, func() {
+		d := generateDepth()
+
+		found := getDepthPrefix(d, "/9/file.txt")
+		So(found, ShouldBeBlank)
+
+		found = getDepthPrefix(d, "/0/file.txt")
+		So(found, ShouldBeBlank)
+
+		found = getDepthPrefix(d, filepath.Join(prefixBenchmarkPrefixes[0], "file.txt"))
+		So(found, ShouldEqual, prefixBenchmarkPrefixes[0])
 	})
 
 	Convey("Tree works", t, func() {
