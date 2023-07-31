@@ -196,7 +196,6 @@ const phi = (1 + Math.sqrt(5)) / 2,
 		}
 
 		ctx.font = "1000px " + font;
-		//ctx.textBaseline = "bottom";
 
 		return (text: string) => {
 			const { width = 1000, actualBoundingBoxAscent: height = 1000, actualBoundingBoxDescent: depth = 0 } = ctx.measureText(text) ?? { "width": 1000, "actualBoundingBoxAscent": 1000, "actualBoundingBoxDescent": 0 };
