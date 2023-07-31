@@ -189,18 +189,19 @@ const phi = (1 + Math.sqrt(5)) / 2,
 	},
 	font = "\"Helvetica Neue\", Helvetica, Arial, sans-serif",
 	getTextBB = (() => {
-		const ctx = document.createElement("canvas").getContext("2d");
+		const ctx = document.createElement("canvas").getContext("2d"),
+			fontSize = 1000; // Fix for WebKit/Blink bug around font rendering at small sizes.
 
 		if (!ctx) {
 			return () => ({ "width": 1, "height": 1, "depth": 1 });
 		}
 
-		ctx.font = "1000px " + font;
+		ctx.font = `${fontSize}px ${font}`;
 
 		return (text: string) => {
-			const { width = 1000, actualBoundingBoxAscent: height = 1000, actualBoundingBoxDescent: depth = 0 } = ctx.measureText(text) ?? { "width": 1000, "actualBoundingBoxAscent": 1000, "actualBoundingBoxDescent": 0 };
+			const { width = fontSize, actualBoundingBoxAscent: height = fontSize, actualBoundingBoxDescent: depth = 0 } = ctx.measureText(text) ?? { "width": fontSize, "actualBoundingBoxAscent": fontSize, "actualBoundingBoxDescent": 0 };
 
-			return { width: width / 1000, height: height / 1000, depth: depth / 1000 };
+			return { width: width / fontSize, height: height / fontSize, depth: depth / fontSize };
 		};
 	})(),
 	maxTableEntries = 1000,
