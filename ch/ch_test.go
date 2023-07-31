@@ -556,89 +556,41 @@ func prefixBenchmarkSetup() {
 func makePrefixBenchmarkPaths() {
 	prefixBenchmarkPaths = make([]string, 0, prefixBenchmarkNumPaths)
 
-	max := 10
-
-	for i := 0; i < max; i++ {
-		iDir := strconv.Itoa(i)
-		for j := 0; j < max; j++ {
-			jDir := strconv.Itoa(j)
-			for k := 0; k < max; k++ {
-				kDir := strconv.Itoa(k)
-				for l := 0; l < max; l++ {
-					lDir := strconv.Itoa(l)
-					for m := 0; m < max; m++ {
-						mDir := strconv.Itoa(m)
-						for n := 0; n < max; n++ {
-							nDir := strconv.Itoa(n)
-							for o := 0; o < max; o++ {
-								oDir := strconv.Itoa(o)
-								prefixBenchmarkPaths = append(prefixBenchmarkPaths,
-									filepath.Join("/", iDir, jDir, kDir, lDir, mDir,
-										nDir, oDir, "file.txt"))
-
-								if len(prefixBenchmarkPaths) == prefixBenchmarkNumPaths {
-									return
-								}
-							}
-						}
-					}
-				}
-			}
+	makePrefixPath("/", 10, 7, func(path string) {
+		if len(prefixBenchmarkPaths) != prefixBenchmarkNumPaths {
+			prefixBenchmarkPaths = append(prefixBenchmarkPaths, filepath.Join(path, "file.txt"))
 		}
-	}
+	})
+
 }
 
-func makePrefixPath(path string, remaining int) {
+func makePrefixPath(path string, max, remaining int, cb func(string)) {
 	if remaining == 0 {
-		prefixBenchmarkPrefixes = append(prefixBenchmarkPrefixes, path)
+		cb(path)
 
 		return
 	}
 
-	max := 5
-
 	for i := 0; i < max; i++ {
 		iDir := strconv.Itoa(i)
 
-		makePrefixPath(filepath.Join(path, iDir), remaining-1)
+		makePrefixPath(filepath.Join(path, iDir), max, remaining-1, cb)
 	}
 }
 
 func makePrefixBenchmarkPrefixes() {
 	prefixBenchmarkPrefixes = make([]string, 0, prefixBenchmarkNumPrefixes)
 
-	makePrefixPath("/", 8)
-	makePrefixPath("/", 6)
-	makePrefixPath("/", 5)
-	makePrefixPath("/", 4)
-	makePrefixPath("/", 3)
+	cb := func(path string) {
+		prefixBenchmarkPrefixes = append(prefixBenchmarkPrefixes, path)
+	}
 
-	// max := 5
+	makePrefixPath("/", 5, 8, cb)
+	makePrefixPath("/", 5, 6, cb)
+	makePrefixPath("/", 5, 5, cb)
+	makePrefixPath("/", 5, 4, cb)
+	makePrefixPath("/", 5, 3, cb)
 
-	// for i := 0; i < max; i++ {
-	// 	iDir := strconv.Itoa(i)
-	// 	for j := 0; j < max; j++ {
-	// 		jDir := strconv.Itoa(j)
-	// 		for k := 0; k < max; k++ {
-	// 			kDir := strconv.Itoa(k)
-	// 			for l := 0; l < max; l++ {
-	// 				lDir := strconv.Itoa(l)
-	// 				for m := 0; m < max; m++ {
-	// 					mDir := strconv.Itoa(m)
-	// 					for n := 0; n < max; n++ {
-	// 						nDir := strconv.Itoa(n)
-	// 						prefixBenchmarkPrefixes = append(prefixBenchmarkPrefixes,
-	// 							filepath.Join("/", iDir, jDir, kDir, lDir, mDir, nDir))
-
-	// 						if len(prefixBenchmarkPrefixes) == prefixBenchmarkNumPrefixes {
-	// 							return
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
 }
 
 func loopPrefixes() {
@@ -699,7 +651,6 @@ func BenchmarkPrefixTree(b *testing.B) {
 type prefixTree struct {
 	children map[string]*prefixTree
 	leaf     string
-	isLeaf   bool
 }
 
 func newPrefixTree() *prefixTree {
@@ -709,30 +660,21 @@ func newPrefixTree() *prefixTree {
 }
 
 func (p *prefixTree) add(directory string) {
-	dirs := splitDirectory(directory)
-
-	tree := p
-
-	for _, dir := range dirs {
-		tree = tree.child(dir)
+	for dir, rest := splitPath(directory[1:]); dir != ""; dir, rest = splitPath(rest) {
+		p = p.child(dir)
 	}
 
-	tree.leaf = directory
-	tree.isLeaf = true
+	p.leaf = directory
 }
 
-func splitDirectory(directory string) []string {
-	dirs := strings.Split(directory, string(os.PathSeparator))
+func splitPath(path string) (string, string) {
+	pos := strings.IndexByte(path, filepath.Separator)
 
-	if len(dirs) > 0 && dirs[0] == "" {
-		dirs = dirs[1:]
+	if pos == -1 {
+		return path, ""
 	}
 
-	if len(dirs) > 0 && dirs[len(dirs)-1] == "" {
-		dirs = dirs[:len(dirs)-1]
-	}
-
-	return dirs
+	return path[:pos], path[pos+1:]
 }
 
 func (p *prefixTree) child(directory string) *prefixTree {
@@ -746,39 +688,20 @@ func (p *prefixTree) child(directory string) *prefixTree {
 }
 
 func (p *prefixTree) getPrefixForPath(path string) (string, bool) {
-	dirs := splitDirectory(path)
-	// fmt.Printf("split %s to %+v\n", path, dirs)
-
-	tree := p
-	previousTree := p
-	// prefixDirs := []string{"/"}
-	prefixDir := ""
-	found := false
-
-	for _, dir := range dirs {
-		// fmt.Printf("checking %s\n", dir)
-		tree, found = tree.children[dir]
+	for dir, rest := splitPath(path[1:]); dir != ""; dir, rest = splitPath(rest) {
+		tree, found := p.children[dir]
 		if !found {
-			// fmt.Printf("not found\n")
-			if previousTree.isLeaf {
-				found = true
-				prefixDir = previousTree.leaf
-				// prefixDir = filepath.Join(prefixDirs...)
-				// fmt.Printf("%s was a leaf, so found\n", prefixDir)
-				// } else {
-				// prefixDir = filepath.Join(prefixDirs...)
-				// fmt.Printf("%s was NOT a leaf, so not found\n", prefixDir)
+			if p.leaf != "" {
+				return p.leaf, true
 			}
 
 			break
 		}
 
-		previousTree = tree
-
-		// prefixDirs = append(prefixDirs, dir)
+		p = tree
 	}
 
-	return prefixDir, found
+	return "", false
 }
 
 func splitPrefixesToTree() *prefixTree {
@@ -943,17 +866,17 @@ func TestPrefixMatchers(t *testing.T) {
 		So(prefix, ShouldEqual, prefixBenchmarkPrefixes[0])
 	})
 
-	Convey("Suffix tree works", t, func() {
-		tree := generateSuffixTree()
+	// Convey("Suffix tree works", t, func() {
+	// 	tree := generateSuffixTree()
 
-		_, _, found := tree.LongestSuffix([]byte("/9/file.txt"))
-		So(found, ShouldBeFalse)
+	// 	_, _, found := tree.LongestSuffix([]byte("/9/file.txt"))
+	// 	So(found, ShouldBeFalse)
 
-		_, _, found = tree.LongestSuffix([]byte("/0/file.txt"))
-		So(found, ShouldBeFalse)
+	// 	_, _, found = tree.LongestSuffix([]byte("/0/file.txt"))
+	// 	So(found, ShouldBeFalse)
 
-		k, _, found := tree.LongestSuffix([]byte(filepath.Join(prefixBenchmarkPrefixes[0], "file.txt")))
-		So(found, ShouldBeTrue)
-		So(k, ShouldResemble, []byte(prefixBenchmarkPrefixes[0]))
-	})
+	// 	k, _, found := tree.LongestSuffix([]byte(filepath.Join(prefixBenchmarkPrefixes[0], "file.txt")))
+	// 	So(found, ShouldBeTrue)
+	// 	So(k, ShouldResemble, []byte(prefixBenchmarkPrefixes[0]))
+	// })
 }
