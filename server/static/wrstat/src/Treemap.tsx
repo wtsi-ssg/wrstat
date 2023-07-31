@@ -117,7 +117,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 			y={top + rowHeight / 2}
 			textAnchor="middle"
 			fill={entry.colour ?? "#000"}
-			dominant-baseline={underhangs.some(u => entry.name.includes(u)) ? "middle" : "central"}
+			dominantBaseline={underhangs.some(u => entry.name.includes(u)) ? "middle" : "central"}
 		>{entry.name}</text>
 	</>,
 	buildTree = (table: Table, box: Box) => {
