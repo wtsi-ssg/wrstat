@@ -33,12 +33,14 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/inconshreveable/log15"
 	. "github.com/smartystreets/goconvey/convey"
+	suffix "github.com/spacewander/go-suffix-tree"
 )
 
 const longBasename = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
@@ -530,4 +532,322 @@ func getFilePermissions(t *testing.T, path string) string {
 	So(err, ShouldBeNil)
 
 	return info.Mode().Perm().String()
+}
+
+// go test ./ch -run NONE -bench=BenchmarkPrefix -benchtime 10s
+// BenchmarkPrefixLoop-8   	       3	4177441684 ns/op
+// BenchmarkPrefixMap-8    	      22	 527689430 ns/op
+// BenchmarkPrefixTree-8   	     148	  79018583 ns/op
+// BenchmarkPrefixSuffixTree-8   	     274	  42758535 ns/op.
+func BenchmarkPrefixLoop(b *testing.B) {
+	prefixBenchmarkSetup()
+
+	// would normally sort prefixBenchmarkPrefixes longest to shortest, but ours
+	// are all the same length
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		loopPrefixes()
+	}
+}
+
+var prefixBenchmarkPaths []string
+
+const prefixBenchmarkNumPaths = 1000000
+
+var prefixBenchmarkPrefixes []string
+
+const prefixBenchmarkNumPrefixes = 1000
+
+func prefixBenchmarkSetup() {
+	if prefixBenchmarkPaths == nil {
+		makePrefixBenchmarkPaths()
+	}
+
+	if prefixBenchmarkPrefixes == nil {
+		makePrefixBenchmarkPrefixes()
+	}
+}
+
+func makePrefixBenchmarkPaths() {
+	prefixBenchmarkPaths = make([]string, 0, prefixBenchmarkNumPaths)
+
+	max := 10
+
+	for i := 0; i < max; i++ {
+		iDir := strconv.Itoa(i)
+		for j := 0; j < max; j++ {
+			jDir := strconv.Itoa(j)
+			for k := 0; k < max; k++ {
+				kDir := strconv.Itoa(k)
+				for l := 0; l < max; l++ {
+					lDir := strconv.Itoa(l)
+					for m := 0; m < max; m++ {
+						mDir := strconv.Itoa(m)
+						for n := 0; n < max; n++ {
+							nDir := strconv.Itoa(n)
+							for o := 0; o < max; o++ {
+								oDir := strconv.Itoa(o)
+								prefixBenchmarkPaths = append(prefixBenchmarkPaths,
+									filepath.Join("/", iDir, jDir, kDir, lDir, mDir,
+										nDir, oDir, "file.txt"))
+
+								if len(prefixBenchmarkPaths) == prefixBenchmarkNumPaths {
+									return
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func makePrefixBenchmarkPrefixes() {
+	prefixBenchmarkPrefixes = make([]string, 0, prefixBenchmarkNumPrefixes)
+
+	max := 5
+
+	for i := 0; i < max; i++ {
+		iDir := strconv.Itoa(i)
+		for j := 0; j < max; j++ {
+			jDir := strconv.Itoa(j)
+			for k := 0; k < max; k++ {
+				kDir := strconv.Itoa(k)
+				for l := 0; l < max; l++ {
+					lDir := strconv.Itoa(l)
+					for m := 0; m < max; m++ {
+						mDir := strconv.Itoa(m)
+						for n := 0; n < max; n++ {
+							nDir := strconv.Itoa(n)
+							prefixBenchmarkPrefixes = append(prefixBenchmarkPrefixes,
+								filepath.Join("/", iDir, jDir, kDir, lDir, mDir, nDir))
+
+							if len(prefixBenchmarkPrefixes) == prefixBenchmarkNumPrefixes {
+								return
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func loopPrefixes() {
+	for _, path := range prefixBenchmarkPaths {
+		for _, prefix := range prefixBenchmarkPrefixes {
+			if strings.HasPrefix(path, prefix) {
+				break
+			}
+		}
+	}
+}
+
+func BenchmarkPrefixMap(b *testing.B) {
+	prefixBenchmarkSetup()
+
+	prefixMap := make(map[string]bool, prefixBenchmarkNumPrefixes)
+
+	for _, prefix := range prefixBenchmarkPrefixes {
+		prefixMap[prefix] = true
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		checkPathParents(prefixMap)
+	}
+}
+
+func checkPathParents(prefixMap map[string]bool) {
+	for _, path := range prefixBenchmarkPaths {
+		dir := path
+
+		for {
+			if prefixMap[dir] {
+				break
+			}
+
+			dir = filepath.Dir(dir)
+			if dir == "." {
+				break
+			}
+		}
+	}
+}
+
+func BenchmarkPrefixTree(b *testing.B) {
+	prefixBenchmarkSetup()
+
+	tree := splitPrefixesToTree()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		checkPathsWithTree(tree)
+	}
+}
+
+type prefixTree struct {
+	children map[string]*prefixTree
+	leaf     bool
+}
+
+func newPrefixTree() *prefixTree {
+	return &prefixTree{
+		children: make(map[string]*prefixTree),
+	}
+}
+
+func (p *prefixTree) add(directory string) {
+	dirs := splitDirectory(directory)
+
+	tree := p
+
+	for _, dir := range dirs {
+		tree = tree.child(dir)
+	}
+
+	tree.leaf = true
+}
+
+func splitDirectory(directory string) []string {
+	dirs := strings.Split(directory, string(os.PathSeparator))
+
+	if len(dirs) > 0 && dirs[0] == "" {
+		dirs = dirs[1:]
+	}
+
+	if len(dirs) > 0 && dirs[len(dirs)-1] == "" {
+		dirs = dirs[0 : len(dirs)-1]
+	}
+
+	return dirs
+}
+
+func (p *prefixTree) child(directory string) *prefixTree {
+	tree, exists := p.children[directory]
+	if !exists {
+		tree = newPrefixTree()
+		p.children[directory] = tree
+	}
+
+	return tree
+}
+
+func (p *prefixTree) getPrefixForPath(path string) (string, bool) {
+	dirs := splitDirectory(path)
+	fmt.Printf("split %s to %+v\n", path, dirs)
+
+	tree := p
+	previousTree := p
+	prefixDirs := []string{"/"}
+	prefixDir := ""
+	found := false
+
+	for _, dir := range dirs {
+		fmt.Printf("checking %s\n", dir)
+		tree, found = tree.children[dir]
+		if !found {
+			fmt.Printf("not found\n")
+			if previousTree.leaf {
+				found = true
+				prefixDir = filepath.Join(prefixDirs...)
+				fmt.Printf("%s was a leaf, so found\n", prefixDir)
+			} else {
+				prefixDir = filepath.Join(prefixDirs...)
+				fmt.Printf("%s was NOT a leaf, so not found\n", prefixDir)
+			}
+
+			break
+		}
+
+		previousTree = tree
+
+		prefixDirs = append(prefixDirs, dir)
+	}
+
+	return prefixDir, found
+}
+
+func splitPrefixesToTree() *prefixTree {
+	tree := newPrefixTree()
+
+	for _, prefix := range prefixBenchmarkPrefixes {
+		tree.add(prefix)
+	}
+
+	return tree
+}
+
+func checkPathsWithTree(tree *prefixTree) {
+	for _, path := range prefixBenchmarkPaths {
+		tree.getPrefixForPath(path)
+	}
+}
+
+func BenchmarkPrefixSuffixTree(b *testing.B) {
+	prefixBenchmarkSetup()
+
+	tree := generateSuffixTree()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		checkPathsWithSuffixTree(tree)
+	}
+}
+
+func generateSuffixTree() *suffix.Tree {
+	tree := suffix.NewTree()
+
+	for _, prefix := range prefixBenchmarkPrefixes {
+		p := prefix
+		tree.Insert([]byte(prefix), &p)
+	}
+
+	return tree
+}
+
+func checkPathsWithSuffixTree(tree *suffix.Tree) {
+	for _, path := range prefixBenchmarkPaths {
+		tree.LongestSuffix([]byte(path))
+	}
+}
+
+// go test ./ch -run TestPrefixMatchers
+// .
+func TestPrefixMatchers(t *testing.T) {
+	prefixBenchmarkSetup()
+
+	Convey("Tree works", t, func() {
+		tree := splitPrefixesToTree()
+
+		_, found := tree.getPrefixForPath("/9/file.txt")
+		So(found, ShouldBeFalse)
+
+		_, found = tree.getPrefixForPath("/0/file.txt")
+		So(found, ShouldBeFalse)
+
+		prefix, found := tree.getPrefixForPath(filepath.Join(prefixBenchmarkPrefixes[0], "file.txt"))
+		So(found, ShouldBeTrue)
+		So(prefix, ShouldEqual, prefixBenchmarkPrefixes[0])
+	})
+
+	Convey("Suffix tree works", t, func() {
+		tree := generateSuffixTree()
+
+		_, _, found := tree.LongestSuffix([]byte("/9/file.txt"))
+		So(found, ShouldBeFalse)
+
+		_, _, found = tree.LongestSuffix([]byte("/0/file.txt"))
+		So(found, ShouldBeFalse)
+
+		k, _, found := tree.LongestSuffix([]byte(filepath.Join(prefixBenchmarkPrefixes[0], "file.txt")))
+		So(found, ShouldBeTrue)
+		So(k, ShouldResemble, []byte(prefixBenchmarkPrefixes[0]))
+	})
 }
