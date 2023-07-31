@@ -62,10 +62,11 @@ type BoxParams = {
 	colWidth: number;
 	rowHeight: number;
 	minScale: number;
-	bbox: { width: number; height: number };
+	bbox: { width: number; height: number; depth: number };
 }
 
 const phi = (1 + Math.sqrt(5)) / 2,
+	underhangs = ['g', 'j', 'p', 'q', 'y'],
 	DirBox = ({ entry, top, left, colWidth, rowHeight, minScale, bbox }: BoxParams) => <>
 		<rect
 			x={left}
@@ -90,22 +91,20 @@ const phi = (1 + Math.sqrt(5)) / 2,
 				}
 			} : undefined}
 			onMouseOver={entry.onmouseover}
-		>
-			<title>{entry.name}</title>
-		</rect>
+		/>
 		{
 			entry.onclick ? <></> :
 				entry.noauth ?
 					<use
 						x={left + (colWidth - bbox.width * minScale) / 2}
-						y={top + (rowHeight - minScale * 0.6) / 2}
+						y={top + (rowHeight - minScale * 0.5) / 2}
 						href="#lock"
 						width="0.5em"
 						height="0.5em"
 						style={{ color: "#000", fontSize: `${minScale}px` }} /> :
 					<use
 						x={left + (colWidth - bbox.width * minScale) / 2}
-						y={top + (rowHeight - minScale * 0.55) / 2}
+						y={top + (rowHeight - minScale * 0.25) / 2}
 						href="#emptyDirectory"
 						width="0.5em"
 						height="0.3846em"
@@ -115,9 +114,10 @@ const phi = (1 + Math.sqrt(5)) / 2,
 			fontSize={minScale}
 			fontFamily={font}
 			x={(entry.noauth ? minScale * 0.225 : 0) + left + colWidth / 2}
-			y={top + (rowHeight + bbox.height * minScale / 2) / 2}
+			y={top + rowHeight / 2}
 			textAnchor="middle"
 			fill={entry.colour ?? "#000"}
+			dominant-baseline={underhangs.some(u => entry.name.includes(u)) ? "middle" : "central"}
 		>{entry.name}</text>
 	</>,
 	buildTree = (table: Table, box: Box) => {
@@ -167,7 +167,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 						boxHeight * entry.value / total,
 					bbox = getTextBB((entry.onclick ? "" : "W") + entry.name),
 					xScale = colWidth / bbox.width,
-					yScale = rowHeight / (bbox.height + bbox.depth),
+					yScale = 0.9 * rowHeight / (bbox.height + bbox.depth),
 					minScale = lastFontSize = Math.min(xScale, yScale, lastFontSize);
 
 				d += isRow ? colWidth : rowHeight;
@@ -196,7 +196,7 @@ const phi = (1 + Math.sqrt(5)) / 2,
 		}
 
 		ctx.font = "1000px " + font;
-		ctx.textBaseline = "bottom";
+		//ctx.textBaseline = "bottom";
 
 		return (text: string) => {
 			const { width = 1000, actualBoundingBoxAscent: height = 1000, actualBoundingBoxDescent: depth = 0 } = ctx.measureText(text) ?? { "width": 1000, "actualBoundingBoxAscent": 1000, "actualBoundingBoxDescent": 0 };
