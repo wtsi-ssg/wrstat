@@ -30,45 +30,56 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"regexp"
 	"strings"
 )
 
+const (
+	numCols  = 5
+	uoPermRE = "[r\\*\\^-][w\\*\\^-][x\\*\\^-]"
+	gPermRE  = "[r\\*\\^-][w\\*\\^-][xs\\*\\^-]"
+)
+
+var (
+	errInvalidFormat = errors.New("invalid ch.tsv format")
+	permsRE          = regexp.MustCompile("^" + uoPermRE + gPermRE + uoPermRE + "$")
+	nameRE           = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$`)
+)
+
+// TSVReader is for parsing the custom ch.tsv file format, which has tab
+// separated columns:
+//
 // directory user group fileperms dirperms
 //
 // *perms format is rwxrwxrwx for user,group,other, where - means remove the
 // permission, * means leave it unchanged, and a letter means set it. s for the
-// group x would enable setting group sticky bit. s implies x. Could use ^ in at
+// group x would enable setting group sticky bit. s implies x. Using ^ in at
 // least 2 equivalent places to mean "set all if any set". ie. '**^**^***` would
 // mean "change nothing, except if execute is set on user or group, set it on
 // both".
 //
 // user and group can be unix username or unix group name. * means don't set it.
-// Could use ^ to mean copy from the directory.
-
-const numCols = 5
-
-var errInvalidFormat = errors.New("invalid ch.tsv format")
-
-type chTSVReader struct {
+// Use ^ to mean copy from the directory.
+type TSVReader struct {
 	r       *bufio.Reader
-	Columns [numCols]string
+	columns [numCols]string
 	err     error
 }
 
-func NewCHTSVReader(r io.Reader) *chTSVReader {
-	return &chTSVReader{
+// NewTSVReader returns a new TSVReader which can read ch.tsv files.
+func NewTSVReader(r io.Reader) *TSVReader {
+	return &TSVReader{
 		r: bufio.NewReader(r),
 	}
 }
 
-func (t *chTSVReader) Next() bool {
+// Next reads the next line in the file, returning true if a valid row was read.
+// Be sure to check Error() after this returns false, and do not continue to
+// call after this returns false.
+func (t *TSVReader) Next() bool {
 	line, err := t.r.ReadString('\n')
 	if err != nil {
-		if !errors.Is(err, io.EOF) {
-			t.err = err
-		} else if line != "" {
-			t.err = io.ErrUnexpectedEOF
-		}
+		t.handleReadError(err, line)
 
 		return false
 	}
@@ -80,18 +91,20 @@ func (t *chTSVReader) Next() bool {
 	}
 
 	for i := numCols - 1; i > 0; i-- {
-		line, t.Columns[i] = splitLastTab(line)
+		line, t.columns[i] = splitLastTab(line)
 	}
 
-	t.Columns[0] = line
+	t.columns[0] = line
 
-	if !validPerms(t.Columns[3]) || !validPerms(t.Columns[4]) {
-		t.err = errInvalidFormat
+	return t.validate()
+}
 
-		return false
+func (t *TSVReader) handleReadError(err error, line string) {
+	if !errors.Is(err, io.EOF) {
+		t.err = err
+	} else if line != "" {
+		t.err = io.ErrUnexpectedEOF
 	}
-
-	return true
 }
 
 func splitLastTab(str string) (string, string) {
@@ -104,14 +117,33 @@ func splitLastTab(str string) (string, string) {
 	return str[:pos], str[pos+1:]
 }
 
-func validPerms(perms string) bool {
-	if len(perms) != 9 {
+func (t *TSVReader) validate() bool {
+	if !validateName(t.columns[1]) || !validateName(t.columns[2]) {
+		t.err = errInvalidFormat
+
+		return false
+	}
+
+	if !permsRE.MatchString(t.columns[3]) || !permsRE.MatchString(t.columns[4]) {
+		t.err = errInvalidFormat
+
 		return false
 	}
 
 	return true
 }
 
-func (t *chTSVReader) Error() error {
+func validateName(name string) bool {
+	return nameRE.MatchString(name) || name == "*" || name == "^"
+}
+
+// Columns returns the columns of the row read after calling Next().
+func (t *TSVReader) Columns() []string {
+	return append([]string{}, t.columns[:]...)
+}
+
+// Error returns any error encountered during Next() parsing. Does not generate
+// an error at end of file.
+func (t *TSVReader) Error() error {
 	return t.err
 }

@@ -50,16 +50,17 @@ func TestTSV(t *testing.T) {
 		tsvData := `/a/b/c/d	*	*	*********	*********
 /e/f/g	user1	group1	rwxrwxrwx	rwxrwsrwx
 /h/i	*	group2	---------	---------
-/a/b/c/	d	*	*	*********	*********
+/a/b/c/	d	^	^	*********	*********
 `
 
 		reader := strings.NewReader(tsvData)
 
 		Convey("You can create a ch.tsv reader for it and read each row", func() {
-			cr := NewCHTSVReader(reader)
+			cr := NewTSVReader(reader)
 
 			for cr.Next() {
-				cols := cr.Columns
+				cols := cr.Columns()
+
 				So(len(cols), ShouldEqual, 5)
 				So(cols[0], ShouldStartWith, "/")
 				So(cols[4], ShouldNotEndWith, "\n")
@@ -82,7 +83,7 @@ func TestTSV(t *testing.T) {
 
 		for _, line := range data {
 			reader := strings.NewReader(line)
-			cr := NewCHTSVReader(reader)
+			cr := NewTSVReader(reader)
 
 			So(cr.Next(), ShouldEqual, false)
 			So(cr.Error(), ShouldNotBeNil)
