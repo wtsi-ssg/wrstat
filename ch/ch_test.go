@@ -79,10 +79,10 @@ func TestCh(t *testing.T) {
 	Convey("Given a Ch", t, func() {
 		buff, l := newLogger()
 		cbChange := false
+		So(cbChange, ShouldEqual, false)
 		cbGID := otherGID
-		cb := func(string) (bool, int) {
-			return cbChange, cbGID
-		}
+		So(cbGID, ShouldEqual, otherGID)
+		cb := &RulesStore{}
 		ch := New(cb, l)
 		So(ch, ShouldNotBeNil)
 

@@ -130,11 +130,35 @@ func (t *TSVReader) validate() bool {
 		return false
 	}
 
+	if !validatePermMatching(t.columns[3]) || !validatePermMatching(t.columns[4]) {
+		t.err = errInvalidFormat
+
+		return false
+	}
+
 	return true
 }
 
 func validateName(name string) bool {
 	return nameRE.MatchString(name) || name == "*" || name == "^"
+}
+
+func validatePermMatching(perms string) bool {
+	for i := 0; i < 3; i++ {
+		set := 0
+
+		for j := i; j < 9; j += 3 {
+			if perms[j] == '^' {
+				set++
+			}
+		}
+
+		if set == 1 {
+			return false
+		}
+	}
+
+	return true
 }
 
 // Columns returns the columns of the row read after calling Next().

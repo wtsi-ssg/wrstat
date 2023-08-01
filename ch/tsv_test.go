@@ -33,6 +33,12 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+const exampleTSVData = `/a/b/c/d	*	*	*********	*********
+/e/f/g	user1	group1	rwxrwxrwx	rwxrwsrwx
+/h/i	*	group2	---------	---------
+/a/b/c/	d	^	^	^^^^^^^^^	^^^^^^^^^
+`
+
 // directory user group fileperms dirperms
 //
 // *perms format is rwxrwxrwx for user,group,other, where - means remove the
@@ -47,13 +53,7 @@ import (
 
 func TestTSV(t *testing.T) {
 	Convey("Given a prefix tsv file", t, func() {
-		tsvData := `/a/b/c/d	*	*	*********	*********
-/e/f/g	user1	group1	rwxrwxrwx	rwxrwsrwx
-/h/i	*	group2	---------	---------
-/a/b/c/	d	^	^	*********	*********
-`
-
-		reader := strings.NewReader(tsvData)
+		reader := strings.NewReader(exampleTSVData)
 
 		Convey("You can create a ch.tsv reader for it and read each row", func() {
 			cr := NewTSVReader(reader)
@@ -79,6 +79,9 @@ func TestTSV(t *testing.T) {
 			"/a/b/c/d	*	*	********	*********\n",
 			"/a/b/c/d	%	*	*********	*********\n",
 			"/a/b/c/d	*	%	*********	*********\n",
+			"/a/b/c/d	*	*	*********	^********\n",
+			"/a/b/c/d	*	*	*********	****^****\n",
+			"/a/b/c/d	*	*	*********	********^\n",
 		}
 
 		for _, line := range data {

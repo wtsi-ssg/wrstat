@@ -49,24 +49,19 @@ const (
 	modeUserGroupReadWritable = 0660
 )
 
-// PathChecker is a callback used by Ch that will receive the absolute path to a
-// file or directory and should return a boolean if this path is eligible for
-// changing, and the desired group ID of this path.
-type PathChecker func(path string) (change bool, gid int)
-
 // Ch is used to chmod and chown files such that they match their desired group.
 type Ch struct {
-	pc     PathChecker
+	rs     *RulesStore
 	logger log15.Logger
 }
 
-// New returns a Ch what will check your pc callback to see what work needs to
+// New returns a Ch what will use your RulesStore to see what work needs to
 // be done on the paths this Ch will receive when Do() is called on it.
 //
 // Changes made will be logged to the given logger.
-func New(pc PathChecker, logger log15.Logger) *Ch {
+func New(rs *RulesStore, logger log15.Logger) *Ch {
 	return &Ch{
-		pc:     pc,
+		rs:     rs,
 		logger: logger,
 	}
 }
@@ -87,12 +82,10 @@ func New(pc PathChecker, logger log15.Logger) *Ch {
 //
 // Any changes we do on disk are logged to our logger.
 func (c *Ch) Do(path string, info fs.FileInfo) error {
-	change, gid := c.pc(path)
-	if !change {
-		return nil
-	}
 
 	chain := &chain{}
+
+	var gid int
 
 	chain.Call(func() error {
 		return c.chownGroup(path, getGIDFromFileInfo(info), gid)
