@@ -36,6 +36,8 @@ import (
 const exampleTSVData = `/a/b/c/d	*	*	*********	*********
 /e/f/g	user1	group1	rwxrwxrwx	rwxrwsrwx
 /h/i	*	group2	---------	---------
+
+# humgen
 /a/b/c/	d	^	^	^^^^^^^^^	^^^^^^^^^
 `
 
@@ -57,6 +59,7 @@ func TestTSV(t *testing.T) {
 
 		Convey("You can create a ch.tsv reader for it and read each row", func() {
 			cr := NewTSVReader(reader)
+			rules := 0
 
 			for cr.Next() {
 				cols := cr.Columns()
@@ -64,9 +67,11 @@ func TestTSV(t *testing.T) {
 				So(len(cols), ShouldEqual, 5)
 				So(cols[0], ShouldStartWith, "/")
 				So(cols[4], ShouldNotEndWith, "\n")
+				rules++
 			}
 
 			So(cr.Error(), ShouldBeNil)
+			So(rules, ShouldEqual, 4)
 		})
 	})
 

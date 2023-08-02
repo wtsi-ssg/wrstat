@@ -86,8 +86,8 @@ func (t *TSVReader) Next() bool {
 
 	line = strings.TrimSuffix(line, "\n")
 
-	if line == "" {
-		return false
+	if line == "" || line[0] == '#' {
+		return t.Next()
 	}
 
 	for i := numCols - 1; i > 0; i-- {
