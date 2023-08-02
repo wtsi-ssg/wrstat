@@ -60,6 +60,9 @@ var (
 //
 // user and group can be unix username or unix group name. * means don't set it.
 // Use ^ to mean copy from the directory.
+//
+// The file can have blank lines and comment lines that begin with #, which will
+// be ignored.
 type TSVReader struct {
 	r       *bufio.Reader
 	columns [numCols]string

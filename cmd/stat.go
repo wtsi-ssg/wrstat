@@ -153,7 +153,9 @@ group x would enable setting group sticky bit. s implies x. Using ^ in at
 least 2 equivalent places means "set all if any set". ie. '**^**^***' would mean
 "change nothing, except if execute is set on user or group, set it on both".
 user and group can be unix username or unix group name. * means don't set it.
-Use ^ to mean copy from the directory.]
+Use ^ to mean copy from the directory.
+The file can have blank lines and comment lines that begin with #, which will be
+ignored.]
 Then any input filesystem path in one of those directories will have its
 permissions and ownership changed if needed.
 
