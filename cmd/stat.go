@@ -145,31 +145,19 @@ and stores this summary in another file named after the input file with a
 3. number of files belonging to both 1 & 2.
 4. total file size in bytes of the files in 3.
 
-If you supply a yaml file to --ch of the following format:
-prefixes: ["/disk1", "/disk2/sub", "/disk3"]
-lookupDir: subdir_name_of_prefixes_that_contains_subdirs_in_lookup
-lookup:
-  subdir_of_lookupDir: unix_group_name
-directDir: subdir_of_prefixes_with_unix_group_or_exception_subdirs
-exceptions:
-  subdir_of_directDir: GID 
-
-Then any input filesystem path that has one of those prefixes and contains a sub
-directory named lookupDir which further contains a sub directory matching one
-of the lookup keys, or named directDir and further containing a sub directory
-named after a unix group or one of the exceptions keys, then the following will
-be ensured:
-
-1. The GID of the path matches the desired GID. The desired GID is either:
-   a) for paths that are nested within a sub directory of a lookupDir, the GID
-      corresponding to the unix group in the lookup.
-   b) for paths that are nested within a sub directory of a directDir, the GID
-      corresponding to the GID in the exceptions, or of the corresponding unix
-	  group.
-2. If path is a directory, it has setgid applied (group sticky).
-3. User execute permission is set if group execute permission was set.
-4. Group permissions match user permissions.
-5. Both user and group have read and write permissions.
+If you supply a tsv file to --ch with the following columns:
+directory user group fileperms dirperms
+[where *perms format is rwxrwxrwx for user,group,other, where - means remove the
+permission, * means leave it unchanged, and one of [rwx] means set it. s for the
+group x would enable setting group sticky bit. s implies x. Using ^ in at
+least 2 equivalent places means "set all if any set". ie. '**^**^***' would mean
+"change nothing, except if execute is set on user or group, set it on both".
+user and group can be unix username or unix group name. * means don't set it.
+Use ^ to mean copy from the directory.
+The file can have blank lines and comment lines that begin with #, which will be
+ignored.]
+Then any input filesystem path in one of those directories will have its
+permissions and ownership changed if needed.
 
 (Any changes caused by this will not be reflected in the output file, since
 the chmod and chown operations happen after path's stats are retrieved.)
@@ -192,12 +180,12 @@ on the above) are stored in another file named after the input file with a
 func init() {
 	RootCmd.AddCommand(statCmd)
 
-	statCmd.Flags().StringVar(&statCh, "ch", "", "YAML file detailing paths to chmod & chown")
+	statCmd.Flags().StringVar(&statCh, "ch", "", "tsv file detailing paths to chmod & chown")
 	statCmd.Flags().BoolVar(&statDebug, "debug", false, "output Lstat timings")
 }
 
 // statPathsInFile does the main work.
-func statPathsInFile(inputPath string, yamlPath string, debug bool) {
+func statPathsInFile(inputPath string, tsvPath string, debug bool) {
 	input, err := os.Open(inputPath)
 	if err != nil {
 		die("failed to open input file: %s", err)
@@ -210,7 +198,7 @@ func statPathsInFile(inputPath string, yamlPath string, debug bool) {
 		}
 	}()
 
-	scanAndStatInput(input, createStatOutputFile(inputPath), yamlPath, debug)
+	scanAndStatInput(input, createStatOutputFile(inputPath), tsvPath, debug)
 }
 
 // createStatOutputFile creates a file named input.stats.
@@ -232,11 +220,11 @@ func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
 // scanAndStatInput scans through the input, stats each path, and outputs the
 // results to the output.
 //
-// If yamlPath is not empty, also does chmod and chown operations on certain
+// If tsvPath is not empty, also does chmod and chown operations on certain
 // paths.
 //
 // If debug is true, outputs timings for Lstat calls and other operations.
-func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
+func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 	var frequency time.Duration
 	if debug {
 		frequency = reportFrequency
@@ -254,7 +242,7 @@ func scanAndStatInput(input, output *os.File, yamlPath string, debug bool) {
 		die("%s", err)
 	}
 
-	if err = addChOperation(yamlPath, p); err != nil {
+	if err = addChOperation(tsvPath, p); err != nil {
 		die("%s", err)
 	}
 
@@ -346,24 +334,26 @@ func addDGUTSummaryOperation(input string, p *stat.Paths) (func() error, error) 
 	return addSummaryOperator(input, statDGUTSummaryOutputFileSuffix, "dgut", p, d)
 }
 
-// addChOperation adds the chmod&chown operation to the Paths if the yaml file
-// has valid contents. No-op if yamlPath is blank.
-func addChOperation(yamlPath string, p *stat.Paths) error {
-	if yamlPath == "" {
+// addChOperation adds the chmod&chown operation to the Paths if the tsv file
+// has valid contents. No-op if tsvPath is blank.
+func addChOperation(tsvPath string, p *stat.Paths) error {
+	if tsvPath == "" {
 		return nil
 	}
 
-	data, err := os.ReadFile(yamlPath)
+	f, err := os.Open(tsvPath)
 	if err != nil {
 		return err
 	}
 
-	from, err := ch.NewGIDFromSubDirFromYAML(data, appLogger)
+	defer f.Close()
+
+	rs, err := ch.NewRulesStore().FromTSV(ch.NewTSVReader(f))
 	if err != nil {
 		return err
 	}
 
-	c := ch.New(from.PathChecker(), appLogger)
+	c := ch.New(rs, appLogger)
 
 	return p.AddOperation("ch", c.Do)
 }
