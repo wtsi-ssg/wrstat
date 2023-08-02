@@ -34,6 +34,19 @@ import (
 	"syscall"
 )
 
+const (
+	readBitNum  = 2
+	writeBitNum = 1
+
+	readBits    = 0444
+	writeBits   = 0222
+	executeBits = 0111
+
+	ugoShift   = 3
+	userShift  = 6
+	groupShift = 3
+)
+
 type setAction uint8
 
 const (
@@ -66,20 +79,22 @@ func (s setAction) toFileMode(currentMode fs.FileMode, match bool) fs.FileMode {
 		if match {
 			return 1
 		}
-	}
 
-	return 0
+		return 0
+	default:
+		return 0
+	}
 }
 
-type Perms struct {
+type perms struct {
 	read    setAction
 	write   setAction
 	execute setAction
 	sticky  bool
 }
 
-func parsePerms(rwx string) Perms {
-	return Perms{
+func parsePerms(rwx string) perms {
+	return perms{
 		read:    parseAction(rwx[0]),
 		write:   parseAction(rwx[1]),
 		execute: parseAction(rwx[2]),
@@ -87,41 +102,41 @@ func parsePerms(rwx string) Perms {
 	}
 }
 
-func (p Perms) toFileMode(currentMode fs.FileMode, readBit, writeBit, executeBit bool) fs.FileMode {
+func (p perms) toFileMode(currentMode fs.FileMode, readBit, writeBit, executeBit bool) fs.FileMode {
 	var mode fs.FileMode
 
-	mode |= p.read.toFileMode(currentMode>>2, readBit)
+	mode |= p.read.toFileMode(currentMode>>readBitNum, readBit)
 	mode <<= 1
-	mode |= p.write.toFileMode(currentMode>>1, writeBit)
+	mode |= p.write.toFileMode(currentMode>>writeBitNum, writeBit)
 	mode <<= 1
 	mode |= p.execute.toFileMode(currentMode, executeBit)
 
 	return mode
 }
 
-type UGOPerms struct {
-	user, group, other Perms
+type ugoPerms struct {
+	user, group, other perms
 }
 
-func parseTSVPerms(perms string) *UGOPerms {
-	return &UGOPerms{
+func parseTSVPerms(perms string) *ugoPerms {
+	return &ugoPerms{
 		user:  parsePerms(perms[:3]),
 		group: parsePerms(perms[3:6]),
 		other: parsePerms(perms[6:]),
 	}
 }
 
-func (u *UGOPerms) toFileMode(currentMode fs.FileMode) fs.FileMode {
+func (u *ugoPerms) toFileMode(currentMode fs.FileMode) fs.FileMode {
 	var mode fs.FileMode
 
-	readBit := (currentMode & 0444) > 0
-	writeBit := (currentMode & 0222) > 0
-	executeBit := (currentMode & 0111) > 0
+	readBit := (currentMode & readBits) > 0
+	writeBit := (currentMode & writeBits) > 0
+	executeBit := (currentMode & executeBits) > 0
 
-	mode |= u.user.toFileMode(currentMode>>6, readBit, writeBit, executeBit)
-	mode <<= 3
-	mode |= u.group.toFileMode(currentMode>>3, readBit, writeBit, executeBit)
-	mode <<= 3
+	mode |= u.user.toFileMode(currentMode>>userShift, readBit, writeBit, executeBit)
+	mode <<= ugoShift
+	mode |= u.group.toFileMode(currentMode>>groupShift, readBit, writeBit, executeBit)
+	mode <<= ugoShift
 	mode |= u.other.toFileMode(currentMode, readBit, writeBit, executeBit)
 
 	if u.group.sticky {
@@ -131,12 +146,15 @@ func (u *UGOPerms) toFileMode(currentMode fs.FileMode) fs.FileMode {
 	return mode
 }
 
+// Rule describes desired file and directory permissions and ownership.
 type Rule struct {
 	uid, gid                uint32
 	changeUser, changeGroup bool
-	filePerms, dirPerms     *UGOPerms
+	filePerms, dirPerms     *ugoPerms
 }
 
+// DesiredUser returns the desired user id if one was set, otherwise returns
+// the given uid.
 func (r *Rule) DesiredUser(uid uint32) uint32 {
 	if !r.changeUser {
 		return uid
@@ -145,6 +163,8 @@ func (r *Rule) DesiredUser(uid uint32) uint32 {
 	return r.uid
 }
 
+// DesiredGroup returns the desired group id if one was set, otherwise returns
+// the given gid.
 func (r *Rule) DesiredGroup(gid uint32) uint32 {
 	if !r.changeGroup {
 		return gid
@@ -153,17 +173,22 @@ func (r *Rule) DesiredGroup(gid uint32) uint32 {
 	return r.gid
 }
 
+// DesiredFilePerms returns the desired file permissions as modified by the
+// given current permissions.
 func (r *Rule) DesiredFilePerms(perms fs.FileMode) fs.FileMode {
 	return r.filePerms.toFileMode(perms)
 }
 
+// DesiredDirPerms returns the desired dir permissions as modified by the given
+// current permissions.
 func (r *Rule) DesiredDirPerms(perms fs.FileMode) fs.FileMode {
 	return r.dirPerms.toFileMode(perms)
 }
 
 type nameToIDFunc func(string) (uint32, error)
 
-// RulesStore is
+// RulesStore holds permission and ownership changing rules for directories that
+// can be retrieved by file path.
 type RulesStore struct {
 	ppt                 *pathPrefixTree
 	rules               map[string]*Rule
@@ -173,6 +198,7 @@ type RulesStore struct {
 	dirToGroupOwnerFunc nameToIDFunc
 }
 
+// NewRulesStore returns a new RulesStore. It can be chained with FromTSV().
 func NewRulesStore() *RulesStore {
 	return &RulesStore{
 		ppt:                 newPathPrefixTree(),
@@ -244,6 +270,7 @@ func defaultDirToGroup(directory string) (uint32, error) {
 	return stat.Gid, nil
 }
 
+// FromTSV returns a RulesStore with rules taken from a ch.tsv via a TSVReader.
 func (r *RulesStore) FromTSV(tsvReader *TSVReader) (*RulesStore, error) {
 	for tsvReader.Next() {
 		cols := tsvReader.Columns()
@@ -253,36 +280,16 @@ func (r *RulesStore) FromTSV(tsvReader *TSVReader) (*RulesStore, error) {
 
 		var err error
 
-		if cols[1] == "^" {
-			rule.uid, err = r.dirToUserOwnerFunc(cols[0])
-			if err != nil {
-				return r, err
-			}
-
-			rule.changeUser = true
-		} else if cols[1] != "*" {
-			rule.uid, err = r.userToUIDFunc(cols[1])
-			if err != nil {
-				return r, err
-			}
-
-			rule.changeUser = true
+		rule.uid, rule.changeUser, err = determineOwnership(cols[0], cols[1],
+			r.dirToUserOwnerFunc, r.userToUIDFunc)
+		if err != nil {
+			return r, err
 		}
 
-		if cols[2] == "^" {
-			rule.gid, err = r.dirToGroupOwnerFunc(cols[0])
-			if err != nil {
-				return r, err
-			}
-
-			rule.changeGroup = true
-		} else if cols[2] != "*" {
-			rule.gid, err = r.groupToGIDFunc(cols[2])
-			if err != nil {
-				return r, err
-			}
-
-			rule.changeGroup = true
+		rule.gid, rule.changeGroup, err = determineOwnership(cols[0], cols[2],
+			r.dirToGroupOwnerFunc, r.groupToGIDFunc)
+		if err != nil {
+			return r, err
 		}
 
 		rule.filePerms = parseTSVPerms(cols[3])
@@ -293,6 +300,23 @@ func (r *RulesStore) FromTSV(tsvReader *TSVReader) (*RulesStore, error) {
 	return r, tsvReader.Error()
 }
 
+func determineOwnership(path, col string, ownerFromPath,
+	ownerFromName nameToIDFunc) (uint32, bool, error) {
+	if col == "^" {
+		id, err := ownerFromPath(path)
+
+		return id, true, err
+	} else if col != "*" {
+		id, err := ownerFromName(col)
+
+		return id, true, err
+	}
+
+	return 0, false, nil
+}
+
+// Get returns the Rule for the longest directory containing the given path.
+// Returns nil if no parent directory of the path is in the store.
 func (r *RulesStore) Get(path string) *Rule {
 	prefix, found := r.ppt.longestPrefix(path)
 	if !found {

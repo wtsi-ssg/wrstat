@@ -42,64 +42,64 @@ func TestPerms(t *testing.T) {
 	Convey("Given ch.tsv permission strings", t, func() {
 		for n, test := range [...]struct {
 			tsvPerms    string
-			parsedPerms *UGOPerms
+			parsedPerms *ugoPerms
 		}{
 			{ // 1
 				"*********",
-				&UGOPerms{},
+				&ugoPerms{},
 			},
 			{ // 2
 				"r********",
-				&UGOPerms{
-					user: Perms{
+				&ugoPerms{
+					user: perms{
 						read: set,
 					},
 				},
 			},
 			{ // 3
 				"*w*******",
-				&UGOPerms{
-					user: Perms{
+				&ugoPerms{
+					user: perms{
 						write: set,
 					},
 				},
 			},
 			{ // 4
 				"**x******",
-				&UGOPerms{
-					user: Perms{
+				&ugoPerms{
+					user: perms{
 						execute: set,
 					},
 				},
 			},
 			{ // 5
 				"***r*****",
-				&UGOPerms{
-					group: Perms{
+				&ugoPerms{
+					group: perms{
 						read: set,
 					},
 				},
 			},
 			{ // 6
 				"****w****",
-				&UGOPerms{
-					group: Perms{
+				&ugoPerms{
+					group: perms{
 						write: set,
 					},
 				},
 			},
 			{ // 7
 				"*****x***",
-				&UGOPerms{
-					group: Perms{
+				&ugoPerms{
+					group: perms{
 						execute: set,
 					},
 				},
 			},
 			{ // 8
 				"*****s***",
-				&UGOPerms{
-					group: Perms{
+				&ugoPerms{
+					group: perms{
 						execute: set,
 						sticky:  true,
 					},
@@ -107,42 +107,42 @@ func TestPerms(t *testing.T) {
 			},
 			{ // 9
 				"******r**",
-				&UGOPerms{
-					other: Perms{
+				&ugoPerms{
+					other: perms{
 						read: set,
 					},
 				},
 			},
 			{ // 10
 				"*******w*",
-				&UGOPerms{
-					other: Perms{
+				&ugoPerms{
+					other: perms{
 						write: set,
 					},
 				},
 			},
 			{ // 11
 				"********x",
-				&UGOPerms{
-					other: Perms{
+				&ugoPerms{
+					other: perms{
 						execute: set,
 					},
 				},
 			},
 			{ // 12
 				"---------",
-				&UGOPerms{
-					user: Perms{
+				&ugoPerms{
+					user: perms{
 						read:    unset,
 						write:   unset,
 						execute: unset,
 					},
-					group: Perms{
+					group: perms{
 						read:    unset,
 						write:   unset,
 						execute: unset,
 					},
-					other: Perms{
+					other: perms{
 						read:    unset,
 						write:   unset,
 						execute: unset,
@@ -151,33 +151,33 @@ func TestPerms(t *testing.T) {
 			},
 			{ // 13
 				"^**^*****",
-				&UGOPerms{
-					user: Perms{
+				&ugoPerms{
+					user: perms{
 						read: matchSet,
 					},
-					group: Perms{
+					group: perms{
 						read: matchSet,
 					},
 				},
 			},
 			{ // 14
 				"*^*****^*",
-				&UGOPerms{
-					user: Perms{
+				&ugoPerms{
+					user: perms{
 						write: matchSet,
 					},
-					other: Perms{
+					other: perms{
 						write: matchSet,
 					},
 				},
 			},
 			{ // 15
 				"*****^**^",
-				&UGOPerms{
-					group: Perms{
+				&ugoPerms{
+					group: perms{
 						execute: matchSet,
 					},
-					other: Perms{
+					other: perms{
 						execute: matchSet,
 					},
 				},
@@ -242,8 +242,8 @@ func TestRules(t *testing.T) {
 				So(rule.changeUser, ShouldBeFalse)
 				So(rule.gid, ShouldEqual, 0)
 				So(rule.changeGroup, ShouldBeFalse)
-				So(rule.filePerms, ShouldResemble, &UGOPerms{})
-				So(rule.dirPerms, ShouldResemble, &UGOPerms{})
+				So(rule.filePerms, ShouldResemble, &ugoPerms{})
+				So(rule.dirPerms, ShouldResemble, &ugoPerms{})
 
 				So(rule.DesiredUser(1), ShouldEqual, 1)
 				So(rule.DesiredUser(2), ShouldEqual, 2)
@@ -261,18 +261,18 @@ func TestRules(t *testing.T) {
 				So(rule.changeUser, ShouldBeTrue)
 				So(rule.gid, ShouldEqual, 101)
 				So(rule.changeGroup, ShouldBeTrue)
-				expectedUGO := &UGOPerms{
-					user: Perms{
+				expectedUGO := &ugoPerms{
+					user: perms{
 						read:    set,
 						write:   set,
 						execute: set,
 					},
-					group: Perms{
+					group: perms{
 						read:    set,
 						write:   set,
 						execute: set,
 					},
-					other: Perms{
+					other: perms{
 						read:    set,
 						write:   set,
 						execute: set,
@@ -379,7 +379,6 @@ func TestRulesWithRealData(t *testing.T) {
 				So(rule.changeGroup, ShouldBeTrue)
 			})
 		})
-
 	})
 }
 
@@ -390,6 +389,8 @@ type tsvCreator struct {
 }
 
 func newTSVCreator(t *testing.T) *tsvCreator {
+	t.Helper()
+
 	return &tsvCreator{
 		prefix: t.TempDir(),
 	}
