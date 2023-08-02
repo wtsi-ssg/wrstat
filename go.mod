@@ -16,7 +16,6 @@ require (
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/rs/xid v1.5.0
 	github.com/smartystreets/goconvey v1.7.2
-	github.com/spacewander/go-suffix-tree v0.0.0-20191010040751-0865e368c784
 	github.com/spf13/cobra v1.7.0
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/ugorji/go/codec v1.2.11
@@ -24,10 +23,12 @@ require (
 	github.com/wtsi-ssg/wr v0.5.7
 	go.etcd.io/bbolt v1.3.7
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
-	gopkg.in/yaml.v2 v2.4.0
 )
 
-require github.com/gabriel-vasile/mimetype v1.4.2 // indirect
+require (
+	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+)
 
 require (
 	cloud.google.com/go/compute v1.20.0 // indirect
