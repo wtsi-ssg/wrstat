@@ -148,7 +148,7 @@ and stores this summary in another file named after the input file with a
 If you supply a tsv file to --ch with the following columns:
 directory user group fileperms dirperms
 [where *perms format is rwxrwxrwx for user,group,other, where - means remove the
-permission, * means leave it unchanged, and a letter means set it. s for the
+permission, * means leave it unchanged, and one of [rwx] means set it. s for the
 group x would enable setting group sticky bit. s implies x. Using ^ in at
 least 2 equivalent places means "set all if any set". ie. '**^**^***' would mean
 "change nothing, except if execute is set on user or group, set it on both".

@@ -52,8 +52,8 @@ var (
 // directory user group fileperms dirperms
 //
 // *perms format is rwxrwxrwx for user,group,other, where - means remove the
-// permission, * means leave it unchanged, and a letter means set it. s for the
-// group x would enable setting group sticky bit. s implies x. Using ^ in at
+// permission, * means leave it unchanged, and one of [rwx] means set it. s for
+// the group x would enable setting group sticky bit. s implies x. Using ^ in at
 // least 2 equivalent places to mean "set all if any set". ie. '**^**^***` would
 // mean "change nothing, except if execute is set on user or group, set it on
 // both".

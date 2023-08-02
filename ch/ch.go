@@ -82,21 +82,19 @@ func New(rs *RulesStore, logger log15.Logger) *Ch {
 //
 // Any changes we do on disk are logged to our logger.
 func (c *Ch) Do(path string, info fs.FileInfo) error {
+	rule := c.rs.Get(path)
+	if rule == nil {
+		return nil
+	}
 
 	chain := &chain{}
 
-	var gid int
-
 	chain.Call(func() error {
-		return c.chownGroup(path, getGIDFromFileInfo(info), gid)
+		return c.chown(rule, path, info)
 	})
 
 	chain.Call(func() error {
-		return c.setgid(path, info)
-	})
-
-	chain.Call(func() error {
-		return c.matchPermissionsAndMakeUGRW(path, info)
+		return c.chmod(rule, path, info)
 	})
 
 	return chain.merr
@@ -126,36 +124,69 @@ func (c *chain) Call(f func() error) {
 	}
 }
 
-// getGIDFromFileInfo extracts the GID from a FileInfo. NB: this will only work
-// on linux.
-func getGIDFromFileInfo(info fs.FileInfo) int {
-	return int(info.Sys().(*syscall.Stat_t).Gid) //nolint:forcetypeassert
-}
+func (c *Ch) chown(rule *Rule, path string, info fs.FileInfo) error {
+	currentUID, currentGID := getIDsFromFileInfo(info)
+	desiredUID := rule.DesiredUser(currentUID)
+	desiredGID := rule.DesiredGroup(currentGID)
 
-// chownGroup chown's path to have newGID as its group owner, if newGID is
-// different to origGID. If a change is made, logs it.
-func (c *Ch) chownGroup(path string, origGID, newGID int) error {
-	if origGID == newGID {
+	if currentUID == desiredUID && currentGID == desiredGID {
 		return nil
 	}
 
-	if err := os.Lchown(path, -1, newGID); err != nil {
+	if err := os.Lchown(path, int(desiredUID), int(desiredGID)); err != nil {
 		return err
 	}
 
-	origName, err := groupName(origGID)
+	return c.logChown(path, currentUID, desiredUID, currentGID, desiredGID)
+}
+
+func (c *Ch) logChown(path string, currentUID, desiredUID, currentGID, desiredGID uint32) error {
+	origUName, err := userName(int(currentUID))
 	if err != nil {
 		return err
 	}
 
-	newName, err := groupName(newGID)
+	newUName, err := userName(int(desiredUID))
 	if err != nil {
 		return err
 	}
 
-	c.logger.Info("changed group", "path", path, "orig", origName, "new", newName)
+	origGName, err := groupName(int(currentGID))
+	if err != nil {
+		return err
+	}
+
+	newGName, err := groupName(int(desiredGID))
+	if err != nil {
+		return err
+	}
+
+	c.logger.Info("changed ownership", "path", path,
+		"origUser", origUName, "newUser", newUName,
+		"origGroup", origGName, "newGroup", newGName)
 
 	return nil
+}
+
+// getIDsFromFileInfo extracts the UID and GID from a FileInfo. NB: this will
+// only work on linux.
+func getIDsFromFileInfo(info fs.FileInfo) (uint32, uint32) {
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, 0
+	}
+
+	return stat.Uid, stat.Gid
+}
+
+// userName returns the username of the user with the given UID.
+func userName(uid int) (string, error) {
+	u, err := user.LookupId(strconv.Itoa(uid))
+	if err != nil {
+		return "", err
+	}
+
+	return u.Username, err
 }
 
 // groupName returns the name of the group with the given GID.
@@ -168,26 +199,28 @@ func groupName(gid int) (string, error) {
 	return g.Name, err
 }
 
-// setgid sets group sticky bit on path if path is a dir and didn't already have
-// group sticky bit set. If a change is made, logs it.
-func (c *Ch) setgid(path string, info fs.FileInfo) error {
-	if !info.IsDir() || setgidApplied(info) {
+func (c *Ch) chmod(rule *Rule, path string, info fs.FileInfo) error {
+	currentPerms := info.Mode()
+
+	var desiredPerms fs.FileMode
+
+	if info.IsDir() {
+		desiredPerms = rule.DesiredDirPerms(currentPerms)
+	} else {
+		desiredPerms = rule.DesiredFilePerms(currentPerms)
+	}
+
+	if currentPerms == desiredPerms {
 		return nil
 	}
 
-	err := chmod(info, path, info.Mode()|os.ModeSetgid)
-	if err != nil {
+	if err := chmod(info, path, desiredPerms); err != nil {
 		return err
 	}
 
-	c.logger.Info("applied setgid", "path", path)
+	c.logger.Info("set permissions", "path", path, "old", currentPerms, "new", desiredPerms)
 
 	return nil
-}
-
-// setgidApplied reports if the setgid bits are set on the given FileInfo.
-func setgidApplied(info fs.FileInfo) bool {
-	return (info.Mode() & os.ModeSetgid) != 0
 }
 
 // chmod is like os.Chmod, but checks the given info to do nothing if this is a
@@ -198,95 +231,4 @@ func chmod(info fs.FileInfo, path string, mode fs.FileMode) error {
 	}
 
 	return os.Chmod(path, mode)
-}
-
-// matchPermissionsAndMakeUGRW:
-//
-// 1) Sets u+x if g+x.
-// 2) Sets group permissions to match user permissions if they're different.
-// 3) Sets ug+rx if not already.
-//
-// If any changes are made, logs them.
-func (c *Ch) matchPermissionsAndMakeUGRW(path string, info fs.FileInfo) error {
-	mode, err := c.copyGroupXToUser(path, info)
-	if err != nil {
-		return err
-	}
-
-	mode, err = c.matchPermissions(path, info, mode)
-	if err != nil {
-		return err
-	}
-
-	return c.makeUGRW(path, info, mode)
-}
-
-// copyGroupXToUser makes the file user executable if it is group executable. If
-// a change is made, logs it and returns the new mode.
-func (c *Ch) copyGroupXToUser(path string, info fs.FileInfo) (fs.FileMode, error) {
-	mode := info.Mode()
-
-	if !(mode&modeGroupExecutable != 0 && mode&modeUserExecutable == 0) {
-		return mode, nil
-	}
-
-	err := chmod(info, path, mode^modeUserExecutable)
-	if err != nil {
-		return mode, err
-	}
-
-	c.logger.Info("set user x to match group", "path", path)
-
-	return mode ^ modeUserExecutable, nil
-}
-
-// matchPermissions sets group permissions to match user permissions if they're
-// different. If a change is made, logs it and returns the new mode.
-func (c *Ch) matchPermissions(path string, info fs.FileInfo, mode fs.FileMode) (fs.FileMode, error) {
-	userAsGroupPerms := extractUserAsGroupPermissions(mode)
-
-	if userAsGroupPerms == extractGroupPermissions(mode) {
-		return mode, nil
-	}
-
-	err := chmod(info, path, mode|userAsGroupPerms)
-	if err != nil {
-		return mode, err
-	}
-
-	c.logger.Info("matched group permissions to user", "path", path, "old", mode, "new", mode|userAsGroupPerms)
-
-	return mode | userAsGroupPerms, nil
-}
-
-// extractUserAsGroupPermissions returns the user permission bits of the given
-// mode, shifted as if they were group permissions. If there were no user
-// permissions, treated as full permissions.
-func extractUserAsGroupPermissions(mode fs.FileMode) fs.FileMode {
-	user := mode & modePermUser
-	if user == 0 {
-		user = modePermUser
-	}
-
-	return user >> modePermUserToGroupShift
-}
-
-// extractGroupPermissions returns the user permission bits of the given mode.
-func extractGroupPermissions(mode fs.FileMode) fs.FileMode {
-	return mode & modePermGroup
-}
-
-// makeUGRW forces ug+rw on the file. If a change is made, logs it.
-func (c *Ch) makeUGRW(path string, info fs.FileInfo, mode fs.FileMode) error {
-	if !(mode&modeUserGroupReadWritable != modeUserGroupReadWritable) {
-		return nil
-	}
-
-	if err := chmod(info, path, mode|modeUserGroupReadWritable); err != nil {
-		return err
-	}
-
-	c.logger.Info("forced ug+rw", "path", path, "old", mode)
-
-	return nil
 }

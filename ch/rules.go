@@ -140,7 +140,7 @@ func (u *ugoPerms) toFileMode(currentMode fs.FileMode) fs.FileMode {
 	mode |= u.other.toFileMode(currentMode, readBit, writeBit, executeBit)
 
 	if u.group.sticky {
-		mode |= fs.ModeSticky
+		mode |= fs.ModeSetgid
 	}
 
 	return mode
@@ -182,7 +182,7 @@ func (r *Rule) DesiredFilePerms(perms fs.FileMode) fs.FileMode {
 // DesiredDirPerms returns the desired dir permissions as modified by the given
 // current permissions.
 func (r *Rule) DesiredDirPerms(perms fs.FileMode) fs.FileMode {
-	return r.dirPerms.toFileMode(perms)
+	return r.dirPerms.toFileMode(perms) | fs.ModeDir
 }
 
 type nameToIDFunc func(string) (uint32, error)
