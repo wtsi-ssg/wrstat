@@ -29,6 +29,7 @@ package ch
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"regexp"
 	"strings"
@@ -40,10 +41,20 @@ const (
 	gPermRE  = "[r\\*\\^-][w\\*\\^-][xs\\*\\^-]"
 )
 
+type tsvError struct {
+	line uint
+	err  error
+}
+
+func (t *tsvError) Error() string {
+	return fmt.Sprintf("error on line %d: %s", t.line, t.err)
+}
+
 var (
-	errInvalidFormat = errors.New("invalid ch.tsv format")
-	permsRE          = regexp.MustCompile("^" + uoPermRE + gPermRE + uoPermRE + "$")
-	nameRE           = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$`)
+	errInvalidPermsFormat = errors.New("invalid permissions format")
+	errInvalidNameFormat  = errors.New("invalid name format")
+	permsRE               = regexp.MustCompile("^" + uoPermRE + gPermRE + uoPermRE + "$")
+	nameRE                = regexp.MustCompile(`^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$`)
 )
 
 // TSVReader is for parsing the custom ch.tsv file format, which has tab
@@ -66,6 +77,7 @@ var (
 type TSVReader struct {
 	r       *bufio.Reader
 	columns [numCols]string
+	line    uint
 	err     error
 }
 
@@ -80,6 +92,8 @@ func NewTSVReader(r io.Reader) *TSVReader {
 // Be sure to check Error() after this returns false, and do not continue to
 // call after this returns false.
 func (t *TSVReader) Next() bool {
+	t.line++
+
 	line, err := t.r.ReadString('\n')
 	if err != nil {
 		t.handleReadError(err, line)
@@ -104,9 +118,15 @@ func (t *TSVReader) Next() bool {
 
 func (t *TSVReader) handleReadError(err error, line string) {
 	if !errors.Is(err, io.EOF) {
-		t.err = err
+		t.err = &tsvError{
+			line: t.line,
+			err:  err,
+		}
 	} else if line != "" {
-		t.err = io.ErrUnexpectedEOF
+		t.err = &tsvError{
+			line: t.line,
+			err:  io.ErrUnexpectedEOF,
+		}
 	}
 }
 
@@ -122,19 +142,28 @@ func splitLastTab(str string) (string, string) {
 
 func (t *TSVReader) validate() bool {
 	if !validateName(t.columns[1]) || !validateName(t.columns[2]) {
-		t.err = errInvalidFormat
+		t.err = &tsvError{
+			line: t.line,
+			err:  errInvalidNameFormat,
+		}
 
 		return false
 	}
 
 	if !permsRE.MatchString(t.columns[3]) || !permsRE.MatchString(t.columns[4]) {
-		t.err = errInvalidFormat
+		t.err = &tsvError{
+			line: t.line,
+			err:  errInvalidPermsFormat,
+		}
 
 		return false
 	}
 
 	if !validatePermMatching(t.columns[3]) || !validatePermMatching(t.columns[4]) {
-		t.err = errInvalidFormat
+		t.err = &tsvError{
+			line: t.line,
+			err:  errInvalidPermsFormat,
+		}
 
 		return false
 	}
