@@ -57,7 +57,7 @@ a successful parsing, or report where the (first) error is located.
 
 		tr := ch.NewTSVReader(f)
 
-		for tr.Next() {
+		for tr.Next() { //nolint:revive
 		}
 
 		if err = tr.Error(); err != nil {
