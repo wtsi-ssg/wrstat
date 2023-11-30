@@ -53,6 +53,7 @@ var multiInodes int
 var multiCh string
 var forcedQueue string
 var quota string
+var maxMem int
 
 // multiCmd represents the multi command.
 var multiCmd = &cobra.Command{
@@ -144,6 +145,8 @@ func init() {
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
 	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
+	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m",
+		basedirRAM, "maximum MBs to reserve for any job")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -241,10 +244,10 @@ func reqs() (*jqs.Requirements, *jqs.Requirements) {
 	req := scheduler.DefaultRequirements()
 	reqWalk := req.Clone()
 	reqWalk.Time = walkTime
-	reqWalk.RAM = walkRAM
+	reqWalk.RAM = min(walkRAM, maxMem)
 	reqCombine := req.Clone()
 	reqCombine.Time = combineTime
-	reqCombine.RAM = combineRAM
+	reqCombine.RAM = min(combineRAM, maxMem)
 
 	return reqWalk, reqCombine
 }
@@ -277,7 +280,7 @@ func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
 func basedirReqs() *jqs.Requirements {
 	req := scheduler.DefaultRequirements()
 	req.Time = basedirTime
-	req.RAM = basedirRAM
+	req.RAM = min(basedirRAM, maxMem)
 
 	return req
 }
