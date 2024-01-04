@@ -138,22 +138,22 @@ func TestServer(t *testing.T) {
 				})
 				So(err, ShouldBeNil)
 
-				token, errl := gas.Login(addr, certPath, username, "pass")
+				r := gas.NewClientRequest(addr, certPath)
+				token, errl := gas.Login(r, username, "pass")
 				So(errl, ShouldBeNil)
-				r := gas.NewAuthenticatedClientRequest(addr, certPath, token)
 
-				tokenBadUID, errl := gas.Login(addr, certPath, "user", "pass")
+				r = gas.NewAuthenticatedClientRequest(addr, certPath, token)
+				tokenBadUID, errl := gas.Login(r, "user", "pass")
 				So(errl, ShouldBeNil)
 				So(tokenBadUID, ShouldNotBeBlank)
 
 				s.AuthRouter().GET("/test", func(c *gin.Context) {})
 
-				rBadUID := gas.NewAuthenticatedClientRequest(addr, certPath, tokenBadUID)
 				resp, err := r.Get(gas.EndPointAuth + "/test")
 				So(err, ShouldBeNil)
 				So(resp.String(), ShouldBeBlank)
 
-				testRestrictedGroups(t, gids, s, r, rBadUID, exampleGIDs)
+				testRestrictedGroups(t, gids, s, exampleGIDs, addr, certPath, token, tokenBadUID)
 			})
 
 			testClientsOnRealServer(t, username, uid, gids, s, addr, certPath, keyPath)
@@ -706,7 +706,11 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 	So(errg, ShouldBeNil)
 
 	Convey("Given databases", func() {
-		_, _, err := GetWhereDataIs("localhost:1", cert, "", "", "", "", "", "")
+		serverTokenBasename := ".wrstat.test.servertoken" //nolint:gosec
+		c, err := gas.NewClientCLI(".wrstat.test.jwt", serverTokenBasename, "localhost:1", cert, true)
+		So(err, ShouldBeNil)
+
+		_, _, err = GetWhereDataIs(c, "", "", "", "", "")
 		So(err, ShouldNotBeNil)
 
 		path, err := internaldb.CreateExampleDGUTDBCustomIDs(t, uid, gids[0], gids[1])
@@ -722,7 +726,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			err = s.LoadDGUTDBs(path)
 			So(err, ShouldBeNil)
 
-			_, _, err = GetWhereDataIs(addr, cert, "", "/", "", "", "", "")
+			_, _, err = GetWhereDataIs(c, "/", "", "", "", "")
 			So(err, ShouldNotBeNil)
 			So(err, ShouldEqual, gas.ErrNoAuth)
 
@@ -731,7 +735,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		})
 
 		Convey("Root can see everything", func() {
-			err = s.EnableAuth(cert, key, func(username, password string) (bool, string) {
+			err = s.EnableAuthWithServerToken(cert, key, serverTokenBasename, func(username, password string) (bool, string) {
 				return true, ""
 			})
 			So(err, ShouldBeNil)
@@ -739,26 +743,23 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			err = s.LoadDGUTDBs(path)
 			So(err, ShouldBeNil)
 
-			token, errl := gas.Login(addr, cert, "user", "pass")
-			So(errl, ShouldBeNil)
-
-			_, _, err = GetWhereDataIs(addr, cert, token, "", "", "", "", "")
+			_, _, err = GetWhereDataIs(c, "", "", "", "", "")
 			So(err, ShouldNotBeNil)
 			So(err, ShouldEqual, ErrBadQuery)
 
-			json, dcss, errg := GetWhereDataIs(addr, cert, token, "/", "", "", "", "0")
+			json, dcss, errg := GetWhereDataIs(c, "/", "", "", "", "0")
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
 			So(dcss[0].Count, ShouldEqual, 19)
 
-			json, dcss, errg = GetWhereDataIs(addr, cert, token, "/", g.Name, "", "", "0")
+			json, dcss, errg = GetWhereDataIs(c, "/", g.Name, "", "", "0")
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
 			So(dcss[0].Count, ShouldEqual, 13)
 
-			json, dcss, errg = GetWhereDataIs(addr, cert, token, "/", "", "root", "", "0")
+			json, dcss, errg = GetWhereDataIs(c, "/", "", "root", "", "0")
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
@@ -774,22 +775,22 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			err = s.LoadDGUTDBs(path)
 			So(err, ShouldBeNil)
 
-			token, errl := gas.Login(addr, cert, "user", "pass")
-			So(errl, ShouldBeNil)
+			err = c.Login("user", "pass")
+			So(err, ShouldBeNil)
 
-			json, dcss, errg := GetWhereDataIs(addr, cert, token, "/", "", "", "", "0")
+			json, dcss, errg := GetWhereDataIs(c, "/", "", "", "", "0")
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
 			So(dcss[0].Count, ShouldEqual, 18)
 
-			json, dcss, errg = GetWhereDataIs(addr, cert, token, "/", g.Name, "", "", "0")
+			json, dcss, errg = GetWhereDataIs(c, "/", g.Name, "", "", "0")
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
 			So(dcss[0].Count, ShouldEqual, 13)
 
-			_, _, errg = GetWhereDataIs(addr, cert, token, "/", "", "root", "", "0")
+			_, _, errg = GetWhereDataIs(c, "/", "", "root", "", "0")
 			So(errg, ShouldBeNil)
 			So(string(json), ShouldNotBeBlank)
 			So(len(dcss), ShouldEqual, 1)
@@ -821,7 +822,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 				So(errd, ShouldBeNil)
 			}()
 
-			token, err := gas.Login(addr, cert, "user", "pass")
+			token, err := gas.Login(gas.NewClientRequest(addr, cert), "user", "pass")
 			So(err, ShouldBeNil)
 
 			Convey("You can get the static tree web page", func() {
@@ -1128,7 +1129,7 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			})
 
 			Convey("You can access the group-areas endpoint after AddGroupAreas()", func() {
-				_, err := GetGroupAreas(addr, cert, token)
+				_, err := GetGroupAreas(c)
 				So(err, ShouldNotBeNil)
 
 				expectedAreas := map[string][]string{
@@ -1138,12 +1139,9 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 
 				s.AddGroupAreas(expectedAreas)
 
-				areas, err := GetGroupAreas(addr, cert, token)
+				areas, err := GetGroupAreas(c)
 				So(err, ShouldBeNil)
 				So(areas, ShouldResemble, expectedAreas)
-
-				_, err = GetGroupAreas(addr, cert, "foo")
-				So(err, ShouldNotBeNil)
 			})
 
 			Convey("You can access the secure basedirs endpoints after LoadBasedirsDB()", func() {
@@ -1283,7 +1281,8 @@ func decodeWhereResult(response *httptest.ResponseRecorder) ([]*DirSummary, erro
 
 // testRestrictedGroups does tests for s.getRestrictedGIDs() if user running the
 // test has enough groups to make the test viable.
-func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *resty.Request, exampleGIDs []string) {
+func testRestrictedGroups(t *testing.T, gids []string, s *Server, exampleGIDs []string,
+	addr, certPath, token, tokenBadUID string) {
 	t.Helper()
 
 	if len(gids) < 3 {
@@ -1304,6 +1303,7 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 	})
 
 	groups := gidsToGroups(t, gids...)
+	r := gas.NewAuthenticatedClientRequest(addr, certPath, token)
 	_, err := r.Get(gas.EndPointAuth + "/groups?groups=" + groups[0])
 	So(err, ShouldBeNil)
 
@@ -1314,6 +1314,7 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 
 	So(filterGIDs, ShouldResemble, []uint32{uint32(gid0)})
 
+	r = gas.NewAuthenticatedClientRequest(addr, certPath, token)
 	_, err = r.Get(gas.EndPointAuth + "/groups?groups=0")
 	So(err, ShouldBeNil)
 
@@ -1322,6 +1323,7 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 
 	s.userToGIDs = make(map[string][]string)
 
+	rBadUID := gas.NewAuthenticatedClientRequest(addr, certPath, tokenBadUID)
 	_, err = rBadUID.Get(gas.EndPointAuth + "/groups?groups=" + groups[0])
 	So(err, ShouldBeNil)
 	So(errg, ShouldNotBeNil)
@@ -1333,6 +1335,7 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 
 	s.userToGIDs = make(map[string][]string)
 
+	r = gas.NewAuthenticatedClientRequest(addr, certPath, token)
 	_, err = r.Get(gas.EndPointAuth + "/groups?groups=root")
 	So(err, ShouldBeNil)
 
@@ -1345,6 +1348,7 @@ func testRestrictedGroups(t *testing.T, gids []string, s *Server, r, rBadUID *re
 
 	s.userToGIDs = make(map[string][]string)
 
+	r = gas.NewAuthenticatedClientRequest(addr, certPath, token)
 	_, err = r.Get(gas.EndPointAuth + "/groups?groups=root")
 	So(err, ShouldBeNil)
 
