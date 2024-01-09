@@ -42,7 +42,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-resty/resty/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	gas "github.com/wtsi-hgi/go-authserver"
 	"github.com/wtsi-ssg/wrstat/v4/basedirs"
@@ -122,9 +121,6 @@ func TestServer(t *testing.T) {
 				errd := dfunc()
 				So(errd, ShouldBeNil)
 			}()
-
-			client := resty.New()
-			client.SetRootCertificate(certPath)
 
 			Convey("The jwt endpoint works after enabling it", func() {
 				err = s.EnableAuth(certPath, keyPath, func(u, p string) (bool, string) {
@@ -706,8 +702,10 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 	So(errg, ShouldBeNil)
 
 	Convey("Given databases", func() {
+		jwtBasename := ".wrstat.test.jwt"
 		serverTokenBasename := ".wrstat.test.servertoken" //nolint:gosec
-		c, err := gas.NewClientCLI(".wrstat.test.jwt", serverTokenBasename, "localhost:1", cert, true)
+
+		c, err := gas.NewClientCLI(jwtBasename, serverTokenBasename, "localhost:1", cert, true)
 		So(err, ShouldBeNil)
 
 		_, _, err = GetWhereDataIs(c, "", "", "", "", "")
@@ -720,6 +718,9 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 		So(err, ShouldBeNil)
 
 		basedirsDBPath, ownersPath, err := createExampleBasedirsDB(t, tree)
+		So(err, ShouldBeNil)
+
+		c, err = gas.NewClientCLI(jwtBasename, serverTokenBasename, addr, cert, false)
 		So(err, ShouldBeNil)
 
 		Convey("You can't get where data is or add the tree page without auth", func() {
@@ -741,6 +742,9 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			So(err, ShouldBeNil)
 
 			err = s.LoadDGUTDBs(path)
+			So(err, ShouldBeNil)
+
+			err = c.Login("user", "pass")
 			So(err, ShouldBeNil)
 
 			_, _, err = GetWhereDataIs(c, "", "", "", "", "")
@@ -1129,6 +1133,12 @@ func testClientsOnRealServer(t *testing.T, username, uid string, gids []string, 
 			})
 
 			Convey("You can access the group-areas endpoint after AddGroupAreas()", func() {
+				c, err = gas.NewClientCLI(jwtBasename, serverTokenBasename, addr, cert, false)
+				So(err, ShouldBeNil)
+
+				err = c.Login("user", "pass")
+				So(err, ShouldBeNil)
+
 				_, err := GetGroupAreas(c)
 				So(err, ShouldNotBeNil)
 
