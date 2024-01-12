@@ -27,6 +27,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/v4/neaten"
 )
 
 const mergeArgs = 2
@@ -70,6 +71,11 @@ var mergedbsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != mergeArgs {
 			die("exactly 2 output directories from 'wrstat multi' must be supplied")
+		}
+
+		err := neaten.MergeDGUTDBDirectories(sourceDir, destDir)
+		if err != nil {
+			die("Merge of dgut.db directories failed: %s", err)
 		}
 	},
 }
