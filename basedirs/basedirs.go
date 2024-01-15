@@ -34,6 +34,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/otiai10/copy"
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 )
@@ -148,4 +149,9 @@ func (b *BaseDirs) CalculateForUser(uid uint32) (dgut.DCSs, error) {
 	}
 
 	return dcss, nil
+}
+
+// MergeDBs
+func MergeDBs(pathA, pathB, outputPath string) error {
+	return copy.Copy(pathA, outputPath)
 }

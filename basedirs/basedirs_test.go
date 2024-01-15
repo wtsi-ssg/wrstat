@@ -37,11 +37,13 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestBaseDirs(t *testing.T) { //nolint:gocognit
@@ -767,6 +769,66 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					So(err, ShouldBeNil)
 					So(wso, ShouldEqual, expectedProjectASubDirUsage)
 				})
+			})
+
+			Convey("and merge with another database", func() {
+				_, newFiles := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
+				for i := range newFiles {
+					newFiles[i].Path = "/nfs" + newFiles[i].Path
+				}
+				newTree, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles)
+				So(err, ShouldBeNil)
+
+				newDbPath := filepath.Join(dir, "newdir.db")
+
+				newBd, err := NewCreator(newDbPath, newTree, quotas)
+				So(err, ShouldBeNil)
+				So(bd, ShouldNotBeNil)
+
+				err = newBd.CreateDatabase(yesterday)
+				So(err, ShouldBeNil)
+
+				outputDbPath := filepath.Join(dir, "merged.db")
+
+				err = MergeDBs(dbPath, newDbPath, outputDbPath)
+				So(err, ShouldBeNil)
+
+				db, err := bolt.Open(outputDbPath, dbOpenMode, &bolt.Options{
+					ReadOnly: true,
+				})
+				So(err, ShouldBeNil)
+				defer db.Close()
+
+				b := &BaseDirReader{
+					db: db,
+					ch: new(codec.BincHandle),
+				}
+
+				hasLustre, hasNfs := false, false
+
+				db.View(func(tx *bolt.Tx) error { //nolint:errcheck
+					bucket := tx.Bucket([]byte(groupUsageBucket))
+
+					return bucket.ForEach(func(_, data []byte) error {
+						uwm := new(Usage)
+
+						if err := b.decodeFromBytes(data, uwm); err != nil {
+							return err
+						}
+
+						if strings.HasPrefix(uwm.BaseDir, "/lustre") {
+							hasLustre = true
+						}
+						if strings.HasPrefix(uwm.BaseDir, "/nfs") {
+							hasNfs = true
+						}
+
+						return nil
+					})
+				})
+
+				So(hasLustre, ShouldBeTrue)
+				So(hasNfs, ShouldBeTrue)
 			})
 		})
 	})
