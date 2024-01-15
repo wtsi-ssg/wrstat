@@ -773,29 +773,31 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 			Convey("and merge with another database", func() {
 				_, newFiles := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
-				for i := range newFiles {
-					newFiles[i].Path = "/nfs" + newFiles[i].Path
+				for _, file := range newFiles {
+					file.Path = "/nfs" + file.Path
 				}
+
 				newTree, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles)
 				So(err, ShouldBeNil)
 
-				newDbPath := filepath.Join(dir, "newdir.db")
+				newDBPath := filepath.Join(dir, "newdir.db")
 
-				newBd, err := NewCreator(newDbPath, newTree, quotas)
+				newBd, err := NewCreator(newDBPath, newTree, quotas)
 				So(err, ShouldBeNil)
 				So(bd, ShouldNotBeNil)
 
 				err = newBd.CreateDatabase(yesterday)
 				So(err, ShouldBeNil)
 
-				outputDbPath := filepath.Join(dir, "merged.db")
+				outputDBPath := filepath.Join(dir, "merged.db")
 
-				err = MergeDBs(dbPath, newDbPath, outputDbPath)
+				err = MergeDBs(dbPath, newDBPath, outputDBPath)
 				So(err, ShouldBeNil)
 
-				db, err := bolt.Open(outputDbPath, dbOpenMode, &bolt.Options{
+				db, err := bolt.Open(outputDBPath, dbOpenMode, &bolt.Options{
 					ReadOnly: true,
 				})
+
 				So(err, ShouldBeNil)
 				defer db.Close()
 

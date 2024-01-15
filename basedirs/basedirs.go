@@ -34,7 +34,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/otiai10/copy"
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 )
@@ -50,7 +49,7 @@ var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
 // BaseDirs is used to summarise disk usage information by base directory and
 // group or user.
 type BaseDirs struct {
-	dir         string
+	dbPath      string
 	tree        *dgut.Tree
 	quotas      *Quotas
 	ch          codec.Handle
@@ -59,14 +58,14 @@ type BaseDirs struct {
 
 // NewCreator returns a BaseDirs that lets you create a database summarising
 // usage information by base directory, taken from the given tree and quotas.
-func NewCreator(dir string, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
+func NewCreator(dbPath string, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
 	mp, err := getMountPoints()
 	if err != nil {
 		return nil, err
 	}
 
 	return &BaseDirs{
-		dir:         dir,
+		dbPath:      dbPath,
 		tree:        tree,
 		quotas:      quotas,
 		ch:          new(codec.BincHandle),
@@ -149,9 +148,4 @@ func (b *BaseDirs) CalculateForUser(uid uint32) (dgut.DCSs, error) {
 	}
 
 	return dcss, nil
-}
-
-// MergeDBs
-func MergeDBs(pathA, pathB, outputPath string) error {
-	return copy.Copy(pathA, outputPath)
 }

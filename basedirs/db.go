@@ -85,11 +85,7 @@ type Usage struct {
 // Provide a time that will be used as the date when appending to the historical
 // data.
 func (b *BaseDirs) CreateDatabase(historyDate time.Time) error {
-	db, err := bolt.Open(b.dir, dbOpenMode, &bolt.Options{
-		NoFreelistSync: true,
-		NoGrowSync:     true,
-		FreelistType:   bolt.FreelistMapType,
-	})
+	db, err := openDB(b.dbPath)
 	if err != nil {
 		return err
 	}
@@ -110,6 +106,14 @@ func (b *BaseDirs) CreateDatabase(historyDate time.Time) error {
 	}
 
 	return db.Close()
+}
+
+func openDB(dbPath string) (*bolt.DB, error) {
+	return bolt.Open(dbPath, dbOpenMode, &bolt.Options{
+		NoFreelistSync: true,
+		NoGrowSync:     true,
+		FreelistType:   bolt.FreelistMapType,
+	})
 }
 
 func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) func(*bolt.Tx) error { //nolint:gocognit
@@ -565,4 +569,71 @@ func (b *BaseDirs) history(bucket *bolt.Bucket, gid uint32, path string) ([]Hist
 	err := b.decodeFromBytes(data, &history)
 
 	return history, err
+}
+
+// MergeDBs merges the basedirs.db database at the given A and B paths and
+// creates a new database file at outputPath.
+func MergeDBs(pathA, pathB, outputPath string) error { //nolint:funlen
+	var (
+		err           error
+		dbA, dbB, dbC *bolt.DB
+	)
+
+	closeDB := func(db *bolt.DB) {
+		errc := db.Close()
+		if err == nil {
+			err = errc
+		}
+	}
+
+	dbA, err = openDB(pathA)
+	if err != nil {
+		return err
+	}
+
+	defer closeDB(dbA)
+
+	dbB, err = openDB(pathB)
+	if err != nil {
+		return err
+	}
+
+	defer closeDB(dbB)
+
+	dbC, err = openDB(outputPath)
+	if err != nil {
+		return err
+	}
+
+	defer closeDB(dbC)
+
+	err = dbC.Update(func(tx *bolt.Tx) error {
+		err = transferAllBucketContents(tx, dbA)
+		if err != nil {
+			return err
+		}
+
+		return transferAllBucketContents(tx, dbB)
+	})
+
+	return err
+}
+
+func transferAllBucketContents(utx *bolt.Tx, source *bolt.DB) error {
+	if err := createBucketsIfNotExist(utx); err != nil {
+		return err
+	}
+
+	return source.View(func(vtx *bolt.Tx) error {
+		return transferBucketContents(vtx, utx, groupUsageBucket)
+	})
+}
+
+func transferBucketContents(vtx, utx *bolt.Tx, bucketName string) error {
+	sourceBucket := vtx.Bucket([]byte(bucketName))
+	destBucket := utx.Bucket([]byte(bucketName))
+
+	return sourceBucket.ForEach(func(k, v []byte) error {
+		return destBucket.Put(k, v)
+	})
 }
