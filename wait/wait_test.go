@@ -51,17 +51,18 @@ func TestWait(t *testing.T) {
 
 		oldSourceDate := "20240108"
 		sourceDate := "20240109"
-		destDest := oldSourceDate
+		destDate := oldSourceDate
+		middle := "_random."
 		suffix := "basedirs.db"
 
-		oldSourcePath := filepath.Join(sourceDir, oldSourceDate+"_random."+suffix)
+		oldSourcePath := filepath.Join(sourceDir, oldSourceDate+middle+suffix)
 		createFile(t, oldSourcePath)
-		sourcePath := filepath.Join(sourceDir, sourceDate+"_random."+suffix)
+		sourcePath := filepath.Join(sourceDir, sourceDate+middle+suffix)
 		<-time.After(10 * time.Millisecond)
 		createFile(t, sourcePath)
-		destPath := filepath.Join(destDir, destDest+"_random."+suffix)
+		destPath := filepath.Join(destDir, destDate+middle+suffix)
 		createFile(t, destPath)
-		trickDestPath := filepath.Join(destDir, sourceDate+"_random.trick")
+		trickDestPath := filepath.Join(destDir, sourceDate+middle+"trick")
 		createFile(t, trickDestPath)
 
 		Convey("ForMatchingPrefixOfLatestSuffix only returns if latest dest has the same prefix as latest source", func() {
@@ -70,7 +71,7 @@ func TestWait(t *testing.T) {
 			So(err, ShouldNotBeNil)
 
 			<-time.After(10 * time.Millisecond)
-			destPath := filepath.Join(destDir, sourceDate+"_random."+suffix)
+			destPath := filepath.Join(destDir, sourceDate+middle+suffix)
 			createFile(t, destPath)
 
 			foundSource, foundDest, errw := ForMatchingPrefixOfLatestSuffix(suffix, 8, sourceDir, destDir, timeLimit)
@@ -83,13 +84,13 @@ func TestWait(t *testing.T) {
 				newDate := "20240110"
 
 				<-time.After(10 * time.Millisecond)
-				destPath = filepath.Join(destDir, newDate+"_random."+suffix)
+				destPath = filepath.Join(destDir, newDate+middle+suffix)
 				createFile(t, destPath)
 
 				_, _, err := ForMatchingPrefixOfLatestSuffix(suffix, 8, sourceDir, destDir, timeLimit)
 				So(err, ShouldNotBeNil)
 
-				sourcePath := filepath.Join(sourceDir, newDate+"_random."+suffix)
+				sourcePath := filepath.Join(sourceDir, newDate+middle+suffix)
 				createFile(t, sourcePath)
 
 				foundSource, foundDest, errw := ForMatchingPrefixOfLatestSuffix(suffix, 8, sourceDir, destDir, timeLimit)
@@ -103,7 +104,7 @@ func TestWait(t *testing.T) {
 		Convey("ForMatchingPrefixOfLatestSuffix waits for latest dest to share prefix with latest source", func() {
 			startCh := make(chan struct{})
 			resultCh := make(chan error)
-			destPath := filepath.Join(destDir, sourceDate+"_random."+suffix)
+			destPath := filepath.Join(destDir, sourceDate+middle+suffix)
 
 			runForMatchingPrefixOfLatestSuffix := func(timeLimit time.Duration) {
 				<-time.After(10 * time.Millisecond)
