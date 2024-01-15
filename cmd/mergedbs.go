@@ -26,11 +26,19 @@
 package cmd
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/v4/neaten"
+	"github.com/wtsi-ssg/wrstat/v4/wait"
 )
 
-const mergeArgs = 2
+const (
+	mergeArgs             = 2
+	mergeDatePrefixLength = 8
+	mergeMaxWait          = 23 * time.Hour
+)
 
 // options for this cmd.
 var mergeDelete bool
@@ -51,11 +59,8 @@ var mergedbsCmd = &cobra.Command{
  .dgut.dbs.updated will be touched to trigger any running server monitoring the
  second one's dbs to reload.
  
- If the second one doesn't have databases with the same date prefix and its
- .dgut.dbs.updated file is older than the firsts, this command waits up to 23hrs
- for it to exist before giving up. If the second's .dgut.dbs.updated file is
- newer than the firsts, waits up to 23hrs for the first's most recent db to have
- the same prefex as the most recent one in the second, and merges that one.
+ This will wait up to 23hrs for both folder's most recent database files have
+ the same date prefix.
  
  To avoid doing the merge in the middle of a server doing a database reload,
  waits until it is more than 15mins since the second's .dgut.dbs.updated was
@@ -73,10 +78,24 @@ var mergedbsCmd = &cobra.Command{
 			die("exactly 2 output directories from 'wrstat multi' must be supplied")
 		}
 
-		err := neaten.MergeDGUTDBDirectories(sourceDir, destDir)
+		sourceDir, destDir, err := wait.ForMatchingPrefixOfLatestSuffix(
+			dgutDBsSuffix, mergeDatePrefixLength, args[0], args[1], mergeMaxWait)
+		if err != nil {
+			die("Wait for matching dgut.db outputs failed: %s", err)
+		}
+
+		err = neaten.MergeDGUTDBDirectories(sourceDir, destDir)
 		if err != nil {
 			die("Merge of dgut.db directories failed: %s", err)
 		}
+
+		sourceBasedir, destBasedir, err := wait.ForMatchingPrefixOfLatestSuffix(
+			basedirBasename, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
+		if err != nil {
+			die("Wait for matching basedirs outputs failed: %s", err)
+		}
+
+		fmt.Printf("need to merge %s to %s\n", sourceBasedir, destBasedir)
 	},
 }
 
