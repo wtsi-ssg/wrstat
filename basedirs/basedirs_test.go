@@ -773,8 +773,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 			Convey("and merge with another database", func() {
 				_, newFiles := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
-				for _, file := range newFiles {
-					file.Path = "/nfs" + file.Path
+				for i := range newFiles {
+					newFiles[i].Path = "/nfs" + newFiles[i].Path
 				}
 
 				newTree, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles)
