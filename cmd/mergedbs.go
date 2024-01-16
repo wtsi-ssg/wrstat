@@ -81,13 +81,15 @@ var mergedbsCmd = &cobra.Command{
 			die("exactly 2 output directories from 'wrstat multi' must be supplied")
 		}
 
-		sourceDir, destDir, err := wait.ForMatchingPrefixOfLatestSuffix(
-			dgutDBsSuffix, mergeDatePrefixLength, args[0], args[1], mergeMaxWait)
+		sourceDir, destDir := args[0], args[1]
+
+		sourceDGUTDir, destDGUTDir, err := wait.ForMatchingPrefixOfLatestSuffix(
+			dgutDBsSuffix, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
 		if err != nil {
 			die("Wait for matching dgut.db outputs failed: %s", err)
 		}
 
-		err = neaten.MergeDGUTDBDirectories(sourceDir, destDir)
+		err = neaten.MergeDGUTDBDirectories(sourceDGUTDir, destDGUTDir)
 		if err != nil {
 			die("Merge of dgut.db directories failed: %s", err)
 		}
