@@ -37,7 +37,7 @@ import (
 
 const modePermUser = 0770
 
-func TestWait(t *testing.T) {
+func TestWaitForMatchingPrefixOfLatestSuffix(t *testing.T) {
 	Convey("Given 2 multi-style output directories", t, func() {
 		tdir := t.TempDir()
 		sourceDir := filepath.Join(tdir, "source")
@@ -129,6 +129,61 @@ func TestWait(t *testing.T) {
 			go runForMatchingPrefixOfLatestSuffix(20 * time.Millisecond)
 			writeFile()
 			So(<-resultCh, ShouldBeNil)
+		})
+	})
+}
+
+func TestWaitUntilFileIsOld(t *testing.T) {
+	Convey("Given an invalid file, UntilFileIsOld returns an error", t, func() {
+		err := UntilFileIsOld("/foo", 1*time.Minute)
+		So(err, ShouldNotBeNil)
+	})
+
+	Convey("Given an old file, UntilFileIsOld returns immediately", t, func() {
+		tdir := t.TempDir()
+		oldFile := filepath.Join(tdir, "old")
+
+		createFile(t, oldFile)
+		err := os.Chtimes(oldFile, time.Time{}, time.Now().Add(-10*time.Minute))
+		So(err, ShouldBeNil)
+
+		callTime := time.Now()
+		err = UntilFileIsOld(oldFile, 1*time.Minute)
+
+		So(err, ShouldBeNil)
+		So(time.Now(), ShouldHappenBefore, callTime.Add(1*time.Second))
+	})
+
+	Convey("Given a new file, UntilFileIsOld does not return immediately", t, func() {
+		tdir := t.TempDir()
+		file := filepath.Join(tdir, "file")
+		desiredAge := 100 * time.Millisecond
+		testLeeway := 10 * time.Millisecond
+
+		createFile(t, file)
+
+		callTime := time.Now()
+		err := UntilFileIsOld(file, desiredAge)
+
+		So(err, ShouldBeNil)
+		So(time.Now(), ShouldHappenAfter, callTime.Add(desiredAge-testLeeway))
+
+		Convey("And it waits longer if the file is touched while waiting", func() {
+			err = os.Chtimes(file, time.Time{}, time.Now())
+			So(err, ShouldBeNil)
+			extra := 50 * time.Millisecond
+			errCh := make(chan error)
+
+			go func() {
+				<-time.After(extra)
+				errCh <- os.Chtimes(file, time.Time{}, time.Now())
+			}()
+
+			callTime := time.Now()
+			err = UntilFileIsOld(file, desiredAge)
+			So(err, ShouldBeNil)
+			So(<-errCh, ShouldBeNil)
+			So(time.Now(), ShouldHappenAfter, callTime.Add(desiredAge-testLeeway+extra))
 		})
 	})
 }

@@ -30,6 +30,7 @@ package wait
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -92,4 +93,28 @@ func getLatestSuffixesWithMathchingPrefix(suffix string, prefixLen int,
 	}
 
 	return latestSource, latestDest, nil
+}
+
+// UntilFileIsOld waits for the file at the given path to be least age old.
+//
+// The file's "age" is time since it's mtime. If the file is touched while we
+// are waiting, we will wait more time.
+//
+// Returns an error if the file doesn't exist.
+func UntilFileIsOld(path string, age time.Duration) error {
+	for {
+		info, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+
+		wait := time.Until(info.ModTime().Add(age))
+		if wait <= 0*time.Second {
+			break
+		}
+
+		<-time.After(wait)
+	}
+
+	return nil
 }
