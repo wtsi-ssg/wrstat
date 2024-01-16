@@ -30,6 +30,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -346,4 +347,32 @@ func readWritePermissionsSame(a, b fs.FileInfo) bool {
 	bRW := b.Mode() & modeRW
 
 	return aRW == bRW
+}
+
+func TestTouch(t *testing.T) {
+	Convey("Touch updates a file's a and mtime to now, in local time", t, func() {
+		tdir := t.TempDir()
+		path := filepath.Join(tdir, "file")
+
+		err := createFile(path)
+		So(err, ShouldBeNil)
+
+		before := time.Now().Add(-10 * time.Second)
+		err = os.Chtimes(path, before, before)
+		So(err, ShouldBeNil)
+
+		recent := time.Now()
+		err = Touch(path)
+		So(err, ShouldBeNil)
+
+		info, err := os.Stat(path)
+		So(err, ShouldBeNil)
+
+		a := info.Sys().(*syscall.Stat_t).Atim //nolint:forcetypeassert
+		atime := time.Unix(a.Sec, a.Nsec)
+
+		So(atime, ShouldHappenAfter, recent)
+		So(info.ModTime(), ShouldHappenAfter, recent)
+		So(atime, ShouldEqual, info.ModTime())
+	})
 }
