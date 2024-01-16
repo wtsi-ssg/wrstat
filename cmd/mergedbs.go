@@ -123,6 +123,10 @@ var mergedbsCmd = &cobra.Command{
 		if err != nil {
 			die("Failed to touch the dgutdbs sentinal file: %s", err)
 		}
+
+		if mergeDelete {
+			neaten.DeleteAllPrefixedDirEntries(sourceDir, filepath.Base(sourceBasedir)[:mergeDatePrefixLength])
+		}
 	},
 }
 

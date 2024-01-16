@@ -376,3 +376,21 @@ func TestTouch(t *testing.T) {
 		So(atime, ShouldEqual, info.ModTime())
 	})
 }
+func TestDeleteAllPrefixedFiles(t *testing.T) {
+	Convey("Only files with a matching prefix should be deleted", t, func() {
+		tdir := t.TempDir()
+		for _, name := range []string{"aaa", "aab", "baa"} {
+			path := filepath.Join(tdir, name)
+			err := createFile(path)
+			So(err, ShouldBeNil)
+		}
+
+		err := DeleteAllPrefixedDirEntries(tdir, "a")
+		So(err, ShouldBeNil)
+
+		entries, err := os.ReadDir(tdir)
+		So(err, ShouldBeNil)
+		So(len(entries), ShouldEqual, 1)
+		So(entries[0].Name(), ShouldEqual, "baa")
+	})
+}
