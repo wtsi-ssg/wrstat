@@ -625,7 +625,15 @@ func transferAllBucketContents(utx *bolt.Tx, source *bolt.DB) error {
 	}
 
 	return source.View(func(vtx *bolt.Tx) error {
-		return transferBucketContents(vtx, utx, groupUsageBucket)
+		for _, bucket := range []string{groupUsageBucket, groupHistoricalBucket,
+			groupSubDirsBucket, userUsageBucket, userSubDirsBucket} {
+			err := transferBucketContents(vtx, utx, bucket)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 }
 

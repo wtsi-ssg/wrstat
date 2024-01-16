@@ -37,7 +37,6 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
@@ -51,6 +50,10 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 2,/lustre/scratch125,300,30
 2,/lustre/scratch123,400,40
 77777,/lustre/scratch125,500,50
+1,/nfs/scratch125,4000000000,20
+2,/nfs/scratch125,300,30
+2,/nfs/scratch123,400,40
+77777,/nfs/scratch125,500,50
 `)
 
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
@@ -774,7 +777,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 			Convey("and merge with another database", func() {
 				_, newFiles := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
 				for i := range newFiles {
-					newFiles[i].Path = "/nfs" + newFiles[i].Path
+					newFiles[i].Path = "/nfs" + newFiles[i].Path[7:]
 				}
 
 				newTree, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles)
@@ -785,6 +788,11 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				newBd, err := NewCreator(newDBPath, newTree, quotas)
 				So(err, ShouldBeNil)
 				So(bd, ShouldNotBeNil)
+
+				newBd.mountPoints = mountPoints{
+					"/nfs/scratch123/",
+					"/nfs/scratch125/",
+				}
 
 				err = newBd.CreateDatabase(yesterday)
 				So(err, ShouldBeNil)
@@ -801,36 +809,48 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				So(err, ShouldBeNil)
 				defer db.Close()
 
-				b := &BaseDirReader{
-					db: db,
-					ch: new(codec.BincHandle),
+				countKeys := func(bucket string) (int, int) {
+					lustreKeys, nfsKeys := 0, 0
+
+					db.View(func(tx *bolt.Tx) error { //nolint:errcheck
+						bucket := tx.Bucket([]byte(bucket))
+
+						return bucket.ForEach(func(k, _ []byte) error {
+							if strings.Contains(string(k), "/lustre/") {
+								lustreKeys++
+							}
+							if strings.Contains(string(k), "/nfs/") {
+								nfsKeys++
+							}
+
+							return nil
+						})
+					})
+
+					return lustreKeys, nfsKeys
 				}
 
-				hasLustre, hasNfs := false, false
+				expectedKeys := 6
 
-				db.View(func(tx *bolt.Tx) error { //nolint:errcheck
-					bucket := tx.Bucket([]byte(groupUsageBucket))
+				lustreKeys, nfsKeys := countKeys(groupUsageBucket)
+				So(lustreKeys, ShouldEqual, expectedKeys)
+				So(nfsKeys, ShouldEqual, expectedKeys)
 
-					return bucket.ForEach(func(_, data []byte) error {
-						uwm := new(Usage)
+				lustreKeys, nfsKeys = countKeys(groupHistoricalBucket)
+				So(lustreKeys, ShouldEqual, 5)
+				So(nfsKeys, ShouldEqual, 5)
 
-						if err := b.decodeFromBytes(data, uwm); err != nil {
-							return err
-						}
+				lustreKeys, nfsKeys = countKeys(groupSubDirsBucket)
+				So(lustreKeys, ShouldEqual, expectedKeys)
+				So(nfsKeys, ShouldEqual, expectedKeys)
 
-						if strings.HasPrefix(uwm.BaseDir, "/lustre") {
-							hasLustre = true
-						}
-						if strings.HasPrefix(uwm.BaseDir, "/nfs") {
-							hasNfs = true
-						}
+				lustreKeys, nfsKeys = countKeys(userUsageBucket)
+				So(lustreKeys, ShouldEqual, expectedKeys)
+				So(nfsKeys, ShouldEqual, expectedKeys)
 
-						return nil
-					})
-				})
-
-				So(hasLustre, ShouldBeTrue)
-				So(hasNfs, ShouldBeTrue)
+				lustreKeys, nfsKeys = countKeys(userSubDirsBucket)
+				So(lustreKeys, ShouldEqual, expectedKeys)
+				So(nfsKeys, ShouldEqual, expectedKeys)
 			})
 		})
 	})
