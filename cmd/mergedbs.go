@@ -86,46 +86,49 @@ var mergedbsCmd = &cobra.Command{
 		sourceDGUTDir, destDGUTDir, err := wait.ForMatchingPrefixOfLatestSuffix(
 			dgutDBsSuffix, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
 		if err != nil {
-			die("Wait for matching dgut.db outputs failed: %s", err)
+			die("wait for matching dgut.db outputs failed: %s", err)
 		}
 
 		err = neaten.MergeDGUTDBDirectories(sourceDGUTDir, destDGUTDir)
 		if err != nil {
-			die("Merge of dgut.db directories failed: %s", err)
+			die("merge of dgut.db directories failed: %s", err)
 		}
 
 		sourceBasedir, destBasedir, err := wait.ForMatchingPrefixOfLatestSuffix(
 			basedirBasename, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
 		if err != nil {
-			die("Wait for matching basedirs outputs failed: %s", err)
+			die("wait for matching basedirs outputs failed: %s", err)
 		}
 
 		outputDBPath := destBasedir + ".merging"
 
 		err = basedirs.MergeDBs(sourceBasedir, destBasedir, outputDBPath)
 		if err != nil {
-			die("Merge of basedir.dbs failed: %s", err)
+			die("merge of basedir.dbs failed: %s", err)
 		}
 
 		sentinal := filepath.Join(destDir, dgutDBsSentinelBasename)
 
 		err = wait.UntilFileIsOld(sentinal, reloadGrace)
 		if err != nil {
-			die("Waiting for the dgutdbs sentintal file failed: %s", err)
+			die("waiting for the dgutdbs sentintal file failed: %s", err)
 		}
 
 		err = os.Rename(outputDBPath, destBasedir)
 		if err != nil {
-			die("Failed to move the merged basedirs.db file back over original: %s", err)
+			die("failed to move the merged basedirs.db file back over original: %s", err)
 		}
 
 		err = neaten.Touch(sentinal)
 		if err != nil {
-			die("Failed to touch the dgutdbs sentinal file: %s", err)
+			die("failed to touch the dgutdbs sentinal file: %s", err)
 		}
 
 		if mergeDelete {
-			neaten.DeleteAllPrefixedDirEntries(sourceDir, filepath.Base(sourceBasedir)[:mergeDatePrefixLength])
+			err = neaten.DeleteAllPrefixedDirEntries(sourceDir, filepath.Base(sourceBasedir)[:mergeDatePrefixLength])
+			if err != nil {
+				warn("failed to delete source files: %s", err)
+			}
 		}
 	},
 }
