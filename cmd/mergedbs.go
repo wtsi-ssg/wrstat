@@ -26,7 +26,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -101,7 +100,6 @@ var mergedbsCmd = &cobra.Command{
 
 		outputDBPath := destBasedir + ".merging"
 
-		fmt.Printf("need to merge %s to %s\n", sourceBasedir, destBasedir)
 		err = basedirs.MergeDBs(sourceBasedir, destBasedir, outputDBPath)
 		if err != nil {
 			die("Merge of basedir.dbs failed: %s", err)
