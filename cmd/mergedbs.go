@@ -27,9 +27,12 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 	"github.com/wtsi-ssg/wrstat/v4/neaten"
 	"github.com/wtsi-ssg/wrstat/v4/wait"
 )
@@ -38,6 +41,7 @@ const (
 	mergeArgs             = 2
 	mergeDatePrefixLength = 8
 	mergeMaxWait          = 23 * time.Hour
+	reloadGrace           = 15 * time.Minute
 )
 
 // options for this cmd.
@@ -95,7 +99,30 @@ var mergedbsCmd = &cobra.Command{
 			die("Wait for matching basedirs outputs failed: %s", err)
 		}
 
+		outputDBPath := destBasedir + ".merging"
+
 		fmt.Printf("need to merge %s to %s\n", sourceBasedir, destBasedir)
+		err = basedirs.MergeDBs(sourceBasedir, destBasedir, outputDBPath)
+		if err != nil {
+			die("Merge of basedir.dbs failed: %s", err)
+		}
+
+		sentinal := filepath.Join(destDir, dgutDBsSentinelBasename)
+
+		err = wait.UntilFileIsOld(sentinal, reloadGrace)
+		if err != nil {
+			die("Waiting for the dgutdbs sentintal file failed: %s", err)
+		}
+
+		err = os.Rename(outputDBPath, destBasedir)
+		if err != nil {
+			die("Failed to move the merged basedirs.db file back over original: %s", err)
+		}
+
+		err = neaten.Touch(sentinal)
+		if err != nil {
+			die("Failed to touch the dgutdbs sentinal file: %s", err)
+		}
 	},
 }
 
