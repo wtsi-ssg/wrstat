@@ -42,6 +42,7 @@ import (
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestBaseDirs(t *testing.T) { //nolint:gocognit
@@ -49,6 +50,10 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 2,/lustre/scratch125,300,30
 2,/lustre/scratch123,400,40
 77777,/lustre/scratch125,500,50
+1,/nfs/scratch125,4000000000,20
+2,/nfs/scratch125,300,30
+2,/nfs/scratch123,400,40
+77777,/nfs/scratch125,500,50
 `)
 
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
@@ -767,6 +772,85 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					So(err, ShouldBeNil)
 					So(wso, ShouldEqual, expectedProjectASubDirUsage)
 				})
+			})
+
+			Convey("and merge with another database", func() {
+				_, newFiles := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
+				for i := range newFiles {
+					newFiles[i].Path = "/nfs" + newFiles[i].Path[7:]
+				}
+
+				newTree, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles)
+				So(err, ShouldBeNil)
+
+				newDBPath := filepath.Join(dir, "newdir.db")
+
+				newBd, err := NewCreator(newDBPath, newTree, quotas)
+				So(err, ShouldBeNil)
+				So(bd, ShouldNotBeNil)
+
+				newBd.mountPoints = mountPoints{
+					"/nfs/scratch123/",
+					"/nfs/scratch125/",
+				}
+
+				err = newBd.CreateDatabase(yesterday)
+				So(err, ShouldBeNil)
+
+				outputDBPath := filepath.Join(dir, "merged.db")
+
+				err = MergeDBs(dbPath, newDBPath, outputDBPath)
+				So(err, ShouldBeNil)
+
+				db, err := bolt.Open(outputDBPath, dbOpenMode, &bolt.Options{
+					ReadOnly: true,
+				})
+
+				So(err, ShouldBeNil)
+				defer db.Close()
+
+				countKeys := func(bucket string) (int, int) {
+					lustreKeys, nfsKeys := 0, 0
+
+					db.View(func(tx *bolt.Tx) error { //nolint:errcheck
+						bucket := tx.Bucket([]byte(bucket))
+
+						return bucket.ForEach(func(k, _ []byte) error {
+							if strings.Contains(string(k), "/lustre/") {
+								lustreKeys++
+							}
+							if strings.Contains(string(k), "/nfs/") {
+								nfsKeys++
+							}
+
+							return nil
+						})
+					})
+
+					return lustreKeys, nfsKeys
+				}
+
+				expectedKeys := 6
+
+				lustreKeys, nfsKeys := countKeys(groupUsageBucket)
+				So(lustreKeys, ShouldEqual, expectedKeys)
+				So(nfsKeys, ShouldEqual, expectedKeys)
+
+				lustreKeys, nfsKeys = countKeys(groupHistoricalBucket)
+				So(lustreKeys, ShouldEqual, 5)
+				So(nfsKeys, ShouldEqual, 5)
+
+				lustreKeys, nfsKeys = countKeys(groupSubDirsBucket)
+				So(lustreKeys, ShouldEqual, expectedKeys)
+				So(nfsKeys, ShouldEqual, expectedKeys)
+
+				lustreKeys, nfsKeys = countKeys(userUsageBucket)
+				So(lustreKeys, ShouldEqual, expectedKeys)
+				So(nfsKeys, ShouldEqual, expectedKeys)
+
+				lustreKeys, nfsKeys = countKeys(userSubDirsBucket)
+				So(lustreKeys, ShouldEqual, expectedKeys)
+				So(nfsKeys, ShouldEqual, expectedKeys)
 			})
 		})
 	})

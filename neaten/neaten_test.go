@@ -30,6 +30,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -346,4 +347,50 @@ func readWritePermissionsSame(a, b fs.FileInfo) bool {
 	bRW := b.Mode() & modeRW
 
 	return aRW == bRW
+}
+
+func TestTouch(t *testing.T) {
+	Convey("Touch updates a file's a and mtime to now, in local time", t, func() {
+		tdir := t.TempDir()
+		path := filepath.Join(tdir, "file")
+
+		err := createFile(path)
+		So(err, ShouldBeNil)
+
+		before := time.Now().Add(-10 * time.Second)
+		err = os.Chtimes(path, before, before)
+		So(err, ShouldBeNil)
+
+		recent := time.Now()
+		err = Touch(path)
+		So(err, ShouldBeNil)
+
+		info, err := os.Stat(path)
+		So(err, ShouldBeNil)
+
+		a := info.Sys().(*syscall.Stat_t).Atim //nolint:forcetypeassert
+		atime := time.Unix(a.Sec, a.Nsec)
+
+		So(atime, ShouldHappenAfter, recent)
+		So(info.ModTime(), ShouldHappenAfter, recent)
+		So(atime, ShouldEqual, info.ModTime())
+	})
+}
+func TestDeleteAllPrefixedFiles(t *testing.T) {
+	Convey("Only files with a matching prefix should be deleted", t, func() {
+		tdir := t.TempDir()
+		for _, name := range []string{"aaa", "aab", "baa"} {
+			path := filepath.Join(tdir, name)
+			err := createFile(path)
+			So(err, ShouldBeNil)
+		}
+
+		err := DeleteAllPrefixedDirEntries(tdir, "a")
+		So(err, ShouldBeNil)
+
+		entries, err := os.ReadDir(tdir)
+		So(err, ShouldBeNil)
+		So(len(entries), ShouldEqual, 1)
+		So(entries[0].Name(), ShouldEqual, "baa")
+	})
 }

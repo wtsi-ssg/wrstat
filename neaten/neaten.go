@@ -414,3 +414,28 @@ func (t *Tidy) getOldestMtimeOfWalkFiles(dir, statLogOutputFileSuffix string) (t
 
 	return oldestT, nil
 }
+
+// Touch modifies path's a and mtime to the current time.
+func Touch(path string) error {
+	now := time.Now().Local()
+
+	return changeAMFileTime(path, now)
+}
+
+// DeleteAllPrefixedDirEntries deletes all files and directories in the given
+// directory that have the given prefix.
+func DeleteAllPrefixedDirEntries(dir, prefix string) error {
+	paths, err := filepath.Glob(fmt.Sprintf("%s/%s*", dir, prefix))
+	if err != nil {
+		return err
+	}
+
+	for _, path := range paths {
+		err = os.RemoveAll(path)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	return nil
+}
