@@ -42,14 +42,10 @@ import (
 )
 
 const (
-	basedirBasename        = "basedirs.db"
-	basedirSplits          = 4
-	basedirMinDirs         = 4
-	basedirMinDirsHumgen   = basedirMinDirs + 1
-	basedirMinDirsMDTExtra = 1
-	groupUsageBasename     = "basedirs.groupusage.tsv"
-	userUsageBasename      = "basedirs.userusage.tsv"
-	numBasedirArgs         = 2
+	basedirBasename    = "basedirs.db"
+	groupUsageBasename = "basedirs.groupusage.tsv"
+	userUsageBasename  = "basedirs.userusage.tsv"
+	numBasedirArgs     = 2
 )
 
 // options for this cmd.
