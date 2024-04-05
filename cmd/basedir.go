@@ -51,6 +51,8 @@ const (
 // options for this cmd.
 var quotaPath string
 var ownersPath string
+var basedirSplits int
+var basedirMinDirs int
 
 // basedirCmd represents the basedir command.
 var basedirCmd = &cobra.Command{
@@ -81,10 +83,16 @@ within.
 
 Since a group/user could have files in multiple mount points mounted at /, the
 true base directory would likely always be '/', which wouldn't be useful.
-Instead, a 'wrstat where' split of 4 is used, and only paths consisting of at
-least 4 sub directories are returned. Paths that are subdirectories of other
-results are ignored. As a special case, if a path contains 'mdt[n]' as a
-directory, where n is a number, then 5 sub directories are required.
+Instead, a 'wrstat where' split of --splits is used, and only paths consisting
+of at least --mindirs sub directories are returned. Paths that are
+subdirectories of other results are ignored. As a special case, if a path
+contains 'mdt[n]' as a directory, where n is a number, then an extra sub
+directories is required.
+
+If you expect data specific to different groups to appear 5 directories deep in
+different mount points, then --splits 4 --mindirs 4 might work well. If you
+expect it to appear 2 directories deep, the defaults of --splits 1 --mindirs 2
+might work well.
 
 Disk usage summaries are stored in database keyed on the group/user and base
 directories. The summaries include quota information for groups, taking
@@ -146,7 +154,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to get existing base directories database: %s", err)
 		}
 
-		bd, err := basedirs.NewCreator(dbPath, tree, quotas)
+		bd, err := basedirs.NewCreator(dbPath, basedirSplits, basedirMinDirs, tree, quotas)
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}
@@ -197,6 +205,8 @@ func init() {
 	// flags specific to this sub-command
 	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "gid,disk,size_quota,inode_quota csv file")
 	basedirCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
+	basedirCmd.Flags().IntVarP(&basedirSplits, "splits", "s", 1, "number of splits")
+	basedirCmd.Flags().IntVarP(&basedirMinDirs, "mindirs", "m", 2, "minimum number of dirs")
 }
 
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
