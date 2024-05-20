@@ -233,7 +233,7 @@ const colours = [
 				<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 				<div>
 					<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
-					<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
+					<TreeDetails details={childDetails} setTreePath={setTreePath} style={{ width: treeWidth + "px" }} />
 				</div>
 			</div>
 		</>
