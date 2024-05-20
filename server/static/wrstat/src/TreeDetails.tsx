@@ -69,17 +69,20 @@ const TreedetailsComponent = ({ details, setTreePath, ...rest }: { details: Chil
 		{details.children && (
 			<Table
 				table={details.children}
-				onRowClick={details.children && (row => setTreePath(row["path"]))}
+				onRowClick={(child => child.has_children && setTreePath(child.path))}
 				id="treeSubDirsTable"
 				cols={[{ title: "Sub-Directories", key: "path" },]}
 				className={"prettyTable"}
-			/> ?? <></>)}
+				rowExtra={(child => {
+					if (!child.has_children) {
+						return {
+							"className": "noHover"
+						};
+					}
 
-		{/* {details && details.children && (details.children.map((child, i) => {
-                return <tr key={i}>
-                    <td onClick={}>{child.path}</td>
-                </tr>
-            }) ?? <></>)} */}
+					return {};
+				})}
+			/> ?? <></>)}
 	</div>
 };
 
