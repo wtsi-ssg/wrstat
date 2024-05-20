@@ -27,8 +27,9 @@
 
 import type { Child } from "./rpc";
 import { formatBytes, formatDate, formatNumber } from "./format";
+import Table from "./Table";
 
-const TreedetailsComponent = ({ details, ...rest }: { details: Child | null } & Record<string, any>) => {
+const TreedetailsComponent = ({ details, setTreePath, ...rest }: { details: Child | null, setTreePath: Function } & Record<string, any>) => {
 	if (!details) {
 		return <></>
 	}
@@ -64,6 +65,21 @@ const TreedetailsComponent = ({ details, ...rest }: { details: Child | null } & 
 				</tr>
 			</tbody>
 		</table>
+
+		{details.children && (
+			<Table
+				table={details.children}
+				onRowClick={details.children && (row => setTreePath(row["path"]))}
+				id="treeSubDirsTable"
+				cols={[{ title: "Sub-Directories", key: "path" },]}
+				className={"prettyTable"}
+			/> ?? <></>)}
+
+		{/* {details && details.children && (details.children.map((child, i) => {
+                return <tr key={i}>
+                    <td onClick={}>{child.path}</td>
+                </tr>
+            }) ?? <></>)} */}
 	</div>
 };
 
