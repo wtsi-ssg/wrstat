@@ -1,8 +1,8 @@
 /*******************************************************************************
- * Copyright (c) 2023 Genome Research Ltd.
+ * Copyright (c) 2024 Genome Research Ltd.
  *
  * Authors:
- *   Michael Woolnough <mw31@sanger.ac.uk>
+ *   Daniel Elia <de7@sanger.ac.uk>
  *   Sendu Bala <sb10@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,45 +26,34 @@
  ******************************************************************************/
 
 import type { Child } from "./rpc";
-import { formatBytes, formatDate, formatNumber } from "./format";
+import Table from "./Table";
 
-const TreedetailsComponent = ({ details, ...rest }: { details: Child | null } & Record<string, any>) => {
+
+const TreeTableComponent = ({ details, setTreePath }: { details: Child | null, setTreePath: Function }) => {
 	if (!details) {
 		return <></>
 	}
+	if (!details.children) {
+		return <></>
+	}
+	return (
+		<Table
+			table={details.children}
+			onRowClick={(child => child.has_children && setTreePath(child.path))}
+			id="treeSubDirsTable"
+			cols={[{ title: "Sub-Directories", key: "path" },]}
+			className={"prettyTable"}
+			rowExtra={(child => {
+				if (!child.has_children) {
+					return {
+						"className": "noHover"
+					};
+				}
 
-	return <div id="details" {...rest}>
-		{details.path}
-		<table>
-			<caption>Path Details</caption>
-			<tbody>
-				<tr>
-					<th>Size</th>
-					<td>{formatBytes(details.size)}</td>
-				</tr>
-				<tr>
-					<th aria-label="Files & Directories">Files &amp; Dirs</th>
-					<td>{formatNumber(details.count)}</td>
-				</tr>
-				<tr>
-					<th>Accessed</th>
-					<td>{formatDate(details.atime)}</td>
-				</tr>
-				<tr>
-					<th>Groups</th>
-					<td><div>{details.groups.join(", ")}</div></td>
-				</tr>
-				<tr>
-					<th>Users</th>
-					<td><div>{details.users.join(", ")}</div></td>
-				</tr>
-				<tr>
-					<th>Filetypes</th>
-					<td><div>{details.filetypes.join(", ")}</div></td>
-				</tr>
-			</tbody>
-		</table>
-	</div>
-};
+				return {};
+			})}
+		/>
+	)
+}
 
-export default TreedetailsComponent;
+export default TreeTableComponent;
