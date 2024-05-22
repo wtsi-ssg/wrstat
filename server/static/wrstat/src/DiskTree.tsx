@@ -33,8 +33,10 @@ import GroupUserFilter from './GroupUserFilter';
 import MultiSelect from './MultiSelect';
 import TreeDetails from "./TreeDetails";
 import Treemap from "./Treemap";
+import Treetable from "./TreeTable"
 import RPC from "./rpc";
 import { useSavedState } from './state';
+import Tabs from "./Tabs";
 
 type DiskTreeParams = {
 	treePath: string;
@@ -146,7 +148,9 @@ const colours = [
 			[treeWidth, setTreeWidth] = useState(determineTreeWidth()),
 			[filterFileTypes, setFilterFileTypes] = useSavedState<string[]>("treeTypes", []),
 			[sinceLastAccess, setSinceLastAccess] = useSavedState("sinceLastAccess", 0),
-			[hasAuth, setHasAuth] = useState(true);
+			[hasAuth, setHasAuth] = useState(true),
+			[viewBoxes, setViewBoxes] = useState(true);
+
 
 		useEffect(() => window.addEventListener("resize", () => setTreeWidth(determineTreeWidth())), []);
 
@@ -232,8 +236,29 @@ const colours = [
 				</div>
 				<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
 				<div>
-					<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
-					<TreeDetails details={childDetails} setTreePath={setTreePath} style={{ width: treeWidth + "px" }} />
+					<Tabs id="mainTabs" tabs={[
+						{
+							title: "Tree",
+							onClick: () => {
+								setViewBoxes(true);
+							},
+							selected: viewBoxes
+						},
+						{
+							title: "List",
+							onClick: () => {
+								setViewBoxes(false);
+							},
+							selected: !viewBoxes
+						},
+					]} />
+					{viewBoxes &&
+						<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
+					}
+					{!viewBoxes &&
+						<Treetable details={childDetails} setTreePath={setTreePath} />
+					}
+					<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
 				</div>
 			</div>
 		</>
