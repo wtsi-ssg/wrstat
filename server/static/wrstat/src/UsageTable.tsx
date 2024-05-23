@@ -163,7 +163,7 @@ const stringSort = new Intl.Collator().compare,
 							formatter: (p: number | undefined) => p ? formatNumber(p) : "0"
 						},
 						{
-							title: "Last Modified (days)",
+							title: "Last Modified",
 							key: "Mtime",
 							extra: title => ({ title }),
 							sortFn: sortMTime,

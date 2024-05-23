@@ -114,7 +114,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 						formatter: formatBytes
 					},
 					{
-						title: "Last Modified (days)",
+						title: "Last Modified",
 						key: "LastModified",
 						extra: title => ({ title }),
 						sortFn: sortLastModifed,
