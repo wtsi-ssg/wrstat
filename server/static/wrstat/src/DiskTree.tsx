@@ -188,77 +188,85 @@ const colours = [
 		}, [treePath, useMTime, useCount, filterFileTypes, sinceLastAccess, guf.groups, guf.users]);
 
 		return <>
-			<div id="disktree">
-				<div>
-					<div className="treeFilter">
-						<div className="title">Colour By</div>
-						<label aria-label="Colour by Oldest Access Time" title="Oldest Access Time" htmlFor="aTime">Access Time</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
-						<label aria-label="Colour by Latest Modified Time" title="Latest Modified Time" htmlFor="mTime">Modified Time</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
-						<div className="title">Area Represents</div>
-						<label aria-label="Area represents File Size" htmlFor="useSize">File Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
-						<label aria-label="Area represents File Count" htmlFor="useCount">File Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
-						<div className="title">Filter</div>
-						<label htmlFor="filetypes">File Types</label><MultiSelect id="filetypes" list={fileTypes} selected={filterFileTypes} onchange={setFilterFileTypes} />
-						<label htmlFor="sinceAccess">Time Since Access</label>
-						<select value={sinceLastAccess} id="sinceAccess" onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
-							{timesSinceAccess.map(([l, t]) => <option key={`tsa_${t}`} value={t}>{l}</option>)}
-						</select>
-						<br />
-						<GroupUserFilter {...guf} num={1} />
-						<button onClick={e => {
-							if (e.button !== 0) {
-								return;
+			<div>
+				<Tabs id="treeTabs" tabs={[
+					{
+						title: "Tree",
+						onClick: () => {
+							setViewBoxes(true);
+						},
+						selected: viewBoxes
+					},
+					{
+						title: "List",
+						onClick: () => {
+							setViewBoxes(false);
+						},
+						selected: !viewBoxes
+					},
+				]} />
+				<div id="disktree">
+					<div>
+						<div className="treeFilter">
+							{viewBoxes &&
+								<>
+									<div className="title">Colour By</div>
+									<label aria-label="Colour by Oldest Access Time" title="Oldest Access Time" htmlFor="aTime">Access Time</label><input type="radio" id="aTime" checked={!useMTime} onChange={() => setUseMTime(false)} />
+									<label aria-label="Colour by Latest Modified Time" title="Latest Modified Time" htmlFor="mTime">Modified Time</label><input type="radio" id="mTime" checked={useMTime} onChange={() => setUseMTime(true)} />
+									<div className="title">Area Represents</div>
+									<label aria-label="Area represents File Size" htmlFor="useSize">File Size</label><input type="radio" id="useSize" checked={!useCount} onChange={() => setUseCount(false)} />
+									<label aria-label="Area represents File Count" htmlFor="useCount">File Count</label><input type="radio" id="useCount" checked={useCount} onChange={() => setUseCount(true)} />
+								</>
 							}
+							<div className="title">Filter</div>
+							<label htmlFor="filetypes">File Types</label><MultiSelect id="filetypes" list={fileTypes} selected={filterFileTypes} onchange={setFilterFileTypes} />
+							<label htmlFor="sinceAccess">Time Since Access</label>
+							<select value={sinceLastAccess} id="sinceAccess" onChange={e => setSinceLastAccess(parseInt(e.target.value) ?? 0)}>
+								{timesSinceAccess.map(([l, t]) => <option key={`tsa_${t}`} value={t}>{l}</option>)}
+							</select>
+							<br />
+							<GroupUserFilter {...guf} num={1} />
+							<button onClick={e => {
+								if (e.button !== 0) {
+									return;
+								}
 
-							setFilterFileTypes([]);
-							setSinceLastAccess(0);
-							guf.setGroups([]);
-							guf.setUsers([]);
-						}}>Reset Filter</button>
-					</div>
-					<div id="treeKey">
-						<div>
-							<span>Colour Key</span>
-							{useMTime ? "Least" : "Greatest"} time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
+								setFilterFileTypes([]);
+								setSinceLastAccess(0);
+								guf.setGroups([]);
+								guf.setUsers([]);
+							}}>Reset Filter</button>
 						</div>
-						<ol>
-							<li className="age_2years">&gt; 2 years</li>
-							<li className="age_1year">&gt; 1 year</li>
-							<li className="age_10months">&gt; 10 months</li>
-							<li className="age_8months">&gt; 8 months</li>
-							<li className="age_6months">&gt; 6 months</li>
-							<li className="age_3months">&gt; 3 months</li>
-							<li className="age_2months">&gt; 2 months</li>
-							<li className="age_1month">&gt; 1 month</li>
-							<li className="age_1week">&lt; 1 month</li>
-						</ol>
+						{viewBoxes &&
+							<div id="treeKey">
+								<div>
+									<span>Colour Key</span>
+									{useMTime ? "Least" : "Greatest"} time since a file nested within the directory was {useMTime ? "modified" : "accessed"}:
+								</div>
+								<ol>
+									<li className="age_2years">&gt; 2 years</li>
+									<li className="age_1year">&gt; 1 year</li>
+									<li className="age_10months">&gt; 10 months</li>
+									<li className="age_8months">&gt; 8 months</li>
+									<li className="age_6months">&gt; 6 months</li>
+									<li className="age_3months">&gt; 3 months</li>
+									<li className="age_2months">&gt; 2 months</li>
+									<li className="age_1month">&gt; 1 month</li>
+									<li className="age_1week">&lt; 1 month</li>
+								</ol>
+							</div>
+						}
 					</div>
-				</div>
-				<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
-				<div>
-					<Tabs id="mainTabs" tabs={[
-						{
-							title: "Tree",
-							onClick: () => {
-								setViewBoxes(true);
-							},
-							selected: viewBoxes
-						},
-						{
-							title: "List",
-							onClick: () => {
-								setViewBoxes(false);
-							},
-							selected: !viewBoxes
-						},
-					]} />
-					{viewBoxes &&
-						<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
-					}
-					{!viewBoxes &&
-						<Treetable details={childDetails} setTreePath={setTreePath} />
-					}
-					<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
+					<ul id="treeBreadcrumbs">{breadcrumbs}</ul>
+					<div>
+						{viewBoxes &&
+							<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
+						}
+						{!viewBoxes &&
+							<Treetable details={childDetails} setTreePath={setTreePath} />
+						}
+						<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
+					</div>
 				</div>
 			</div>
 		</>

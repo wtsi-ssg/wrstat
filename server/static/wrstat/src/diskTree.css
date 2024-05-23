@@ -28,6 +28,7 @@
 details #treeBreadcrumbs {
 	margin: 0;
 	width: calc(100% - 4em);
+	margin-top: 5px;
 }
 
 #treeBreadcrumbs {
@@ -167,6 +168,7 @@ details #disktree>div:first-child {
 	border: 1px solid var(--subtleBorder);
 	border-radius: 8px;
 	padding: 1em;
+	margin-bottom: 1em;
 }
 
 #treeKey div {
