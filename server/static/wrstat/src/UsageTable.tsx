@@ -29,7 +29,7 @@ import type { Usage } from './rpc';
 import type { Filter, } from './Table';
 import Table, { fitlerTableRows } from './Table';
 import { downloadGroups, downloadUsers } from './download';
-import { asDaysAgoStr, formatBytes, formatNumber } from './format';
+import { asTimeAgo, formatBytes, formatNumber } from './format';
 import { useSavedState } from './state';
 
 
@@ -167,7 +167,7 @@ const stringSort = new Intl.Collator().compare,
 							key: "Mtime",
 							extra: title => ({ title }),
 							sortFn: sortMTime,
-							formatter: asDaysAgoStr
+							formatter: asTimeAgo
 						},
 						{
 							title: "Status",

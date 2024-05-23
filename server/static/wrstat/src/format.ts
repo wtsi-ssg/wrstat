@@ -25,6 +25,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
+import * as dateFns from "date-fns"
+
 const numberFormatter = new Intl.NumberFormat("en-GB", { "style": "decimal" }),
 	largeNumberFormatter = new Intl.NumberFormat("en-GB", {
 		"style": "decimal",
@@ -64,8 +66,29 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 		return formatNumber(n) + " " + byteUnits[unit];
 	},
 	asDaysAgo = (date: string) => Math.max(0, Math.round((now - new Date(date).valueOf()) / msInDay)),
-	asDaysAgoStr = (date: string) => formatNumber(asDaysAgo(date)) + " days",
-	formatTimeAgo = (dStr: string | number) => {
+	asTimeAgo = (dateStr: string) => {
+		const duration = dateFns.intervalToDuration({
+			start: new Date(dateStr),
+			end: new Date(),
+		});
+
+		let [years, months, days] = ["", "", ""];
+
+		if (duration.years) {
+			years = `${duration.years}y`;
+		}
+		if (duration.months) {
+			months = `${duration.months}m`;
+		}
+		if (duration.days) {
+			days = `${duration.days}d`;
+		}
+
+		let response = [years, months, days].filter(Boolean);
+
+		return response.join("");
+	},
+	approxTimeAgo = (dStr: string | number) => {
 		const secs = Math.round((Date.now() - new Date(dStr).valueOf()) / 1000);
 
 		if (secs < 0.75 * minute) {
@@ -99,4 +122,9 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 			}-${(d.getMonth() + 1 + "").padStart(2, "0")
 			}-${(d.getDate() + "").padStart(2, "0")
 			}`;
+	},
+	asBasename = (absPath: string) => {
+		const basename = absPath.split('/').pop()
+
+		return basename || "-"
 	};
