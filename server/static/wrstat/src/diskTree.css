@@ -38,6 +38,10 @@ details #treeBreadcrumbs {
 	grid-row: 1;
 	grid-column: 1 / span 2;
 	width: calc(100% - 2em);
+	border: 1px solid #BBB;
+	padding: 3px;
+	background-color: #DDD;
+	width: fit-content;
 }
 
 #treeBreadcrumbs li {
@@ -45,13 +49,13 @@ details #treeBreadcrumbs {
 }
 
 #treeBreadcrumbs li:first-child {
-	margin: 0 1em 0 0;
+	margin: 0 0.25em 0 0;
 }
 
-#treeBreadcrumbs li:first-child:after {
+/* #treeBreadcrumbs li:first-child:after {
 	content: ":";
 	display: inline-block;
-}
+} */
 
 #treeBreadcrumbs button {
 	cursor: pointer;
@@ -59,7 +63,7 @@ details #treeBreadcrumbs {
 
 #treeBreadcrumbs li:not(:first-child):not(:last-child):after {
 	display: inline-block;
-	margin: 0 1em;
+	margin: 0 0.25em;
 	content: "/";
 }
 
@@ -205,4 +209,8 @@ details #disktree>div:first-child {
 	padding: 0.5em;
 	margin-right: 1em;
 	margin-bottom: -0.25em;
+}
+
+#treeTabs {
+	margin-top: 1em;
 }

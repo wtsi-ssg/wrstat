@@ -95,7 +95,7 @@ const colours = [
 		let last = 0;
 
 		const breadcrumbs = [
-			<Breadcrumb key={`breadcrumb_root`} path="/" part="Root" setPath={setPath} />
+			<Breadcrumb key={`breadcrumb_root`} path="/" part="/" setPath={setPath} />
 		];
 
 		while (true) {
