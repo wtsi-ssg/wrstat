@@ -64,7 +64,7 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 		return formatNumber(n) + " " + byteUnits[unit];
 	},
 	asDaysAgo = (date: string) => Math.max(0, Math.round((now - new Date(date).valueOf()) / msInDay)),
-	asDaysAgoStr = (date: string) => formatNumber(asDaysAgo(date)),
+	asDaysAgoStr = (date: string) => formatNumber(asDaysAgo(date)) + " days",
 	formatTimeAgo = (dStr: string | number) => {
 		const secs = Math.round((Date.now() - new Date(dStr).valueOf()) / 1000);
 

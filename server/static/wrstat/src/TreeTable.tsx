@@ -27,24 +27,34 @@
 
 import type { Child } from "./rpc";
 import Table from "./Table";
+import { asDaysAgoStr, formatBytes } from './format';
 
 
 const TreeTableComponent = ({ details, setTreePath }: { details: Child | null, setTreePath: Function }) => {
 	if (!details) {
 		return <></>
 	}
+
 	if (!details.children) {
+		// TODO: no subdirs message?
 		return <></>
 	}
+
 	return (
 		<Table
 			table={details.children}
 			onRowClick={(child => child.has_children && setTreePath(child.path))}
-			id="treeSubDirsTable"
-			cols={[{ title: "Sub-Directories", key: "path" },]}
+			id="treeTable"
+			cols={[
+				{ title: "Sub-Directories", key: "path" },
+				{ title: "File Size", key: "size", formatter: formatBytes },
+				{ title: "File Count", key: "count" },
+				{ title: "Earliest access", key: "atime", formatter: asDaysAgoStr },
+				{ title: "Last modified", key: "mtime", formatter: asDaysAgoStr },
+			]}
 			className={"prettyTable"}
 			rowExtra={(child => {
-				if (!child.has_children) {
+				if (!child.has_children || child.noauth) {
 					return {
 						"className": "noHover"
 					};
