@@ -27,7 +27,7 @@
 
 import type { Child } from "./rpc";
 import Table from "./Table";
-import { asDaysAgoStr, formatBytes } from './format';
+import { asTimeAgo, formatBytes, formatNumber, asBasename } from './format';
 
 
 const TreeTableComponent = ({ details, setTreePath }: { details: Child | null, setTreePath: Function }) => {
@@ -40,17 +40,24 @@ const TreeTableComponent = ({ details, setTreePath }: { details: Child | null, s
 		return <></>
 	}
 
+	const stringSort = new Intl.Collator().compare,
+		sortPath = (a: Child, b: Child) => stringSort(a.path, b.path),
+		sortSize = (a: Child, b: Child) => a.size - b.size,
+		sortCount = (a: Child, b: Child) => a.count - b.count,
+		sortAtime = (a: Child, b: Child) => new Date(b.atime).valueOf() - new Date(a.atime).valueOf(),
+		sortMtime = (a: Child, b: Child) => new Date(b.mtime).valueOf() - new Date(a.mtime).valueOf();
+
 	return (
 		<Table
 			table={details.children}
 			onRowClick={(child => child.has_children && setTreePath(child.path))}
 			id="treeTable"
 			cols={[
-				{ title: "Sub-Directories", key: "path" },
-				{ title: "File Size", key: "size", formatter: formatBytes },
-				{ title: "File Count", key: "count" },
-				{ title: "Earliest access", key: "atime", formatter: asDaysAgoStr },
-				{ title: "Last modified", key: "mtime", formatter: asDaysAgoStr },
+				{ title: "Sub-Directories", key: "path", formatter: asBasename, sortFn: sortPath },
+				{ title: "File Size", key: "size", formatter: formatBytes, sortFn: sortSize },
+				{ title: "File Count", key: "count", formatter: formatNumber, sortFn: sortCount },
+				{ title: "Earliest access", key: "atime", formatter: asTimeAgo, sortFn: sortAtime },
+				{ title: "Last modified", key: "mtime", formatter: asTimeAgo, sortFn: sortMtime },
 			]}
 			className={"prettyTable"}
 			rowExtra={(child => {
