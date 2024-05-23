@@ -84,9 +84,14 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 			days = `${duration.days}d`;
 		}
 
-		let response = [years, months, days].filter(Boolean);
+		let vals = [years, months, days].filter(Boolean);
+		let response = vals.join("");
 
-		return response.join("");
+		if (response.length == 0) {
+			response = "<1d"
+		}
+
+		return response;
 	},
 	approxTimeAgo = (dStr: string | number) => {
 		const secs = Math.round((Date.now() - new Date(dStr).valueOf()) / 1000);
