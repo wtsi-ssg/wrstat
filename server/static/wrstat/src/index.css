@@ -170,6 +170,10 @@ th,
   user-select: none;
 }
 
+button {
+	cursor: pointer;
+}
+
 @media (prefers-color-scheme: light) {
   html {
     --colour: #000;

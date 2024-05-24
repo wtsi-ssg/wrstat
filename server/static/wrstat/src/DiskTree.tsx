@@ -99,6 +99,7 @@ const colours = [
 		];
 
 		while (true) {
+
 			const pos = path.indexOf("/", last + 1);
 
 			if (pos === -1) {
@@ -110,7 +111,9 @@ const colours = [
 			last = pos;
 		}
 
-		breadcrumbs.push(<li key={`breadcrumb_${breadcrumbs.length}`} tabIndex={0} aria-current="location">{path.slice(last + 1) || "/"}</li>);
+		if (path.length > 1) {
+			breadcrumbs.push(<li key={`breadcrumb_${breadcrumbs.length}`} tabIndex={0} aria-current="location">{path.slice(last + 1) || "/"}</li>);
+		}
 
 		return breadcrumbs;
 	},
