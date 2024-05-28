@@ -53,6 +53,7 @@ type Params<T> = {
 	filter?: Filter<T>;
 	rowExtra?: (row: T) => Record<string, any>;
 	onRowClick: (row: T) => void;
+	onRowHover: (row: T) => void;
 	className?: string;
 	id: string;
 	style?: CSSProperties;
@@ -98,7 +99,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 
 		return col["reverseFn"] ?? reverseSort(col["sortFn"] ?? noopSort);
 	},
-	makeRows = <T extends Record<string, any>>(rows: T[], cols: Column<T>[], onRowClick: (row: T) => void, rowExtra?: (row: T) => Record<string, any>) => {
+	makeRows = <T extends Record<string, any>>(rows: T[], cols: Column<T>[], onRowClick: (row: T) => void, onRowHover: (row: T) => void,rowExtra?: (row: T) => Record<string, any>) => {
 		return rows.map((row, n) => <tr
 			key={`table_row_${n}`}
 			role="button"
@@ -114,6 +115,13 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 
 				onRowClick(row);
 			}}
+			onMouseOver={e => {
+				if (e.button !== 0) {
+					return;
+				}
+
+				onRowHover(row);
+			}}
 			{...(rowExtra?.(row) ?? {})}
 		>
 			{cols.map((col, m) => <td
@@ -128,6 +136,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 		table,
 		cols,
 		onRowClick,
+		onRowHover,
 		perPage = Infinity,
 		filter = {},
 		id,
@@ -184,7 +193,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 					</tr>
 				</thead>
 				<tbody>
-					{makeRows(pagedRows, cols, onRowClick, rowExtra)}
+					{makeRows(pagedRows, cols, onRowClick, onRowHover, rowExtra)}
 				</tbody>
 				{
 					cols.some(c => c.sum) ?
