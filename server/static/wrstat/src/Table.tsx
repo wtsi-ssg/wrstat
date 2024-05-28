@@ -116,18 +116,10 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 
 				onRowClick(row);
 			}}
-			onMouseOver={e => {
-				if (e.button !== 0) {
-					return;
-				}
-
+			onMouseOver={() => {
 				onRowHover(row);
 			}}
-			onMouseOut={e => {
-				if (e.button !== 0) {
-					return;
-				}
-
+			onMouseOut={() => {
 				onMouseOut(row);
 			} }
 			{...(rowExtra?.(row) ?? {})}
