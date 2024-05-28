@@ -52,6 +52,7 @@ const TreeTableComponent = ({ details, setTreePath, setChildDetails }: { details
 			table={details.children}
 			onRowClick={(child => child.has_children && !child.noauth && setTreePath(child.path))}
 			onRowHover={(child => child.has_children && !child.noauth && setChildDetails(child))}
+			onMouseOut={(child => child.has_children && !child.noauth && setChildDetails(details))}
 			id="treeTable"
 			cols={[
 				{ title: "Sub-Directories", key: "path", formatter: asBasename, sortFn: sortPath },
