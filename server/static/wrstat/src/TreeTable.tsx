@@ -30,7 +30,7 @@ import Table from "./Table";
 import { asTimeAgo, formatBytes, formatNumber, asBasename } from './format';
 
 
-const TreeTableComponent = ({ details, setTreePath }: { details: Child | null, setTreePath: Function }) => {
+const TreeTableComponent = ({ details, setTreePath, setChildDetails }: { details: Child | null, setTreePath: Function, setChildDetails: Function }) => {
 	if (!details) {
 		return <></>
 	}
@@ -50,7 +50,8 @@ const TreeTableComponent = ({ details, setTreePath }: { details: Child | null, s
 	return (
 		<Table
 			table={details.children}
-			onRowClick={(child => child.has_children && setTreePath(child.path))}
+			onRowClick={(child => child.has_children && !child.noauth && setTreePath(child.path))}
+			onRowHover={(child => child.has_children && !child.noauth && setChildDetails(child))}
 			id="treeTable"
 			cols={[
 				{ title: "Sub-Directories", key: "path", formatter: asBasename, sortFn: sortPath },

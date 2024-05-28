@@ -145,6 +145,7 @@ const colours = [
 		const [treeMapData, setTreeMapData] = useState<Entry[] | null>(null),
 			[breadcrumbs, setBreadcrumbs] = useState<JSX.Element[]>([]),
 			[childDetails, setChildDetails] = useState<Child | null>(null),
+			[tableDetails, setTableDetails] = useState<Child | null>(null),
 			[dirDetails, setDirDetails] = useState<Child | null>(childDetails),
 			[useMTime, setUseMTime] = useSavedState("useMTime", false),
 			[useCount, setUseCount] = useSavedState("useCount", false),
@@ -185,6 +186,7 @@ const colours = [
 					setTreeMapData(entries);
 					setChildDetails(children);
 					setDirDetails(children);
+					setTableDetails(children);
 				});
 
 			setBreadcrumbs(makeBreadcrumbs(treePath, setTreePath));
@@ -266,7 +268,8 @@ const colours = [
 							<Treemap table={treeMapData} width={treeWidth} height={500} noAuth={!hasAuth} onmouseout={() => setChildDetails(dirDetails)} />
 						}
 						{!viewBoxes &&
-							<Treetable details={childDetails} setTreePath={setTreePath} />
+						// make new state and variable to replace child details in the details field, so that clicking and hovering do different things
+							<Treetable details={tableDetails} setTreePath={setTreePath} setChildDetails={setChildDetails} />
 						}
 						<TreeDetails details={childDetails} style={{ width: treeWidth + "px" }} />
 					</div>
