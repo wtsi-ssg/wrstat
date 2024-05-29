@@ -25,7 +25,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-import * as dateFns from "date-fns"
+import * as dateFns from "date-fns";
 
 const numberFormatter = new Intl.NumberFormat("en-GB", { "style": "decimal" }),
 	largeNumberFormatter = new Intl.NumberFormat("en-GB", {
@@ -88,7 +88,7 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 		let response = vals.join("");
 
 		if (response.length == 0) {
-			response = "<1d"
+			response = "<1d";
 		}
 
 		return response;
@@ -129,7 +129,7 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 			}`;
 	},
 	asBasename = (absPath: string) => {
-		const basename = absPath.split('/').pop()
+		const basename = absPath.split('/').pop();
 
-		return basename || "-"
+		return basename || "-";
 	};

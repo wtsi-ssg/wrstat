@@ -126,7 +126,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 						formatter: (files: Record<number, number>) => Object.entries(files).sort((a, b) => b[1] - a[1]).map(e => `${fileTypes[parseInt(e[0])]}: ${formatBytes(e[1])}`).join(", ")
 					}
 				]} />
-		</details>
+		</details>;
 	};
 
 export default SubdirsComponent;

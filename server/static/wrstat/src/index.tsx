@@ -54,13 +54,13 @@ auth.then(username => Promise.all([
 			let spaceOK = false, filesOK = false;
 
 			if (d.DateNoSpace === nullDate) {
-				spaceOK = true
+				spaceOK = true;
 			} else {
 				spaceOK = daysUntilQuotaFull(d.DateNoSpace) > 3;
 			}
 
 			if (d.DateNoFiles === nullDate) {
-				filesOK = true
+				filesOK = true;
 			} else {
 				filesOK = daysUntilQuotaFull(d.DateNoFiles) > 3;
 			}

@@ -31,7 +31,7 @@ import type React from "react";
 
 const TreedetailsComponent = ({ details, ...rest }: { details: Child | null } & React.HTMLAttributes<HTMLDivElement>) => {
 	if (!details) {
-		return <></>
+		return <></>;
 	}
 
 	return <div id="details" {...rest}>
@@ -65,7 +65,7 @@ const TreedetailsComponent = ({ details, ...rest }: { details: Child | null } & 
 				</tr>
 			</tbody>
 		</table>
-	</div>
+	</div>;
 };
 
 export default TreedetailsComponent;

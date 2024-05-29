@@ -51,6 +51,6 @@ const Tabs = ({ id, tabs }: { id: string, tabs: TabData[] }) => <ul id={id} clas
 			}
 		}}
 	>{tab.title}</li>)}
-</ul>
+</ul>;
 
 export default Tabs;

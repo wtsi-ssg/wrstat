@@ -32,12 +32,12 @@ import { asTimeAgo, formatBytes, formatNumber, asBasename } from './format';
 
 const TreeTableComponent = ({ details, setTreePath, setChildDetails }: { details: Child | null, setTreePath: (s: string) => void, setChildDetails: (c: Child) => void }) => {
 	if (!details) {
-		return <></>
+		return <></>;
 	}
 
 	if (!details.children) {
 		// TODO: no subdirs message?
-		return <></>
+		return <></>;
 	}
 
 	const stringSort = new Intl.Collator().compare,
@@ -72,7 +72,7 @@ const TreeTableComponent = ({ details, setTreePath, setChildDetails }: { details
 				return {};
 			})}
 		/>
-	)
-}
+	);
+};
 
 export default TreeTableComponent;

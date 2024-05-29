@@ -130,7 +130,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 				{...(col.extra?.(row[col.key], row) ?? {})}
 			> {(col.formatter ?? noopFormatter)(row[col.key], row)}</td>)
 			}
-		</tr >)
+		</tr>);
 	},
 	TableComponent = <T extends Record<string, any>>({
 		table,
@@ -211,7 +211,7 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 						<></>
 				}
 			</table>
-		</>
+		</>;
 	};
 
 export default TableComponent;
