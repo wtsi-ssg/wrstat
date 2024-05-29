@@ -84,7 +84,7 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 			days = `${duration.days}d`;
 		}
 
-		let vals = [years, months, days].filter(Boolean);
+		const vals = [years, months, days].filter(Boolean);
 		let response = vals.join("");
 
 		if (response.length == 0) {

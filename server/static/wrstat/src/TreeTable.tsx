@@ -30,7 +30,7 @@ import Table from "./Table";
 import { asTimeAgo, formatBytes, formatNumber, asBasename } from './format';
 
 
-const TreeTableComponent = ({ details, setTreePath, setChildDetails }: { details: Child | null, setTreePath: Function, setChildDetails: Function }) => {
+const TreeTableComponent = ({ details, setTreePath, setChildDetails }: { details: Child | null, setTreePath: (s: string) => void, setChildDetails: (c: Child) => void }) => {
 	if (!details) {
 		return <></>
 	}

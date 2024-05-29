@@ -138,9 +138,9 @@ const phi = (1 + Math.sqrt(5)) / 2,
 				boxHeight = box.bottom - box.top;
 
 			let total = table[pos].value,
-				split = pos + 1,
-				totalRatio = total / remainingTotal,
-				lastDR = phi - boxWidth * (isRow ? 1 : totalRatio) / (boxHeight * (isRow ? totalRatio : 1)),
+				split = pos + 1;
+			const totalRatio = total / remainingTotal;
+			let lastDR = phi - boxWidth * (isRow ? 1 : totalRatio) / (boxHeight * (isRow ? totalRatio : 1)),
 				d = isRow ? box.left : box.top;
 
 			for (let i = split; i < table.length; i++) {
