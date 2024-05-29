@@ -28,12 +28,12 @@
 import type { GroupUserFilterParams } from './GroupUserFilter';
 import type { Child } from './rpc';
 import type { Entry } from './Treemap';
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import GroupUserFilter from './GroupUserFilter';
 import MultiSelect from './MultiSelect';
 import TreeDetails from "./TreeDetails";
 import Treemap from "./Treemap";
-import Treetable from "./TreeTable"
+import Treetable from "./TreeTable";
 import RPC from "./rpc";
 import { useSavedState } from './state';
 import Tabs from "./Tabs";
@@ -275,7 +275,7 @@ const colours = [
 					</div>
 				</div>
 			</div>
-		</>
+		</>;
 	};
 
 export default DiskTreeComponent;

@@ -52,9 +52,9 @@ type Params<T> = {
 	perPage?: number;
 	filter?: Filter<T>;
 	rowExtra?: (row: T) => Record<string, any>;
-	onRowClick: (row: T) => void;
-	onRowHover: (row: T) => void;
-	onMouseOut: (row: T) => void;
+	onRowClick?: (row: T) => void;
+	onRowHover?: (row: T) => void;
+	onMouseOut?: (row: T) => void;
 	className?: string;
 	id: string;
 	style?: CSSProperties;
@@ -100,13 +100,13 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 
 		return col["reverseFn"] ?? reverseSort(col["sortFn"] ?? noopSort);
 	},
-	makeRows = <T extends Record<string, any>>(rows: T[], cols: Column<T>[], onRowClick: (row: T) => void, onRowHover: (row: T) => void, onMouseOut: (row: T) => void, rowExtra?: (row: T) => Record<string, any>) => {
+	makeRows = <T extends Record<string, any>>(rows: T[], cols: Column<T>[], onRowClick?: (row: T) => void, onRowHover?: (row: T) => void, onMouseOut?: (row: T) => void, rowExtra?: (row: T) => Record<string, any>) => {
 		return rows.map((row, n) => <tr
 			key={`table_row_${n}`}
 			role="button"
 			onKeyPress={e => {
 				if (e.key === "Enter") {
-					onRowClick(row);
+					onRowClick?.(row) ?? {};
 				}
 			}}
 			onClick={e => {
@@ -114,13 +114,13 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 					return;
 				}
 
-				onRowClick(row);
+				onRowClick?.(row) ?? {};
 			}}
 			onMouseOver={() => {
-				onRowHover(row);
+				onRowHover?.(row) ?? {};
 			}}
 			onMouseOut={() => {
-				onMouseOut(row);
+				onMouseOut?.(row) ?? {};
 			} }
 			{...(rowExtra?.(row) ?? {})}
 		>

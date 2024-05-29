@@ -79,7 +79,7 @@ const pathJoin = (base: string, sub: string) => sub === "." ? base : base + "/" 
 		}, [id, path, isUser]);
 
 		if (!subdirs || subdirs.length === 0) {
-			return <></>
+			return <></>;
 		}
 
 		return <details open id="subdirs" style={justDisktree ? { display: "none" } : undefined}>
