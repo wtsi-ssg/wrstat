@@ -104,9 +104,9 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 		return rows.map((row, n) => <tr
 			key={`table_row_${n}`}
 			role="button"
-			onKeyPress={e => {
+			onKeyDown={e => {
 				if (e.key === "Enter") {
-					onRowClick?.(row) ?? {};
+					onRowClick?.(row);
 				}
 			}}
 			onClick={e => {
@@ -114,13 +114,13 @@ const noopFormatter = (a: { toString(): string }) => a + "",
 					return;
 				}
 
-				onRowClick?.(row) ?? {};
+				onRowClick?.(row);
 			}}
 			onMouseOver={() => {
-				onRowHover?.(row) ?? {};
+				onRowHover?.(row);
 			}}
 			onMouseOut={() => {
-				onMouseOut?.(row) ?? {};
+				onMouseOut?.(row);
 			} }
 			{...(rowExtra?.(row) ?? {})}
 		>
