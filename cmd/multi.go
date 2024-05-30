@@ -150,8 +150,8 @@ func init() {
 	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m",
 		basedirRAM, "maximum MBs to reserve for any job")
-	multiCmd.Flags().IntVarP(&multiSplits, "splits", "s", 1, "number of splits")
-	multiCmd.Flags().IntVarP(&multiMinDirs, "mindirs", "d", 2, "minimum number of dirs")
+	multiCmd.Flags().IntVarP(&multiSplits, "splits", "s", defaultSplits, "number of splits")
+	multiCmd.Flags().IntVarP(&multiMinDirs, "mindirs", "d", defaultMinDirs, "minimum number of dirs")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -280,7 +280,8 @@ func combineRepGrp(dir, unique string) string {
 // scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
 // from the combined dgut.dbs folders.
 func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q -s %d -m %d %q %q", s.Executable(), quota, ownersPath, multiSplits, multiMinDirs, outputRoot, finalDir),
+	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q -s %d -m %d %q %q",
+		s.Executable(), quota, ownersPath, multiSplits, multiMinDirs, outputRoot, finalDir),
 		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

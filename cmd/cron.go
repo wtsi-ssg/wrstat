@@ -108,8 +108,8 @@ func init() {
 		"0 17 * * *",
 		"crontab describing when to run, first 5 columns only")
 	cronCmd.Flags().BoolVar(&cronKill, "kill", false, "kill all wrstat processes on the system")
-	cronCmd.Flags().IntVarP(&multiSplits, "splits", "s", 1, "number of splits")
-	cronCmd.Flags().IntVarP(&multiMinDirs, "mindirs", "d", 2, "minimum number of dirs")
+	cronCmd.Flags().IntVarP(&multiSplits, "splits", "s", defaultSplits, "number of splits")
+	cronCmd.Flags().IntVarP(&multiMinDirs, "mindirs", "d", defaultMinDirs, "minimum number of dirs")
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.
