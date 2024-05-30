@@ -72,26 +72,19 @@ export const formatNumber = (n: number) => numberFormatter.format(n),
 			end: new Date(),
 		});
 
-		let [years, months, days] = ["", "", ""];
+		let response = "";
 
 		if (duration.years) {
-			years = `${duration.years}y`;
+			response += `${duration.years}y`;
 		}
 		if (duration.months) {
-			months = `${duration.months}m`;
+			response += `${duration.months}m`;
 		}
 		if (duration.days) {
-			days = `${duration.days}d`;
+			response += `${duration.days}d`;
 		}
 
-		const vals = [years, months, days].filter(Boolean);
-		let response = vals.join("");
-
-		if (response.length == 0) {
-			response = "<1d";
-		}
-
-		return response;
+		return response || "<1d";
 	},
 	approxTimeAgo = (dStr: string | number) => {
 		const secs = Math.round((Date.now() - new Date(dStr).valueOf()) / 1000);
