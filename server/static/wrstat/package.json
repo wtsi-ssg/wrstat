@@ -25,8 +25,7 @@
     "eject": "react-scripts eject",
     "lint": "npx eslint src/"
   },
-  "eslintConfig": {
-  },
+  "eslintConfig": {},
   "browserslist": {
     "production": [
       ">0.2%",
@@ -44,7 +43,7 @@
     "@eslint/compat": "^1.0.1",
     "@eslint/js": "^9.3.0",
     "cross-env": "^7.0.3",
-    "eslint": "^9.3.0",
+    "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.2",
     "globals": "^15.3.0",
     "jest-canvas-mock": "^2.5.2",

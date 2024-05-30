@@ -92,23 +92,18 @@ const colours = [
 		}}>{part}</button>
 	</li>,
 	makeBreadcrumbs = (path: string, setPath: (path: string) => void) => {
-		let last = 0;
+		let last = 0,
+			pos = path.indexOf("/", last + 1);
 
 		const breadcrumbs = [
 			<Breadcrumb key={`breadcrumb_root`} path="/" part="/" setPath={setPath} />
 		];
 
-		while (true) {
-
-			const pos = path.indexOf("/", last + 1);
-
-			if (pos === -1) {
-				break;
-			}
-
+		while (pos !== -1) {
 			breadcrumbs.push(<Breadcrumb key={`breadcrumb_${breadcrumbs.length}`} path={path.slice(0, pos)} part={path.slice(last + 1, pos)} setPath={setPath} />);
 
 			last = pos;
+			pos = path.indexOf("/", last + 1);
 		}
 
 		if (path.length > 1) {
