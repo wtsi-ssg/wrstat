@@ -196,7 +196,9 @@ const paddingXL = 80,
 				<path d={quotaPath} style={{ stroke: "var(--graphQuota)" }} fill="none" />
 				<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Quota)} L${dateToX(projectDate)},${amountToY(latestHistory.Quota)}`} style={{ stroke: "var(--graphQuota)" }} fill="none" strokeWidth="3" strokeDasharray="3" />
 				<path d={usagePath} style={{ stroke: "var(--graphUsage)" }} fill="none" />
-				<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Usage)} L${dateToX(x)},${amountToY(y)}`} style={{ stroke: "var(--graphUsage)" }} fill="none" strokeWidth="3" strokeDasharray="3" />
+				{y !== -Infinity &&
+					<path d={`M${dateToX(latestDate)},${amountToY(latestHistory.Usage)} L${dateToX(x)},${amountToY(y)}`} style={{ stroke: "var(--graphUsage)" }} fill="none" strokeWidth="3" strokeDasharray="3" />
+				}
 				{quotaPoints}
 				{usagePoints}
 				{
