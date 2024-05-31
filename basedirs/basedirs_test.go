@@ -65,6 +65,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 		const (
 			halfGig = 1 << 29
 			twoGig  = 1 << 31
+			splits  = 4
+			minDirs = 4
 		)
 
 		files[0].SizeOfEachFile = halfGig
@@ -86,7 +88,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 		dir := t.TempDir()
 		dbPath := filepath.Join(dir, "basedir.db")
 
-		bd, err := NewCreator(dbPath, tree, quotas)
+		bd, err := NewCreator(dbPath, splits, minDirs, tree, quotas)
 		So(err, ShouldBeNil)
 		So(bd, ShouldNotBeNil)
 
@@ -352,7 +354,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 						mp := bd.mountPoints
 
-						bd, err = NewCreator(dbPath, tree, quotas)
+						bd, err = NewCreator(dbPath, splits, minDirs, tree, quotas)
 						So(err, ShouldBeNil)
 						So(bd, ShouldNotBeNil)
 
@@ -785,7 +787,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 				newDBPath := filepath.Join(dir, "newdir.db")
 
-				newBd, err := NewCreator(newDBPath, newTree, quotas)
+				newBd, err := NewCreator(newDBPath, splits, minDirs, newTree, quotas)
 				So(err, ShouldBeNil)
 				So(bd, ShouldNotBeNil)
 

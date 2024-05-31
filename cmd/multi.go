@@ -54,6 +54,8 @@ var multiCh string
 var forcedQueue string
 var quota string
 var maxMem int
+var multiSplits int
+var multiMinDirs int
 
 // multiCmd represents the multi command.
 var multiCmd = &cobra.Command{
@@ -109,7 +111,8 @@ The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
 The basedirs.* file gets made by calling 'wrstat basedirs' after the 'combine'
-step.
+step. The --splits and --mindirs arguments are passed through to basedir;
+see docs for the basedir command for values to use.
 
 This requires you provide a --quota file, so that the current max quota
 of each group can be recorded. The quota file is a csv of:
@@ -147,6 +150,8 @@ func init() {
 	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m",
 		basedirRAM, "maximum MBs to reserve for any job")
+	multiCmd.Flags().IntVarP(&multiSplits, "splits", "s", defaultSplits, "number of splits")
+	multiCmd.Flags().IntVarP(&multiMinDirs, "mindirs", "d", defaultMinDirs, "minimum number of dirs")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -169,6 +174,14 @@ func checkMultiArgs(args []string) {
 
 	if len(args) == 0 {
 		die("at least 1 directory of interest must be supplied")
+	}
+
+	if multiSplits <= 0 {
+		die("number of splits must be an integer more than 0")
+	}
+
+	if multiMinDirs <= 0 {
+		die("minimum number of dirs must be an integer more than 0")
 	}
 }
 
@@ -267,7 +280,8 @@ func combineRepGrp(dir, unique string) string {
 // scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
 // from the combined dgut.dbs folders.
 func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q %q %q", s.Executable(), quota, ownersPath, outputRoot, finalDir),
+	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q -s %d -m %d %q %q",
+		s.Executable(), quota, ownersPath, multiSplits, multiMinDirs, outputRoot, finalDir),
 		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

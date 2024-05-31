@@ -39,9 +39,7 @@ import (
 )
 
 const (
-	basedirSplits     = 4
-	basedirMinDirs    = 4
-	basedirMinDirsMDT = 5
+	extraMinDirsForMDT = 1
 )
 
 var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
@@ -50,6 +48,8 @@ var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
 // group or user.
 type BaseDirs struct {
 	dbPath      string
+	splits      int
+	minDirs     int
 	tree        *dgut.Tree
 	quotas      *Quotas
 	ch          codec.Handle
@@ -58,7 +58,13 @@ type BaseDirs struct {
 
 // NewCreator returns a BaseDirs that lets you create a database summarising
 // usage information by base directory, taken from the given tree and quotas.
-func NewCreator(dbPath string, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
+//
+// Choose splits and minDirs based on how many directories deep you expect data
+// for different groups/users to appear. Eg. if your file structure is
+// `/mounts/[group name]`, that's 2 directories deep and splits 1, minDirs 2
+// might work well. If it's 5 directories deep, splits 4, minDirs 4 might work
+// well.
+func NewCreator(dbPath string, splits, minDirs int, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
 	mp, err := getMountPoints()
 	if err != nil {
 		return nil, err
@@ -66,6 +72,8 @@ func NewCreator(dbPath string, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, erro
 
 	return &BaseDirs{
 		dbPath:      dbPath,
+		splits:      splits,
+		minDirs:     minDirs,
 		tree:        tree,
 		quotas:      quotas,
 		ch:          new(codec.BincHandle),
@@ -93,7 +101,7 @@ func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
 }
 
 func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirSummary)) error {
-	dcss, err := b.tree.Where("/", filter, basedirSplits)
+	dcss, err := b.tree.Where("/", filter, b.splits)
 	if err != nil {
 		return err
 	}
@@ -103,7 +111,7 @@ func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirS
 	var previous string
 
 	for _, ds := range dcss {
-		if notEnoughDirs(ds.Dir) || childOfPreviousResult(ds.Dir, previous) {
+		if b.notEnoughDirs(ds.Dir) || childOfPreviousResult(ds.Dir, previous) {
 			continue
 		}
 
@@ -118,14 +126,15 @@ func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirS
 	return nil
 }
 
-// notEnoughDirs returns true if the given path has fewer than 4 directories.
-// If path has an mdt directory in it, then it becomes 5 directories.
-func notEnoughDirs(path string) bool {
+// notEnoughDirs returns true if the given path has fewer than minDirs
+// directories. If path has an mdt directory in it, then it becomes an extra
+// directory.
+func (b *BaseDirs) notEnoughDirs(path string) bool {
 	numDirs := strings.Count(path, "/")
 
-	min := basedirMinDirs
+	min := b.minDirs
 	if basedirMDTRegexp.MatchString(path) {
-		min = basedirMinDirsMDT
+		min += extraMinDirsForMDT
 	}
 
 	return numDirs < min
