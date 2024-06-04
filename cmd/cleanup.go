@@ -65,7 +65,7 @@ instead of deleting them.
 		if cleanupPerms {
 			err := matchPerms(cleanupDir)
 			if err != nil {
-				die("could not cleanup dir: %s", err)
+				die("could not correct permissions: %s", err)
 			}
 		} else {
 			err := cleanup(cleanupDir)
