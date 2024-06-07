@@ -28,6 +28,7 @@ package cmd
 import (
 	"io/fs"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -198,7 +199,17 @@ func statPathsInFile(inputPath string, tsvPath string, debug bool) {
 		}
 	}()
 
-	scanAndStatInput(input, createStatOutputFile(inputPath), tsvPath, debug)
+	// Create 'unique' filename for output…
+	output := createStatOutputFile(inputPath + "." + strconv.FormatInt(time.Now().Unix(), 10))
+
+	scanAndStatInput(input, output, tsvPath, debug)
+
+	output.Close()
+
+	// …rename 'unique' filename to correct output path.
+	if err = os.Rename(output.Name(), inputPath+statOutputFileSuffix); err != nil {
+		die("failed to rename output file to correct location: %s", err)
+	}
 }
 
 // createStatOutputFile creates a file named input.stats.
