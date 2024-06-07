@@ -33,7 +33,7 @@ import (
 	"sync"
 )
 
-var gcmu, ucmu sync.RWMutex
+var gcmu, ucmu sync.RWMutex //nolint:gochecknoglobals
 
 type GroupCache map[uint32]string
 
