@@ -30,12 +30,18 @@ package basedirs
 import (
 	"os/user"
 	"strconv"
+	"sync"
 )
+
+var gcmu, ucmu sync.RWMutex
 
 type GroupCache map[uint32]string
 
 func (g GroupCache) GroupName(gid uint32) string {
+	gcmu.RLock()
 	groupName, ok := g[gid]
+	gcmu.RUnlock()
+
 	if ok {
 		return groupName
 	}
@@ -47,7 +53,9 @@ func (g GroupCache) GroupName(gid uint32) string {
 		groupStr = group.Name
 	}
 
+	gcmu.Lock()
 	g[gid] = groupStr
+	gcmu.Unlock()
 
 	return groupStr
 }
@@ -55,7 +63,10 @@ func (g GroupCache) GroupName(gid uint32) string {
 type UserCache map[uint32]string
 
 func (u UserCache) UserName(uid uint32) string {
+	ucmu.RLock()
 	userName, ok := u[uid]
+	ucmu.RUnlock()
+
 	if ok {
 		return userName
 	}
@@ -67,7 +78,9 @@ func (u UserCache) UserName(uid uint32) string {
 		userStr = uu.Username
 	}
 
+	ucmu.Lock()
 	u[uid] = userStr
+	ucmu.Unlock()
 
 	return userStr
 }

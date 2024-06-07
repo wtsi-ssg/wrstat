@@ -5,6 +5,7 @@
 *.so
 *.dylib
 ./wrstat
+wrstat
 
 # Test binary, built with `go test -c`
 *.test
