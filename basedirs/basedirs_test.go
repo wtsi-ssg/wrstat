@@ -33,6 +33,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -910,6 +911,48 @@ func TestOwners(t *testing.T) {
 			2: "Barbara",
 			4: "Dellilah",
 		})
+	})
+}
+
+func TestCaches(t *testing.T) {
+	Convey("Given a GroupCache, accessing it in multiple threads should be safe.", t, func() {
+		var wg sync.WaitGroup
+
+		g := NewGroupCache()
+
+		wg.Add(2)
+
+		go func() {
+			g.GroupName(0)
+			wg.Done()
+		}()
+
+		go func() {
+			g.GroupName(0)
+			wg.Done()
+		}()
+
+		wg.Wait()
+	})
+
+	Convey("Given a UserCache, accessing it in multiple threads should be safe.", t, func() {
+		var wg sync.WaitGroup
+
+		u := NewUserCache()
+
+		wg.Add(2)
+
+		go func() {
+			u.UserName(0)
+			wg.Done()
+		}()
+
+		go func() {
+			u.UserName(0)
+			wg.Done()
+		}()
+
+		wg.Wait()
 	})
 }
 
