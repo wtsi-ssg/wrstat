@@ -63,13 +63,13 @@ const colours = [
 	colourFromAge = (lm: number) => {
 		const diff = now - lm;
 
-		if (diff > 2 * 365 * day) {
+		if (diff > 5 * 365 * day) {
 			return colours[0];
-		} else if (diff > 365 * day) {
+		} else if (diff > 2 * 365 * day) {
 			return colours[1];
-		} else if (diff > 10 * 30 * day) {
+		} else if (diff > 365 * day) {
 			return colours[2];
-		} else if (diff > 8 * 30 * day) {
+		} else if (diff > 9 * 30 * day) {
 			return colours[3];
 		} else if (diff > 6 * 30 * day) {
 			return colours[4];
@@ -130,10 +130,10 @@ const colours = [
 		["> 2 months", 60],
 		["> 3 months", 120],
 		["> 6 months", 180],
-		["> 8 months", 240],
-		["> 10 months", 300],
+		["> 9 months", 270],
 		["> 1 year", 365],
-		["> 2 years", 730]
+		["> 2 years", 730],
+		["> 5 years", 1825],
 	] as const,
 	entrySort = (a: Entry, b: Entry) => b.value - a.value,
 	DiskTreeComponent = ({ treePath, userMap, groupMap, setTreePath, guf }: DiskTreeParams) => {
