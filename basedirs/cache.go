@@ -33,14 +33,21 @@ import (
 	"sync"
 )
 
-var gcmu, ucmu sync.RWMutex //nolint:gochecknoglobals
+type GroupCache struct {
+	mu   sync.RWMutex
+	data map[uint32]string
+}
 
-type GroupCache map[uint32]string
+func NewGroupCache() *GroupCache {
+	return &GroupCache{
+		data: make(map[uint32]string),
+	}
+}
 
-func (g GroupCache) GroupName(gid uint32) string {
-	gcmu.RLock()
-	groupName, ok := g[gid]
-	gcmu.RUnlock()
+func (g *GroupCache) GroupName(gid uint32) string {
+	g.mu.RLock()
+	groupName, ok := g.data[gid]
+	g.mu.RUnlock()
 
 	if ok {
 		return groupName
@@ -53,19 +60,28 @@ func (g GroupCache) GroupName(gid uint32) string {
 		groupStr = group.Name
 	}
 
-	gcmu.Lock()
-	g[gid] = groupStr
-	gcmu.Unlock()
+	g.mu.Lock()
+	g.data[gid] = groupStr
+	g.mu.Unlock()
 
 	return groupStr
 }
 
-type UserCache map[uint32]string
+type UserCache struct {
+	mu   sync.RWMutex
+	data map[uint32]string
+}
 
-func (u UserCache) UserName(uid uint32) string {
-	ucmu.RLock()
-	userName, ok := u[uid]
-	ucmu.RUnlock()
+func NewUserCache() *UserCache {
+	return &UserCache{
+		data: make(map[uint32]string),
+	}
+}
+
+func (u *UserCache) UserName(uid uint32) string {
+	u.mu.RLock()
+	userName, ok := u.data[uid]
+	u.mu.RUnlock()
 
 	if ok {
 		return userName
@@ -78,9 +94,9 @@ func (u UserCache) UserName(uid uint32) string {
 		userStr = uu.Username
 	}
 
-	ucmu.Lock()
-	u[uid] = userStr
-	ucmu.Unlock()
+	u.mu.Lock()
+	u.data[uid] = userStr
+	u.mu.Unlock()
 
 	return userStr
 }

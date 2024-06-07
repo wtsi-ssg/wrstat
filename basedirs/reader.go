@@ -36,18 +36,20 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const secondsInDay = time.Hour * 24
-const threeDays = 3 * secondsInDay
-const quotaStatusOK = "OK"
-const quotaStatusNotOK = "Not OK"
+const (
+	secondsInDay     = time.Hour * 24
+	threeDays        = 3 * secondsInDay
+	quotaStatusOK    = "OK"
+	quotaStatusNotOK = "Not OK"
+)
 
 // BaseDirReader is used to read the information stored in a BaseDir database.
 type BaseDirReader struct {
 	db          *bolt.DB
 	ch          codec.Handle
 	mountPoints mountPoints
-	groupCache  GroupCache
-	userCache   UserCache
+	groupCache  *GroupCache
+	userCache   *UserCache
 	owners      map[uint32]string
 }
 
@@ -76,8 +78,8 @@ func NewReader(dbPath, ownersPath string) (*BaseDirReader, error) {
 		db:          db,
 		ch:          new(codec.BincHandle),
 		mountPoints: mp,
-		groupCache:  make(GroupCache),
-		userCache:   make(UserCache),
+		groupCache:  NewGroupCache(),
+		userCache:   NewUserCache(),
 		owners:      owners,
 	}, nil
 }
