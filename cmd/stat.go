@@ -211,14 +211,19 @@ func createStatOutputFile(input string) *os.File {
 // appended with suffix.
 func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
 	fname := prefixPath + suffix
-	hostname, _ := os.Hostname()
+	hostname, err := os.Hostname()
+	if err != nil {
+		die("failed to get hostname: %s", err)
+	}
 
 	output, err := os.Create(fmt.Sprintf("%s%s.%s.%d", prefixPath, suffix, hostname, os.Getpid()))
 	if err != nil {
 		die("failed to create output file: %s", err)
 	}
 
-	os.Symlink(fname, output.Name())
+	if err = os.Symlink(fname, output.Name()); err != nil {
+		die("failed to create symlink: %s", err)
+	}
 
 	return output
 }
