@@ -222,7 +222,7 @@ func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
 		die("failed to create output file: %s", err)
 	}
 
-	if err = os.Symlink(fname, output.Name()); err != nil {
+	if err = os.Symlink(output.Name(), fname); err != nil {
 		die("failed to create symlink: %s", err)
 	}
 
