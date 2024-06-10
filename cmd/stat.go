@@ -211,6 +211,7 @@ func createStatOutputFile(input string) *os.File {
 // appended with suffix.
 func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
 	fname := prefixPath + suffix
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		die("failed to get hostname: %s", err)
