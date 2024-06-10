@@ -26,9 +26,9 @@
 package cmd
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -199,17 +199,7 @@ func statPathsInFile(inputPath string, tsvPath string, debug bool) {
 		}
 	}()
 
-	// Create 'unique' filename for output…
-	output := createStatOutputFile(inputPath + "." + strconv.FormatInt(time.Now().Unix(), 10))
-
-	scanAndStatInput(input, output, tsvPath, debug)
-
-	output.Close()
-
-	// …rename 'unique' filename to correct output path.
-	if err = os.Rename(output.Name(), inputPath+statOutputFileSuffix); err != nil {
-		die("failed to rename output file to correct location: %s", err)
-	}
+	scanAndStatInput(input, createStatOutputFile(inputPath), tsvPath, debug)
 }
 
 // createStatOutputFile creates a file named input.stats.
@@ -220,10 +210,15 @@ func createStatOutputFile(input string) *os.File {
 // createOutputFileWithSuffix creates an output file named after prefixPath
 // appended with suffix.
 func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
-	output, err := os.Create(prefixPath + suffix)
+	fname := prefixPath + suffix
+	hostname, _ := os.Hostname()
+
+	output, err := os.Create(fmt.Sprintf("%s%s.%s.%d", prefixPath, suffix, hostname, os.Getpid()))
 	if err != nil {
 		die("failed to create output file: %s", err)
 	}
+
+	os.Symlink(fname, output.Name())
 
 	return output
 }
