@@ -217,10 +217,12 @@ func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
 		die("failed to get hostname: %s", err)
 	}
 
-	output, err := os.Create(fmt.Sprintf("%s%s.%s.%d", prefixPath, suffix, hostname, os.Getpid()))
+	output, err := os.Create(fmt.Sprintf("%s.%s.%d", fname, hostname, os.Getpid()))
 	if err != nil {
 		die("failed to create output file: %s", err)
 	}
+
+	os.Remove(fname)
 
 	if err = os.Symlink(output.Name(), fname); err != nil {
 		die("failed to create symlink: %s", err)
