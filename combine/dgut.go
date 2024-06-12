@@ -18,8 +18,6 @@ func DgutFiles(inputs []string, outputDir string) (err error) {
 		return err
 	}
 
-	db := dgut.NewDB(outputDir)
-	reader, writer := io.Pipe()
 	errCh := make(chan error, 1)
 
 	defer func() {
@@ -32,30 +30,39 @@ func DgutFiles(inputs []string, outputDir string) (err error) {
 		}
 	}()
 
-	go func() {
-		errs := db.Store(reader, dgutStoreBatchSize)
+	return processDgutFiles(outputDir, sortMergeOutput, cleanup, errCh)
+}
 
-		if errs != nil {
-			reader.Close()
-		}
+func processDgutFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup func() error, errCh chan error) error {
+	db := dgut.NewDB(outputDir)
+	reader, writer := io.Pipe()
 
-		errCh <- errs
-	}()
+	go dgutStore(db, reader, errCh)
 
-	if err = MergeSummaryLines(sortMergeOutput, dgutSumCols,
+	if err := MergeSummaryLines(sortMergeOutput, dgutSumCols,
 		numSummaryColumnsDGUT, sumCountAndSizeAndKeepOldestAtime, writer); err != nil {
 
 		return err
 	}
 
-	if err = writer.Close(); err != nil {
+	if err := writer.Close(); err != nil {
 		return err
 	}
 
-	err = <-errCh
+	err := <-errCh
 	if err != nil {
 		return err
 	}
 
 	return cleanup()
+}
+
+func dgutStore(db *dgut.DB, reader io.ReadCloser, errCh chan error) {
+	errs := db.Store(reader, dgutStoreBatchSize)
+
+	if errs != nil {
+		reader.Close()
+	}
+
+	errCh <- errs
 }
