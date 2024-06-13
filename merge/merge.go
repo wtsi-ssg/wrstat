@@ -58,7 +58,7 @@ var (
 
 // MergeDBs merges the wrstat databases in the source and dest directories. The second
 // value it returns is a 0 if no errors, a 1 if theres an error, and 2 if a warning.
-func mergeDB(sourceDir, destDir, dgutDBsSuffix, basedirBasename, dgutDBsSentinelBasename string, mergeDelete bool) (error, int) {
+func MergeDB(sourceDir, destDir, dgutDBsSuffix, basedirBasename, dgutDBsSentinelBasename string, mergeDelete bool) (error, int) {
 	sourceDGUTDir, destDGUTDir, err := wait.ForMatchingPrefixOfLatestSuffix(
 		dgutDBsSuffix, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
 	if err != nil {

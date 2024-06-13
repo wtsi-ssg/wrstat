@@ -78,12 +78,12 @@ var mergedbsCmd = &cobra.Command{
 		}
 
 		sourceDir, destDir := args[0], args[1]
-		err, code := merge.mergeDB(sourceDir, destDir, dgutDBsSuffix, basedirBasename, dgutDBsSentinelBasename, mergeDelete)
+		err, code := merge.MergeDB(sourceDir, destDir, dgutDBsSuffix, basedirBasename, dgutDBsSentinelBasename, mergeDelete)
 		switch code {
 		case 1:
-			die(err)
+			die("%s", err)
 		case 2:
-			warn(err)
+			warn("%s", err)
 		default:
 			info("Merge successful")
 		}
