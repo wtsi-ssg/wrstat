@@ -26,14 +26,10 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v4/basedirs"
-	"github.com/wtsi-ssg/wrstat/v4/neaten"
-	"github.com/wtsi-ssg/wrstat/v4/wait"
+	"github.com/wtsi-ssg/wrstat/v4/merge"
 )
 
 const (
@@ -82,53 +78,14 @@ var mergedbsCmd = &cobra.Command{
 		}
 
 		sourceDir, destDir := args[0], args[1]
-
-		sourceDGUTDir, destDGUTDir, err := wait.ForMatchingPrefixOfLatestSuffix(
-			dgutDBsSuffix, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
-		if err != nil {
-			die("wait for matching dgut.db outputs failed: %s", err)
-		}
-
-		err = neaten.MergeDGUTDBDirectories(sourceDGUTDir, destDGUTDir)
-		if err != nil {
-			die("merge of dgut.db directories failed: %s", err)
-		}
-
-		sourceBasedir, destBasedir, err := wait.ForMatchingPrefixOfLatestSuffix(
-			basedirBasename, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
-		if err != nil {
-			die("wait for matching basedirs outputs failed: %s", err)
-		}
-
-		outputDBPath := destBasedir + ".merging"
-
-		err = basedirs.MergeDBs(sourceBasedir, destBasedir, outputDBPath)
-		if err != nil {
-			die("merge of basedir.dbs failed: %s", err)
-		}
-
-		sentinal := filepath.Join(destDir, dgutDBsSentinelBasename)
-
-		err = wait.UntilFileIsOld(sentinal, reloadGrace)
-		if err != nil {
-			die("waiting for the dgutdbs sentintal file failed: %s", err)
-		}
-
-		err = os.Rename(outputDBPath, destBasedir)
-		if err != nil {
-			die("failed to move the merged basedirs.db file back over original: %s", err)
-		}
-
-		err = neaten.Touch(sentinal)
-		if err != nil {
-			die("failed to touch the dgutdbs sentinal file: %s", err)
-		}
-
-		if mergeDelete {
-			err = neaten.DeleteAllPrefixedDirEntries(sourceDir, filepath.Base(sourceBasedir)[:mergeDatePrefixLength])
-			if err != nil {
-				warn("failed to delete source files: %s", err)
-			}
+		err, code := merge.mergeDB(sourceDir, destDir, dgutDBsSuffix, basedirBasename, dgutDBsSentinelBasename, mergeDelete)
+		switch code {
+		case 1:
+			die(err)
+		case 2:
+			warn(err)
+		default:
+			info("Merge successful")
 		}
 	},
 }
