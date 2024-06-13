@@ -415,7 +415,7 @@ func (t *Tidy) getOldestMtimeOfWalkFiles(dir, statLogOutputFileSuffix string) (t
 	return oldestT, nil
 }
 
-// Touch modifies path's a and mtime to the current time.
+// Touch modifies a given path's atime and mtime to the current time.
 func Touch(path string) error {
 	now := time.Now().Local()
 

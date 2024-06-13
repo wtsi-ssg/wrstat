@@ -26,6 +26,7 @@
 package cmd
 
 import (
+	"errors"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -78,14 +79,15 @@ var mergedbsCmd = &cobra.Command{
 		}
 
 		sourceDir, destDir := args[0], args[1]
-		err, code := merge.MergeDB(sourceDir, destDir, dgutDBsSuffix, basedirBasename, dgutDBsSentinelBasename, mergeDelete)
-		switch code {
-		case 1:
-			die("%s", err)
-		case 2:
-			warn("%s", err)
-		default:
-			info("Merge successful")
+
+		err := merge.MergeDB(sourceDir, destDir, mergeDelete)
+		if err != nil {
+			var warning merge.Warning
+			if errors.As(err, &warning) {
+				warn("%s", err)
+			} else {
+				die("%s", err)
+			}
 		}
 	},
 }
