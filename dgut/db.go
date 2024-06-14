@@ -206,10 +206,10 @@ func NewDB(paths ...string) *DB {
 // batchSize is how many directories worth of information are written to the
 // database in one go. More is faster, but uses more memory. 10,000 might be a
 // good number to try.
-func (d *DB) Store(data io.Reader, batchSize int) error {
+func (d *DB) Store(data io.Reader, batchSize int) (err error) {
 	d.batchSize = batchSize
 
-	err := d.createDB()
+	err = d.createDB()
 	if err != nil {
 		return err
 	}

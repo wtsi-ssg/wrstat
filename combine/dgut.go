@@ -12,39 +12,57 @@ const numSummaryColumnsDGUT = 4
 
 // DgutFiles merges the pre-sorted dgut files, summing consecutive lines with
 // the same first 4 columns, and outputs the results to an embedded database.
-func DgutFiles(inputs []string, outputDir string) error {
+func DgutFiles(inputs []string, outputDir string) (err error) {
 	sortMergeOutput, cleanup, err := MergeSortedFiles(inputs)
 	if err != nil {
 		return err
 	}
 
-	db := dgut.NewDB(outputDir)
-	reader, writer := io.Pipe()
 	errCh := make(chan error, 1)
 
-	go func() {
-		errs := db.Store(reader, dgutStoreBatchSize)
-
-		if errs != nil {
-			reader.Close()
+	defer func() {
+		select {
+		case e := <-errCh:
+			if e != nil {
+				err = e
+			}
+		default:
 		}
-
-		errCh <- errs
 	}()
 
-	if err = MergeSummaryLines(sortMergeOutput, dgutSumCols,
+	return processDgutFiles(outputDir, sortMergeOutput, cleanup, errCh)
+}
+
+func processDgutFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup func() error, errCh chan error) error {
+	db := dgut.NewDB(outputDir)
+	reader, writer := io.Pipe()
+
+	go dgutStore(db, reader, errCh)
+
+	if err := MergeSummaryLines(sortMergeOutput, dgutSumCols,
 		numSummaryColumnsDGUT, sumCountAndSizeAndKeepOldestAtime, writer); err != nil {
+
 		return err
 	}
 
-	if err = writer.Close(); err != nil {
+	if err := writer.Close(); err != nil {
 		return err
 	}
 
-	err = <-errCh
+	err := <-errCh
 	if err != nil {
 		return err
 	}
 
 	return cleanup()
+}
+
+func dgutStore(db *dgut.DB, reader io.ReadCloser, errCh chan error) {
+	errs := db.Store(reader, dgutStoreBatchSize)
+
+	if errs != nil {
+		reader.Close()
+	}
+
+	errCh <- errs
 }
