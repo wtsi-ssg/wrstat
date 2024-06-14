@@ -30,12 +30,25 @@ package basedirs
 import (
 	"os/user"
 	"strconv"
+	"sync"
 )
 
-type GroupCache map[uint32]string
+type GroupCache struct {
+	mu   sync.RWMutex
+	data map[uint32]string
+}
 
-func (g GroupCache) GroupName(gid uint32) string {
-	groupName, ok := g[gid]
+func NewGroupCache() *GroupCache {
+	return &GroupCache{
+		data: make(map[uint32]string),
+	}
+}
+
+func (g *GroupCache) GroupName(gid uint32) string {
+	g.mu.RLock()
+	groupName, ok := g.data[gid]
+	g.mu.RUnlock()
+
 	if ok {
 		return groupName
 	}
@@ -47,15 +60,29 @@ func (g GroupCache) GroupName(gid uint32) string {
 		groupStr = group.Name
 	}
 
-	g[gid] = groupStr
+	g.mu.Lock()
+	g.data[gid] = groupStr
+	g.mu.Unlock()
 
 	return groupStr
 }
 
-type UserCache map[uint32]string
+type UserCache struct {
+	mu   sync.RWMutex
+	data map[uint32]string
+}
 
-func (u UserCache) UserName(uid uint32) string {
-	userName, ok := u[uid]
+func NewUserCache() *UserCache {
+	return &UserCache{
+		data: make(map[uint32]string),
+	}
+}
+
+func (u *UserCache) UserName(uid uint32) string {
+	u.mu.RLock()
+	userName, ok := u.data[uid]
+	u.mu.RUnlock()
+
 	if ok {
 		return userName
 	}
@@ -67,7 +94,9 @@ func (u UserCache) UserName(uid uint32) string {
 		userStr = uu.Username
 	}
 
-	u[uid] = userStr
+	u.mu.Lock()
+	u.data[uid] = userStr
+	u.mu.Unlock()
 
 	return userStr
 }
