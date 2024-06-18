@@ -113,7 +113,11 @@ func (s *Server) reloadDGUTDBs(dir, suffix string, mtime time.Time) {
 		s.tree.Close()
 	}
 
-	oldPaths := s.dgutPaths
+	oldPaths := make(map[string]struct{}, len(s.dgutPaths))
+
+	for _, p := range s.dgutPaths {
+		oldPaths[p] = struct{}{}
+	}
 
 	err := s.findNewDgutPaths(dir, suffix)
 	if err != nil {
@@ -133,7 +137,17 @@ func (s *Server) reloadDGUTDBs(dir, suffix string, mtime time.Time) {
 
 	s.Logger.Printf("server ready again after reloading dgut dbs")
 
-	s.deleteDirs(oldPaths)
+	for _, p := range s.dgutPaths {
+		delete(oldPaths, p)
+	}
+
+	op := make([]string, 0, len(oldPaths))
+
+	for p := range oldPaths {
+		op = append(op, p)
+	}
+
+	s.deleteDirs(op)
 
 	s.dataTimeStamp = mtime
 }
