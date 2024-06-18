@@ -50,7 +50,7 @@ func (e Error) Error() string { return string(e) }
 const (
 	defaultWhereSplits             = 2
 	defaultSize                    = "50M"
-	hoursePerDay                   = 24
+	hoursPerDay                    = 24
 	jwtBasename                    = ".wrstat.jwt"
 	errBadGroupArea                = Error("unknown group area")
 	privatePerms       os.FileMode = 0600
@@ -176,7 +176,7 @@ with refreshes possible up to 5 days after expiry.
 			die("bad --size: %s", err)
 		}
 
-		minAtime := time.Now().Add(-(time.Duration(whereAge*hoursePerDay) * time.Hour))
+		minAtime := time.Now().Add(-(time.Duration(whereAge*hoursPerDay) * time.Hour))
 
 		err = where(c, whereQueryDir, whereGroups, whereSupergroup, whereUsers, whereTypes,
 			fmt.Sprintf("%d", whereSplits), whereOrder, minSizeBytes, minAtime, whereJSON)
@@ -208,7 +208,7 @@ func init() { //nolint:funlen
 	whereCmd.Flags().StringVar(&whereSize, "size", defaultSize,
 		"minimum size (specify the unit) of files nested under a directory for it to be reported on")
 	whereCmd.Flags().IntVar(&whereAge, "age", 0,
-		"minimum age (in days) of the oldest file nested under a directory for it to be reported on")
+		"do not report on directories that contain a file whose access time is longer ago than the time specified (in days)")
 	whereCmd.Flags().StringVarP(&whereCert, "cert", "c", "",
 		"path to the server's certificate to force trust in it")
 	whereCmd.Flags().StringVarP(&whereOrder, "order", "o", "size",
@@ -420,7 +420,7 @@ func columns(ds *server.DirSummary) []string {
 
 // timeToDaysAgo returns the given time converted to number of days ago.
 func timeToDaysAgo(t time.Time) int {
-	return int(time.Since(t).Hours() / hoursePerDay)
+	return int(time.Since(t).Hours() / hoursPerDay)
 }
 
 // printSkipped prints the given number of results were skipped.
