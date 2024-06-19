@@ -48,6 +48,7 @@ const (
 var outputDir string
 var depGroup string
 var walkInodesPerJob int
+var walkNumOfJobs int
 var walkID string
 var walkCh string
 
@@ -69,7 +70,8 @@ option to this command.
 For each entry recursively within the directory of interest, their paths are
 quickly retrieved (without doing any expensive stat calls) and written to output
 files in the given output directory. The number of files is such that they will
-each contain about --inodes_per_stat entries.
+each contain about --inodes_per_stat entries (or if --num_stats was supplied
+greater than zero, then there will be that number of output files).
 
 For each output file, a 'wrstat stat' job is then added to wr's queue with the
 given dependency group. For the meaning of the --ch option which is passed
@@ -95,7 +97,7 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 
 		logToFile(filepath.Join(outputDir, walkLogOutputBasename))
 
-		walkDirAndScheduleStats(desiredDir, outputDir, walkInodesPerJob, depGroup, walkID, walkCh, s)
+		walkDirAndScheduleStats(desiredDir, outputDir, walkNumOfJobs, walkInodesPerJob, depGroup, walkID, walkCh, s)
 	},
 }
 
@@ -105,6 +107,8 @@ func init() {
 	// flags specific to this sub-command
 	walkCmd.Flags().IntVarP(&walkInodesPerJob, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes each parallel stat job will run on")
+	walkCmd.Flags().IntVarP(&walkNumOfJobs, "num_stat_jobs", "j",
+		0, "force a specific number of parallel stat jobs (ignore -n if above 0)")
 	walkCmd.Flags().StringVarP(&outputDir, "output_directory", "o", "", "base directory for output files")
 	walkCmd.Flags().StringVarP(&walkID,
 		"id", "i", "",
@@ -141,9 +145,12 @@ func statRepGrp(dir, unique string) string {
 }
 
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, inodes int, depGroup, repGroup,
+func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int, depGroup, repGroup,
 	yamlPath string, s *scheduler.Scheduler) {
-	n := calculateSplitBasedOnInodes(inodes, desiredDir)
+	n := statJobs
+	if n == 0 {
+		n = calculateSplitBasedOnInodes(inodes, desiredDir)
+	}
 
 	files, err := walk.NewFiles(outputDir, n)
 	if err != nil {

@@ -50,6 +50,7 @@ const (
 var workDir string
 var finalDir string
 var multiInodes int
+var multiStatJobs int
 var multiCh string
 var forcedQueue string
 var quota string
@@ -144,6 +145,8 @@ func init() {
 	multiCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
+	multiCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
+		0, "force a specific number of parallel stat jobs (ignore -n if above 0)")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
@@ -198,7 +201,7 @@ func doMultiScheduling(args []string) error {
 		return err
 	}
 
-	scheduleWalkJobs(outputRoot, args, unique, multiInodes, multiCh, forcedQueue, s)
+	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
 	scheduleBasedirsJob(outputRoot, unique, s)
 	scheduleTidyJob(outputRoot, finalDir, unique, s)
 
@@ -209,11 +212,11 @@ func doMultiScheduling(args []string) error {
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	n int, yamlPath, queue string, s *scheduler.Scheduler) {
+	numStatJobs, inodesPerStat int, yamlPath, queue string, s *scheduler.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
-	cmd := buildWalkCommand(s, n, yamlPath, queue)
+	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue)
 
 	reqWalk, reqCombine := reqs()
 
@@ -235,8 +238,15 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 
 // buildWalkCommand builds a wrstat walk command line based on the given n,
 // yaml path, queue, and if sudo is in effect.
-func buildWalkCommand(s *scheduler.Scheduler, n int, yamlPath, queue string) string {
-	cmd := fmt.Sprintf("%s walk -n %d ", s.Executable(), n)
+func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int, yamlPath, queue string) string {
+	cmd := fmt.Sprintf("%s walk ", s.Executable())
+
+	if numStatJobs > 0 {
+		cmd += fmt.Sprintf("-j %d ", numStatJobs)
+	} else {
+		cmd += fmt.Sprintf("-n %d ", inodesPerStat)
+	}
+
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
 	}
