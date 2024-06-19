@@ -179,9 +179,9 @@ button {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 84'%3E%3Ccircle r='38' cx='42' cy='42' fill='none' stroke='%23000' stroke-width='6' /%3E%3Cpath d='M27,33 v-2 a1,1 0,0,1 30,0 c0,10 -15,10 -15,20 v7' stroke='%23000' fill='none' stroke-width='10' /%3E%3Crect x='37' y='60' width='10' height='10' fill='%23000' stroke-width='2' /%3E%3C/svg%3E%0A");
   background-size: contain;
   background-repeat: no-repeat;
-  width: 1.25em;
-  height: 1.25em;
-  margin-left: 1em;
+  width: calc(1em - 2px);
+  height: calc(1em - 2px);
+  margin-left: 0.25em;
   cursor: help;
   position: relative;
 }
@@ -195,7 +195,7 @@ button {
   border-radius: 8px;
   background-color: var(--subtleBG);
   position: absolute;
-  top: 1.25em;
+  top: calc(1em - 2px);
   left: 50%;
   transform: translateX(-50%);
   width: 20em;

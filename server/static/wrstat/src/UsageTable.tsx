@@ -100,7 +100,7 @@ const stringSort = new Intl.Collator().compare,
 							titleHTML: <>
 								Base Directory
 								<input type="search" id="search" onChange={e => setBaseDirFilter(e.target.value)} placeholder="Filter…" value={baseDirFilter} onClick={e => e.stopPropagation()} style={{ marginLeft: "1em", float: "left" }} />
-								<div className="question" data-help={"A base directory is a directory where all a group/user's data lies nested within, per major area on each mounted volume (lustre scratch disk or nfs area).\n\nYou will see deep subdirectories if all the data for a group/user is only found in that deep subdirectory.\n\nYou will see shorter paths if a group/user owns any files that are in that higher level directory."} onClick={e => e.stopPropagation()} style={{ marginRight: "1em", float: "right" }} />
+								<div className="question" data-help={"A base directory is a directory where all a group/user's data lies nested within, per major area on each mounted volume (lustre scratch disk or nfs area).\n\nYou will see deep subdirectories if all the data for a group/user is only found in that deep subdirectory.\n\nYou will see shorter paths if a group/user owns any files that are in that higher level directory."} onClick={e => e.stopPropagation()} />
 							</>,
 							key: "BaseDir",
 							extra: (path, row) => ({
