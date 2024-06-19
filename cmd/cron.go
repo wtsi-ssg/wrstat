@@ -98,6 +98,8 @@ func init() {
 	cronCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
 	cronCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
+	cronCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
+		0, "force a specific number of parallel stat jobs (ignore -n if above 0)")
 	cronCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	cronCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	cronCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
