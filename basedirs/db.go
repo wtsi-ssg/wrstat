@@ -116,6 +116,12 @@ func openDB(dbPath string) (*bolt.DB, error) {
 	})
 }
 
+func openRODB(dbPath string) (*bolt.DB, error) {
+	return bolt.Open(dbPath, dbOpenMode, &bolt.Options{
+		ReadOnly: true,
+	})
+}
+
 func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) func(*bolt.Tx) error { //nolint:gocognit
 	return func(tx *bolt.Tx) error {
 		if err := clearUsageBuckets(tx); err != nil {
@@ -573,11 +579,8 @@ func (b *BaseDirs) history(bucket *bolt.Bucket, gid uint32, path string) ([]Hist
 
 // MergeDBs merges the basedirs.db database at the given A and B paths and
 // creates a new database file at outputPath.
-func MergeDBs(pathA, pathB, outputPath string) error { //nolint:funlen
-	var (
-		err           error
-		dbA, dbB, dbC *bolt.DB
-	)
+func MergeDBs(pathA, pathB, outputPath string) (err error) { //nolint:funlen
+	var dbA, dbB, dbC *bolt.DB
 
 	closeDB := func(db *bolt.DB) {
 		errc := db.Close()
@@ -586,14 +589,14 @@ func MergeDBs(pathA, pathB, outputPath string) error { //nolint:funlen
 		}
 	}
 
-	dbA, err = openDB(pathA)
+	dbA, err = openRODB(pathA)
 	if err != nil {
 		return err
 	}
 
 	defer closeDB(dbA)
 
-	dbB, err = openDB(pathB)
+	dbB, err = openRODB(pathB)
 	if err != nil {
 		return err
 	}

@@ -845,9 +845,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				err = MergeDBs(dbPath, newDBPath, outputDBPath)
 				So(err, ShouldBeNil)
 
-				db, err := bolt.Open(outputDBPath, dbOpenMode, &bolt.Options{
-					ReadOnly: true,
-				})
+				db, err := openRODB(outputDBPath)
 
 				So(err, ShouldBeNil)
 				defer db.Close()
