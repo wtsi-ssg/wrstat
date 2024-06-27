@@ -70,3 +70,19 @@ func DirEntryModTime(de os.DirEntry) time.Time {
 
 	return info.ModTime()
 }
+
+// ModTime returns the ModTime for the given path, treating errors as time 0.
+func ModTime(path string) time.Time {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return time.Time{}
+	}
+
+	return fi.ModTime()
+}
+
+// Touch updates the modtime and access time of the specified path to the
+// specified time.
+func Touch(path string, t time.Time) {
+	os.Chtimes(path, t, t)
+}
