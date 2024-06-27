@@ -57,19 +57,21 @@ const (
 )
 
 // options for this cmd.
-var whereQueryDir string
-var whereSplits int
-var whereGroups string
-var whereUsers string
-var whereTypes string
-var whereSize string
-var whereAge int
-var whereShowSupergroups bool
-var whereSupergroup string
-var whereCert string
-var whereJSON bool
-var whereOrder string
-var whereShowUG bool
+var (
+	whereQueryDir        string
+	whereSplits          int
+	whereGroups          string
+	whereUsers           string
+	whereTypes           string
+	whereSize            string
+	whereAge             int
+	whereShowSupergroups bool
+	whereSupergroup      string
+	whereCert            string
+	whereJSON            bool
+	whereOrder           string
+	whereShowUG          bool
+)
 
 // whereCmd represents the where command.
 var whereCmd = &cobra.Command{
@@ -208,7 +210,7 @@ func init() { //nolint:funlen
 	whereCmd.Flags().StringVar(&whereSize, "size", defaultSize,
 		"minimum size (specify the unit) of files nested under a directory for it to be reported on")
 	whereCmd.Flags().IntVar(&whereAge, "age", 0,
-		"do not report on directories that contain a file whose access time is longer ago than the time specified (in days)")
+		"do not report on directories that contain a file whose access time falls within the last x days")
 	whereCmd.Flags().StringVarP(&whereCert, "cert", "c", "",
 		"path to the server's certificate to force trust in it")
 	whereCmd.Flags().StringVarP(&whereOrder, "order", "o", "size",
@@ -271,7 +273,8 @@ func getSupergroups(c *gas.ClientCLI) (map[string][]string, error) {
 // where does the main job of querying the server to answer where the data is on
 // disk.
 func where(c *gas.ClientCLI, dir, groups, supergroup, users, types, splits, order string,
-	minSizeBytes uint64, minAtime time.Time, json bool) error {
+	minSizeBytes uint64, minAtime time.Time, json bool,
+) error {
 	var err error
 
 	if groups, err = mergeGroupsWithAreaGroups(c, groups, supergroup); err != nil {
