@@ -250,7 +250,7 @@ func TestDGUT(t *testing.T) {
 						err = db.Open()
 						So(err, ShouldBeNil)
 
-						c, s, a, m, u, g, t, errd := db.DirInfo("/", nil)
+						c, s, a, m, u, g, t, _, errd := db.DirInfo("/", nil)
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 14+numDirectories)
 						So(s, ShouldEqual, 85+numDirectories*directorySize)
@@ -260,7 +260,7 @@ func TestDGUT(t *testing.T) {
 						So(g, ShouldResemble, expectedGIDs)
 						So(t, ShouldResemble, expectedFTs)
 
-						c, s, a, m, u, g, t, errd = db.DirInfo("/a/c/d", nil)
+						c, s, a, m, u, g, t, _, errd = db.DirInfo("/a/c/d", nil)
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 6)
 						So(s, ShouldEqual, 5+directorySize)
@@ -270,7 +270,7 @@ func TestDGUT(t *testing.T) {
 						So(g, ShouldResemble, []uint32{2})
 						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir})
 
-						c, s, a, m, u, g, t, errd = db.DirInfo("/a/b/d/g", nil)
+						c, s, a, m, u, g, t, _, errd = db.DirInfo("/a/b/d/g", nil)
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 7)
 						So(s, ShouldEqual, 60+directorySize)
@@ -280,11 +280,11 @@ func TestDGUT(t *testing.T) {
 						So(g, ShouldResemble, []uint32{1})
 						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir})
 
-						_, _, _, _, _, _, _, errd = db.DirInfo("/foo", nil)
+						_, _, _, _, _, _, _, _, errd = db.DirInfo("/foo", nil)
 						So(errd, ShouldNotBeNil)
 						So(errd, ShouldEqual, ErrDirNotFound)
 
-						c, s, a, m, u, g, t, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}})
+						c, s, a, m, u, g, t, _, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}})
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 9+8)
 						So(s, ShouldEqual, 80+8*directorySize)
@@ -294,7 +294,7 @@ func TestDGUT(t *testing.T) {
 						So(g, ShouldResemble, []uint32{1})
 						So(t, ShouldResemble, expectedFTs)
 
-						c, s, a, m, u, g, t, errd = db.DirInfo("/", &Filter{UIDs: []uint32{102}})
+						c, s, a, m, u, g, t, _, errd = db.DirInfo("/", &Filter{UIDs: []uint32{102}})
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 9+2)
 						So(s, ShouldEqual, 45+2*directorySize)
@@ -304,7 +304,7 @@ func TestDGUT(t *testing.T) {
 						So(g, ShouldResemble, expectedGIDs)
 						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir})
 
-						c, s, a, m, u, g, t, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
+						c, s, a, m, u, g, t, _, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 4)
 						So(s, ShouldEqual, 40)
@@ -314,7 +314,7 @@ func TestDGUT(t *testing.T) {
 						So(g, ShouldResemble, []uint32{1})
 						So(t, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram})
 
-						c, s, a, m, u, g, t, errd = db.DirInfo("/", &Filter{
+						c, s, a, m, u, g, t, _, errd = db.DirInfo("/", &Filter{
 							GIDs: []uint32{1},
 							UIDs: []uint32{102},
 							FTs:  []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
@@ -327,7 +327,7 @@ func TestDGUT(t *testing.T) {
 						So(g, ShouldResemble, []uint32{})
 						So(t, ShouldResemble, []summary.DirGUTFileType{})
 
-						c, s, a, m, u, g, t, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
+						c, s, a, m, u, g, t, _, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
 						So(errd, ShouldBeNil)
 						So(c, ShouldEqual, 1+1)
 						So(s, ShouldEqual, 5+directorySize)
@@ -399,7 +399,7 @@ func TestDGUT(t *testing.T) {
 							err = db.Open()
 							So(err, ShouldBeNil)
 
-							c, s, a, m, u, g, t, errd := db.DirInfo("/", nil)
+							c, s, a, m, u, g, t, _, errd := db.DirInfo("/", nil)
 							So(errd, ShouldBeNil)
 							So(c, ShouldEqual, 16+numDirectories)
 							So(s, ShouldEqual, 87+numDirectories*directorySize)
@@ -614,7 +614,7 @@ func testMakeDBPaths(t *testing.T) []string {
 
 	dir := t.TempDir()
 
-	set := newDBSet(dir)
+	set, _ := newDBSet(dir)
 	paths := set.paths()
 
 	return append([]string{dir}, paths...)

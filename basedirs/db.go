@@ -84,7 +84,7 @@ type Usage struct {
 //
 // Provide a time that will be used as the date when appending to the historical
 // data.
-func (b *BaseDirs) CreateDatabase(historyDate time.Time) error {
+func (b *BaseDirs) CreateDatabase() error {
 	db, err := openDB(b.dbPath)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func (b *BaseDirs) CreateDatabase(historyDate time.Time) error {
 		return err
 	}
 
-	err = db.Update(b.updateDatabase(historyDate, gids, uids))
+	err = db.Update(b.updateDatabase(gids, uids))
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func openRODB(dbPath string) (*bolt.DB, error) {
 	})
 }
 
-func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) func(*bolt.Tx) error { //nolint:gocognit
+func (b *BaseDirs) updateDatabase(gids, uids []uint32) func(*bolt.Tx) error { //nolint:gocognit
 	return func(tx *bolt.Tx) error {
 		if err := clearUsageBuckets(tx); err != nil {
 			return err
@@ -141,7 +141,7 @@ func (b *BaseDirs) updateDatabase(historyDate time.Time, gids, uids []uint32) fu
 			return errc
 		}
 
-		if errc := b.updateHistories(tx, historyDate, gidBase); errc != nil {
+		if errc := b.updateHistories(tx, gidBase); errc != nil {
 			return errc
 		}
 
@@ -261,14 +261,13 @@ func (b *BaseDirs) storeUIDBaseDirs(tx *bolt.Tx, uids []uint32) error {
 	return nil
 }
 
-func (b *BaseDirs) updateHistories(tx *bolt.Tx, historyDate time.Time,
-	gidBase map[uint32]dgut.DCSs) error {
+func (b *BaseDirs) updateHistories(tx *bolt.Tx, gidBase map[uint32]dgut.DCSs) error {
 	ghb := tx.Bucket([]byte(groupHistoricalBucket))
 
 	gidMounts := b.gidsToMountpoints(gidBase)
 
 	for gid, mounts := range gidMounts {
-		if err := b.updateGroupHistories(ghb, gid, mounts, historyDate); err != nil {
+		if err := b.updateGroupHistories(ghb, gid, mounts); err != nil {
 			return err
 		}
 	}
@@ -292,6 +291,10 @@ func (b *BaseDirs) gidsToMountpoints(gidBase map[uint32]dgut.DCSs) gidMountsMap 
 				ds.Count += dcs.Count
 				ds.Size += dcs.Size
 
+				if dcs.Modtime.After(ds.Modtime) {
+					ds.Modtime = dcs.Modtime
+				}
+
 				mounts[mp] = ds
 			}
 		}
@@ -303,7 +306,7 @@ func (b *BaseDirs) gidsToMountpoints(gidBase map[uint32]dgut.DCSs) gidMountsMap 
 }
 
 func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,
-	mounts map[string]dgut.DirSummary, historyDate time.Time) error {
+	mounts map[string]dgut.DirSummary) error {
 	for mount, ds := range mounts {
 		quotaSize, quotaInode := b.quotas.Get(gid, mount)
 
@@ -311,7 +314,7 @@ func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,
 
 		existing := ghb.Get(key)
 
-		histories, err := b.updateHistory(ds, quotaSize, quotaInode, historyDate, existing)
+		histories, err := b.updateHistory(ds, quotaSize, quotaInode, ds.Modtime, existing)
 		if err != nil {
 			return err
 		}
@@ -331,6 +334,10 @@ func (b *BaseDirs) updateHistory(ds dgut.DirSummary, quotaSize, quotaInode uint6
 	if existing != nil {
 		if err := b.decodeFromBytes(existing, &histories); err != nil {
 			return nil, err
+		}
+
+		if len(histories) > 0 && !historyDate.After(histories[len(histories)-1].Date) {
+			return existing, nil
 		}
 	}
 

@@ -31,6 +31,7 @@ import (
 	"path/filepath"
 	"sort"
 	"syscall"
+	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/ugorji/go/codec"
@@ -55,14 +56,21 @@ type dbSet struct {
 	dir      string
 	dguts    *bolt.DB
 	children *bolt.DB
+	modtime  time.Time
 }
 
 // newDBSet creates a new newDBSet that knows where its database files are
 // located or should be created.
-func newDBSet(dir string) *dbSet {
-	return &dbSet{
-		dir: dir,
+func newDBSet(dir string) (*dbSet, error) {
+	fi, err := os.Lstat(dir)
+	if err != nil {
+		return nil, err
 	}
+
+	return &dbSet{
+		dir:     dir,
+		modtime: fi.ModTime(),
+	}, nil
 }
 
 // Create creates new database files in our directory. Returns an error if those
@@ -236,9 +244,12 @@ func (d *DB) Store(data io.Reader, batchSize int) (err error) {
 
 // createDB creates a new database set, but only if it doesn't already exist.
 func (d *DB) createDB() error {
-	set := newDBSet(d.paths[0])
+	set, err := newDBSet(d.paths[0])
+	if err != nil {
+		return err
+	}
 
-	err := set.Create()
+	err = set.Create()
 	if err != nil {
 		return err
 	}
@@ -418,13 +429,16 @@ func (d *DB) Open() error {
 	readSets := make([]*dbSet, len(d.paths))
 
 	for i, path := range d.paths {
-		readSet := newDBSet(path)
+		readSet, err := newDBSet(path)
+		if err != nil {
+			return err
+		}
 
 		if !readSet.pathsExist(readSet.paths()) {
 			return ErrDBNotExists
 		}
 
-		err := readSet.Open()
+		err = readSet.Open()
 		if err != nil {
 			return err
 		}
@@ -459,14 +473,21 @@ func (d *DB) Close() {
 //
 // You must call Open() before calling this.
 func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, int64, int64,
-	[]uint32, []uint32, []summary.DirGUTFileType, error) {
-	var notFound int
+	[]uint32, []uint32, []summary.DirGUTFileType, time.Time, error) {
+	var (
+		notFound    int
+		lastUpdated time.Time
+	)
 
 	dgut := &DGUT{}
 
 	for _, readSet := range d.readSets {
 		if err := readSet.dguts.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(gutBucket))
+
+			if readSet.modtime.After(lastUpdated) {
+				lastUpdated = readSet.modtime
+			}
 
 			return getDGUTFromDBAndAppend(b, dir, d.ch, dgut)
 		}); err != nil {
@@ -475,12 +496,12 @@ func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, int64, int64,
 	}
 
 	if notFound == len(d.readSets) {
-		return 0, 0, 0, 0, nil, nil, nil, ErrDirNotFound
+		return 0, 0, 0, 0, nil, nil, nil, lastUpdated, ErrDirNotFound
 	}
 
 	c, s, a, m, u, g, t := dgut.Summary(filter)
 
-	return c, s, a, m, u, g, t, nil
+	return c, s, a, m, u, g, t, lastUpdated, nil
 }
 
 // getDGUTFromDBAndAppend calls getDGUTFromDB() and appends the result
