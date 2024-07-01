@@ -81,9 +81,6 @@ type Usage struct {
 
 // CreateDatabase creates a database containing usage information for each of
 // our groups and users by calculated base directory.
-//
-// Provide a time that will be used as the date when appending to the historical
-// data.
 func (b *BaseDirs) CreateDatabase() error {
 	db, err := openDB(b.dbPath)
 	if err != nil {
