@@ -419,7 +419,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						So(err, ShouldBeNil)
 
 						// Add new…
-						fs.Touch(treePath, time.Now())
+						err = fs.Touch(treePath, time.Now())
+						So(err, ShouldBeNil)
 
 						tree, err = dgut.NewTree(treePath)
 						So(err, ShouldBeNil)

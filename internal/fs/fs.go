@@ -83,6 +83,6 @@ func ModTime(path string) time.Time {
 
 // Touch updates the modtime and access time of the specified path to the
 // specified time.
-func Touch(path string, t time.Time) {
-	os.Chtimes(path, t, t)
+func Touch(path string, t time.Time) error {
+	return os.Chtimes(path, t, t)
 }
