@@ -136,7 +136,9 @@ func CreateDGUTDBFromFakeFiles(t *testing.T, files []internaldata.TestFile,
 	}
 
 	if len(modtime) == 1 {
-		fs.Touch(dbPath, modtime[0])
+		if err = fs.Touch(dbPath, modtime[0]); err != nil {
+			return nil, "", err
+		}
 	}
 
 	tree, err := dgut.NewTree(dbPath)
