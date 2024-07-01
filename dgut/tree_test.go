@@ -40,7 +40,9 @@ func TestTree(t *testing.T) {
 	expectedFTsBam := []summary.DirGUTFileType{summary.DGUTFileTypeBam}
 
 	Convey("You can make a Tree from a dgut database", t, func() {
-		paths := testMakeDBPaths(t)
+		paths, err := testMakeDBPaths(t)
+		So(err, ShouldBeNil)
+
 		tree, errc := NewTree(paths[0])
 		So(errc, ShouldNotBeNil)
 		So(tree, ShouldBeNil)
@@ -217,17 +219,21 @@ func TestTree(t *testing.T) {
 	})
 
 	Convey("You can make a Tree from multiple dgut databases and query it", t, func() {
-		paths1 := testMakeDBPaths(t)
+		paths1, err := testMakeDBPaths(t)
+		So(err, ShouldBeNil)
+
 		db := NewDB(paths1[0])
 		data := strings.NewReader("/\t1\t11\t6\t1\t1\t20\t20\n" +
 			"/a\t1\t11\t6\t1\t1\t20\t20\n" +
 			"/a/b\t1\t11\t6\t1\t1\t20\t20\n" +
 			"/a/b/c\t1\t11\t6\t1\t1\t20\t20\n" +
 			"/a/b/c/d\t1\t11\t6\t1\t1\t20\t20\n")
-		err := db.Store(data, 20)
+		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 
-		paths2 := testMakeDBPaths(t)
+		paths2, err := testMakeDBPaths(t)
+		So(err, ShouldBeNil)
+
 		db = NewDB(paths2[0])
 		data = strings.NewReader("/\t1\t11\t6\t1\t1\t15\t15\n" +
 			"/a\t1\t11\t6\t1\t1\t15\t15\n" +
