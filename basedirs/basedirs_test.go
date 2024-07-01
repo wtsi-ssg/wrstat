@@ -42,6 +42,7 @@ import (
 	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
+	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 	bolt "go.etcd.io/bbolt"
 )
@@ -73,7 +74,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 		files[0].SizeOfEachFile = halfGig
 		files[1].SizeOfEachFile = twoGig
 
-		tree, err := internaldb.CreateDGUTDBFromFakeFiles(t, files)
+		yesterday := fixtimes.FixTime(time.Now().Add(-24 * time.Hour))
+		tree, treePath, err := internaldb.CreateDGUTDBFromFakeFiles(t, files, yesterday)
 		So(err, ShouldBeNil)
 
 		projectA := locDirs[0]
@@ -88,6 +90,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 		dir := t.TempDir()
 		dbPath := filepath.Join(dir, "basedir.db")
+
+		dbModTime := fs.ModTime(treePath)
 
 		bd, err := NewCreator(dbPath, splits, minDirs, tree, quotas)
 		So(err, ShouldBeNil)
@@ -109,14 +113,15 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				So(err, ShouldBeNil)
 				So(dcss, ShouldResemble, dgut.DCSs{
 					{
-						Dir:   projectA,
-						Count: 2,
-						Size:  halfGig + twoGig,
-						Atime: expectedAtime,
-						Mtime: expectedMtimeA,
-						GIDs:  []uint32{1},
-						UIDs:  []uint32{101},
-						FTs:   expectedFTsBam,
+						Dir:     projectA,
+						Count:   2,
+						Size:    halfGig + twoGig,
+						Atime:   expectedAtime,
+						Mtime:   expectedMtimeA,
+						GIDs:    []uint32{1},
+						UIDs:    []uint32{101},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
 					},
 				})
 
@@ -124,34 +129,37 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				So(err, ShouldBeNil)
 				So(dcss, ShouldResemble, dgut.DCSs{
 					{
-						Dir:   projectC1,
-						Count: 1,
-						Size:  40,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{2},
-						UIDs:  []uint32{88888},
-						FTs:   expectedFTsBam,
+						Dir:     projectC1,
+						Count:   1,
+						Size:    40,
+						Atime:   expectedAtime,
+						Mtime:   expectedMtime,
+						GIDs:    []uint32{2},
+						UIDs:    []uint32{88888},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
 					},
 					{
-						Dir:   projectB123,
-						Count: 1,
-						Size:  30,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{2},
-						UIDs:  []uint32{102},
-						FTs:   expectedFTsBam,
+						Dir:     projectB123,
+						Count:   1,
+						Size:    30,
+						Atime:   expectedAtime,
+						Mtime:   expectedMtime,
+						GIDs:    []uint32{2},
+						UIDs:    []uint32{102},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
 					},
 					{
-						Dir:   projectB125,
-						Count: 1,
-						Size:  20,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{2},
-						UIDs:  []uint32{102},
-						FTs:   expectedFTsBam,
+						Dir:     projectB125,
+						Count:   1,
+						Size:    20,
+						Atime:   expectedAtime,
+						Mtime:   expectedMtime,
+						GIDs:    []uint32{2},
+						UIDs:    []uint32{102},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
 					},
 				})
 			})
@@ -161,14 +169,15 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				So(err, ShouldBeNil)
 				So(dcss, ShouldResemble, dgut.DCSs{
 					{
-						Dir:   projectA,
-						Count: 2,
-						Size:  halfGig + twoGig,
-						Atime: expectedAtime,
-						Mtime: expectedMtimeA,
-						GIDs:  []uint32{1},
-						UIDs:  []uint32{101},
-						FTs:   expectedFTsBam,
+						Dir:     projectA,
+						Count:   2,
+						Size:    halfGig + twoGig,
+						Atime:   expectedAtime,
+						Mtime:   expectedMtimeA,
+						GIDs:    []uint32{1},
+						UIDs:    []uint32{101},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
 					},
 				})
 
@@ -176,42 +185,44 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				So(err, ShouldBeNil)
 				So(dcss, ShouldResemble, dgut.DCSs{
 					{
-						Dir:   projectB123,
-						Count: 1,
-						Size:  30,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{2},
-						UIDs:  []uint32{102},
-						FTs:   expectedFTsBam,
+						Dir:     projectB123,
+						Count:   1,
+						Size:    30,
+						Atime:   expectedAtime,
+						Mtime:   expectedMtime,
+						GIDs:    []uint32{2},
+						UIDs:    []uint32{102},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
 					},
 					{
-						Dir:   projectB125,
-						Count: 1,
-						Size:  20,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{2},
-						UIDs:  []uint32{102},
-						FTs:   expectedFTsBam,
+						Dir:     projectB125,
+						Count:   1,
+						Size:    20,
+						Atime:   expectedAtime,
+						Mtime:   expectedMtime,
+						GIDs:    []uint32{2},
+						UIDs:    []uint32{102},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
 					},
 					{
-						Dir:   user2,
-						Count: 1,
-						Size:  60,
-						Atime: expectedAtime,
-						Mtime: expectedMtime,
-						GIDs:  []uint32{77777},
-						UIDs:  []uint32{102},
-						FTs:   expectedFTsBam,
+						Dir:     user2,
+						Count:   1,
+						Size:    60,
+						Atime:   expectedAtime,
+						Mtime:   expectedMtime,
+						GIDs:    []uint32{77777},
+						UIDs:    []uint32{102},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
 					},
 				})
 			})
 		})
 
 		Convey("With which you can store group and user summary info in a database", func() {
-			yesterday := fixtimes.FixTime(time.Now().Add(-24 * time.Hour))
-			err := bd.CreateDatabase(yesterday)
+			err := bd.CreateDatabase()
 			So(err, ShouldBeNil)
 
 			_, err = os.Stat(dbPath)
@@ -366,6 +377,74 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					err = bdr.Close()
 					So(err, ShouldBeNil)
 
+					Convey("then adding the same database twice doesn't duplicate history.", func() {
+						// Add existing…
+						bd, err = NewCreator(dbPath, splits, minDirs, tree, quotas)
+						So(err, ShouldBeNil)
+						So(bd, ShouldNotBeNil)
+
+						err = bd.CreateDatabase()
+						So(err, ShouldBeNil)
+
+						bdr, err = NewReader(dbPath, ownersPath)
+						So(err, ShouldBeNil)
+
+						history, err = bdr.History(1, projectA)
+						fixHistoryTimes(history)
+						So(err, ShouldBeNil)
+
+						So(len(history), ShouldEqual, 1)
+
+						err = bdr.Close()
+						So(err, ShouldBeNil)
+
+						// Add existing again…
+						bd, err = NewCreator(dbPath, splits, minDirs, tree, quotas)
+						So(err, ShouldBeNil)
+						So(bd, ShouldNotBeNil)
+
+						err = bd.CreateDatabase()
+						So(err, ShouldBeNil)
+
+						bdr, err = NewReader(dbPath, ownersPath)
+						So(err, ShouldBeNil)
+
+						history, err = bdr.History(1, projectA)
+						fixHistoryTimes(history)
+						So(err, ShouldBeNil)
+
+						So(len(history), ShouldEqual, 1)
+
+						err = bdr.Close()
+						So(err, ShouldBeNil)
+
+						// Add new…
+						err = fs.Touch(treePath, time.Now())
+						So(err, ShouldBeNil)
+
+						tree, err = dgut.NewTree(treePath)
+						So(err, ShouldBeNil)
+
+						bd, err = NewCreator(dbPath, splits, minDirs, tree, quotas)
+						So(err, ShouldBeNil)
+						So(bd, ShouldNotBeNil)
+
+						err = bd.CreateDatabase()
+						So(err, ShouldBeNil)
+
+						bdr, err = NewReader(dbPath, ownersPath)
+						So(err, ShouldBeNil)
+
+						history, err = bdr.History(1, projectA)
+						fixHistoryTimes(history)
+						So(err, ShouldBeNil)
+
+						So(len(history), ShouldEqual, 2)
+
+						err = bdr.Close()
+						So(err, ShouldBeNil)
+					})
+
 					Convey("Then you can add and retrieve a new day's usage and quota", func() {
 						_, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
 						files[0].NumFiles = 2
@@ -373,7 +452,8 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						files[1].SizeOfEachFile = twoGig
 
 						files = files[:len(files)-1]
-						tree, err = internaldb.CreateDGUTDBFromFakeFiles(t, files)
+						today := fixtimes.FixTime(time.Now())
+						tree, _, err = internaldb.CreateDGUTDBFromFakeFiles(t, files, today)
 						So(err, ShouldBeNil)
 
 						const fiveGig = 5 * (1 << 30)
@@ -389,8 +469,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 						bd.mountPoints = mp
 
-						today := fixtimes.FixTime(time.Now())
-						err := bd.CreateDatabase(today)
+						err := bd.CreateDatabase()
 						So(err, ShouldBeNil)
 
 						bdr, err = NewReader(dbPath, ownersPath)
@@ -823,7 +902,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					newFiles[i].Path = "/nfs" + newFiles[i].Path[7:]
 				}
 
-				newTree, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles)
+				newTree, _, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles, yesterday)
 				So(err, ShouldBeNil)
 
 				newDBPath := filepath.Join(dir, "newdir.db")
@@ -837,7 +916,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 					"/nfs/scratch125/",
 				}
 
-				err = newBd.CreateDatabase(yesterday)
+				err = newBd.CreateDatabase()
 				So(err, ShouldBeNil)
 
 				outputDBPath := filepath.Join(dir, "merged.db")
@@ -845,9 +924,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				err = MergeDBs(dbPath, newDBPath, outputDBPath)
 				So(err, ShouldBeNil)
 
-				db, err := bolt.Open(outputDBPath, dbOpenMode, &bolt.Options{
-					ReadOnly: true,
-				})
+				db, err := openRODB(outputDBPath)
 
 				So(err, ShouldBeNil)
 				defer db.Close()

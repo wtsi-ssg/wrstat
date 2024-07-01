@@ -362,7 +362,7 @@ func (t *Tidy) touchDBUpdatedFile(dgutDBsSentinelBasename string) error {
 
 	_, err = os.Stat(sentinel)
 	if os.IsNotExist(err) {
-		if err = createFile(sentinel); err != nil {
+		if err = CreateFile(sentinel); err != nil {
 			return err
 		}
 	}
@@ -374,16 +374,14 @@ func (t *Tidy) touchDBUpdatedFile(dgutDBsSentinelBasename string) error {
 	return CorrectPerms(sentinel, t.destDirInfo)
 }
 
-// createFile creates a file in the given path.
-func createFile(path string) error {
+// CreateFile creates a file in the given path.
+func CreateFile(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 
-	file.Close()
-
-	return nil
+	return file.Close()
 }
 
 // changeAMFileTime updates the a&m time of the given path to the given time.
