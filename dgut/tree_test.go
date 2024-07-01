@@ -250,7 +250,6 @@ func TestTree(t *testing.T) {
 		expectedAtime := time.Unix(15, 0)
 		expectedMtime := time.Unix(20, 0)
 
-		//mtime1 := fs.ModTime(paths1[0])
 		mtime2 := fs.ModTime(paths2[0])
 
 		dcss, err := tree.Where("/", nil, 0)
