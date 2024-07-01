@@ -213,7 +213,9 @@ func TestDGUT(t *testing.T) {
 		})
 
 		Convey("And database file paths", func() {
-			paths := testMakeDBPaths(t)
+			paths, err := testMakeDBPaths(t)
+			So(err, ShouldBeNil)
+
 			db := NewDB(paths[0])
 			So(db, ShouldNotBeNil)
 
@@ -490,7 +492,9 @@ func TestDGUT(t *testing.T) {
 			err = db.Open()
 			So(err, ShouldNotBeNil)
 
-			paths := testMakeDBPaths(t)
+			paths, err := testMakeDBPaths(t)
+			So(err, ShouldBeNil)
+
 			db = NewDB(paths[0])
 
 			err = os.WriteFile(paths[2], []byte("foo"), 0600)
@@ -609,15 +613,19 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 // testMakeDBPaths creates a temp dir that will be cleaned up automatically, and
 // returns the paths to the directory and dgut and children database files
 // inside that would be created. The files aren't actually created.
-func testMakeDBPaths(t *testing.T) []string {
+func testMakeDBPaths(t *testing.T) ([]string, error) {
 	t.Helper()
 
 	dir := t.TempDir()
 
-	set, _ := newDBSet(dir)
+	set, err := newDBSet(dir)
+	if err != nil {
+		return nil, err
+	}
+
 	paths := set.paths()
 
-	return append([]string{dir}, paths...)
+	return append([]string{dir}, paths...), nil
 }
 
 // testGetDBKeys returns all the keys in the db at the given path.
