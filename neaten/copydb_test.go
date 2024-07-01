@@ -91,7 +91,7 @@ func makeFakeDgutDB(t *testing.T, dir string, subFolderNum int) {
 	}
 
 	for _, basename := range []string{"dgut.db", "dgut.db.children"} {
-		err = createFile(filepath.Join(subDir, basename))
+		err = CreateFile(filepath.Join(subDir, basename))
 		if err != nil {
 			t.Fatalf("failed to make subdir: %s", err)
 		}

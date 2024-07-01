@@ -38,17 +38,22 @@ import (
 )
 
 const (
-	walkTime    = 19 * time.Hour
-	walkRAM     = 16000
-	combineTime = 40 * time.Minute
-	combineRAM  = 800
-	basedirTime = 15 * time.Minute
-	basedirRAM  = 42000
+	walkTime     = 19 * time.Hour
+	walkRAM      = 16000
+	combineTime  = 40 * time.Minute
+	combineRAM   = 800
+	mergedbsTime = 15 * time.Minute
+	mergedbsRAM  = 42000
+	basedirTime  = 15 * time.Minute
+	basedirRAM   = 42000
 )
 
 // options for this cmd.
 var workDir string
 var finalDir string
+var customDirMerge string
+var customDirClean bool
+var createCustom bool
 var multiInodes int
 var multiStatJobs int
 var multiCh string
@@ -85,6 +90,11 @@ unique directory created for all of them.
 --rep_grp of wrstat-[cmd]-[directory_basename]-[date]-[unique], so you can use
 'wr status -i wrstat -z -o s' to get information on how long everything or
 particular subsets of jobs took.)
+
+A partial walk->stat->combine run can be performed with the --create_custom_dir
+flag. These files can be used with the --custom_dir_merge flag to combine this
+partial run with a full run. The --custom_dir_clean can be used to provide the
+--delete flag to the 'mergedb' subcommand.
 
 Once everything has completed, the final output files are moved to the given
 --final_output directory by 'wrstat tidy', with a name that includes the date
@@ -143,6 +153,9 @@ func init() {
 	// flags specific to this sub-command
 	multiCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	multiCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
+	multiCmd.Flags().StringVarP(&customDirMerge, "custom_dir_merge", "c", "", "merge results from specified directory")
+	multiCmd.Flags().BoolVarP(&customDirClean, "custom_dir_clean", "r", false, "remove old results from specified directory after merging")
+	multiCmd.Flags().BoolVarP(&createCustom, "create_custom_dir", "p", false, "perform the walk, stat, and combine steps only")
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
@@ -201,9 +214,16 @@ func doMultiScheduling(args []string) error {
 		return err
 	}
 
+	if customDirMerge != "" {
+		scheduleStaticCopy(outputRoot, unique, customDirMerge, customDirClean, s)
+	}
+
 	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
-	scheduleBasedirsJob(outputRoot, unique, s)
-	scheduleTidyJob(outputRoot, finalDir, unique, s)
+
+	if !createCustom {
+		scheduleBasedirsJob(outputRoot, unique, s)
+		scheduleTidyJob(outputRoot, finalDir, unique, s)
+	}
 
 	return nil
 }
@@ -293,6 +313,28 @@ func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q -s %d -m %d %q %q",
 		s.Executable(), quota, ownersPath, multiSplits, multiMinDirs, outputRoot, finalDir),
 		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
+
+	addJobsToQueue(s, []*jobqueue.Job{job})
+}
+
+func copyReqs() *jqs.Requirements {
+	req := scheduler.DefaultRequirements()
+	req.Time = mergedbsTime
+	req.RAM = min(mergedbsRAM, maxMem)
+
+	return req
+}
+
+func scheduleStaticCopy(outputRoot, unique, customDirMerge string, customDirClean bool, s *scheduler.Scheduler) {
+	var remove string
+
+	if customDirClean {
+		remove = "--remove"
+	}
+
+	job := s.NewJob(fmt.Sprintf("%s mergedbs %s %q %q",
+		s.Executable(), remove, customDirMerge, outputRoot),
+		repGrp("mergedirs", customDirMerge, unique), "wrstat-merge", unique+".merge", unique, copyReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
