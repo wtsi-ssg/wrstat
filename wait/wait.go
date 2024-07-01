@@ -113,7 +113,7 @@ func UntilFileIsOld(path string, age time.Duration) error {
 			break
 		}
 
-		<-time.After(wait)
+		time.Sleep(wait)
 	}
 
 	return nil

@@ -294,7 +294,7 @@ func createTestPath(dirs []string, basename ...string) string {
 	So(err, ShouldBeNil)
 
 	if len(basename) == 1 {
-		err = createFile(filepath.Join(wholeDir, basename[0]))
+		err = CreateFile(filepath.Join(wholeDir, basename[0]))
 		So(err, ShouldBeNil)
 	}
 
@@ -354,7 +354,7 @@ func TestTouch(t *testing.T) {
 		tdir := t.TempDir()
 		path := filepath.Join(tdir, "file")
 
-		err := createFile(path)
+		err := CreateFile(path)
 		So(err, ShouldBeNil)
 
 		before := time.Now().Add(-10 * time.Second)
@@ -381,7 +381,7 @@ func TestDeleteAllPrefixedFiles(t *testing.T) {
 		tdir := t.TempDir()
 		for _, name := range []string{"aaa", "aab", "baa"} {
 			path := filepath.Join(tdir, name)
-			err := createFile(path)
+			err := CreateFile(path)
 			So(err, ShouldBeNil)
 		}
 
