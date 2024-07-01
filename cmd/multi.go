@@ -154,8 +154,10 @@ func init() {
 	multiCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	multiCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
 	multiCmd.Flags().StringVarP(&customDirMerge, "custom_dir_merge", "c", "", "merge results from specified directory")
-	multiCmd.Flags().BoolVarP(&customDirClean, "custom_dir_clean", "r", false, "remove old results from specified directory after merging")
-	multiCmd.Flags().BoolVarP(&createCustom, "create_custom_dir", "p", false, "perform the walk, stat, and combine steps only")
+	multiCmd.Flags().BoolVarP(&customDirClean, "custom_dir_clean", "r", false, "remove old results "+
+		"from specified directory after merging")
+	multiCmd.Flags().BoolVarP(&createCustom, "create_custom_dir", "p", false, "perform the walk, "+
+		"stat, and combine steps only")
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
