@@ -353,6 +353,8 @@ func TestRulesWithRealData(t *testing.T) {
 
 		tc.add("some/other/prefix", u.Username, g.Name)
 
+		tc.Builder.WriteString("/non/existent	^	^	*********	*********\n")
+
 		cr := tc.asTSVReader()
 		So(cr, ShouldNotBeNil)
 
@@ -377,6 +379,9 @@ func TestRulesWithRealData(t *testing.T) {
 				So(rule.changeUser, ShouldBeTrue)
 				So(rule.gid, ShouldEqual, gid)
 				So(rule.changeGroup, ShouldBeTrue)
+
+				rule = rs.Get("/non/existent/file.txt")
+				So(rule, ShouldBeNil)
 			})
 		})
 	})

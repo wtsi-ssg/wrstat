@@ -283,13 +283,13 @@ func (r *RulesStore) FromTSV(tsvReader *TSVReader) (*RulesStore, error) {
 		rule.uid, rule.changeUser, err = determineOwnership(cols[0], cols[1],
 			r.dirToUserOwnerFunc, r.userToUIDFunc)
 		if err != nil {
-			return r, err
+			continue
 		}
 
 		rule.gid, rule.changeGroup, err = determineOwnership(cols[0], cols[2],
 			r.dirToGroupOwnerFunc, r.groupToGIDFunc)
 		if err != nil {
-			return r, err
+			continue
 		}
 
 		rule.filePerms = parseTSVPerms(cols[3])
