@@ -47,8 +47,8 @@ directory of a full 'wrstat multi' run.
 Provide the output working directory of the minimal '-p' run and the unique
 working directory of the full multi run.
 
- Provide the --delete option to delete all previous runs within the minimal
- working directory, leaving the latest.`,
+Provide the --delete option to delete all previous runs within the minimal
+working directory, leaving the latest.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != mergeArgs {
 			die("exactly 2 output directories from 'wrstat multi' must be supplied")
