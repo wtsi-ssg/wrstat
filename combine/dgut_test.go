@@ -60,7 +60,7 @@ func TestDGUTFiles(t *testing.T) {
 				err = db.Open()
 				So(err, ShouldBeNil)
 
-				numFiles, fileSize, aTime, mTime, users, groups, fileType, err := db.DirInfo("/", nil)
+				numFiles, fileSize, aTime, mTime, users, groups, fileType, _, err := db.DirInfo("/", nil)
 				So(err, ShouldBeNil)
 				So(numFiles, ShouldEqual, 3)
 				So(fileSize, ShouldEqual, 25)

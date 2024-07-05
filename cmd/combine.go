@@ -32,6 +32,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/v4/combine"
 	"github.com/wtsi-ssg/wrstat/v4/fs"
+	"github.com/wtsi-ssg/wrstat/v4/merge"
+	"github.com/wtsi-ssg/wrstat/v4/neaten"
 )
 
 const combineStatsOutputFileBasename = "combine.stats.gz"
@@ -106,6 +108,10 @@ you supplied 'wrstat walk'.`,
 		}()
 
 		wg.Wait()
+
+		if err := neaten.CreateFile(filepath.Join(sourceDir, merge.SentinelComplete)); err != nil {
+			die("could not create sentinel completion file: %s", err)
+		}
 	},
 }
 

@@ -54,14 +54,15 @@ func NewTree(paths ...string) (*Tree, error) {
 // directory. It also holds which users and groups own files nested under the
 // directory, and what the file types are.
 type DirSummary struct {
-	Dir   string
-	Count uint64
-	Size  uint64
-	Atime time.Time
-	Mtime time.Time
-	UIDs  []uint32
-	GIDs  []uint32
-	FTs   []summary.DirGUTFileType
+	Dir     string
+	Count   uint64
+	Size    uint64
+	Atime   time.Time
+	Mtime   time.Time
+	UIDs    []uint32
+	GIDs    []uint32
+	FTs     []summary.DirGUTFileType
+	Modtime time.Time
 }
 
 // DCSs is a Size-sortable slice of DirSummary.
@@ -143,20 +144,21 @@ func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 // info for a given directory and filter, along with the UIDs and GIDs that own
 // those files, the file types of those files.
 func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
-	c, s, a, m, u, g, fts, err := t.db.DirInfo(dir, filter)
+	c, s, a, m, u, g, fts, lastUpdated, err := t.db.DirInfo(dir, filter)
 	if err != nil {
 		return nil, err
 	}
 
 	return &DirSummary{
-		Dir:   dir,
-		Count: c,
-		Size:  s,
-		Atime: time.Unix(a, 0),
-		Mtime: time.Unix(m, 0),
-		UIDs:  u,
-		GIDs:  g,
-		FTs:   fts,
+		Dir:     dir,
+		Count:   c,
+		Size:    s,
+		Atime:   time.Unix(a, 0),
+		Mtime:   time.Unix(m, 0),
+		UIDs:    u,
+		GIDs:    g,
+		FTs:     fts,
+		Modtime: lastUpdated,
 	}, nil
 }
 

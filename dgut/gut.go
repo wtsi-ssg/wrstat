@@ -27,6 +27,7 @@ package dgut
 
 import (
 	"sort"
+	"time"
 
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 	"golang.org/x/exp/constraints"
@@ -34,13 +35,14 @@ import (
 
 // GUT handles group,user,type,count,size information.
 type GUT struct {
-	GID   uint32
-	UID   uint32
-	FT    summary.DirGUTFileType
-	Count uint64
-	Size  uint64
-	Atime int64 // seconds since Unix epoch
-	Mtime int64 // seconds since Unix epoch
+	GID        uint32
+	UID        uint32
+	FT         summary.DirGUTFileType
+	Count      uint64
+	Size       uint64
+	Atime      int64 // seconds since Unix epoch
+	Mtime      int64 // seconds since Unix epoch
+	updateTime time.Time
 }
 
 // Filter can be applied to a GUT to see if it has one of the specified GIDs,
@@ -160,6 +162,8 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, int64, []uint32, [
 
 	var atime, mtime int64
 
+	var updateTime time.Time
+
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
 	uniqueFTs := make(map[summary.DirGUTFileType]bool)
@@ -175,7 +179,7 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, int64, []uint32, [
 			continue
 		}
 
-		addGUTToSummary(gut, &count, &size, &atime, &mtime, uniqueUIDs, uniqueGIDs)
+		addGUTToSummary(gut, &count, &size, &atime, &mtime, &updateTime, uniqueUIDs, uniqueGIDs)
 	}
 
 	return count, size, atime, mtime,
@@ -186,7 +190,7 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, int64, []uint32, [
 
 // addGUTToSummary alters the incoming arg summary values based on the gut.
 func addGUTToSummary(gut *GUT, count, size *uint64, atime *int64, mtime *int64,
-	uniqueUIDs, uniqueGIDs map[uint32]bool) {
+	updateTime *time.Time, uniqueUIDs, uniqueGIDs map[uint32]bool) {
 	*count += gut.Count
 	*size += gut.Size
 
@@ -196,6 +200,10 @@ func addGUTToSummary(gut *GUT, count, size *uint64, atime *int64, mtime *int64,
 
 	if *mtime == 0 || gut.Mtime > *mtime {
 		*mtime = gut.Mtime
+	}
+
+	if gut.updateTime.After(*updateTime) {
+		*updateTime = gut.updateTime
 	}
 
 	uniqueUIDs[gut.UID] = true

@@ -162,7 +162,7 @@ be blank), and the first column will be user_name instead of group_name.
 		}
 
 		t = time.Now()
-		err = bd.CreateDatabase(time.Now())
+		err = bd.CreateDatabase()
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}

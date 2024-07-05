@@ -26,22 +26,11 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
-	"time"
-
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v4/basedirs"
-	"github.com/wtsi-ssg/wrstat/v4/neaten"
-	"github.com/wtsi-ssg/wrstat/v4/wait"
+	"github.com/wtsi-ssg/wrstat/v4/merge"
 )
 
-const (
-	mergeArgs             = 2
-	mergeDatePrefixLength = 8
-	mergeMaxWait          = 23 * time.Hour
-	reloadGrace           = 15 * time.Minute
-)
+const mergeArgs = 2
 
 // options for this cmd.
 var mergeDelete bool
@@ -51,84 +40,22 @@ var mergedbsCmd = &cobra.Command{
 	Use:   "mergedbs",
 	Short: "Merge wrstat databases.",
 	Long: `Merge wrstat databases.
- 
- If you run 'wrstat multi' on 2 separate systems but want to combine their
- outputs to display on a single wrstat server, use this command to merge their
- databases.
- 
- Provide the multi output directories of the 2 systems. The most recent database
- information in the first will be copied/merged in to the most recent set with
- the same date prefix in the second one, and then the second one's
- .dgut.dbs.updated will be touched to trigger any running server monitoring the
- second one's dbs to reload.
- 
- This will wait up to 23hrs for both folder's most recent database files have
- the same date prefix.
- 
- To avoid doing the merge in the middle of a server doing a database reload,
- waits until it is more than 15mins since the second's .dgut.dbs.updated was
- touched
- 
- This means you can run multi on your 2 systems once per day, and run this in
- a crontab job once per day as well, and it will merge the 2 outputs of the
- same day once they're both ready.
 
- Provide the --delete option to delete all files with the database's date
- prefix from the first output directory after successful merge.
- .`,
+Used to merge in results from a minimal 'wrstat multi -p' run into the working
+directory of a full 'wrstat multi' run.
+
+Provide the output working directory of the minimal '-p' run and the unique
+working directory of the full multi run.
+
+Provide the --delete option to delete all previous runs within the minimal
+working directory, leaving the latest.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != mergeArgs {
 			die("exactly 2 output directories from 'wrstat multi' must be supplied")
 		}
 
-		sourceDir, destDir := args[0], args[1]
-
-		sourceDGUTDir, destDGUTDir, err := wait.ForMatchingPrefixOfLatestSuffix(
-			dgutDBsSuffix, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
-		if err != nil {
-			die("wait for matching dgut.db outputs failed: %s", err)
-		}
-
-		err = neaten.MergeDGUTDBDirectories(sourceDGUTDir, destDGUTDir)
-		if err != nil {
-			die("merge of dgut.db directories failed: %s", err)
-		}
-
-		sourceBasedir, destBasedir, err := wait.ForMatchingPrefixOfLatestSuffix(
-			basedirBasename, mergeDatePrefixLength, sourceDir, destDir, mergeMaxWait)
-		if err != nil {
-			die("wait for matching basedirs outputs failed: %s", err)
-		}
-
-		outputDBPath := destBasedir + ".merging"
-
-		err = basedirs.MergeDBs(sourceBasedir, destBasedir, outputDBPath)
-		if err != nil {
-			die("merge of basedir.dbs failed: %s", err)
-		}
-
-		sentinal := filepath.Join(destDir, dgutDBsSentinelBasename)
-
-		err = wait.UntilFileIsOld(sentinal, reloadGrace)
-		if err != nil {
-			die("waiting for the dgutdbs sentintal file failed: %s", err)
-		}
-
-		err = os.Rename(outputDBPath, destBasedir)
-		if err != nil {
-			die("failed to move the merged basedirs.db file back over original: %s", err)
-		}
-
-		err = neaten.Touch(sentinal)
-		if err != nil {
-			die("failed to touch the dgutdbs sentinal file: %s", err)
-		}
-
-		if mergeDelete {
-			err = neaten.DeleteAllPrefixedDirEntries(sourceDir, filepath.Base(sourceBasedir)[:mergeDatePrefixLength])
-			if err != nil {
-				warn("failed to delete source files: %s", err)
-			}
+		if err := merge.Merge(args[0], args[1], mergeDelete); err != nil {
+			die("error while merging: %s", err)
 		}
 	},
 }

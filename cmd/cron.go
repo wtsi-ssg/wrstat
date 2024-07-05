@@ -39,8 +39,10 @@ import (
 )
 
 // options for this cmd.
-var crontab string
-var cronKill bool
+var (
+	crontab  string
+	cronKill bool
+)
 
 // cronCmd represents the cron command.
 var cronCmd = &cobra.Command{
@@ -96,6 +98,12 @@ func init() {
 	// flags specific to this sub-command
 	cronCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	cronCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
+	cronCmd.Flags().StringVarP(&partialDirMerge, "partial_dir_merge", "l", "", "merge results from a partial run"+
+		"stored in the specified directory")
+	cronCmd.Flags().BoolVarP(&partialDirClean, "partial_dir_clean", "r", false, "remove old results "+
+		"from specified directory after merging")
+	cronCmd.Flags().BoolVarP(&createPartial, "create_partial_dir", "p", false, "perform the walk, "+
+		"stat, and combine steps only")
 	cronCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	cronCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
