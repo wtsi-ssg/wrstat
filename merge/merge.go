@@ -51,7 +51,7 @@ type pathTime struct {
 // FindLatestCombinedOutputOlderThan finds the latest entry in dir and returns its path.
 func FindLatestCombinedOutputOlderThan(dir string, minAge time.Duration) (string, error) {
 	for {
-		files, err := filepath.Glob(filepath.Join(dir, "*", "*", watchFile))
+		files, err := filepath.Glob(filepath.Join(dir, "*", "*", "*", watchFile))
 		if err != nil {
 			return "", err
 		}
@@ -68,7 +68,7 @@ func FindLatestCombinedOutputOlderThan(dir string, minAge time.Duration) (string
 		diff := de.modtime.Sub(time.Now().Add(-minAge))
 
 		if diff < 0 {
-			return filepath.Dir(filepath.Dir(de.path)), nil
+			return filepath.Dir(filepath.Dir(filepath.Dir(de.path))), nil
 		}
 
 		time.Sleep(diff)
