@@ -16,6 +16,11 @@ const (
 	SentinelComplete = "combine.complete"
 )
 
+// Merge finds the latest completed run in the source dir and copies it,
+// preserving timestamps, into the destination.
+//
+// When the removeOld param is set to true, the function will remove any runs
+// older that the one that is copied.
 func Merge(sourceDir, destDir string, removeOld bool) error {
 	de, err := fs.FindLatestCombinedOutputOlderThan(sourceDir, SentinelComplete, reloadGrace)
 	if err != nil {
