@@ -28,6 +28,7 @@
 package fs
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -38,6 +39,8 @@ import (
 )
 
 const ErrNoDirEntryFound = gas.Error("file not found in directory")
+
+const DirPerms = 0755
 
 // FindLatestDirectoryEntry finds the latest entry in dir that has the given
 // suffix and returns its path.
@@ -140,4 +143,98 @@ func filesToLatestPathTime(files []string) (pathTime, error) {
 	})
 
 	return des[0], nil
+}
+
+// CopyPreservingTimestamp copies the source to the dest, recursively,
+// preserving the modification and access times.
+func CopyPreservingTimestamp(source, dest string) error {
+	fi, err := os.Lstat(source)
+	if err != nil {
+		return err
+	}
+
+	t := fi.ModTime()
+
+	if fi.IsDir() {
+		err = CopyDirectoryPreservingTimestamp(source, dest)
+	} else {
+		err = CopyFile(source, dest)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return os.Chtimes(dest, t, t)
+}
+
+// CopyDirectoryPreservingTimestamp copies the source directory to the
+// destination, preserving the modification and access times.
+func CopyDirectoryPreservingTimestamp(source, dest string) error {
+	if err := os.MkdirAll(dest, DirPerms); err != nil {
+		return err
+	}
+
+	matches, err := filepath.Glob(source + "/*")
+	if err != nil {
+		return err
+	}
+
+	for _, match := range matches {
+		if err := CopyPreservingTimestamp(match, filepath.Join(dest, filepath.Base(match))); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// CopyFile copies the source file to the destination, preserving the
+// modification and access times.
+func CopyFile(source, dest string) (err error) {
+	var f, d *os.File
+
+	if f, err = os.Open(source); err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	if d, err = os.Create(dest); err != nil {
+		return err
+	}
+
+	defer func() {
+		if errr := d.Close(); err == nil {
+			err = errr
+		}
+	}()
+
+	_, err = io.Copy(d, f)
+
+	return err
+}
+
+// RemoveFromDirWhenOlderThan removes all children of the given directory if
+// their modification time is before the time specified.
+func RemoveFromDirWhenOlderThan(dir string, before time.Time) error {
+	matches, err := filepath.Glob(dir + "/*")
+	if err != nil {
+		return err
+	}
+
+	for _, match := range matches {
+		fi, err := os.Lstat(match)
+		if err != nil {
+			return err
+		} else if !fi.ModTime().Before(before) {
+			continue
+		}
+
+		if err := os.RemoveAll(match); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

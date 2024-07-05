@@ -67,7 +67,7 @@ func TestCopy(t *testing.T) {
 		err := createDirStructure(dir, time.Now().Add(time.Second*-10))
 		So(err, ShouldBeNil)
 
-		err = copyPreservingTimestamp(dir, newDir)
+		err = ifs.CopyPreservingTimestamp(dir, newDir)
 		So(err, ShouldBeNil)
 
 		err = fs.WalkDir(os.DirFS(dir), ".", func(path string, de fs.DirEntry, errr error) error {

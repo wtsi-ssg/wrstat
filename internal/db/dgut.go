@@ -41,7 +41,7 @@ import (
 	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
 )
 
-const DirPerms = 0755
+const DirPerms = fs.DirPerms
 const ExampleDgutDirParentSuffix = "dgut.dbs"
 const minGIDsForExampleDgutDB = 2
 const exampleDBBatchSize = 20
