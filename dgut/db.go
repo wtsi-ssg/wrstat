@@ -27,6 +27,7 @@ package dgut
 
 import (
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -177,6 +178,99 @@ func (s *dbSet) Close() error {
 	errm = multierror.Append(errm, err)
 
 	return errm.ErrorOrNil()
+}
+
+type DBInfo struct {
+	NumDirs     int
+	NumDGUTs    int
+	NumParents  int
+	NumChildren int
+}
+
+// Info opens our constituent databases read-only, gets summary info about their
+// contents, returns that info and closes the databases.
+func (s *dbSet) Info() (*DBInfo, error) {
+	paths := s.paths()
+	info := &DBInfo{}
+	ch := new(codec.BincHandle)
+
+	err := gutDBInfo(paths[0], info, ch)
+	if err != nil {
+		return nil, err
+	}
+
+	err = childrenDBInfo(paths[1], info, ch)
+
+	return info, err
+}
+
+func gutDBInfo(path string, info *DBInfo, ch codec.Handle) error {
+	gutDB, err := openBoltReadOnlyUnPopulated(path)
+	if err != nil {
+		return err
+	}
+
+	slog.Debug("opened bolt file", "path", path)
+
+	defer gutDB.Close()
+
+	fullBucketScan(gutDB, gutBucket, func(k, v []byte) {
+		info.NumDirs++
+
+		dgut := decodeDGUTbytes(ch, k, v)
+		info.NumDGUTs += len(dgut.GUTs)
+	})
+
+	slog.Debug("went through bucket", "name", gutBucket)
+
+	return nil
+}
+
+// openBoltReadOnlyUnPopulated opens a bolt database at the given path in
+// read-only mode, without MAP_POPULATE.
+func openBoltReadOnlyUnPopulated(path string) (*bolt.DB, error) {
+	return bolt.Open(path, dbOpenMode, &bolt.Options{
+		ReadOnly: true,
+	})
+}
+
+func fullBucketScan(db *bolt.DB, bucketName string, cb func(k, v []byte)) {
+	db.View(func(tx *bolt.Tx) error { //nolint:errcheck
+		b := tx.Bucket([]byte(bucketName))
+
+		return b.ForEach(func(k, v []byte) error {
+			cb(k, v)
+
+			return nil
+		})
+	})
+}
+
+func childrenDBInfo(path string, info *DBInfo, ch codec.Handle) error {
+	childDB, err := openBoltReadOnlyUnPopulated(path)
+	if err != nil {
+		return err
+	}
+
+	slog.Debug("opened bolt file", "path", path)
+
+	defer childDB.Close()
+
+	fullBucketScan(childDB, childBucket, func(_, v []byte) {
+		info.NumParents++
+
+		dec := codec.NewDecoderBytes(v, ch)
+
+		var children []string
+
+		dec.MustDecode(&children)
+
+		info.NumChildren += len(children)
+	})
+
+	slog.Debug("went through bucket", "name", childBucket)
+
+	return nil
 }
 
 // DB is used to create and query a database made from a dgut file, which is the
@@ -585,4 +679,39 @@ func mapToSortedKeys(things map[string]bool) []string {
 	sort.Strings(keys)
 
 	return keys
+}
+
+// Info opens our constituent databases read-only, gets summary info about their
+// contents, returns that info and closes the databases.
+func (d *DB) Info() (*DBInfo, error) {
+	infos := &DBInfo{}
+
+	readSets := make([]*dbSet, len(d.paths))
+
+	for i, path := range d.paths {
+		readSet, err := newDBSet(path)
+		if err != nil {
+			return nil, err
+		}
+
+		if !readSet.pathsExist(readSet.paths()) {
+			return nil, ErrDBNotExists
+		}
+
+		readSets[i] = readSet
+	}
+
+	for _, rs := range readSets {
+		info, err := rs.Info()
+		if err != nil {
+			return nil, err
+		}
+
+		infos.NumDirs += info.NumDirs
+		infos.NumDGUTs += info.NumDGUTs
+		infos.NumParents += info.NumParents
+		infos.NumChildren += info.NumChildren
+	}
+
+	return infos, nil
 }

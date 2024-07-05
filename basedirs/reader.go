@@ -57,7 +57,7 @@ type BaseDirReader struct {
 // stored in a BaseDir database. It takes an owners file (gid,name csv) to
 // associate groups with their owners in certain output.
 func NewReader(dbPath, ownersPath string) (*BaseDirReader, error) {
-	db, err := openRODB(dbPath)
+	db, err := openDBRO(dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +80,12 @@ func NewReader(dbPath, ownersPath string) (*BaseDirReader, error) {
 		userCache:   NewUserCache(),
 		owners:      owners,
 	}, nil
+}
+
+func openDBRO(dbPath string) (*bolt.DB, error) {
+	return bolt.Open(dbPath, dbOpenMode, &bolt.Options{
+		ReadOnly: true,
+	})
 }
 
 func (b *BaseDirReader) Close() error {
