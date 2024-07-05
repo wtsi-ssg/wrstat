@@ -924,7 +924,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				err = MergeDBs(dbPath, newDBPath, outputDBPath)
 				So(err, ShouldBeNil)
 
-				db, err := openRODB(outputDBPath)
+				db, err := openDBRO(outputDBPath)
 
 				So(err, ShouldBeNil)
 				defer db.Close()

@@ -113,12 +113,6 @@ func openDB(dbPath string) (*bolt.DB, error) {
 	})
 }
 
-func openRODB(dbPath string) (*bolt.DB, error) {
-	return bolt.Open(dbPath, dbOpenMode, &bolt.Options{
-		ReadOnly: true,
-	})
-}
-
 func (b *BaseDirs) updateDatabase(gids, uids []uint32) func(*bolt.Tx) error { //nolint:gocognit
 	return func(tx *bolt.Tx) error {
 		if err := clearUsageBuckets(tx); err != nil {
@@ -593,14 +587,14 @@ func MergeDBs(pathA, pathB, outputPath string) (err error) { //nolint:funlen
 		}
 	}
 
-	dbA, err = openRODB(pathA)
+	dbA, err = openDBRO(pathA)
 	if err != nil {
 		return err
 	}
 
 	defer closeDB(dbA)
 
-	dbB, err = openRODB(pathB)
+	dbB, err = openDBRO(pathB)
 	if err != nil {
 		return err
 	}
