@@ -689,7 +689,10 @@ func (d *DB) Info() (*DBInfo, error) {
 	readSets := make([]*dbSet, len(d.paths))
 
 	for i, path := range d.paths {
-		readSet := newDBSet(path)
+		readSet, err := newDBSet(path)
+		if err != nil {
+			return nil, err
+		}
 
 		if !readSet.pathsExist(readSet.paths()) {
 			return nil, ErrDBNotExists
