@@ -86,3 +86,57 @@ func ModTime(path string) time.Time {
 func Touch(path string, t time.Time) error {
 	return os.Chtimes(path, t, t)
 }
+
+type pathTime struct {
+	path    string
+	modtime time.Time
+}
+
+// FindLatestCombinedOutputOlderThan finds the latest entry in dir and returns its path.
+func FindLatestCombinedOutputOlderThan(dir, watchFile string, minAge time.Duration) (string, error) {
+	for {
+		files, err := filepath.Glob(filepath.Join(dir, "*", "*", "*", watchFile))
+		if err != nil {
+			return "", err
+		}
+
+		if len(files) == 0 {
+			return "", ErrNoDirEntryFound
+		}
+
+		de, err := filesToLatestPathTime(files)
+		if err != nil {
+			return "", err
+		}
+
+		diff := de.modtime.Sub(time.Now().Add(-minAge))
+
+		if diff < 0 {
+			return filepath.Dir(filepath.Dir(filepath.Dir(de.path))), nil
+		}
+
+		time.Sleep(diff)
+	}
+}
+
+func filesToLatestPathTime(files []string) (pathTime, error) {
+	des := make([]pathTime, len(files))
+
+	for n, file := range files {
+		fi, err := os.Lstat(file)
+		if err != nil {
+			return pathTime{}, err
+		}
+
+		des[n] = pathTime{
+			path:    file,
+			modtime: fi.ModTime(),
+		}
+	}
+
+	sort.Slice(des, func(i, j int) bool {
+		return des[i].modtime.After(des[j].modtime)
+	})
+
+	return des[0], nil
+}
