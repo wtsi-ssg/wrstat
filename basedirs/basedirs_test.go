@@ -972,6 +972,21 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 				So(lustreKeys, ShouldEqual, expectedKeys)
 				So(nfsKeys, ShouldEqual, expectedKeys)
 			})
+
+			Convey("and get basic info about it", func() {
+				info, err := Info(dbPath)
+				So(err, ShouldBeNil)
+				So(info, ShouldResemble, &DBInfo{
+					GroupDirCombos:    6,
+					GroupMountCombos:  5,
+					GroupHistories:    5,
+					GroupSubDirCombos: 6,
+					GroupSubDirs:      8,
+					UserDirCombos:     6,
+					UserSubDirCombos:  6,
+					UserSubDirs:       8,
+				})
+			})
 		})
 	})
 }
