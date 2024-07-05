@@ -104,7 +104,7 @@ func createDirStructure(base string, mt time.Time, extra ...string) error {
 		}
 	}
 
-	for _, file := range append(extra, "aFile", "a/notherFile", "b/d/e", "b/d/"+watchFile) {
+	for _, file := range append(extra, "aFile", "a/notherFile", "b/d/e", "b/d/"+SentinelComplete) {
 		p := filepath.Join(base, file)
 
 		err := neaten.CreateFile(p)

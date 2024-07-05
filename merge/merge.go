@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	reloadGrace = 5 * time.Minute
-	watchFile   = "combine.log.gz"
+	reloadGrace      = 5 * time.Minute
+	SentinelComplete = "combine.complete"
 )
 
 func Merge(sourceDir, destDir string, removeOld bool) error {
-	de, err := fs.FindLatestCombinedOutputOlderThan(sourceDir, watchFile, reloadGrace)
+	de, err := fs.FindLatestCombinedOutputOlderThan(sourceDir, SentinelComplete, reloadGrace)
 	if err != nil {
 		return fmt.Errorf("failed to find database files in source dir: %w", err)
 	}
