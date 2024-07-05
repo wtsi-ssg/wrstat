@@ -49,19 +49,21 @@ const (
 )
 
 // options for this cmd.
-var workDir string
-var finalDir string
-var customDirMerge string
-var customDirClean bool
-var createCustom bool
-var multiInodes int
-var multiStatJobs int
-var multiCh string
-var forcedQueue string
-var quota string
-var maxMem int
-var multiSplits int
-var multiMinDirs int
+var (
+	workDir        string
+	finalDir       string
+	customDirMerge string
+	customDirClean bool
+	createCustom   bool
+	multiInodes    int
+	multiStatJobs  int
+	multiCh        string
+	forcedQueue    string
+	quota          string
+	maxMem         int
+	multiSplits    int
+	multiMinDirs   int
+)
 
 // multiCmd represents the multi command.
 var multiCmd = &cobra.Command{
@@ -178,16 +180,18 @@ func checkMultiArgs(args []string) {
 		die("--working_directory is required")
 	}
 
-	if finalDir == "" {
-		die("--final_output is required")
-	}
+	if !createCustom {
+		if finalDir == "" {
+			die("--final_output is required")
+		}
 
-	if quota == "" {
-		die("--quota is required")
-	}
+		if quota == "" {
+			die("--quota is required")
+		}
 
-	if ownersPath == "" {
-		die("--owners is required")
+		if ownersPath == "" {
+			die("--owners is required")
+		}
 	}
 
 	if len(args) == 0 {
@@ -234,7 +238,8 @@ func doMultiScheduling(args []string) error {
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	numStatJobs, inodesPerStat int, yamlPath, queue string, s *scheduler.Scheduler) {
+	numStatJobs, inodesPerStat int, yamlPath, queue string, s *scheduler.Scheduler,
+) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
@@ -331,7 +336,7 @@ func scheduleStaticCopy(outputRoot, unique, customDirMerge string, customDirClea
 	var remove string
 
 	if customDirClean {
-		remove = "--remove"
+		remove = "--delete"
 	}
 
 	job := s.NewJob(fmt.Sprintf("%s mergedbs %s %q %q",
