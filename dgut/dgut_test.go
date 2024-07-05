@@ -419,6 +419,17 @@ func TestDGUT(t *testing.T) {
 						})
 					})
 				})
+
+				Convey("You can get info on the database files", func() {
+					info, err := db.Info()
+					So(err, ShouldBeNil)
+					So(info, ShouldResemble, &DBInfo{
+						NumDirs:     11,
+						NumDGUTs:    40,
+						NumParents:  7,
+						NumChildren: 10,
+					})
+				})
 			})
 
 			Convey("Storing with a batch size == directories works", func() {
