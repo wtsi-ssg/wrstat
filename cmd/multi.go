@@ -181,17 +181,7 @@ func checkMultiArgs(args []string) {
 	}
 
 	if !createCustom {
-		if finalDir == "" {
-			die("--final_output is required")
-		}
-
-		if quota == "" {
-			die("--quota is required")
-		}
-
-		if ownersPath == "" {
-			die("--owners is required")
-		}
+		checkStandardFlags()
 	}
 
 	if len(args) == 0 {
@@ -204,6 +194,20 @@ func checkMultiArgs(args []string) {
 
 	if multiMinDirs <= 0 {
 		die("minimum number of dirs must be an integer more than 0")
+	}
+}
+
+func checkStandardFlags() {
+	if finalDir == "" {
+		die("--final_output is required")
+	}
+
+	if quota == "" {
+		die("--quota is required")
+	}
+
+	if ownersPath == "" {
+		die("--owners is required")
 	}
 }
 
