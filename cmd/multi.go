@@ -50,19 +50,19 @@ const (
 
 // options for this cmd.
 var (
-	workDir        string
-	finalDir       string
-	customDirMerge string
-	customDirClean bool
-	createCustom   bool
-	multiInodes    int
-	multiStatJobs  int
-	multiCh        string
-	forcedQueue    string
-	quota          string
-	maxMem         int
-	multiSplits    int
-	multiMinDirs   int
+	workDir         string
+	finalDir        string
+	partialDirMerge string
+	partialDirClean bool
+	createPartial   bool
+	multiInodes     int
+	multiStatJobs   int
+	multiCh         string
+	forcedQueue     string
+	quota           string
+	maxMem          int
+	multiSplits     int
+	multiMinDirs    int
 )
 
 // multiCmd represents the multi command.
@@ -93,9 +93,9 @@ unique directory created for all of them.
 'wr status -i wrstat -z -o s' to get information on how long everything or
 particular subsets of jobs took.)
 
-A partial walk->stat->combine run can be performed with the --create_custom_dir
-flag. These files can be used with the --custom_dir_merge flag to combine this
-partial run with a full run. The --custom_dir_clean can be used to provide the
+A partial walk->stat->combine run can be performed with the --create_partial_dir
+flag. These files can be used with the --partial_dir_merge flag to combine this
+partial run with a full run. The --partial_dir_clean can be used to provide the
 --delete flag to the 'mergedb' subcommand.
 
 Once everything has completed, the final output files are moved to the given
@@ -155,10 +155,11 @@ func init() {
 	// flags specific to this sub-command
 	multiCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	multiCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
-	multiCmd.Flags().StringVarP(&customDirMerge, "custom_dir_merge", "c", "", "merge results from specified directory")
-	multiCmd.Flags().BoolVarP(&customDirClean, "custom_dir_clean", "r", false, "remove old results "+
+	multiCmd.Flags().StringVarP(&partialDirMerge, "partial_dir_merge", "c", "", "merge results from a partial run"+
+		"stored in the specified directory")
+	multiCmd.Flags().BoolVarP(&partialDirClean, "partial_dir_clean", "r", false, "remove old results "+
 		"from specified directory after merging")
-	multiCmd.Flags().BoolVarP(&createCustom, "create_custom_dir", "p", false, "perform the walk, "+
+	multiCmd.Flags().BoolVarP(&createPartial, "create_partial_dir", "p", false, "perform the walk, "+
 		"stat, and combine steps only")
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
@@ -180,7 +181,7 @@ func checkMultiArgs(args []string) {
 		die("--working_directory is required")
 	}
 
-	if !createCustom {
+	if !createPartial {
 		checkStandardFlags()
 	}
 
@@ -224,13 +225,13 @@ func doMultiScheduling(args []string) error {
 		return err
 	}
 
-	if customDirMerge != "" {
-		scheduleStaticCopy(outputRoot, unique, customDirMerge, customDirClean, s)
+	if partialDirMerge != "" {
+		scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
 	}
 
 	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
 
-	if !createCustom {
+	if !createPartial {
 		scheduleBasedirsJob(outputRoot, unique, s)
 		scheduleTidyJob(outputRoot, finalDir, unique, s)
 	}
@@ -336,16 +337,16 @@ func copyReqs() *jqs.Requirements {
 	return req
 }
 
-func scheduleStaticCopy(outputRoot, unique, customDirMerge string, customDirClean bool, s *scheduler.Scheduler) {
+func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirClean bool, s *scheduler.Scheduler) {
 	var remove string
 
-	if customDirClean {
+	if partialDirClean {
 		remove = "--delete"
 	}
 
 	job := s.NewJob(fmt.Sprintf("%s mergedbs %s %q %q",
-		s.Executable(), remove, customDirMerge, outputRoot),
-		repGrp("mergedirs", customDirMerge, unique), "wrstat-merge", unique+".merge", unique, copyReqs())
+		s.Executable(), remove, partialDirMerge, outputRoot),
+		repGrp("mergedirs", partialDirMerge, unique), "wrstat-merge", unique+".merge", unique, copyReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
