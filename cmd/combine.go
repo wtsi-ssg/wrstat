@@ -109,7 +109,9 @@ you supplied 'wrstat walk'.`,
 
 		wg.Wait()
 
-		neaten.CreateFile(filepath.Join(sourceDir, merge.SentinelComplete))
+		if err := neaten.CreateFile(filepath.Join(sourceDir, merge.SentinelComplete)); err != nil {
+			die("could not create sentinel completion file: %s", err)
+		}
 	},
 }
 
