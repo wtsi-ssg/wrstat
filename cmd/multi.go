@@ -155,7 +155,7 @@ func init() {
 	// flags specific to this sub-command
 	multiCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	multiCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
-	multiCmd.Flags().StringVarP(&partialDirMerge, "partial_dir_merge", "c", "", "merge results from a partial run"+
+	multiCmd.Flags().StringVarP(&partialDirMerge, "partial_dir_merge", "l", "", "merge results from a partial run"+
 		"stored in the specified directory")
 	multiCmd.Flags().BoolVarP(&partialDirClean, "partial_dir_clean", "r", false, "remove old results "+
 		"from specified directory after merging")
