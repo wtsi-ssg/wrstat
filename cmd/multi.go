@@ -34,6 +34,7 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	jqs "github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/v4/merge"
 	"github.com/wtsi-ssg/wrstat/v4/scheduler"
 )
 
@@ -231,10 +232,14 @@ func doMultiScheduling(args []string) error {
 
 	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
 
-	if !createPartial {
-		scheduleBasedirsJob(outputRoot, unique, s)
-		scheduleTidyJob(outputRoot, finalDir, unique, s)
+	if createPartial {
+		schedulePartialSentinel(outputRoot, unique, s)
+
+		return nil
 	}
+
+	scheduleBasedirsJob(outputRoot, unique, s)
+	scheduleTidyJob(outputRoot, finalDir, unique, s)
 
 	return nil
 }
@@ -317,6 +322,16 @@ func walkRepGrp(dir, unique string) string {
 // will create.
 func combineRepGrp(dir, unique string) string {
 	return repGrp("combine", dir, unique)
+}
+
+// schedulePartialSentinel adds a job to wr's queue that creates a sentinel file
+// indicating the completion of a 'partial' run.
+func schedulePartialSentinel(outputRoot, unique string, s *scheduler.Scheduler) {
+	job := s.NewJob("touch "+filepath.Join(outputRoot, merge.SentinelComplete),
+		repGrp("touchSentinel", "", unique), "wrstat-sentinel", unique+".sentinel",
+		unique, scheduler.DefaultRequirements())
+
+	addJobsToQueue(s, []*jobqueue.Job{job})
 }
 
 // scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
