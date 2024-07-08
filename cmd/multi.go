@@ -361,7 +361,8 @@ func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirCl
 
 	job := s.NewJob(fmt.Sprintf("%s mergedbs %s %q %q",
 		s.Executable(), remove, partialDirMerge, outputRoot),
-		repGrp("mergedirs", partialDirMerge, unique), "wrstat-merge", unique+".merge", unique, copyReqs())
+		repGrp("mergedirs", partialDirMerge, unique), "wrstat-merge",
+		unique, "", copyReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
