@@ -327,7 +327,7 @@ func combineRepGrp(dir, unique string) string {
 // schedulePartialSentinel adds a job to wr's queue that creates a sentinel file
 // indicating the completion of a 'partial' run.
 func schedulePartialSentinel(outputRoot, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob(fmt.Sprintf("touch %s", filepath.Join(outputRoot, merge.SentinelComplete)),
+	job := s.NewJob("touch "+filepath.Join(outputRoot, merge.SentinelComplete),
 		repGrp("touchSentinel", "", unique), "wrstat-sentinel", unique+".sentinel",
 		unique, scheduler.DefaultRequirements())
 
