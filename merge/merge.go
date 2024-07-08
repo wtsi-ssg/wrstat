@@ -1,17 +1,14 @@
 package merge
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
 )
 
-const (
-	reloadGrace      = 5 * time.Minute
-	SentinelComplete = "combine.complete"
-)
+const SentinelComplete = "combine.complete"
 
 // Merge finds the latest completed run in the source dir and copies it,
 // preserving timestamps, into the destination.
@@ -19,8 +16,10 @@ const (
 // When the removeOld param is set to true, the function will remove any runs
 // older that the one that is copied.
 func Merge(sourceDir, destDir string, removeOld bool) error {
-	de, err := fs.FindLatestCombinedOutputOlderThan(sourceDir, SentinelComplete, reloadGrace)
-	if err != nil {
+	de, err := fs.FindLatestCombinedOutput(sourceDir, SentinelComplete)
+	if errors.Is(err, fs.ErrNoDirEntryFound) {
+		return nil
+	} else if err != nil {
 		return fmt.Errorf("failed to find database files in source dir: %w", err)
 	}
 

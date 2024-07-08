@@ -226,11 +226,11 @@ func doMultiScheduling(args []string) error {
 		return err
 	}
 
+	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
+
 	if partialDirMerge != "" {
 		scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
 	}
-
-	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
 
 	if createPartial {
 		schedulePartialSentinel(outputRoot, unique, s)
@@ -361,7 +361,8 @@ func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirCl
 
 	job := s.NewJob(fmt.Sprintf("%s mergedbs %s %q %q",
 		s.Executable(), remove, partialDirMerge, outputRoot),
-		repGrp("mergedirs", partialDirMerge, unique), "wrstat-merge", unique+".merge", unique, copyReqs())
+		repGrp("mergedirs", partialDirMerge, unique), "wrstat-merge",
+		unique, unique+".basedir", copyReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
