@@ -352,7 +352,8 @@ func copyReqs() *jqs.Requirements {
 	return req
 }
 
-func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirClean bool, s *scheduler.Scheduler) string {
+func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirClean bool,
+	s *scheduler.Scheduler) string {
 	var remove string
 
 	if partialDirClean {
