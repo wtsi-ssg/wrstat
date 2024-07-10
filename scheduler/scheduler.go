@@ -125,7 +125,7 @@ func DefaultRequirements() *jqs.Requirements {
 // If this Scheduler had been made with sudo: true, cmd will be prefixed with
 // 'sudo '.
 //
-// THe supplied depGroup and dep can be blank to not set DepGroups and
+// The supplied depGroup and dep can be blank to not set DepGroups and
 // Dependencies.
 //
 // If req is supplied, sets the job override to 1. Otherwise, req will default

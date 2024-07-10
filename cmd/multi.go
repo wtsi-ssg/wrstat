@@ -229,7 +229,7 @@ func doMultiScheduling(args []string) error {
 	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
 
 	if partialDirMerge != "" {
-		scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
+		unique = scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
 	}
 
 	if createPartial {
@@ -352,19 +352,24 @@ func copyReqs() *jqs.Requirements {
 	return req
 }
 
-func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirClean bool, s *scheduler.Scheduler) {
+func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirClean bool,
+	s *scheduler.Scheduler) string {
 	var remove string
 
 	if partialDirClean {
 		remove = "--delete"
 	}
 
+	thisUnique := unique + ".merge"
+
 	job := s.NewJob(fmt.Sprintf("%s mergedbs %s %q %q",
 		s.Executable(), remove, partialDirMerge, outputRoot),
 		repGrp("mergedirs", partialDirMerge, unique), "wrstat-merge",
-		unique, unique+".basedir", copyReqs())
+		thisUnique, unique, copyReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
+
+	return thisUnique
 }
 
 // basedirReqs returns Requirements suitable for basedir jobs. The RAM
