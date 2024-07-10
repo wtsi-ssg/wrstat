@@ -360,7 +360,7 @@ func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirCl
 		remove = "--delete"
 	}
 
-	thisUnique := scheduler.UniqueString()
+	thisUnique := unique + ".merge"
 
 	job := s.NewJob(fmt.Sprintf("%s mergedbs %s %q %q",
 		s.Executable(), remove, partialDirMerge, outputRoot),
