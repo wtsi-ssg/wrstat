@@ -36,6 +36,7 @@ import (
 
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 )
 
 const (
@@ -101,7 +102,7 @@ func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
 }
 
 func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirSummary)) error {
-	dcss, err := b.tree.Where("/", filter, b.splits)
+	dcss, err := b.tree.Where("/", filter, split.SplitsToSplitFn(b.splits))
 	if err != nil {
 		return err
 	}

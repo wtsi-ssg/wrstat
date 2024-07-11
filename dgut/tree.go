@@ -75,6 +75,10 @@ func (d DCSs) Swap(i, j int) {
 	d[i], d[j] = d[j], d[i]
 }
 func (d DCSs) Less(i, j int) bool {
+	if d[i].Size == d[j].Size {
+		return d[i].Dir < d[j].Dir
+	}
+
 	return d[i].Size > d[j].Size
 }
 
@@ -200,9 +204,7 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 // The returned DirSummarys are sorted by Size, largest first.
 //
 // Returns an error if dir doesn't exist.
-func (t *Tree) Where(dir string, filter *Filter, depth int) (DCSs, error) {
-	var dcss DCSs
-
+func (t *Tree) Where(dir string, filter *Filter, recurseCount func(string) int) (DCSs, error) {
 	if filter == nil {
 		filter = new(Filter)
 	}
@@ -211,31 +213,34 @@ func (t *Tree) Where(dir string, filter *Filter, depth int) (DCSs, error) {
 		filter.FTs = summary.AllTypesExceptDirectories
 	}
 
+	dcss, err := t.recurseWhere(dir, filter, recurseCount, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Sort(dcss)
+
+	return dcss, nil
+}
+
+func (t *Tree) recurseWhere(dir string, filter *Filter, recurseCount func(string) int, step int) (DCSs, error) {
 	di, err := t.where0(dir, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	dcss = append(dcss, di.Current)
+	dcss := DCSs{di.Current}
 
-	children := di.Children
+	if recurseCount(dir) > step {
+		for _, dcs := range di.Children {
+			d, err := t.recurseWhere(dcs.Dir, filter, recurseCount, step+1)
+			if err != nil {
+				return nil, err
+			}
 
-	for i := 0; i < depth; i++ {
-		var theseChildren []*DirSummary
-
-		for _, dcs := range children {
-			// where0 can't return an error here, because we're supplying it a
-			// directory name that came from the database.
-			//nolint:errcheck
-			diChild, _ := t.where0(dcs.Dir, filter)
-			dcss = append(dcss, diChild.Current)
-			theseChildren = append(theseChildren, diChild.Children...)
+			dcss = append(dcss, d...)
 		}
-
-		children = theseChildren
 	}
-
-	sort.Sort(dcss)
 
 	return dcss, nil
 }

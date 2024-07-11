@@ -50,6 +50,7 @@ import (
 	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
 	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
 	ifs "github.com/wtsi-ssg/wrstat/v4/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 )
 
 func TestIDsToWanted(t *testing.T) {
@@ -163,10 +164,10 @@ func TestServer(t *testing.T) {
 
 		Convey("convertSplitsValue works", func() {
 			n := convertSplitsValue("1")
-			So(n, ShouldEqual, 1)
+			So(n(""), ShouldEqual, 1)
 
 			n = convertSplitsValue("foo")
-			So(n, ShouldEqual, 2)
+			So(n(""), ShouldEqual, 2)
 		})
 
 		Convey("You can query the where endpoint", func() {
@@ -186,7 +187,7 @@ func TestServer(t *testing.T) {
 				tree, err := dgut.NewTree(path)
 				So(err, ShouldBeNil)
 
-				expectedRaw, err := tree.Where("/", nil, 2)
+				expectedRaw, err := tree.Where("/", nil, split.SplitsToSplitFn(2))
 				So(err, ShouldBeNil)
 
 				expected := s.dcssToSummaries(expectedRaw)
@@ -241,12 +242,12 @@ func TestServer(t *testing.T) {
 								{Dir: "/a/b/d/g", Count: 10, Size: 100, Atime: time.Unix(60, 0),
 									Mtime: time.Unix(75, 0), Users: expectedUsers,
 									Groups: expectedGroupsA, FileTypes: expectedCrams},
-								{Dir: "/a/b/e/h", Count: 2, Size: 10, Atime: time.Unix(80, 0),
-									Mtime: time.Unix(80, 0), Users: expectedUser,
-									Groups: expectedGroupsA, FileTypes: expectedBams},
 								{Dir: "/a/b/d/f", Count: 1, Size: 10, Atime: expectedAtime,
 									Mtime: time.Unix(50, 0), Users: expectedUser,
 									Groups: expectedGroupsA, FileTypes: expectedCrams},
+								{Dir: "/a/b/e/h", Count: 2, Size: 10, Atime: time.Unix(80, 0),
+									Mtime: time.Unix(80, 0), Users: expectedUser,
+									Groups: expectedGroupsA, FileTypes: expectedBams},
 								{Dir: "/a/b/e/h/tmp", Count: 1, Size: 5, Atime: time.Unix(80, 0),
 									Mtime: time.Unix(80, 0), Users: expectedUser,
 									Groups: expectedGroupsA, FileTypes: expectedBams},

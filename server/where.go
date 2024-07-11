@@ -30,6 +30,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 )
 
 // getWhere responds with a list of directory stats describing where data is on
@@ -61,11 +62,11 @@ func (s *Server) getWhere(c *gin.Context) {
 
 // convertSplitsValue converts the given number string in to an int. On failure,
 // returns our default value for splits of 2.
-func convertSplitsValue(splits string) int {
+func convertSplitsValue(splits string) func(string) int {
 	splitsN, err := strconv.ParseUint(splits, 10, 8)
 	if err != nil {
 		return convertSplitsValue(defaultSplits)
 	}
 
-	return int(splitsN)
+	return split.SplitsToSplitFn(int(splitsN))
 }

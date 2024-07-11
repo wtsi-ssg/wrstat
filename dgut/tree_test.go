@@ -33,6 +33,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
 	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
@@ -142,19 +143,19 @@ func TestTree(t *testing.T) {
 		})
 
 		Convey("You can find Where() in the Tree files are", func() {
-			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, 0)
+			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, split.SplitsToSplitFn(0))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
 				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},
 			})
 
-			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, 0)
+			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, split.SplitsToSplitFn(0))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
 				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs[:3], dbModTime},
 			})
 
-			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, 1)
+			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, split.SplitsToSplitFn(1))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
 				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},
@@ -169,7 +170,7 @@ func TestTree(t *testing.T) {
 				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},
 			})
 
-			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, 2)
+			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, split.SplitsToSplitFn(2))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
 				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},
@@ -177,7 +178,7 @@ func TestTree(t *testing.T) {
 				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},
 			})
 
-			dcss, err = tree.Where("/", nil, 1)
+			dcss, err = tree.Where("/", nil, split.SplitsToSplitFn(1))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
 				{"/a", 14, 85, expectedAtime, time.Unix(90, 0), expectedUIDs, expectedGIDs, expectedFTs[:3], dbModTime},
@@ -185,7 +186,7 @@ func TestTree(t *testing.T) {
 				{"/a/c/d", 5, 5, time.Unix(90, 0), time.Unix(90, 0), []uint32{102}, []uint32{2}, expectedFTsCram, dbModTime},
 			})
 
-			_, err = tree.Where("/foo", nil, 1)
+			_, err = tree.Where("/foo", nil, split.SplitsToSplitFn(1))
 			So(err, ShouldNotBeNil)
 		})
 
@@ -252,13 +253,13 @@ func TestTree(t *testing.T) {
 
 		mtime2 := fs.ModTime(paths2[0])
 
-		dcss, err := tree.Where("/", nil, 0)
+		dcss, err := tree.Where("/", nil, split.SplitsToSplitFn(0))
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
 			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, mtime2},
 		})
 
-		dcss, err = tree.Where("/", nil, 1)
+		dcss, err = tree.Where("/", nil, split.SplitsToSplitFn(1))
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
 			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, mtime2},
