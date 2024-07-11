@@ -31,26 +31,18 @@
 package basedirs
 
 import (
-	"regexp"
+	"path/filepath"
 	"strings"
 
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 )
-
-const (
-	extraMinDirsForMDT = 1
-)
-
-var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
 
 // BaseDirs is used to summarise disk usage information by base directory and
 // group or user.
 type BaseDirs struct {
 	dbPath      string
-	splits      int
-	minDirs     int
+	config      Config
 	tree        *dgut.Tree
 	quotas      *Quotas
 	ch          codec.Handle
@@ -65,7 +57,7 @@ type BaseDirs struct {
 // `/mounts/[group name]`, that's 2 directories deep and splits 1, minDirs 2
 // might work well. If it's 5 directories deep, splits 4, minDirs 4 might work
 // well.
-func NewCreator(dbPath string, splits, minDirs int, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
+func NewCreator(dbPath string, c Config, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
 	mp, err := getMountPoints()
 	if err != nil {
 		return nil, err
@@ -73,8 +65,7 @@ func NewCreator(dbPath string, splits, minDirs int, tree *dgut.Tree, quotas *Quo
 
 	return &BaseDirs{
 		dbPath:      dbPath,
-		splits:      splits,
-		minDirs:     minDirs,
+		config:      c,
 		tree:        tree,
 		quotas:      quotas,
 		ch:          new(codec.BincHandle),
@@ -102,7 +93,7 @@ func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
 }
 
 func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirSummary)) error {
-	dcss, err := b.tree.Where("/", filter, split.SplitsToSplitFn(b.splits))
+	dcss, err := b.tree.Where("/", filter, splitFnFromConfig(b.config))
 	if err != nil {
 		return err
 	}
@@ -127,16 +118,58 @@ func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirS
 	return nil
 }
 
+func splitFnFromConfig(c Config) func(string) int {
+	return func(path string) int {
+		return int(findBestMatchingConfig(c, path).Splits)
+	}
+}
+
+func findBestMatchingConfig(c Config, path string) ConfigAttrs {
+	var (
+		maxScore int
+		conf     ConfigAttrs
+	)
+
+	for _, p := range c {
+		parts := strings.Split(path, "/")
+		prefixParts := strings.Split(p.Prefix, "/")
+
+		if len(parts) < len(prefixParts) {
+			continue
+		}
+
+		var score int
+
+		for i, part := range prefixParts {
+			if match, _ := filepath.Match(part, parts[i]); !match {
+				score = -1
+
+				break
+			}
+
+			if !strings.Contains(part, "*") {
+				score++
+			} else {
+
+			}
+		}
+
+		if score > maxScore {
+			maxScore = score
+			conf = p
+		}
+	}
+
+	return conf
+}
+
 // notEnoughDirs returns true if the given path has fewer than minDirs
 // directories. If path has an mdt directory in it, then it becomes an extra
 // directory.
 func (b *BaseDirs) notEnoughDirs(path string) bool {
 	numDirs := strings.Count(path, "/")
 
-	min := b.minDirs
-	if basedirMDTRegexp.MatchString(path) {
-		min += extraMinDirsForMDT
-	}
+	min := int(findBestMatchingConfig(b.config, path).MinDirs)
 
 	return numDirs < min
 }

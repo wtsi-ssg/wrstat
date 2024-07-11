@@ -41,20 +41,23 @@ import (
 	ifs "github.com/wtsi-ssg/wrstat/v4/internal/fs"
 )
 
+type baseDirsConfig struct {
+	Prefix  string
+	Splits  int
+	MinDirs int
+}
+
 const (
 	basedirBasename    = "basedirs.db"
 	groupUsageBasename = "basedirs.groupusage.tsv"
 	userUsageBasename  = "basedirs.userusage.tsv"
 	numBasedirArgs     = 2
-	defaultSplits      = 1
-	defaultMinDirs     = 2
 )
 
 // options for this cmd.
 var quotaPath string
 var ownersPath string
-var basedirSplits int
-var basedirMinDirs int
+var configPath string
 
 // basedirCmd represents the basedir command.
 var basedirCmd = &cobra.Command{
@@ -130,6 +133,13 @@ be blank), and the first column will be user_name instead of group_name.
 				"and the multi -f output directory")
 		}
 
+		f, err := os.Open(configPath)
+		if err != nil {
+			die("error opening config: %s", err)
+		}
+
+		c, err := basedirs.ParseConfig(f)
+
 		if quotaPath == "" {
 			die("you must supply --quota")
 		}
@@ -156,7 +166,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to get existing base directories database: %s", err)
 		}
 
-		bd, err := basedirs.NewCreator(dbPath, basedirSplits, basedirMinDirs, tree, quotas)
+		bd, err := basedirs.NewCreator(dbPath, c, tree, quotas)
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}
@@ -207,8 +217,7 @@ func init() {
 	// flags specific to this sub-command
 	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "gid,disk,size_quota,inode_quota csv file")
 	basedirCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
-	basedirCmd.Flags().IntVarP(&basedirSplits, "splits", "s", defaultSplits, "number of splits")
-	basedirCmd.Flags().IntVarP(&basedirMinDirs, "mindirs", "m", defaultMinDirs, "minimum number of dirs")
+	basedirCmd.Flags().StringVarP(&configPath, "config", "b", "", "path to basedirs config file")
 }
 
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'

@@ -47,6 +47,11 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+const (
+	defaultSplits  = 4
+	defaultMinDirs = 4
+)
+
 func TestBaseDirs(t *testing.T) { //nolint:gocognit
 	csvPath := internaldata.CreateQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
 2,/lustre/scratch125,300,30
@@ -58,6 +63,23 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 77777,/nfs/scratch125,500,50
 `)
 
+	defaultConfig := Config{
+		{
+			Splits:  defaultSplits,
+			MinDirs: defaultMinDirs,
+		},
+		{
+			Prefix:  "/lustre/scratch123/hgi/mdt*",
+			Splits:  defaultSplits + 1,
+			MinDirs: defaultMinDirs + 1,
+		},
+		{
+			Prefix:  "/nfs/scratch123/hgi/mdt*",
+			Splits:  defaultSplits + 1,
+			MinDirs: defaultMinDirs + 1,
+		},
+	}
+
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
 		gid, uid, groupName, username, err := internaldata.RealGIDAndUID()
 		So(err, ShouldBeNil)
@@ -67,8 +89,6 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 		const (
 			halfGig = 1 << 29
 			twoGig  = 1 << 31
-			splits  = 4
-			minDirs = 4
 		)
 
 		files[0].SizeOfEachFile = halfGig
@@ -93,7 +113,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 		dbModTime := fs.ModTime(treePath)
 
-		bd, err := NewCreator(dbPath, splits, minDirs, tree, quotas)
+		bd, err := NewCreator(dbPath, defaultConfig, tree, quotas)
 		So(err, ShouldBeNil)
 		So(bd, ShouldNotBeNil)
 
@@ -379,7 +399,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 					Convey("then adding the same database twice doesn't duplicate history.", func() {
 						// Add existing…
-						bd, err = NewCreator(dbPath, splits, minDirs, tree, quotas)
+						bd, err = NewCreator(dbPath, defaultConfig, tree, quotas)
 						So(err, ShouldBeNil)
 						So(bd, ShouldNotBeNil)
 
@@ -399,7 +419,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						So(err, ShouldBeNil)
 
 						// Add existing again…
-						bd, err = NewCreator(dbPath, splits, minDirs, tree, quotas)
+						bd, err = NewCreator(dbPath, defaultConfig, tree, quotas)
 						So(err, ShouldBeNil)
 						So(bd, ShouldNotBeNil)
 
@@ -425,7 +445,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 						tree, err = dgut.NewTree(treePath)
 						So(err, ShouldBeNil)
 
-						bd, err = NewCreator(dbPath, splits, minDirs, tree, quotas)
+						bd, err = NewCreator(dbPath, defaultConfig, tree, quotas)
 						So(err, ShouldBeNil)
 						So(bd, ShouldNotBeNil)
 
@@ -463,7 +483,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 						mp := bd.mountPoints
 
-						bd, err = NewCreator(dbPath, splits, minDirs, tree, quotas)
+						bd, err = NewCreator(dbPath, defaultConfig, tree, quotas)
 						So(err, ShouldBeNil)
 						So(bd, ShouldNotBeNil)
 
@@ -907,7 +927,7 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 				newDBPath := filepath.Join(dir, "newdir.db")
 
-				newBd, err := NewCreator(newDBPath, splits, minDirs, newTree, quotas)
+				newBd, err := NewCreator(newDBPath, defaultConfig, newTree, quotas)
 				So(err, ShouldBeNil)
 				So(bd, ShouldNotBeNil)
 
@@ -1046,6 +1066,67 @@ func TestCaches(t *testing.T) {
 
 		wg.Wait()
 	})
+}
+
+func TestSplitFn(t *testing.T) {
+	fn := splitFnFromConfig(Config{
+		{
+			Prefix: "/ab/cd",
+			Splits: 3,
+		},
+		{
+			Prefix: "/ab/ef",
+			Splits: 2,
+		},
+		{
+			Prefix: "/some/*/other/path",
+			Splits: 4,
+		},
+		{
+			Prefix: "/some/*/other/*/longerpath",
+			Splits: 5,
+		},
+		{
+			Prefix: "/some/partial*/thing",
+			Splits: 6,
+		},
+	})
+
+	for n, test := range [...]struct {
+		Input  string
+		Output int
+	}{
+		{
+			"/ab/cd/ef",
+			3,
+		},
+		{
+			"/ab/cd/ef/gh",
+			3,
+		},
+		{
+			"/some/thins/other/path/p",
+			4,
+		},
+		{
+			"/some/thins/other/wombat/longerpath",
+			5,
+		},
+		{
+			"/some/partial/thing",
+			6,
+		},
+		{
+			"/some/partialCat/thing",
+			6,
+		},
+	} {
+		out := fn(test.Input)
+
+		if test.Output != out {
+			t.Errorf("test %d: expecting splits %d ,got %d", n+1, test.Output, out)
+		}
+	}
 }
 
 func fixUsageTimes(mt []*Usage) {

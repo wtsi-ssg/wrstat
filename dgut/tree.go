@@ -187,6 +187,8 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 // depth of 0 it only returns the single deepest directory that has all passing
 // files nested under it.
 //
+// The recurseCount function returns a path dependent depth value.
+//
 // With a depth of 1, it also returns the results that calling Where() with a
 // depth of 0 on each of the deepest directory's children would give. And so on
 // recursively for higher depths.

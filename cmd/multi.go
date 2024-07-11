@@ -170,10 +170,8 @@ func init() {
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
 	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
-	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m",
-		basedirRAM, "maximum MBs to reserve for any job")
-	multiCmd.Flags().IntVarP(&multiSplits, "splits", "s", defaultSplits, "number of splits")
-	multiCmd.Flags().IntVarP(&multiMinDirs, "mindirs", "d", defaultMinDirs, "minimum number of dirs")
+	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", basedirRAM, "maximum MBs to reserve for any job")
+	multiCmd.Flags().StringVarP(&configPath, "config", "b", "", "path to basedirs config file")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
