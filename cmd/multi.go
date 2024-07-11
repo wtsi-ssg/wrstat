@@ -274,7 +274,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 // buildWalkCommand builds a wrstat walk command line based on the given n,
 // yaml path, queue, and if sudo is in effect.
 func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int, yamlPath, queue string) string {
-	cmd := fmt.Sprintf("%s walk ", s.Executable())
+	cmd := s.Executable() + " walk"
 
 	if numStatJobs > 0 {
 		cmd += fmt.Sprintf("-j %d ", numStatJobs)

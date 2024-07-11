@@ -143,7 +143,8 @@ func TestTree(t *testing.T) {
 		})
 
 		Convey("You can find Where() in the Tree files are", func() {
-			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, split.SplitsToSplitFn(0))
+			dcss, err := tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram},
+				split.SplitsToSplitFn(0))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
 				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},
@@ -155,7 +156,8 @@ func TestTree(t *testing.T) {
 				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs[:3], dbModTime},
 			})
 
-			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, split.SplitsToSplitFn(1))
+			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram},
+				split.SplitsToSplitFn(1))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
 				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},
@@ -170,7 +172,8 @@ func TestTree(t *testing.T) {
 				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},
 			})
 
-			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram}, split.SplitsToSplitFn(2))
+			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram},
+				split.SplitsToSplitFn(2))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
 				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime},

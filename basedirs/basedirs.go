@@ -131,36 +131,38 @@ func findBestMatchingConfig(c Config, path string) ConfigAttrs {
 	)
 
 	for _, p := range c {
-		parts := strings.Split(path, "/")
-		prefixParts := strings.Split(p.Prefix, "/")
-
-		if len(parts) < len(prefixParts) {
-			continue
-		}
-
-		var score int
-
-		for i, part := range prefixParts {
-			if match, _ := filepath.Match(part, parts[i]); !match {
-				score = -1
-
-				break
-			}
-
-			if !strings.Contains(part, "*") {
-				score++
-			} else {
-
-			}
-		}
-
-		if score > maxScore {
+		if score := scoreMatch(p, path); score > maxScore {
 			maxScore = score
 			conf = p
 		}
 	}
 
 	return conf
+}
+
+func scoreMatch(p ConfigAttrs, path string) int {
+	parts := strings.Split(path, "/")
+	prefixParts := strings.Split(p.Prefix, "/")
+
+	if len(parts) < len(prefixParts) {
+		return -1
+	}
+
+	var score int
+
+	for i, part := range prefixParts {
+		if match, _ := filepath.Match(part, parts[i]); !match { //nolint:errcheck
+			score = -1
+
+			break
+		}
+
+		if !strings.Contains(part, "*") {
+			score++
+		}
+	}
+
+	return score
 }
 
 // notEnoughDirs returns true if the given path has fewer than minDirs

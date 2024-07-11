@@ -18,10 +18,12 @@ type Config []ConfigAttrs
 
 var ErrBadTSV = errors.New("bad TSV")
 
+const numColumns = 3
+
 func ParseConfig(r io.Reader) (Config, error) {
 	b := bufio.NewReader(r)
 
-	var (
+	var ( //nolint:prealloc
 		result Config
 		end    bool
 	)
@@ -36,21 +38,7 @@ func ParseConfig(r io.Reader) (Config, error) {
 
 		line = bytes.TrimSuffix(line, []byte{'\n'})
 
-		attr := bytes.Split(line, []byte{'\t'})
-		if len(attr) != 3 {
-			return nil, ErrBadTSV
-		}
-
-		var conf ConfigAttrs
-
-		conf.Prefix = string(attr[0])
-
-		conf.Splits, err = strconv.ParseUint(string(attr[1]), 10, 0)
-		if err != nil {
-			return nil, err
-		}
-
-		conf.MinDirs, err = strconv.ParseUint(string(attr[2]), 10, 0)
+		conf, err := parseLine(line)
 		if err != nil {
 			return nil, err
 		}
@@ -59,4 +47,25 @@ func ParseConfig(r io.Reader) (Config, error) {
 	}
 
 	return result, nil
+}
+
+func parseLine(line []byte) (conf ConfigAttrs, err error) {
+	attr := bytes.Split(line, []byte{'\t'})
+	if len(attr) != numColumns {
+		return conf, ErrBadTSV
+	}
+
+	conf.Prefix = string(attr[0])
+
+	conf.Splits, err = strconv.ParseUint(string(attr[1]), 10, 0)
+	if err != nil {
+		return conf, err
+	}
+
+	conf.MinDirs, err = strconv.ParseUint(string(attr[2]), 10, 0)
+	if err != nil {
+		return conf, err
+	}
+
+	return conf, nil
 }

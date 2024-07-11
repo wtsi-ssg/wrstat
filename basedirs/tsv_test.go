@@ -33,7 +33,7 @@ func TestTSV(t *testing.T) {
 		},
 	} {
 		c, err := ParseConfig(strings.NewReader(test.Input))
-		if err != nil {
+		if err != nil { //nolint:nestif,gocritic
 			if errStr := err.Error(); errStr != test.Error {
 				t.Errorf("test %d: expecting error %q, got %q", n+1, test.Error, errStr)
 			}

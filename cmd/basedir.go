@@ -41,12 +41,6 @@ import (
 	ifs "github.com/wtsi-ssg/wrstat/v4/internal/fs"
 )
 
-type baseDirsConfig struct {
-	Prefix  string
-	Splits  int
-	MinDirs int
-}
-
 const (
 	basedirBasename    = "basedirs.db"
 	groupUsageBasename = "basedirs.groupusage.tsv"
@@ -139,6 +133,11 @@ be blank), and the first column will be user_name instead of group_name.
 		}
 
 		c, err := basedirs.ParseConfig(f)
+		if err != nil {
+			die("error parsing basedirs config: %s", err)
+		}
+
+		f.Close()
 
 		if quotaPath == "" {
 			die("you must supply --quota")
