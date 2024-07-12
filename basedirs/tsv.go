@@ -33,7 +33,7 @@ const (
 	noMatch    = -1
 
 	DefaultSplits  = 1
-	DefaultMinDirs = 2
+	defaultMinDirs = 2
 )
 
 func ParseConfig(r io.Reader) (Config, error) {
@@ -96,7 +96,7 @@ func (c *Config) findBestMatch(path string) ConfigAttrs {
 	maxScore := -1
 	conf := ConfigAttrs{
 		Splits:  DefaultSplits,
-		MinDirs: DefaultMinDirs,
+		MinDirs: defaultMinDirs,
 	}
 
 	pathParts := strings.Split(strings.TrimPrefix(path, "/"), "/")
