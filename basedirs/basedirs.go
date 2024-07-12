@@ -31,7 +31,6 @@
 package basedirs
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/ugorji/go/codec"
@@ -93,7 +92,7 @@ func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
 }
 
 func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirSummary)) error {
-	dcss, err := b.tree.Where("/", filter, splitFnFromConfig(b.config))
+	dcss, err := b.tree.Where("/", filter, b.config.splitFn())
 	if err != nil {
 		return err
 	}
@@ -118,60 +117,13 @@ func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirS
 	return nil
 }
 
-func splitFnFromConfig(c Config) func(string) int {
-	return func(path string) int {
-		return int(findBestMatchingConfig(c, path).Splits)
-	}
-}
-
-func findBestMatchingConfig(c Config, path string) ConfigAttrs {
-	var (
-		maxScore int
-		conf     ConfigAttrs
-	)
-
-	for _, p := range c {
-		if score := scoreMatch(p, path); score > maxScore {
-			maxScore = score
-			conf = p
-		}
-	}
-
-	return conf
-}
-
-func scoreMatch(p ConfigAttrs, path string) int {
-	parts := strings.Split(path, "/")
-	prefixParts := strings.Split(p.Prefix, "/")
-
-	if len(parts) < len(prefixParts) {
-		return -1
-	}
-
-	var score int
-
-	for i, part := range prefixParts {
-		if match, _ := filepath.Match(part, parts[i]); !match { //nolint:errcheck
-			score = -1
-
-			break
-		}
-
-		if !strings.Contains(part, "*") {
-			score++
-		}
-	}
-
-	return score
-}
-
 // notEnoughDirs returns true if the given path has fewer than minDirs
 // directories. If path has an mdt directory in it, then it becomes an extra
 // directory.
 func (b *BaseDirs) notEnoughDirs(path string) bool {
 	numDirs := strings.Count(path, "/")
 
-	min := int(findBestMatchingConfig(b.config, path).MinDirs)
+	min := int(b.config.findBestMatch(path).MinDirs)
 
 	return numDirs < min
 }

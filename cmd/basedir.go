@@ -81,17 +81,24 @@ A base directory is a directory where all a group/user's data lies nested
 within.
 
 Since a group/user could have files in multiple mount points mounted at /, the
-true base directory would likely always be '/', which wouldn't be useful.
-Instead, a 'wrstat where' split of --splits is used, and only paths consisting
+true base directory would likely always be '/', which wouldn't be useful. 
+Instead, you can provide as TSV based config file, with the following format:
+
+PREFIX	SPLITS	MINDIRS
+
+…where the PREFIX is a path prefix, which can contain wildcards, the SPLITS
+values matches the usage in the where subcommand, and the MINDIRS values are the
+minimum number of sub-directories a directory should contain for a directory to
+be considered a base directory.
+
+a 'wrstat where' split of --splits is used, and only paths consisting
 of at least --mindirs sub directories are returned. Paths that are
-subdirectories of other results are ignored. As a special case, if a path
-contains 'mdt[n]' as a directory, where n is a number, then an extra sub
-directories is required.
+subdirectories of other results are ignored.
 
 If you expect data specific to different groups to appear 5 directories deep in
-different mount points, then --splits 4 --mindirs 4 might work well. If you
-expect it to appear 2 directories deep, the defaults of --splits 1 --mindirs 2
-might work well.
+different mount points, then a splits value of  4 and mindirs value of 4 might
+work well. If you expect it to appear 2 directories deep, the defaults of
+splits=1 and mindirs=2 might work well.
 
 Disk usage summaries are stored in database keyed on the group/user and base
 directories. The summaries include quota information for groups, taking

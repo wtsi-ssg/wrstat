@@ -47,12 +47,12 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const (
-	defaultSplits  = 4
-	defaultMinDirs = 4
-)
-
 func TestBaseDirs(t *testing.T) { //nolint:gocognit
+	const (
+		defaultSplits  = 4
+		defaultMinDirs = 4
+	)
+
 	csvPath := internaldata.CreateQuotasCSV(t, `1,/lustre/scratch125,4000000000,20
 2,/lustre/scratch125,300,30
 2,/lustre/scratch123,400,40
@@ -69,12 +69,12 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 			MinDirs: defaultMinDirs,
 		},
 		{
-			Prefix:  "/lustre/scratch123/hgi/mdt*",
+			Prefix:  []string{"lustre", "scratch123", "hgi", "mdt*"},
 			Splits:  defaultSplits + 1,
 			MinDirs: defaultMinDirs + 1,
 		},
 		{
-			Prefix:  "/nfs/scratch123/hgi/mdt*",
+			Prefix:  []string{"nfs", "scratch123", "hgi", "mdt*"},
 			Splits:  defaultSplits + 1,
 			MinDirs: defaultMinDirs + 1,
 		},
@@ -1066,67 +1066,6 @@ func TestCaches(t *testing.T) {
 
 		wg.Wait()
 	})
-}
-
-func TestSplitFn(t *testing.T) {
-	fn := splitFnFromConfig(Config{
-		{
-			Prefix: "/ab/cd",
-			Splits: 3,
-		},
-		{
-			Prefix: "/ab/ef",
-			Splits: 2,
-		},
-		{
-			Prefix: "/some/*/other/path",
-			Splits: 4,
-		},
-		{
-			Prefix: "/some/*/other/*/longerpath",
-			Splits: 5,
-		},
-		{
-			Prefix: "/some/partial*/thing",
-			Splits: 6,
-		},
-	})
-
-	for n, test := range [...]struct {
-		Input  string
-		Output int
-	}{
-		{
-			"/ab/cd/ef",
-			3,
-		},
-		{
-			"/ab/cd/ef/gh",
-			3,
-		},
-		{
-			"/some/thins/other/path/p",
-			4,
-		},
-		{
-			"/some/thins/other/wombat/longerpath",
-			5,
-		},
-		{
-			"/some/partial/thing",
-			6,
-		},
-		{
-			"/some/partialCat/thing",
-			6,
-		},
-	} {
-		out := fn(test.Input)
-
-		if test.Output != out {
-			t.Errorf("test %d: expecting splits %d ,got %d", n+1, test.Output, out)
-		}
-	}
 }
 
 func fixUsageTimes(mt []*Usage) {

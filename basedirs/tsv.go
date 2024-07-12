@@ -5,20 +5,36 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"path/filepath"
 	"strconv"
+	"strings"
+
+	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 )
 
 type ConfigAttrs struct {
-	Prefix  string
+	Prefix  []string
 	Splits  uint64
 	MinDirs uint64
 }
 
 type Config []ConfigAttrs
 
-var ErrBadTSV = errors.New("bad TSV")
+var (
+	ErrBadTSV = errors.New("bad TSV")
 
-const numColumns = 3
+	slashByte   = []byte{'/'}  //nolint:gochecknoglobals
+	newLineByte = []byte{'\n'} //nolint:gochecknoglobals
+	tabByte     = []byte{'\t'} //nolint:gochecknoglobals
+)
+
+const (
+	numColumns = 3
+	noMatch    = -1
+
+	DefaultSplits  = 1
+	DefaultMinDirs = 2
+)
 
 func ParseConfig(r io.Reader) (Config, error) {
 	b := bufio.NewReader(r)
@@ -36,7 +52,7 @@ func ParseConfig(r io.Reader) (Config, error) {
 			return nil, err
 		}
 
-		line = bytes.TrimSuffix(line, []byte{'\n'})
+		line = bytes.TrimSuffix(line, newLineByte)
 
 		conf, err := parseLine(line)
 		if err != nil {
@@ -50,12 +66,12 @@ func ParseConfig(r io.Reader) (Config, error) {
 }
 
 func parseLine(line []byte) (conf ConfigAttrs, err error) {
-	attr := bytes.Split(line, []byte{'\t'})
+	attr := bytes.Split(line, tabByte)
 	if len(attr) != numColumns {
 		return conf, ErrBadTSV
 	}
 
-	conf.Prefix = string(attr[0])
+	conf.Prefix = strings.Split(string(bytes.TrimPrefix(attr[0], slashByte)), "/")
 
 	conf.Splits, err = strconv.ParseUint(string(attr[1]), 10, 0)
 	if err != nil {
@@ -68,4 +84,51 @@ func parseLine(line []byte) (conf ConfigAttrs, err error) {
 	}
 
 	return conf, nil
+}
+
+func (c *Config) splitFn() split.SplitFn {
+	return func(path string) int {
+		return int(c.findBestMatch(path).Splits)
+	}
+}
+
+func (c *Config) findBestMatch(path string) ConfigAttrs {
+	maxScore := -1
+	conf := ConfigAttrs{
+		Splits:  DefaultSplits,
+		MinDirs: DefaultMinDirs,
+	}
+
+	pathParts := strings.Split(strings.TrimPrefix(path, "/"), "/")
+
+	for _, p := range *c {
+		if score := p.scoreMatch(pathParts); score > maxScore {
+			maxScore = score
+			conf = p
+		}
+	}
+
+	return conf
+}
+
+func (p *ConfigAttrs) scoreMatch(pathParts []string) int {
+	if len(pathParts) < len(p.Prefix) {
+		return noMatch
+	}
+
+	var score int
+
+	for i, prefixPart := range p.Prefix {
+		pathPart := pathParts[i]
+
+		if prefixPart == pathPart {
+			score++
+		} else if match, _ := filepath.Match(prefixPart, pathPart); !match { //nolint:errcheck
+			return noMatch
+		}
+
+		score++
+	}
+
+	return score
 }

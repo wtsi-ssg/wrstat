@@ -29,6 +29,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
@@ -206,7 +207,7 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 // The returned DirSummarys are sorted by Size, largest first.
 //
 // Returns an error if dir doesn't exist.
-func (t *Tree) Where(dir string, filter *Filter, recurseCount func(string) int) (DCSs, error) {
+func (t *Tree) Where(dir string, filter *Filter, recurseCount split.SplitFn) (DCSs, error) {
 	if filter == nil {
 		filter = new(Filter)
 	}

@@ -30,6 +30,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 )
 
@@ -38,7 +39,7 @@ import (
 // is a GET on /rest/v1/where or /rest/v1/auth/where.
 func (s *Server) getWhere(c *gin.Context) {
 	dir := c.DefaultQuery("dir", defaultDir)
-	splits := c.DefaultQuery("splits", defaultSplits)
+	splits := c.DefaultQuery("splits", strconv.FormatUint(basedirs.DefaultSplits, 10))
 
 	filter, err := s.makeRestrictedFilterFromContext(c)
 	if err != nil {
@@ -60,12 +61,13 @@ func (s *Server) getWhere(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, s.dcssToSummaries(dcss))
 }
 
-// convertSplitsValue converts the given number string in to an int. On failure,
-// returns our default value for splits of 2.
-func convertSplitsValue(splits string) func(string) int {
+// convertSplitsValue returns a split.SplitFn that always returns the value
+// specified. If the given value fails to be parsed as a Uint, the default value
+// of 2 will be used.
+func convertSplitsValue(splits string) split.SplitFn {
 	splitsN, err := strconv.ParseUint(splits, 10, 8)
 	if err != nil {
-		return convertSplitsValue(defaultSplits)
+		return split.SplitsToSplitFn(basedirs.DefaultSplits)
 	}
 
 	return split.SplitsToSplitFn(int(splitsN))
