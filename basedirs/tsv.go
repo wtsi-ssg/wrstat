@@ -38,7 +38,7 @@ const (
 // ParseConfig reads basedirs configuration, which is a TSV in the following
 // format:
 //
-// PREFIX	SPLITS	MINDIRS
+// PREFIX	SPLITS	MINDIRS.
 func ParseConfig(r io.Reader) (Config, error) {
 	b := bufio.NewReader(r)
 
