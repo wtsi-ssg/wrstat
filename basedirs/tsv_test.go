@@ -15,22 +15,30 @@ func TestTSV(t *testing.T) {
 			Error  error
 		}{
 			{
-				Input: "some/path\t1\t2\nsome/other/path\t3\t4",
+				Input: "/some/path/\t1\t2\n/some/other/path\t3\t4\n/some/much/longer/path/\t999\t911",
 				Output: Config{
 					{
-						Prefix:  []string{"some", "path"},
+						Prefix:  "/some/path/",
+						Score:   3,
 						Splits:  1,
 						MinDirs: 2,
 					},
 					{
-						Prefix:  []string{"some", "other", "path"},
+						Prefix:  "/some/other/path",
+						Score:   3,
 						Splits:  3,
 						MinDirs: 4,
+					},
+					{
+						Prefix:  "/some/much/longer/path/",
+						Score:   5,
+						Splits:  999,
+						MinDirs: 911,
 					},
 				},
 			},
 			{
-				Input: "some/path\t12\nsome/other/path\t3\t4",
+				Input: "/some/path\t12\n/some/other/path\t3\t4",
 				Error: ErrBadTSV,
 			},
 		} {
@@ -44,23 +52,18 @@ func TestTSV(t *testing.T) {
 func TestSplitFn(t *testing.T) {
 	c := Config{
 		{
-			Prefix: []string{"ab", "cd"},
+			Prefix: "/ab/cd/",
+			Score:  3,
 			Splits: 3,
 		},
 		{
-			Prefix: []string{"ab", "ef"},
+			Prefix: "/ab/ef/",
+			Score:  3,
 			Splits: 2,
 		},
 		{
-			Prefix: []string{"some", "*", "other", "path"},
-			Splits: 4,
-		},
-		{
-			Prefix: []string{"some", "*", "other", "*", "longerpath"},
-			Splits: 5,
-		},
-		{
-			Prefix: []string{"some", "partial*", "thing"},
+			Prefix: "/some/partial/thing",
+			Score:  3,
 			Splits: 6,
 		},
 	}
@@ -81,19 +84,11 @@ func TestSplitFn(t *testing.T) {
 				3,
 			},
 			{
-				"/some/thins/other/path/p",
-				4,
-			},
-			{
-				"/some/thins/other/wombat/longerpath",
-				5,
-			},
-			{
 				"/some/partial/thing",
 				6,
 			},
 			{
-				"/some/partialCat/thing",
+				"/some/partial/thingCat",
 				6,
 			},
 		} {

@@ -118,12 +118,10 @@ func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirS
 }
 
 // notEnoughDirs returns true if the given path has fewer than minDirs
-// directories. If path has an mdt directory in it, then it becomes an extra
-// directory.
+// directories.
 func (b *BaseDirs) notEnoughDirs(path string) bool {
 	numDirs := strings.Count(path, "/")
-
-	min := int(b.config.findBestMatch(path).MinDirs)
+	min := b.config.findBestMatch(path).MinDirs
 
 	return numDirs < min
 }

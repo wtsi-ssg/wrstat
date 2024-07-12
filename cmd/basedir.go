@@ -86,14 +86,9 @@ Instead, you can provide as TSV based config file, with the following format:
 
 PREFIX	SPLITS	MINDIRS
 
-…where the PREFIX is a path prefix, which can contain wildcards, the SPLITS
-values matches the usage in the where subcommand, and the MINDIRS values are the
-minimum number of sub-directories a directory should contain for a directory to
-be considered a base directory.
-
-a 'wrstat where' split of --splits is used, and only paths consisting
-of at least --mindirs sub directories are returned. Paths that are
-subdirectories of other results are ignored.
+…where the PREFIX is a path prefix, the SPLITS values matches the usage in the
+where subcommand, and the MINDIRS values are the minimum number of nodes a path
+must possess.
 
 If you expect data specific to different groups to appear 5 directories deep in
 different mount points, then a splits value of  4 and mindirs value of 4 might
@@ -139,7 +134,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("error opening config: %s", err)
 		}
 
-		c, err := basedirs.ParseConfig(f)
+		basedirsConfig, err := basedirs.ParseConfig(f)
 		if err != nil {
 			die("error parsing basedirs config: %s", err)
 		}
@@ -172,7 +167,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to get existing base directories database: %s", err)
 		}
 
-		bd, err := basedirs.NewCreator(dbPath, c, tree, quotas)
+		bd, err := basedirs.NewCreator(dbPath, basedirsConfig, tree, quotas)
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}

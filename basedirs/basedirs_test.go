@@ -69,12 +69,14 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 			MinDirs: defaultMinDirs,
 		},
 		{
-			Prefix:  []string{"lustre", "scratch123", "hgi", "mdt*"},
+			Prefix:  "/lustre/scratch123/hgi/mdt",
+			Score:   4,
 			Splits:  defaultSplits + 1,
 			MinDirs: defaultMinDirs + 1,
 		},
 		{
-			Prefix:  []string{"nfs", "scratch123", "hgi", "mdt*"},
+			Prefix:  "/nfs/scratch123/hgi/mdt",
+			Score:   4,
 			Splits:  defaultSplits + 1,
 			MinDirs: defaultMinDirs + 1,
 		},

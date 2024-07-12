@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -13,9 +12,10 @@ import (
 )
 
 type ConfigAttrs struct {
-	Prefix  []string
-	Splits  uint64
-	MinDirs uint64
+	Prefix  string
+	Score   int
+	Splits  int
+	MinDirs int
 }
 
 type Config []ConfigAttrs
@@ -23,7 +23,6 @@ type Config []ConfigAttrs
 var (
 	ErrBadTSV = errors.New("bad TSV")
 
-	slashByte   = []byte{'/'}  //nolint:gochecknoglobals
 	newLineByte = []byte{'\n'} //nolint:gochecknoglobals
 	tabByte     = []byte{'\t'} //nolint:gochecknoglobals
 )
@@ -36,6 +35,10 @@ const (
 	defaultMinDirs = 2
 )
 
+// ParseConfig reads basedirs configuration, which is a TSV in the following
+// format:
+//
+// PREFIX	SPLITS	MINDIRS
 func ParseConfig(r io.Reader) (Config, error) {
 	b := bufio.NewReader(r)
 
@@ -65,70 +68,51 @@ func ParseConfig(r io.Reader) (Config, error) {
 	return result, nil
 }
 
-func parseLine(line []byte) (conf ConfigAttrs, err error) {
+func parseLine(line []byte) (ConfigAttrs, error) {
 	attr := bytes.Split(line, tabByte)
 	if len(attr) != numColumns {
-		return conf, ErrBadTSV
+		return ConfigAttrs{}, ErrBadTSV
 	}
 
-	conf.Prefix = strings.Split(string(bytes.TrimPrefix(attr[0], slashByte)), "/")
+	prefix := string(attr[0])
 
-	conf.Splits, err = strconv.ParseUint(string(attr[1]), 10, 0)
+	splits, err := strconv.ParseUint(string(attr[1]), 10, 0)
 	if err != nil {
-		return conf, err
+		return ConfigAttrs{}, err
 	}
 
-	conf.MinDirs, err = strconv.ParseUint(string(attr[2]), 10, 0)
+	minDirs, err := strconv.ParseUint(string(attr[2]), 10, 0)
 	if err != nil {
-		return conf, err
+		return ConfigAttrs{}, err
 	}
 
-	return conf, nil
+	return ConfigAttrs{
+		Prefix:  prefix,
+		Score:   strings.Count(prefix, "/"),
+		Splits:  int(splits),
+		MinDirs: int(minDirs),
+	}, nil
 }
 
 func (c *Config) splitFn() split.SplitFn {
 	return func(path string) int {
-		return int(c.findBestMatch(path).Splits)
+		return c.findBestMatch(path).Splits
 	}
 }
 
 func (c *Config) findBestMatch(path string) ConfigAttrs {
-	maxScore := -1
+	maxScore := noMatch
 	conf := ConfigAttrs{
 		Splits:  DefaultSplits,
 		MinDirs: defaultMinDirs,
 	}
 
-	pathParts := strings.Split(strings.TrimPrefix(path, "/"), "/")
-
 	for _, p := range *c {
-		if score := p.scoreMatch(pathParts); score > maxScore {
-			maxScore = score
+		if strings.HasPrefix(path, p.Prefix) && p.Score > maxScore {
+			maxScore = p.Score
 			conf = p
 		}
 	}
 
 	return conf
-}
-
-func (p *ConfigAttrs) scoreMatch(pathParts []string) int {
-	if len(pathParts) < len(p.Prefix) {
-		return noMatch
-	}
-
-	var score int
-
-	for i, prefixPart := range p.Prefix {
-		pathPart := pathParts[i]
-
-		if prefixPart == pathPart {
-			score++
-		} else if match, _ := filepath.Match(prefixPart, pathPart); !match { //nolint:errcheck
-			return noMatch
-		}
-
-		score++
-	}
-
-	return score
 }

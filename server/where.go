@@ -30,18 +30,20 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 	"github.com/wtsi-ssg/wrstat/v4/internal/split"
 )
 
-const defaultSplits = 2
+const (
+	defaultSplits    = 2
+	defaultSplitsStr = "2"
+)
 
 // getWhere responds with a list of directory stats describing where data is on
 // disks. LoadDGUTDB() must already have been called. This is called when there
 // is a GET on /rest/v1/where or /rest/v1/auth/where.
 func (s *Server) getWhere(c *gin.Context) {
 	dir := c.DefaultQuery("dir", defaultDir)
-	splits := c.DefaultQuery("splits", strconv.FormatUint(basedirs.DefaultSplits, 10))
+	splits := c.DefaultQuery("splits", defaultSplitsStr)
 
 	filter, err := s.makeRestrictedFilterFromContext(c)
 	if err != nil {

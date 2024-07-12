@@ -1576,7 +1576,8 @@ func createExampleBasedirsDB(t *testing.T, tree *dgut.Tree) (string, string, err
 			MinDirs: 4,
 		},
 		{
-			Prefix:  []string{"lustre", "scratch123", "hgi", "mdt*"},
+			Prefix:  "/lustre/scratch123/hgi/mdt",
+			Score:   4,
 			Splits:  5,
 			MinDirs: 5,
 		},
