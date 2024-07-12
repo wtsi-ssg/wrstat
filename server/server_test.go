@@ -1572,14 +1572,14 @@ func createExampleBasedirsDB(t *testing.T, tree *dgut.Tree) (string, string, err
 
 	bd, err := basedirs.NewCreator(dbPath, basedirs.Config{
 		{
-			Splits:  4,
-			MinDirs: 4,
-		},
-		{
 			Prefix:  "/lustre/scratch123/hgi/mdt",
 			Score:   4,
 			Splits:  5,
 			MinDirs: 5,
+		},
+		{
+			Splits:  4,
+			MinDirs: 4,
 		},
 	}, tree, quotas)
 	if err != nil {

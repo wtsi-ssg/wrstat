@@ -18,6 +18,12 @@ func TestTSV(t *testing.T) {
 				Input: "/some/path/\t1\t2\n/some/other/path\t3\t4\n/some/much/longer/path/\t999\t911",
 				Output: Config{
 					{
+						Prefix:  "/some/much/longer/path/",
+						Score:   5,
+						Splits:  999,
+						MinDirs: 911,
+					},
+					{
 						Prefix:  "/some/path/",
 						Score:   3,
 						Splits:  1,
@@ -28,12 +34,6 @@ func TestTSV(t *testing.T) {
 						Score:   3,
 						Splits:  3,
 						MinDirs: 4,
-					},
-					{
-						Prefix:  "/some/much/longer/path/",
-						Score:   5,
-						Splits:  999,
-						MinDirs: 911,
 					},
 				},
 			},

@@ -65,10 +65,6 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 
 	defaultConfig := Config{
 		{
-			Splits:  defaultSplits,
-			MinDirs: defaultMinDirs,
-		},
-		{
 			Prefix:  "/lustre/scratch123/hgi/mdt",
 			Score:   4,
 			Splits:  defaultSplits + 1,
@@ -79,6 +75,10 @@ func TestBaseDirs(t *testing.T) { //nolint:gocognit
 			Score:   4,
 			Splits:  defaultSplits + 1,
 			MinDirs: defaultMinDirs + 1,
+		},
+		{
+			Splits:  defaultSplits,
+			MinDirs: defaultMinDirs,
 		},
 	}
 

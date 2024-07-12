@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -65,6 +66,10 @@ func ParseConfig(r io.Reader) (Config, error) {
 		result = append(result, conf)
 	}
 
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Score > result[j].Score
+	})
+
 	return result, nil
 }
 
@@ -101,18 +106,14 @@ func (c *Config) splitFn() split.SplitFn {
 }
 
 func (c *Config) findBestMatch(path string) ConfigAttrs {
-	maxScore := noMatch
-	conf := ConfigAttrs{
-		Splits:  DefaultSplits,
-		MinDirs: defaultMinDirs,
-	}
-
 	for _, p := range *c {
-		if strings.HasPrefix(path, p.Prefix) && p.Score > maxScore {
-			maxScore = p.Score
-			conf = p
+		if strings.HasPrefix(path, p.Prefix) {
+			return p
 		}
 	}
 
-	return conf
+	return ConfigAttrs{
+		Splits:  DefaultSplits,
+		MinDirs: defaultMinDirs,
+	}
 }
