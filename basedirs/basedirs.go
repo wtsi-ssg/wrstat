@@ -31,25 +31,17 @@
 package basedirs
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
 )
 
-const (
-	extraMinDirsForMDT = 1
-)
-
-var basedirMDTRegexp = regexp.MustCompile(`\/mdt\d(\/|\z)`)
-
 // BaseDirs is used to summarise disk usage information by base directory and
 // group or user.
 type BaseDirs struct {
 	dbPath      string
-	splits      int
-	minDirs     int
+	config      Config
 	tree        *dgut.Tree
 	quotas      *Quotas
 	ch          codec.Handle
@@ -64,7 +56,7 @@ type BaseDirs struct {
 // `/mounts/[group name]`, that's 2 directories deep and splits 1, minDirs 2
 // might work well. If it's 5 directories deep, splits 4, minDirs 4 might work
 // well.
-func NewCreator(dbPath string, splits, minDirs int, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
+func NewCreator(dbPath string, c Config, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
 	mp, err := getMountPoints()
 	if err != nil {
 		return nil, err
@@ -72,8 +64,7 @@ func NewCreator(dbPath string, splits, minDirs int, tree *dgut.Tree, quotas *Quo
 
 	return &BaseDirs{
 		dbPath:      dbPath,
-		splits:      splits,
-		minDirs:     minDirs,
+		config:      c,
 		tree:        tree,
 		quotas:      quotas,
 		ch:          new(codec.BincHandle),
@@ -101,7 +92,7 @@ func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
 }
 
 func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirSummary)) error {
-	dcss, err := b.tree.Where("/", filter, b.splits)
+	dcss, err := b.tree.Where("/", filter, b.config.splitFn())
 	if err != nil {
 		return err
 	}
@@ -127,15 +118,10 @@ func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirS
 }
 
 // notEnoughDirs returns true if the given path has fewer than minDirs
-// directories. If path has an mdt directory in it, then it becomes an extra
-// directory.
+// directories.
 func (b *BaseDirs) notEnoughDirs(path string) bool {
 	numDirs := strings.Count(path, "/")
-
-	min := b.minDirs
-	if basedirMDTRegexp.MatchString(path) {
-		min += extraMinDirsForMDT
-	}
+	min := b.config.findBestMatch(path).MinDirs
 
 	return numDirs < min
 }

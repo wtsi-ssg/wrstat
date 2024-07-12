@@ -51,19 +51,18 @@ const (
 
 // options for this cmd.
 var (
-	workDir         string
-	finalDir        string
-	partialDirMerge string
-	partialDirClean bool
-	createPartial   bool
-	multiInodes     int
-	multiStatJobs   int
-	multiCh         string
-	forcedQueue     string
-	quota           string
-	maxMem          int
-	multiSplits     int
-	multiMinDirs    int
+	workDir             string
+	finalDir            string
+	partialDirMerge     string
+	partialDirClean     bool
+	createPartial       bool
+	multiInodes         int
+	multiStatJobs       int
+	multiCh             string
+	forcedQueue         string
+	quota               string
+	maxMem              int
+	multiBasedirsConfig string
 )
 
 // multiCmd represents the multi command.
@@ -170,10 +169,8 @@ func init() {
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
 	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
-	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m",
-		basedirRAM, "maximum MBs to reserve for any job")
-	multiCmd.Flags().IntVarP(&multiSplits, "splits", "s", defaultSplits, "number of splits")
-	multiCmd.Flags().IntVarP(&multiMinDirs, "mindirs", "d", defaultMinDirs, "minimum number of dirs")
+	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", basedirRAM, "maximum MBs to reserve for any job")
+	multiCmd.Flags().StringVarP(&multiBasedirsConfig, "config", "b", "", "path to basedirs config file")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -188,14 +185,6 @@ func checkMultiArgs(args []string) {
 
 	if len(args) == 0 {
 		die("at least 1 directory of interest must be supplied")
-	}
-
-	if multiSplits <= 0 {
-		die("number of splits must be an integer more than 0")
-	}
-
-	if multiMinDirs <= 0 {
-		die("minimum number of dirs must be an integer more than 0")
 	}
 }
 
@@ -276,7 +265,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 // buildWalkCommand builds a wrstat walk command line based on the given n,
 // yaml path, queue, and if sudo is in effect.
 func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int, yamlPath, queue string) string {
-	cmd := fmt.Sprintf("%s walk ", s.Executable())
+	cmd := s.Executable() + " walk"
 
 	if numStatJobs > 0 {
 		cmd += fmt.Sprintf("-j %d ", numStatJobs)
@@ -337,8 +326,14 @@ func schedulePartialSentinel(outputRoot, unique string, s *scheduler.Scheduler) 
 // scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
 // from the combined dgut.dbs folders.
 func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q -s %d -m %d %q %q",
-		s.Executable(), quota, ownersPath, multiSplits, multiMinDirs, outputRoot, finalDir),
+	var baseDirsConfig string
+
+	if multiBasedirsConfig != "" {
+		baseDirsConfig = fmt.Sprintf("-b %q", multiBasedirsConfig)
+	}
+
+	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q %s %q %q",
+		s.Executable(), quota, ownersPath, baseDirsConfig, outputRoot, finalDir),
 		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

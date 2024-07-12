@@ -46,15 +46,12 @@ const (
 	groupUsageBasename = "basedirs.groupusage.tsv"
 	userUsageBasename  = "basedirs.userusage.tsv"
 	numBasedirArgs     = 2
-	defaultSplits      = 1
-	defaultMinDirs     = 2
 )
 
 // options for this cmd.
 var quotaPath string
 var ownersPath string
-var basedirSplits int
-var basedirMinDirs int
+var configPath string
 
 // basedirCmd represents the basedir command.
 var basedirCmd = &cobra.Command{
@@ -84,17 +81,19 @@ A base directory is a directory where all a group/user's data lies nested
 within.
 
 Since a group/user could have files in multiple mount points mounted at /, the
-true base directory would likely always be '/', which wouldn't be useful.
-Instead, a 'wrstat where' split of --splits is used, and only paths consisting
-of at least --mindirs sub directories are returned. Paths that are
-subdirectories of other results are ignored. As a special case, if a path
-contains 'mdt[n]' as a directory, where n is a number, then an extra sub
-directories is required.
+true base directory would likely always be '/', which wouldn't be useful. 
+Instead, you can provide as TSV based config file, with the following format:
+
+PREFIX	SPLITS	MINDIRS
+
+…where the PREFIX is a path prefix, the SPLITS values matches the usage in the
+where subcommand, and the MINDIRS values are the minimum number of nodes a path
+must possess.
 
 If you expect data specific to different groups to appear 5 directories deep in
-different mount points, then --splits 4 --mindirs 4 might work well. If you
-expect it to appear 2 directories deep, the defaults of --splits 1 --mindirs 2
-might work well.
+different mount points, then a splits value of  4 and mindirs value of 4 might
+work well. If you expect it to appear 2 directories deep, the defaults of
+splits=1 and mindirs=2 might work well.
 
 Disk usage summaries are stored in database keyed on the group/user and base
 directories. The summaries include quota information for groups, taking
@@ -130,6 +129,18 @@ be blank), and the first column will be user_name instead of group_name.
 				"and the multi -f output directory")
 		}
 
+		f, err := os.Open(configPath)
+		if err != nil {
+			die("error opening config: %s", err)
+		}
+
+		basedirsConfig, err := basedirs.ParseConfig(f)
+		if err != nil {
+			die("error parsing basedirs config: %s", err)
+		}
+
+		f.Close()
+
 		if quotaPath == "" {
 			die("you must supply --quota")
 		}
@@ -156,7 +167,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to get existing base directories database: %s", err)
 		}
 
-		bd, err := basedirs.NewCreator(dbPath, basedirSplits, basedirMinDirs, tree, quotas)
+		bd, err := basedirs.NewCreator(dbPath, basedirsConfig, tree, quotas)
 		if err != nil {
 			die("failed to create base directories database: %s", err)
 		}
@@ -207,8 +218,7 @@ func init() {
 	// flags specific to this sub-command
 	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "gid,disk,size_quota,inode_quota csv file")
 	basedirCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
-	basedirCmd.Flags().IntVarP(&basedirSplits, "splits", "s", defaultSplits, "number of splits")
-	basedirCmd.Flags().IntVarP(&basedirMinDirs, "mindirs", "m", defaultMinDirs, "minimum number of dirs")
+	basedirCmd.Flags().StringVarP(&configPath, "config", "b", "", "path to basedirs config file")
 }
 
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
