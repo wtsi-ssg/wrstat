@@ -46,6 +46,8 @@ const (
 	groupUsageBasename = "basedirs.groupusage.tsv"
 	userUsageBasename  = "basedirs.userusage.tsv"
 	numBasedirArgs     = 2
+	defaultSplits      = 1
+	defaultMinDirs     = 2
 )
 
 // options for this cmd.
@@ -88,7 +90,8 @@ PREFIX	SPLITS	MINDIRS
 
 …where the PREFIX is a path prefix, the SPLITS values matches the usage in the
 where subcommand, and the MINDIRS values are the minimum number of nodes a path
-must possess.
+must possess. If you don't provide a config file, one like "/ 1 2" is used by
+default.
 
 If you expect data specific to different groups to appear 5 directories deep in
 different mount points, then a splits value of  4 and mindirs value of 4 might
@@ -129,18 +132,6 @@ be blank), and the first column will be user_name instead of group_name.
 				"and the multi -f output directory")
 		}
 
-		f, err := os.Open(configPath)
-		if err != nil {
-			die("error opening config: %s", err)
-		}
-
-		basedirsConfig, err := basedirs.ParseConfig(f)
-		if err != nil {
-			die("error parsing basedirs config: %s", err)
-		}
-
-		f.Close()
-
 		if quotaPath == "" {
 			die("you must supply --quota")
 		}
@@ -153,6 +144,8 @@ be blank), and the first column will be user_name instead of group_name.
 		if err != nil {
 			die("failed to parse quota information: %s", err)
 		}
+
+		basedirsConfig := config()
 
 		t := time.Now()
 		tree, err := dgut.NewTree(dgutDBCombinePaths(args[0])...)
@@ -219,6 +212,32 @@ func init() {
 	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "gid,disk,size_quota,inode_quota csv file")
 	basedirCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	basedirCmd.Flags().StringVarP(&configPath, "config", "b", "", "path to basedirs config file")
+}
+
+func config() basedirs.Config {
+	if configPath == "" {
+		return basedirs.Config{
+			basedirs.ConfigAttrs{
+				Prefix:  "/",
+				Splits:  defaultSplits,
+				MinDirs: defaultMinDirs,
+			},
+		}
+	}
+
+	f, err := os.Open(configPath)
+	if err != nil {
+		die("error opening config: %s", err)
+	}
+
+	basedirsConfig, err := basedirs.ParseConfig(f)
+	if err != nil {
+		die("error parsing basedirs config: %s", err)
+	}
+
+	f.Close()
+
+	return basedirsConfig
 }
 
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
