@@ -203,8 +203,16 @@ func dateStamp() string {
 	return t.Format("20060102")
 }
 
+var runJobs string
+
 // addJobsToQueue adds the jobs to wr's queue.
 func addJobsToQueue(s *scheduler.Scheduler, jobs []*jobqueue.Job) {
+	if runJobs != "" {
+		fmt.Printf("%#v", jobs)
+
+		return
+	}
+
 	if err := s.SubmitJobs(jobs); err != nil {
 		die("failed to add jobs to wr's queue: %s", err)
 	}
