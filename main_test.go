@@ -23,8 +23,8 @@ const app = "wrstat"
 
 func buildSelf() func() {
 	cmd := exec.Command(
-		"go", "build", "-tags", "netgo", "-ldflags",
-		"-X github.com/wtsi-ssg/wrstat/v4/cmd.jobRun=0 -X github.com/wtsi-ssg/wrstat/v4/cmd.Version=TESTVERSION",
+		"go", "build", "-tags", "netgo",
+		"-ldflags=-X github.com/wtsi-ssg/wrstat/v4/cmd.runJobs=0 -X github.com/wtsi-ssg/wrstat/v4/cmd.Version=TESTVERSION",
 	)
 
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=1")

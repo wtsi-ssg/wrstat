@@ -174,6 +174,10 @@ func die(msg string, a ...interface{}) {
 //
 // If you provide a non-blank queue, that queue will be used when scheduling.
 func newScheduler(cwd, queue string) (*scheduler.Scheduler, func()) {
+	if runJobs != "" {
+		return testScheduler()
+	}
+
 	s, err := scheduler.New(deployment, cwd, queue, connectTimeout, appLogger, sudo)
 
 	if err != nil {
@@ -225,4 +229,8 @@ func testPrint(jobs []*jobqueue.Job) {
 	w := os.NewFile(uintptr(testOutput), "/dev/stdin")
 
 	json.NewEncoder(w).Encode(jobs) //nolint:errcheck,errchkjson
+}
+
+func testScheduler() (*scheduler.Scheduler, func()) {
+	return &scheduler.Scheduler{}, func() {}
 }
