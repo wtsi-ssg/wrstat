@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
+	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -231,4 +232,142 @@ func TestStat(t *testing.T) {
 
 		So(string(data), ShouldEqual, expectation)
 	})
+}
+
+func TestWalk(t *testing.T) {
+	//TODO: Seems to be sporadically inconsistant, possible race issue.
+
+	Convey("wrstat prints the correct output for a directory", t, func() {
+		out := t.TempDir()
+		tmp := t.TempDir()
+
+		for _, dir := range [...]string{"/a/b/c/d/e", "/a/b/f", "/a/g/h"} {
+			err := os.MkdirAll(filepath.Join(tmp, dir), 0755)
+			So(err, ShouldBeNil)
+		}
+
+		for _, file := range [...]string{"/a/b/c/test.txt", "/a/b/f/test2.csv", "/a/test3"} {
+			f, err := os.Create(filepath.Join(tmp, file))
+			So(err, ShouldBeNil)
+			err = f.Close()
+			So(err, ShouldBeNil)
+		}
+
+		depgroup := "test-group"
+
+		_, _, jobs, err := runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "1")
+		So(err, ShouldBeNil)
+
+		walk1 := filepath.Join(out, "walk.1")
+
+		jobsExpectation := []*jobqueue.Job{
+			{
+				Cmd:        " stat " + walk1,
+				CwdMatters: true,
+				RepGroup:   "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
+				ReqGroup:   "wrstat-stat",
+				Requirements: &scheduler.Requirements{
+					RAM:   750,
+					Time:  12 * time.Hour,
+					Cores: 1,
+					Disk:  1,
+				},
+				Override:  1,
+				Retries:   30,
+				DepGroups: []string{depgroup},
+			},
+		}
+
+		removeJobRepGroupSuffixes(jobs)
+
+		So(jobs, ShouldResemble, jobsExpectation)
+
+		compareFileContents(t, walk1, fmt.Sprintf(`%[1]s
+%[1]s/a/test3
+%[1]s/a
+%[1]s/a/g
+%[1]s/a/g/h
+%[1]s/a/b
+%[1]s/a/b/f/test2.csv
+%[1]s/a/b/f
+%[1]s/a/b/c/test.txt
+%[1]s/a/b/c
+%[1]s/a/b/c/d
+%[1]s/a/b/c/d/e`, tmp))
+
+		_, _, jobs, err = runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "2")
+		So(err, ShouldBeNil)
+
+		walk2 := filepath.Join(out, "walk.2")
+
+		jobsExpectation = []*jobqueue.Job{
+			{
+				Cmd:        " stat " + walk1,
+				CwdMatters: true,
+				RepGroup:   "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
+				ReqGroup:   "wrstat-stat",
+				Requirements: &scheduler.Requirements{
+					RAM:   750,
+					Time:  12 * time.Hour,
+					Cores: 1,
+					Disk:  1,
+				},
+				Override:  1,
+				Retries:   30,
+				DepGroups: []string{depgroup},
+			},
+			{
+				Cmd:        " stat " + walk2,
+				CwdMatters: true,
+				RepGroup:   "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
+				ReqGroup:   "wrstat-stat",
+				Requirements: &scheduler.Requirements{
+					RAM:   750,
+					Time:  12 * time.Hour,
+					Cores: 1,
+					Disk:  1,
+				},
+				Override:  1,
+				Retries:   30,
+				DepGroups: []string{depgroup},
+			},
+		}
+
+		removeJobRepGroupSuffixes(jobs)
+
+		So(jobs, ShouldResemble, jobsExpectation)
+
+		compareFileContents(t, filepath.Join(out, "walk.1"), fmt.Sprintf(`%[1]s
+%[1]s/a
+%[1]s/a/g/h
+%[1]s/a/b/f/test2.csv
+%[1]s/a/b/c/test.txt
+%[1]s/a/b/c/d`, tmp))
+
+		compareFileContents(t, filepath.Join(out, "walk.2"), fmt.Sprintf(`%[1]s/a/test3
+%[1]s/a/g
+%[1]s/a/b
+%[1]s/a/b/f
+%[1]s/a/b/c
+%[1]s/a/b/c/d/e`, tmp))
+	})
+}
+
+func compareFileContents(t *testing.T, filename, expectation string) {
+	t.Helper()
+
+	f, err := os.Open(filename)
+	So(err, ShouldBeNil)
+
+	defer f.Close()
+
+	output, err := io.ReadAll(f)
+	So(err, ShouldBeNil)
+	So(strings.TrimSpace(string(output)), ShouldEqual, expectation)
+}
+
+func removeJobRepGroupSuffixes(jobs []*jobqueue.Job) {
+	for _, job := range jobs {
+		job.RepGroup = job.RepGroup[:len(job.RepGroup)-21]
+	}
 }
