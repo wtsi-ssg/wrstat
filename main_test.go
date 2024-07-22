@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -14,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/VertebrateResequencing/wr/jobqueue"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -54,13 +56,38 @@ func TestMain(m *testing.M) {
 	defer d1()
 }
 
+func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
+	var (
+		stdout, stderr strings.Builder
+		jobs           []*jobqueue.Job
+	)
+
+	pr, pw, err := os.Pipe()
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	cmd := exec.Command("./wrstat", args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	cmd.ExtraFiles = append(cmd.ExtraFiles, pw)
+
+	go func() {
+		err = cmd.Run()
+
+		pw.Close()
+	}()
+
+	json.NewDecoder(pr).Decode(&jobs)
+
+	return stdout.String(), stderr.String(), jobs, err
+}
+
 func TestVersion(t *testing.T) {
 	Convey("wrstat prints the correct version", t, func() {
-		cmd := exec.Command("./wrstat", "version")
-
-		output, err := cmd.CombinedOutput()
+		output, _, _, err := runWRStat("version")
 		So(err, ShouldBeNil)
-		So(strings.TrimSpace(string(output)), ShouldEqual, "TESTVERSION")
+		So(strings.TrimSpace(output), ShouldEqual, "TESTVERSION")
 	})
 }
 
@@ -157,8 +184,7 @@ func TestStat(t *testing.T) {
 		err = statFile.Close()
 		So(err, ShouldBeNil)
 
-		cmd := exec.Command("./wrstat", "stat", statFilePath)
-		err = cmd.Run()
+		_, _, _, err = runWRStat("stat", statFilePath)
 
 		So(err, ShouldBeNil)
 
