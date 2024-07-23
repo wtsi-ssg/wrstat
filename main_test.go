@@ -79,7 +79,17 @@ func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
 		pw.Close()
 	}()
 
-	json.NewDecoder(pr).Decode(&jobs)
+	jd := json.NewDecoder(pr)
+
+	for {
+		var j []*jobqueue.Job
+		err := jd.Decode(&j)
+		if err != nil {
+			break
+		}
+
+		jobs = append(jobs, j...)
+	}
 
 	return stdout.String(), stderr.String(), jobs, err
 }
@@ -370,4 +380,341 @@ func removeJobRepGroupSuffixes(jobs []*jobqueue.Job) {
 	for _, job := range jobs {
 		job.RepGroup = job.RepGroup[:len(job.RepGroup)-21]
 	}
+}
+
+func TestMulti(t *testing.T) {
+	walkReqs := &scheduler.Requirements{
+		RAM:   16000,
+		Time:  19 * time.Hour,
+		Cores: 1,
+		Disk:  1,
+	}
+
+	combineReqs := &scheduler.Requirements{
+		RAM:   800,
+		Time:  40 * time.Minute,
+		Cores: 1,
+		Disk:  1,
+	}
+
+	touchReqs := &scheduler.Requirements{
+		RAM:   100,
+		Time:  10 * time.Second,
+		Cores: 1,
+		Disk:  1,
+	}
+
+	baseDirsReqs := &scheduler.Requirements{
+		RAM:   42000,
+		Time:  15 * time.Minute,
+		Cores: 1,
+		Disk:  1,
+	}
+
+	tidyReqs := &scheduler.Requirements{
+		RAM:   100,
+		Time:  10 * time.Second,
+		Cores: 1,
+		Disk:  1,
+	}
+
+	date := time.Now().Format("20060102")
+
+	Convey("wrstat gets the stats for a partial run", t, func() {
+		workingDir := t.TempDir()
+		_, _, jobs, err := runWRStat("multi", "-w", workingDir, "-p", "/some/path", "/some-other/path")
+		So(err, ShouldBeNil)
+
+		So(len(jobs), ShouldEqual, 5)
+		So(len(jobs[0].DepGroups), ShouldEqual, 1)
+		So(len(jobs[1].DepGroups), ShouldEqual, 1)
+		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
+
+		walk1DepGroup := jobs[0].DepGroups[0]
+		walk2DepGroup := jobs[1].DepGroups[0]
+		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
+
+		expectation := []*jobqueue.Job{
+			{
+				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-walk",
+				Requirements: walkReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{walk1DepGroup},
+			},
+			{
+				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-walk",
+				Requirements: walkReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{walk2DepGroup},
+			},
+			{
+				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk1DepGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-combine",
+				Requirements: combineReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: walk1DepGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk2DepGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-combine",
+				Requirements: combineReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: walk2DepGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf("touch %s/%s/combine.complete", workingDir, repGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-touchSentinel-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-sentinel",
+				Requirements: touchReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup + ".sentinel"},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: repGroup,
+					},
+				},
+			},
+		}
+
+		So(jobs, ShouldResemble, expectation)
+	})
+
+	Convey("wrstat gets the stats for a normal run", t, func() {
+		workingDir := t.TempDir()
+		_, _, jobs, err := runWRStat("multi", "-w", workingDir, "/some/path", "/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")
+		So(err, ShouldBeNil)
+
+		So(len(jobs), ShouldEqual, 6)
+		So(len(jobs[0].DepGroups), ShouldEqual, 1)
+		So(len(jobs[1].DepGroups), ShouldEqual, 1)
+		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
+
+		walk1DepGroup := jobs[0].DepGroups[0]
+		walk2DepGroup := jobs[1].DepGroups[0]
+		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
+
+		expectation := []*jobqueue.Job{
+			{
+				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-walk",
+				Requirements: walkReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{walk1DepGroup},
+			},
+			{
+				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-walk",
+				Requirements: walkReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{walk2DepGroup},
+			},
+			{
+				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk1DepGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-combine",
+				Requirements: combineReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: walk1DepGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk2DepGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-combine",
+				Requirements: combineReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: walk2DepGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf(" basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"", workingDir, repGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-basedir-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-basedir",
+				Requirements: baseDirsReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup + ".basedir"},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: repGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf(" tidy -f final_output -d %s %s/%s", date, workingDir, repGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-tidy-final_output-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-tidy",
+				Requirements: tidyReqs,
+				Override:     1,
+				Retries:      30,
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: repGroup + ".basedir",
+					},
+				},
+			},
+		}
+
+		So(jobs, ShouldResemble, expectation)
+	})
+
+	Convey("wrstat gets the stats for a normal run with a partial merge", t, func() {
+		workingDir := t.TempDir()
+		_, _, jobs, err := runWRStat("multi", "-l", "/path/to/partial_merge", "-w", workingDir, "/some/path", "/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")
+		So(err, ShouldBeNil)
+
+		So(len(jobs), ShouldEqual, 7)
+		So(len(jobs[0].DepGroups), ShouldEqual, 1)
+		So(len(jobs[1].DepGroups), ShouldEqual, 1)
+		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
+
+		walk1DepGroup := jobs[0].DepGroups[0]
+		walk2DepGroup := jobs[1].DepGroups[0]
+		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
+
+		expectation := []*jobqueue.Job{
+			{
+				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-walk",
+				Requirements: walkReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{walk1DepGroup},
+			},
+			{
+				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-walk",
+				Requirements: walkReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{walk2DepGroup},
+			},
+			{
+				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk1DepGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-combine",
+				Requirements: combineReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: walk1DepGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk2DepGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-combine",
+				Requirements: combineReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: walk2DepGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf(" mergedbs  \"/path/to/partial_merge\" \"%s/%s\"", workingDir, repGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-mergedirs-partial_merge-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-merge",
+				Requirements: baseDirsReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup + ".merge"},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: repGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf(" basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"", workingDir, repGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-basedir-%s-%s.merge", date, repGroup),
+				ReqGroup:     "wrstat-basedir",
+				Requirements: baseDirsReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup + ".merge.basedir"},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: repGroup + ".merge",
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf(" tidy -f final_output -d %s %s/%s", date, workingDir, repGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-tidy-final_output-%s-%s.merge", date, repGroup),
+				ReqGroup:     "wrstat-tidy",
+				Requirements: tidyReqs,
+				Override:     1,
+				Retries:      30,
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: repGroup + ".merge.basedir",
+					},
+				},
+			},
+		}
+
+		So(jobs, ShouldResemble, expectation)
+	})
 }
