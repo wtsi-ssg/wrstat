@@ -383,6 +383,18 @@ func removeJobRepGroupSuffixes(jobs []*jobqueue.Job) {
 }
 
 func TestMulti(t *testing.T) {
+	Convey("For the multi subcommand", t, func() {
+		multiTests(t, "multi")
+	})
+}
+
+func TestCron(t *testing.T) {
+	Convey("For the cron subcommand", t, func() {
+		multiTests(t, "cron", "-c", "* * * * * *")
+	})
+}
+
+func multiTests(t *testing.T, subcommand ...string) {
 	walkReqs := &scheduler.Requirements{
 		RAM:   16000,
 		Time:  19 * time.Hour,
@@ -420,9 +432,9 @@ func TestMulti(t *testing.T) {
 
 	date := time.Now().Format("20060102")
 
-	Convey("wrstat gets the stats for a partial run", t, func() {
+	Convey("wrstat gets the stats for a partial run", func() {
 		workingDir := t.TempDir()
-		_, _, jobs, err := runWRStat("multi", "-w", workingDir, "-p", "/some/path", "/some-other/path")
+		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "-p", "/some/path", "/some-other/path")...)
 		So(err, ShouldBeNil)
 
 		So(len(jobs), ShouldEqual, 5)
@@ -505,9 +517,9 @@ func TestMulti(t *testing.T) {
 		So(jobs, ShouldResemble, expectation)
 	})
 
-	Convey("wrstat gets the stats for a normal run", t, func() {
+	Convey("wrstat gets the stats for a normal run", func() {
 		workingDir := t.TempDir()
-		_, _, jobs, err := runWRStat("multi", "-w", workingDir, "/some/path", "/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")
+		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "/some/path", "/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")...)
 		So(err, ShouldBeNil)
 
 		So(len(jobs), ShouldEqual, 6)
@@ -604,9 +616,9 @@ func TestMulti(t *testing.T) {
 		So(jobs, ShouldResemble, expectation)
 	})
 
-	Convey("wrstat gets the stats for a normal run with a partial merge", t, func() {
+	Convey("wrstat gets the stats for a normal run with a partial merge", func() {
 		workingDir := t.TempDir()
-		_, _, jobs, err := runWRStat("multi", "-l", "/path/to/partial_merge", "-w", workingDir, "/some/path", "/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")
+		_, _, jobs, err := runWRStat(append(subcommand, "-l", "/path/to/partial_merge", "-w", workingDir, "/some/path", "/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")...)
 		So(err, ShouldBeNil)
 
 		So(len(jobs), ShouldEqual, 7)

@@ -85,6 +85,10 @@ invocations of cron, do 'sudo wrstsat cron --kill'.
 		taskr.Task(crontab, func(ctx context.Context) (int, error) {
 			err := doMultiScheduling(args)
 
+			if runJobs != "" {
+				os.Exit(0)
+			}
+
 			return 0, err
 		})
 
