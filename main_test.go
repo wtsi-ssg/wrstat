@@ -730,3 +730,73 @@ func multiTests(t *testing.T, subcommand ...string) {
 		So(jobs, ShouldResemble, expectation)
 	})
 }
+
+func TestMergsDBs(t *testing.T) {}
+
+func TestTidy(t *testing.T) {
+	Convey("", t, func() {
+		srcDir := t.TempDir()
+		finalDir := t.TempDir()
+
+		for _, file := range [...]string{
+			filepath.Join("a", "b", "combine.stats.gz"),
+			filepath.Join("a", "b", "combine.byusergroup.gz"),
+			filepath.Join("a", "b", "combine.bygroup"),
+			filepath.Join("a", "b", "combine.log.gz"),
+			filepath.Join("a", "b", "combine.dgut.db"),
+			filepath.Join("test.dgut.dbs", "0", "dgut.db"),
+			filepath.Join("test.dgut.dbs", "0", "dgut.db.children"),
+			filepath.Join("test.dgut.dbs", "1", "dgut.db"),
+			filepath.Join("test.dgut.dbs", "1", "dgut.db.children"),
+			"basedirs.db",
+			"basedirs.userusage.tsv",
+			"basedirs.groupusage.tsv",
+		} {
+			fp := filepath.Join(srcDir, file)
+			err := os.MkdirAll(filepath.Dir(fp), 0755)
+			So(err, ShouldBeNil)
+
+			f, err := os.Create(fp)
+			So(err, ShouldBeNil)
+
+			_, err = io.WriteString(f, file)
+			So(err, ShouldBeNil)
+
+			err = f.Close()
+			So(err, ShouldBeNil)
+		}
+
+		_, _, jobs, err := runWRStat("tidy", "-d", "today", "-f", finalDir, srcDir)
+		So(err, ShouldBeNil)
+
+		So(len(jobs), ShouldEqual, 0)
+
+		_, err = os.Lstat(srcDir)
+		So(err, ShouldNotBeNil)
+		So(err.Error(), ShouldEndWith, "no such file or directory")
+
+		for file, expected := range map[string]string{
+			"today_a.b.001.stats.gz":            filepath.Join("a", "b", "combine.stats.gz"),
+			"today_a.b.001.bygroup":             filepath.Join("a", "b", "combine.bygroup"),
+			"today_a.b.001.byusergroup.gz":      filepath.Join("a", "b", "combine.byusergroup.gz"),
+			"today_a.b.001.logs.gz":             filepath.Join("a", "b", "combine.log.gz"),
+			".dgut.dbs.updated":                 "",
+			"today_001.dgut.dbs/0":              filepath.Join("a", "b", "combine.dgut.db"),
+			"today_001.basedirs.userusage.tsv":  "basedirs.userusage.tsv",
+			"today_001.basedirs.db":             "basedirs.db",
+			"today_001.basedirs.groupusage.tsv": "basedirs.groupusage.tsv",
+		} {
+			f, err := os.Open(filepath.Join(finalDir, file))
+			So(err, ShouldBeNil)
+
+			contents, err := io.ReadAll(f)
+			So(err, ShouldBeNil)
+
+			f.Close()
+
+			So(string(contents), ShouldEqual, expected)
+		}
+	})
+}
+
+func TestBasedirs(t *testing.T) {}
