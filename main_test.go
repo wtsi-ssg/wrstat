@@ -792,9 +792,20 @@ func TestMergsDBs(t *testing.T) {
 			"combine.complete": time.Unix(5, 0),
 			"subdir/file":      time.Unix(6, 0),
 		} {
-			fi, err := os.Lstat(filepath.Join(destDir, file))
+			p := filepath.Join(destDir, file)
+
+			fi, err := os.Lstat(p)
 			So(err, ShouldBeNil)
 			So(fi.ModTime(), ShouldEqual, mt)
+
+			f, err := os.Open(p)
+			So(err, ShouldBeNil)
+
+			contents, err := io.ReadAll(f)
+			So(err, ShouldBeNil)
+			So(string(contents), ShouldEqual, filepath.Join("b", file))
+
+			f.Close()
 		}
 	})
 }
