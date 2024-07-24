@@ -731,10 +731,76 @@ func multiTests(t *testing.T, subcommand ...string) {
 	})
 }
 
-func TestMergsDBs(t *testing.T) {}
+func TestMergsDBs(t *testing.T) {
+	Convey("For the mergedbs subcommand, it copies and delete the correct files", t, func() {
+		srcDir := t.TempDir()
+		destDir := t.TempDir()
+
+		for dir, mtime := range map[string]time.Time{
+			"a": time.Unix(1, 0),
+			"b": time.Unix(3, 0),
+			"c": time.Unix(2, 0),
+		} {
+			fullDir := filepath.Join(srcDir, dir)
+
+			for file, mt := range map[string]time.Time{
+				"test":             mtime.Add(1 * time.Second),
+				"combine.complete": mtime.Add(2 * time.Second),
+				"subdir/file":      mtime.Add(3 * time.Second),
+			} {
+				p := filepath.Join(fullDir, file)
+
+				err := os.MkdirAll(filepath.Dir(p), 0755)
+				So(err, ShouldBeNil)
+
+				f, err := os.Create(p)
+				So(err, ShouldBeNil)
+
+				_, err = io.WriteString(f, filepath.Join(dir, file))
+				So(err, ShouldBeNil)
+
+				err = f.Close()
+				So(err, ShouldBeNil)
+
+				err = os.Chtimes(p, mt, mt)
+				So(err, ShouldBeNil)
+			}
+
+			err := os.Chtimes(fullDir, mtime, mtime)
+			So(err, ShouldBeNil)
+		}
+
+		newerDir := filepath.Join(srcDir, "d")
+
+		err := os.MkdirAll(newerDir, 0755)
+		So(err, ShouldBeNil)
+
+		err = os.Chtimes(newerDir, time.Unix(4, 0), time.Unix(4, 0))
+		So(err, ShouldBeNil)
+
+		_, _, _, err = runWRStat("mergedbs", "-d", srcDir, destDir)
+		So(err, ShouldBeNil)
+
+		entries, err := fs.ReadDir(os.DirFS(srcDir), ".")
+		So(err, ShouldBeNil)
+		So(len(entries), ShouldResemble, 2)
+		So(entries[0].Name(), ShouldEqual, "b")
+		So(entries[1].Name(), ShouldEqual, "d")
+
+		for file, mt := range map[string]time.Time{
+			"test":             time.Unix(4, 0),
+			"combine.complete": time.Unix(5, 0),
+			"subdir/file":      time.Unix(6, 0),
+		} {
+			fi, err := os.Lstat(filepath.Join(destDir, file))
+			So(err, ShouldBeNil)
+			So(fi.ModTime(), ShouldEqual, mt)
+		}
+	})
+}
 
 func TestTidy(t *testing.T) {
-	Convey("", t, func() {
+	Convey("For the tidy command, combine files within the source directory are cleaned up and moved to the final directory", t, func() {
 		srcDir := t.TempDir()
 		finalDir := t.TempDir()
 
@@ -799,4 +865,6 @@ func TestTidy(t *testing.T) {
 	})
 }
 
-func TestBasedirs(t *testing.T) {}
+func TestBasedirs(t *testing.T) {
+
+}
