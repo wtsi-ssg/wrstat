@@ -687,7 +687,10 @@ func TestStat(t *testing.T) {
 		u, err := user.Current()
 		So(err, ShouldBeNil)
 
-		expectation := fmt.Sprintf(""+
+		g, err := user.LookupGroupId(u.Gid)
+		So(err, ShouldBeNil)
+
+		statsExpectation := fmt.Sprintf(""+
 			"%[3]s\t4096\t%[1]s\t%[2]s\t%[14]d\t271828\t%[19]d\td\t%[8]d\t4\t%[13]d\n"+
 			"%[4]s\t4096\t%[1]s\t%[2]s\t%[15]d\t133032\t%[20]d\td\t%[9]d\t3\t%[13]d\n"+
 			"%[5]s\t10\t%[1]s\t%[2]s\t%[16]d\t7383773\t%[21]d\tf\t%[10]d\t1\t%[13]d\n"+
@@ -718,14 +721,64 @@ func TestStat(t *testing.T) {
 			ctimes[1],
 		)
 
-		f, err := os.Open(filepath.Join(statDir, "dir.walk.stats"))
+		fi, err := os.Lstat(tmp)
 		So(err, ShouldBeNil)
 
-		data, err := io.ReadAll(f)
-		f.Close()
-		So(err, ShouldBeNil)
+		atime := fi.Sys().(*syscall.Stat_t).Atim.Sec
 
-		So(string(data), ShouldEqual, expectation)
+		groupExpectation := fmt.Sprintf("%s\t%s\t1\t10\n", u.Username, g.Name)
+
+		parent := tmp
+
+		var userGroupExpectation, walkExpectations string
+
+		for filepath.Dir(parent) != parent {
+			parent = filepath.Dir(parent)
+
+			userGroupExpectation = fmt.Sprintf("%s\t%s\t%s\t1\t10\n", u.Username, g.Name, parent) + userGroupExpectation
+			walkExpectations = fmt.Sprintf(""+
+				"%[1]s\t%[2]s\t%[3]s\t0\t1\t10\t%[4]d\t7383773\n"+
+				"%[1]s\t%[2]s\t%[3]s\t1\t5\t16394\t%[4]d\t7383773\n"+
+				"%[1]s\t%[2]s\t%[3]s\t15\t4\t16384\t%[4]d\t314159\n", parent, u.Uid, g.Gid, atime) + walkExpectations
+		}
+
+		userGroupExpectation += fmt.Sprintf(""+
+			"%[1]s\t%[2]s\t%[3]s\t1\t10\n"+
+			"%[1]s\t%[2]s\t%[3]s/aDirectory\t1\t10\n", u.Username, g.Name, tmp)
+
+		walkExpectations += fmt.Sprintf(""+
+			"%[1]s\t%[2]s\t%[3]s\t0\t1\t10\t%[4]d\t7383773\n"+
+			"%[1]s\t%[2]s\t%[3]s\t1\t5\t16394\t%[4]d\t7383773\n"+
+			"%[1]s\t%[2]s\t%[3]s\t15\t4\t16384\t%[4]d\t314159\n"+
+			"%[1]s/aDirectory\t%[2]s\t%[3]s\t0\t1\t10\t%[4]d\t7383773\n"+
+			"%[1]s/aDirectory\t%[2]s\t%[3]s\t1\t3\t8202\t%[4]d\t7383773\n"+
+			"%[1]s/aDirectory\t%[2]s\t%[3]s\t15\t2\t8192\t%[4]d\t314159\n"+
+			"%[1]s/aDirectory/aSubDirectory\t%[2]s\t%[3]s\t1\t1\t4096\t%[4]d\t314159\n"+
+			"%[1]s/aDirectory/aSubDirectory\t%[2]s\t%[3]s\t15\t1\t4096\t%[4]d\t314159\n"+
+			"%[1]s/anotherDirectory\t%[2]s\t%[3]s\t1\t1\t4096\t%[4]d\t282820\n"+
+			"%[1]s/anotherDirectory\t%[2]s\t%[3]s\t15\t1\t4096\t%[4]d\t282820\n", tmp, u.Uid, g.Gid, atime)
+
+		for file, contents := range map[string]string{
+			"dir.walk.stats":       statsExpectation,
+			"dir.walk.bygroup":     groupExpectation,
+			"dir.walk.byusergroup": userGroupExpectation,
+			"dir.walk.dgut":        walkExpectations,
+			"dir.walk.log":         "",
+		} {
+			f, err := os.Open(filepath.Join(statDir, file))
+			So(err, ShouldBeNil)
+
+			data, err := io.ReadAll(f)
+			f.Close()
+			So(err, ShouldBeNil)
+			So(string(data), ShouldEqual, contents)
+		}
+	})
+}
+
+func TestCombine(t *testing.T) {
+	Convey("", t, func() {
+
 	})
 }
 
