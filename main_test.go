@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
 )
 
 const app = "wrstat"
@@ -778,7 +780,92 @@ func TestStat(t *testing.T) {
 
 func TestCombine(t *testing.T) {
 	Convey("", t, func() {
+		tmp := t.TempDir()
 
+		for file, contents := range map[string]string{
+			"a.stats":       "a\nb\nc\n",
+			"b.stats":       "d\ne\nf\ng\n",
+			"c.stats":       "h\n",
+			"a.byusergroup": "c\t1\t2\nb\t3\t4\na\t5\t6\n",
+			"b.byusergroup": "a\t7\t8\nd\t9\t10\nc\t11\t12\nb\t13\t14\n",
+			"c.byusergroup": "f\t15\t16\ne\t17\t18\nb\t19\t20\n",
+			"a.bygroup":     "a\tb\tc\td\n1\t2\t3\t4\n",
+			"b.bygroup":     "e\tf\tg\th\n5\t6\t7\t8\n",
+			"c.bygroup":     "",
+			"a.dgut": "" +
+				"/\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/\t1000\t1000\t1\t5\t16394\t1721915848\t7383773\n" +
+				"/\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/tmp\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/tmp\t1000\t1000\t1\t5\t16394\t1721915848\t7383773\n" +
+				"/tmp\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/tmp/TestStat1107678881\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/tmp/TestStat1107678881\t1000\t1000\t1\t5\t16394\t1721915848\t7383773\n" +
+				"/tmp/TestStat1107678881\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/tmp/TestStat1107678881/001\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/tmp/TestStat1107678881/001\t1000\t1000\t1\t5\t16394\t1721915848\t7383773\n" +
+				"/tmp/TestStat1107678881/001\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/tmp/TestStat1107678881/001/aDirectory\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/tmp/TestStat1107678881/001/aDirectory\t1000\t1000\t1\t3\t8202\t1721915848\t7383773\n" +
+				"/tmp/TestStat1107678881/001/aDirectory\t1000\t1000\t15\t2\t8192\t1721915848\t314159\n" +
+				"/tmp/TestStat1107678881/001/aDirectory/aSubDirectory\t1000\t1000\t1\t1\t4096\t1721915848\t314159\n" +
+				"/tmp/TestStat1107678881/001/aDirectory/aSubDirectory\t1000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
+				"/tmp/TestStat1107678881/001/anotherDirectory\t1000\t1000\t1\t1\t4096\t1721915848\t282820\n" +
+				"/tmp/TestStat1107678881/001/anotherDirectory\t1000\t1000\t15\t1\t4096\t1721915848\t282820\n",
+			"a.log": "A log file\nwith 2 lines\n",
+			"b.log": "Another log file, with 1 line\n",
+			"c.log": "Lorem ipsum!!!!",
+		} {
+			f, err := os.Create(filepath.Join(tmp, file))
+			So(err, ShouldBeNil)
+
+			_, err = io.WriteString(f, contents)
+			So(err, ShouldBeNil)
+
+			err = f.Close()
+			So(err, ShouldBeNil)
+		}
+
+		_, _, _, err := runWRStat("combine", tmp)
+		So(err, ShouldBeNil)
+
+		for file, contents := range map[string]string{
+			"combine.stats.gz":       "a\nb\nc\nd\ne\nf\ng\nh\n",
+			"combine.byusergroup.gz": "a\t7\t8\nc\t1\t2\nb\t3\t4\na\t5\t6\nd\t9\t10\nc\t11\t12\nb\t13\t14\nf\t15\t16\ne\t17\t18\nb\t19\t20\n",
+			"combine.bygroup":        "a\tb\tc\td\n1\t2\t3\t4\ne\tf\tg\th\n5\t6\t7\t8\n",
+			"combine.log.gz":         "A log file\nwith 2 lines\nAnother log file, with 1 line\nLorem ipsum!!!!",
+		} {
+			f, err := os.Open(filepath.Join(tmp, file))
+			So(err, ShouldBeNil)
+
+			var r io.Reader
+
+			if strings.HasSuffix(file, ".gz") {
+				r, err = gzip.NewReader(f)
+				So(err, ShouldBeNil)
+			} else {
+				r = f
+			}
+
+			buf, err := io.ReadAll(r)
+			So(err, ShouldBeNil)
+
+			f.Close()
+
+			So(string(buf), ShouldEqual, contents)
+		}
+
+		db := dgut.NewDB(filepath.Join(tmp, "combine.dgut.db"))
+
+		err = db.Open()
+		So(err, ShouldBeNil)
+
+		info, err := db.Info()
+		So(err, ShouldBeNil)
+		So(info.NumDirs, ShouldEqual, 7)
+		So(info.NumDGUTs, ShouldEqual, 19)
+		So(info.NumParents, ShouldEqual, 5)
+		So(info.NumChildren, ShouldEqual, 6)
 	})
 }
 
