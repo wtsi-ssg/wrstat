@@ -46,6 +46,8 @@ const (
 	groupUsageBasename = "basedirs.groupusage.tsv"
 	userUsageBasename  = "basedirs.userusage.tsv"
 	numBasedirArgs     = 2
+	defaultSplits      = 1
+	defaultMinDirs     = 2
 )
 
 // options for this cmd.
@@ -220,6 +222,32 @@ func init() {
 	basedirCmd.Flags().StringVarP(&quotaPath, "quota", "q", "", "gid,disk,size_quota,inode_quota csv file")
 	basedirCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	basedirCmd.Flags().StringVarP(&configPath, "config", "b", "", "path to basedirs config file")
+}
+
+func config() basedirs.Config {
+	if configPath == "" {
+		return basedirs.Config{
+			basedirs.ConfigAttrs{
+				Prefix:  "/",
+				Splits:  defaultSplits,
+				MinDirs: defaultMinDirs,
+			},
+		}
+	}
+
+	f, err := os.Open(configPath)
+	if err != nil {
+		die("error opening config: %s", err)
+	}
+
+	basedirsConfig, err := basedirs.ParseConfig(f)
+	if err != nil {
+		die("error parsing basedirs config: %s", err)
+	}
+
+	f.Close()
+
+	return basedirsConfig
 }
 
 // dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
