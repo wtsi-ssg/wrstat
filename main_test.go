@@ -1398,6 +1398,7 @@ func removeHistory(b []*basedirs.Usage) {
 	for _, u := range b {
 		u.DateNoFiles = time.Time{}
 		u.DateNoSpace = time.Time{}
+		u.Mtime = fixtimes.FixTime(u.Mtime)
 	}
 }
 
