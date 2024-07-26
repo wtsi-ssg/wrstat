@@ -88,7 +88,8 @@ PREFIX	SPLITS	MINDIRS
 
 …where the PREFIX is a path prefix, the SPLITS values matches the usage in the
 where subcommand, and the MINDIRS values are the minimum number of nodes a path
-must possess.
+must possess. If you don't provide a config file, one like "/ 1 2" is used by
+default.
 
 If you expect data specific to different groups to appear 5 directories deep in
 different mount points, then a splits value of  4 and mindirs value of 4 might
