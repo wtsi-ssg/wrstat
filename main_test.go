@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -20,6 +21,7 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
 const app = "wrstat"
@@ -794,24 +796,24 @@ func TestCombine(t *testing.T) {
 			"c.bygroup":     "",
 			"a.dgut": "" +
 				"/\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/\t1000\t1000\t1\t5\t16394\t1721915848\t7383773\n" +
+				"/\t1000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
 				"/\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				"/tmp\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/tmp\t1000\t1000\t1\t5\t16394\t1721915848\t7383773\n" +
-				"/tmp\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				"/tmp/TestStat1107678881\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/tmp/TestStat1107678881\t1000\t1000\t1\t5\t16394\t1721915848\t7383773\n" +
-				"/tmp/TestStat1107678881\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				"/tmp/TestStat1107678881/001\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/tmp/TestStat1107678881/001\t1000\t1000\t1\t5\t16394\t1721915848\t7383773\n" +
-				"/tmp/TestStat1107678881/001\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				"/tmp/TestStat1107678881/001/aDirectory\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/tmp/TestStat1107678881/001/aDirectory\t1000\t1000\t1\t3\t8202\t1721915848\t7383773\n" +
-				"/tmp/TestStat1107678881/001/aDirectory\t1000\t1000\t15\t2\t8192\t1721915848\t314159\n" +
-				"/tmp/TestStat1107678881/001/aDirectory/aSubDirectory\t1000\t1000\t1\t1\t4096\t1721915848\t314159\n" +
-				"/tmp/TestStat1107678881/001/aDirectory/aSubDirectory\t1000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
-				"/tmp/TestStat1107678881/001/anotherDirectory\t1000\t1000\t1\t1\t4096\t1721915848\t282820\n" +
-				"/tmp/TestStat1107678881/001/anotherDirectory\t1000\t1000\t15\t1\t4096\t1721915848\t282820\n",
+				"/some\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/some\t1000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
+				"/some\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/some/directory\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/some/directory\t1000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
+				"/some/directory\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/some/directory/001\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/some/directory/001\t1000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
+				"/some/directory/001\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/some/directory/001/aDirectory\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/some/directory/001/aDirectory\t1000\t1000\t2\t3\t8202\t1721915848\t7383773\n" +
+				"/some/directory/001/aDirectory\t1000\t1000\t15\t2\t8192\t1721915848\t314159\n" +
+				"/some/directory/001/aDirectory/aSubDirectory\t1000\t1000\t2\t1\t4096\t1721915848\t314159\n" +
+				"/some/directory/001/aDirectory/aSubDirectory\t1000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
+				"/some/directory/001/anotherDirectory\t1000\t1000\t2\t1\t4096\t1721915848\t282820\n" +
+				"/some/directory/001/anotherDirectory\t1000\t1000\t15\t1\t4096\t1721915848\t282820\n",
 			"a.log": "A log file\nwith 2 lines\n",
 			"b.log": "Another log file, with 1 line\n",
 			"c.log": "Lorem ipsum!!!!",
@@ -866,6 +868,99 @@ func TestCombine(t *testing.T) {
 		So(info.NumDGUTs, ShouldEqual, 19)
 		So(info.NumParents, ShouldEqual, 5)
 		So(info.NumChildren, ShouldEqual, 6)
+
+		u, err := user.Current()
+		So(err, ShouldBeNil)
+
+		uid, err := strconv.ParseUint(u.Uid, 10, 32)
+		So(err, ShouldBeNil)
+
+		gid, err := strconv.ParseUint(u.Gid, 10, 32)
+		So(err, ShouldBeNil)
+
+		for _, test := range [...]struct {
+			Directory   string
+			Filter      *dgut.Filter
+			NumFiles    uint64
+			TotalSize   uint64
+			NewestMTime int64
+			UIDs        []uint32
+			GIDs        []uint32
+			FTs         []summary.DirGUTFileType
+		}{
+			{
+				Directory:   "/",
+				NumFiles:    10,
+				TotalSize:   32788,
+				NewestMTime: 7383773,
+				UIDs:        []uint32{uint32(uid)},
+				GIDs:        []uint32{uint32(gid)},
+				FTs:         []summary.DirGUTFileType{0, 2, 15},
+			},
+			{
+				Directory:   "/some/directory/001",
+				NumFiles:    10,
+				TotalSize:   32788,
+				NewestMTime: 7383773,
+				UIDs:        []uint32{uint32(uid)},
+				GIDs:        []uint32{uint32(gid)},
+				FTs:         []summary.DirGUTFileType{0, 2, 15},
+			},
+			{
+				Directory:   "/some/directory/001",
+				Filter:      &dgut.Filter{FTs: []summary.DirGUTFileType{0, 2, 15}},
+				NumFiles:    10,
+				TotalSize:   32788,
+				NewestMTime: 7383773,
+				UIDs:        []uint32{uint32(uid)},
+				GIDs:        []uint32{uint32(gid)},
+				FTs:         []summary.DirGUTFileType{0, 2, 15},
+			},
+			{
+				Directory:   "/some/directory/001",
+				Filter:      &dgut.Filter{FTs: []summary.DirGUTFileType{0}},
+				NumFiles:    1,
+				TotalSize:   10,
+				NewestMTime: 7383773,
+				UIDs:        []uint32{uint32(uid)},
+				GIDs:        []uint32{uint32(gid)},
+				FTs:         []summary.DirGUTFileType{0},
+			},
+			{
+				Directory:   "/some/directory/001/aDirectory",
+				NumFiles:    6,
+				TotalSize:   16404,
+				NewestMTime: 7383773,
+				UIDs:        []uint32{uint32(uid)},
+				GIDs:        []uint32{uint32(gid)},
+				FTs:         []summary.DirGUTFileType{0, 2, 15},
+			},
+			{
+				Directory:   "/some/directory/001/aDirectory/aSubDirectory",
+				NumFiles:    2,
+				TotalSize:   8192,
+				NewestMTime: 314159,
+				UIDs:        []uint32{uint32(uid)},
+				GIDs:        []uint32{uint32(gid)},
+				FTs:         []summary.DirGUTFileType{2, 15},
+			},
+			{
+				Directory: "/some/directory/001/aDirectory/aSubDirectory",
+				Filter:    &dgut.Filter{UIDs: []uint32{0}},
+				UIDs:      []uint32{},
+				GIDs:      []uint32{},
+				FTs:       []summary.DirGUTFileType{},
+			},
+		} {
+			numFiles, totalSize, _, newestMTime, uids, gids, fts, _, err := db.DirInfo(test.Directory, test.Filter)
+			So(err, ShouldBeNil)
+			So(numFiles, ShouldEqual, test.NumFiles)
+			So(totalSize, ShouldEqual, test.TotalSize)
+			So(newestMTime, ShouldEqual, test.NewestMTime)
+			So(uids, ShouldResemble, test.UIDs)
+			So(gids, ShouldResemble, test.GIDs)
+			So(fts, ShouldResemble, test.FTs)
+		}
 	})
 }
 
