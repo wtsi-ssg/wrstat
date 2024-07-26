@@ -157,6 +157,8 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to parse quota information: %s", err)
 		}
 
+		basedirsConfig := config()
+
 		t := time.Now()
 		tree, err := dgut.NewTree(dgutDBCombinePaths(args[0])...)
 		if err != nil {
