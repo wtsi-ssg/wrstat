@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022, 2023 Genome Research Ltd.
+ * Copyright (c) 2024 Genome Research Ltd.
  *
  * Authors:
  *   Michael Woolnough <mw31@sanger.ac.uk>
@@ -47,7 +47,9 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v4/basedirs"
 	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
@@ -1070,7 +1072,334 @@ func TestMergsDBs(t *testing.T) {
 	})
 }
 
-func TestBasedirs(t *testing.T) {}
+type stringCloser struct {
+	io.WriteCloser
+}
+
+func (sc *stringCloser) WriteString(s string) (int, error) {
+	return io.WriteString(sc.WriteCloser, s)
+}
+
+type fileInfo struct {
+	filename            string
+	isDir               bool
+	uid, gid            uint32
+	atime, ctime, mtime int64
+	size                int64
+}
+
+func (f fileInfo) Name() string { return f.filename }
+
+func (fileInfo) Mode() fs.FileMode { return 0 }
+
+func (fileInfo) ModTime() time.Time { return time.Time{} }
+
+func (f fileInfo) IsDir() bool { return f.isDir }
+
+func (f fileInfo) Size() int64 { return f.size }
+
+func (f fileInfo) Sys() any {
+	return &syscall.Stat_t{
+		Uid:  f.uid,
+		Gid:  f.gid,
+		Atim: syscall.Timespec{Sec: f.atime},
+		Ctim: syscall.Timespec{Sec: f.ctime},
+		Mtim: syscall.Timespec{Sec: f.mtime},
+	}
+}
+
+func TestBasedirs(t *testing.T) {
+	Convey("", t, func() {
+		configs := t.TempDir()
+		dbTmp := t.TempDir()
+		outputTmp := t.TempDir()
+
+		for file, contents := range map[string]string{
+			"owners": "" +
+				"9000,BOM1\n" +
+				"9001,BOM2",
+			"quota": "",
+			"baseDirsConfig": "" +
+				"/someDirectory/\t2\t2\n" +
+				"/someDirectory/a/mdt0\t3\t3",
+		} {
+			f, err := os.Create(filepath.Join(configs, file))
+			So(err, ShouldBeNil)
+
+			_, err = io.WriteString(f, contents)
+			So(err, ShouldBeNil)
+
+			err = f.Close()
+			So(err, ShouldBeNil)
+		}
+
+		err := os.MkdirAll(filepath.Join(dbTmp, "a", "b", "combine.dgut.db"), 0755)
+		So(err, ShouldBeNil)
+
+		db := dgut.NewDB(filepath.Join(dbTmp, "a", "b", "combine.dgut.db"))
+
+		pr, pw := io.Pipe()
+
+		o := summary.NewByDirGroupUserType()
+
+		const dirSize = 4096
+
+		for _, info := range [...]fs.FileInfo{
+			fileInfo{
+				filename: "/someDirectory",
+				atime:    1,
+				ctime:    2,
+				mtime:    3,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/a",
+				atime:    4,
+				ctime:    5,
+				mtime:    6,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/b",
+				uid:      8010,
+				gid:      9001,
+				atime:    7,
+				ctime:    8,
+				mtime:    9,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/c",
+				atime:    10,
+				ctime:    11,
+				mtime:    12,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/mdt0",
+				atime:    13,
+				ctime:    14,
+				mtime:    15,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/team1",
+				atime:    16,
+				ctime:    17,
+				mtime:    18,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/team1/x.vcf",
+				uid:      8000,
+				gid:      9000,
+				atime:    19,
+				ctime:    20,
+				mtime:    21,
+				size:     10,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/team1/v.vcf",
+				uid:      8003,
+				gid:      9000,
+				atime:    22,
+				ctime:    23,
+				mtime:    24,
+				size:     10,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/team1/y.sam",
+				uid:      8001,
+				gid:      9000,
+				atime:    25,
+				ctime:    26,
+				mtime:    27,
+				size:     50,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/team1/z.txt",
+				uid:      8002,
+				gid:      9000,
+				atime:    28,
+				ctime:    29,
+				mtime:    30,
+				size:     100,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/team1/z.txt.old",
+				uid:      8002,
+				gid:      9000,
+				atime:    31,
+				ctime:    32,
+				mtime:    33,
+				size:     90,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/team1/folder",
+				uid:      8000,
+				gid:      9000,
+				atime:    34,
+				ctime:    35,
+				mtime:    36,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/mdt0/team2",
+				uid:      8010,
+				gid:      9001,
+				atime:    37,
+				ctime:    38,
+				mtime:    39,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/mdt0/team2/helloworld.py",
+				uid:      8010,
+				gid:      9001,
+				atime:    40,
+				ctime:    41,
+				mtime:    42,
+				size:     8092,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/mdt0/team2/README.md",
+				uid:      8010,
+				gid:      9001,
+				atime:    43,
+				ctime:    44,
+				mtime:    45,
+				size:     5000,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/mdt0/team2/data.ped",
+				uid:      8010,
+				gid:      9001,
+				atime:    46,
+				ctime:    47,
+				mtime:    48,
+				size:     6000,
+			},
+			fileInfo{
+				filename: "/someDirectory/a/team2",
+				uid:      8010,
+				gid:      9001,
+				atime:    49,
+				ctime:    50,
+				mtime:    51,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/b/team2/test.log",
+				uid:      8010,
+				gid:      9001,
+				atime:    52,
+				ctime:    53,
+				mtime:    54,
+				size:     100,
+			},
+			fileInfo{
+				filename: "/someDirectory/b/team2/test.vcf",
+				uid:      8010,
+				gid:      9001,
+				atime:    55,
+				ctime:    56,
+				mtime:    57,
+				size:     100,
+			},
+			fileInfo{
+				filename: "/someDirectory/c/team3",
+				uid:      8000,
+				gid:      9000,
+				atime:    58,
+				ctime:    59,
+				mtime:    60,
+				size:     dirSize,
+				isDir:    true,
+			},
+			fileInfo{
+				filename: "/someDirectory/c/team3/this.txt",
+				uid:      8000,
+				gid:      9000,
+				atime:    61,
+				ctime:    62,
+				mtime:    63,
+				size:     10,
+			},
+			fileInfo{
+				filename: "/someDirectory/c/team3/that.txt",
+				uid:      8000,
+				gid:      9000,
+				atime:    64,
+				ctime:    65,
+				mtime:    66,
+				size:     20,
+			},
+		} {
+			err = o.Add(info.Name(), info)
+			So(err, ShouldBeNil)
+		}
+
+		go o.Output(&stringCloser{WriteCloser: pw})
+
+		err = db.Store(pr, 10000)
+		So(err, ShouldBeNil)
+
+		db.Close()
+
+		_, _, _, err = runWRStat("basedir", "-q", filepath.Join(configs, "quota"), "-o", filepath.Join(configs, "owners"), "-b", filepath.Join(configs, "baseDirsConfig"), dbTmp, outputTmp)
+		So(err, ShouldBeNil)
+
+		bdr, err := basedirs.NewReader(filepath.Join(dbTmp, "basedirs.db"), filepath.Join(configs, "owners"))
+		So(err, ShouldBeNil)
+
+		gu, err := bdr.GroupUsage()
+		So(err, ShouldBeNil)
+
+		removeHistory(gu)
+
+		groupExpectation := []*basedirs.Usage{
+			{GID: 9000, UIDs: []uint32{8000, 8001, 8002, 8003}, Name: "9000", Owner: "BOM1", BaseDir: "/someDirectory/a/team1", UsageSize: 260, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(33, 0))},
+			{GID: 9000, UIDs: []uint32{8000}, Name: "9000", Owner: "BOM1", BaseDir: "/someDirectory/c/team3", UsageSize: 30, UsageInodes: 2, Mtime: fixtimes.FixTime(time.Unix(66, 0))},
+			{GID: 9001, UIDs: []uint32{8010}, Name: "9001", Owner: "BOM2", BaseDir: "/someDirectory/a/mdt0/team2", UsageSize: 19092, UsageInodes: 3, Mtime: fixtimes.FixTime(time.Unix(48, 0))},
+			{GID: 9001, UIDs: []uint32{8010}, Name: "9001", Owner: "BOM2", BaseDir: "/someDirectory/b/team2", UsageSize: 200, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(57, 0))},
+		}
+
+		So(gu, ShouldResemble, groupExpectation)
+
+		uu, err := bdr.UserUsage()
+		So(err, ShouldBeNil)
+
+		removeHistory(uu)
+
+		userExpectation := []*basedirs.Usage{
+			{UID: 8000, GIDs: []uint32{9000}, Name: "8000", BaseDir: "/someDirectory/a/team1", UsageSize: 10, QuotaSize: 0, UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(21, 0))},
+			{UID: 8000, GIDs: []uint32{9000}, Name: "8000", BaseDir: "/someDirectory/c/team3", UsageSize: 30, QuotaSize: 0, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(66, 0))},
+			{UID: 8001, GIDs: []uint32{9000}, Name: "8001", BaseDir: "/someDirectory/a/team1", UsageSize: 50, QuotaSize: 0, UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(27, 0))},
+			{UID: 8002, GIDs: []uint32{9000}, Name: "8002", BaseDir: "/someDirectory/a/team1", UsageSize: 190, QuotaSize: 0, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(33, 0))},
+			{UID: 8003, GIDs: []uint32{9000}, Name: "8003", BaseDir: "/someDirectory/a/team1", UsageSize: 10, QuotaSize: 0, UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(24, 0))},
+			{UID: 8010, GIDs: []uint32{9001}, Name: "8010", BaseDir: "/someDirectory/a/mdt0/team2", UsageSize: 19092, QuotaSize: 0, UsageInodes: 3, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(48, 0))},
+			{UID: 8010, GIDs: []uint32{9001}, Name: "8010", BaseDir: "/someDirectory/b/team2", UsageSize: 200, QuotaSize: 0, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(57, 0))},
+		}
+
+		So(uu, ShouldResemble, userExpectation)
+	})
+}
+
+func removeHistory(b []*basedirs.Usage) {
+	for _, u := range b {
+		u.DateNoFiles = time.Time{}
+		u.DateNoSpace = time.Time{}
+	}
+}
 
 func TestTidy(t *testing.T) {
 	Convey("For the tidy command, combine files within the source directory are cleaned up and moved to the final directory", t, func() {
