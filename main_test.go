@@ -698,9 +698,10 @@ func TestStat(t *testing.T) {
 		err = statFile.Close()
 		So(err, ShouldBeNil)
 
-		_, _, _, err = runWRStat("stat", statFilePath)
+		_, _, jobs, err := runWRStat("stat", statFilePath)
 
 		So(err, ShouldBeNil)
+		So(len(jobs), ShouldEqual, 0)
 
 		u, err := user.Current()
 		So(err, ShouldBeNil)
@@ -842,8 +843,9 @@ func TestCombine(t *testing.T) {
 			So(err, ShouldBeNil)
 		}
 
-		_, _, _, err := runWRStat("combine", tmp)
+		_, _, jobs, err := runWRStat("combine", tmp)
 		So(err, ShouldBeNil)
+		So(len(jobs), ShouldEqual, 0)
 
 		for file, contents := range map[string]string{
 			"combine.stats.gz":       "a\nb\nc\nd\ne\nf\ng\nh\n",
@@ -1019,8 +1021,9 @@ func TestMergsDBs(t *testing.T) {
 		err = os.Chtimes(newerDir, time.Unix(4, 0), time.Unix(4, 0))
 		So(err, ShouldBeNil)
 
-		_, _, _, err = runWRStat("mergedbs", "-d", srcDir, destDir)
+		_, _, jobs, err := runWRStat("mergedbs", "-d", srcDir, destDir)
 		So(err, ShouldBeNil)
+		So(len(jobs), ShouldEqual, 0)
 
 		entries, err := fs.ReadDir(os.DirFS(srcDir), ".")
 		So(err, ShouldBeNil)
@@ -1334,8 +1337,9 @@ func TestBasedirs(t *testing.T) {
 
 		db.Close()
 
-		_, _, _, err = runWRStat("basedir", "-q", filepath.Join(configs, "quota"), "-o", filepath.Join(configs, "owners"), "-b", filepath.Join(configs, "baseDirsConfig"), dbTmp, outputTmp)
+		_, _, jobs, err := runWRStat("basedir", "-q", filepath.Join(configs, "quota"), "-o", filepath.Join(configs, "owners"), "-b", filepath.Join(configs, "baseDirsConfig"), dbTmp, outputTmp)
 		So(err, ShouldBeNil)
+		So(len(jobs), ShouldEqual, 0)
 
 		bdr, err := basedirs.NewReader(filepath.Join(dbTmp, "basedirs.db"), filepath.Join(configs, "owners"))
 		So(err, ShouldBeNil)
