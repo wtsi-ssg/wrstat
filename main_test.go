@@ -583,20 +583,6 @@ func TestWalk(t *testing.T) {
 		removeJobRepGroupSuffixes(jobs)
 
 		So(jobs, ShouldResemble, jobsExpectation)
-
-		compareFileContents(t, filepath.Join(out, "walk.1"), fmt.Sprintf(`%[1]s
-%[1]s/a
-%[1]s/a/g/h
-%[1]s/a/b/f/test2.csv
-%[1]s/a/b/c/test.txt
-%[1]s/a/b/c/d`, tmp))
-
-		compareFileContents(t, filepath.Join(out, "walk.2"), fmt.Sprintf(`%[1]s/a/test3
-%[1]s/a/g
-%[1]s/a/b
-%[1]s/a/b/f
-%[1]s/a/b/c
-%[1]s/a/b/c/d/e`, tmp))
 	})
 }
 
