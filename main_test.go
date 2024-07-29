@@ -38,7 +38,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -759,7 +758,7 @@ func TestStat(t *testing.T) {
 
 		atime := fi.Sys().(*syscall.Stat_t).Atim.Sec
 
-		groupExpectation := fmt.Sprintf("%s\t%s\t1\t10\n", u.Username, g.Name)
+		groupExpectation := fmt.Sprintf("%s\t%s\t1\t10\n", g.Name, u.Username)
 
 		parent := tmp
 
@@ -772,7 +771,7 @@ func TestStat(t *testing.T) {
 			walkExpectations = fmt.Sprintf(""+
 				"%[1]s\t%[2]s\t%[3]s\t0\t1\t10\t%[4]d\t7383773\n"+
 				"%[1]s\t%[2]s\t%[3]s\t1\t5\t16394\t%[4]d\t7383773\n"+
-				"%[1]s\t%[2]s\t%[3]s\t15\t4\t16384\t%[4]d\t314159\n", parent, u.Uid, g.Gid, atime) + walkExpectations
+				"%[1]s\t%[2]s\t%[3]s\t15\t4\t16384\t%[4]d\t314159\n", parent, g.Gid, u.Uid, atime) + walkExpectations
 		}
 
 		userGroupExpectation += fmt.Sprintf(""+
@@ -789,7 +788,7 @@ func TestStat(t *testing.T) {
 			"%[1]s/aDirectory/aSubDirectory\t%[2]s\t%[3]s\t1\t1\t4096\t%[4]d\t314159\n"+
 			"%[1]s/aDirectory/aSubDirectory\t%[2]s\t%[3]s\t15\t1\t4096\t%[4]d\t314159\n"+
 			"%[1]s/anotherDirectory\t%[2]s\t%[3]s\t1\t1\t4096\t%[4]d\t282820\n"+
-			"%[1]s/anotherDirectory\t%[2]s\t%[3]s\t15\t1\t4096\t%[4]d\t282820\n", tmp, u.Uid, g.Gid, atime)
+			"%[1]s/anotherDirectory\t%[2]s\t%[3]s\t15\t1\t4096\t%[4]d\t282820\n", tmp, g.Gid, u.Uid, atime)
 
 		for file, contents := range map[string]string{
 			"dir.walk.stats":       statsExpectation,
@@ -824,25 +823,25 @@ func TestCombine(t *testing.T) {
 			"b.bygroup":     "e\tf\tg\th\n5\t6\t7\t8\n",
 			"c.bygroup":     "",
 			"a.dgut": "" +
-				"/\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/\t1000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				"/\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				"/some\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/some\t1000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				"/some\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				"/some/directory\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/some/directory\t1000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				"/some/directory\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				"/some/directory/001\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/some/directory/001\t1000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				"/some/directory/001\t1000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				"/some/directory/001/aDirectory\t1000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				"/some/directory/001/aDirectory\t1000\t1000\t2\t3\t8202\t1721915848\t7383773\n" +
-				"/some/directory/001/aDirectory\t1000\t1000\t15\t2\t8192\t1721915848\t314159\n" +
-				"/some/directory/001/aDirectory/aSubDirectory\t1000\t1000\t2\t1\t4096\t1721915848\t314159\n" +
-				"/some/directory/001/aDirectory/aSubDirectory\t1000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
-				"/some/directory/001/anotherDirectory\t1000\t1000\t2\t1\t4096\t1721915848\t282820\n" +
-				"/some/directory/001/anotherDirectory\t1000\t1000\t15\t1\t4096\t1721915848\t282820\n",
+				"/\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
+				"/\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/some\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/some\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
+				"/some\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/some/directory\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/some/directory\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
+				"/some/directory\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/some/directory/001\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/some/directory/001\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
+				"/some/directory/001\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
+				"/some/directory/001/aDirectory\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
+				"/some/directory/001/aDirectory\t2000\t1000\t2\t3\t8202\t1721915848\t7383773\n" +
+				"/some/directory/001/aDirectory\t2000\t1000\t15\t2\t8192\t1721915848\t314159\n" +
+				"/some/directory/001/aDirectory/aSubDirectory\t2000\t1000\t2\t1\t4096\t1721915848\t314159\n" +
+				"/some/directory/001/aDirectory/aSubDirectory\t2000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
+				"/some/directory/001/anotherDirectory\t2000\t1000\t2\t1\t4096\t1721915848\t282820\n" +
+				"/some/directory/001/anotherDirectory\t2000\t1000\t15\t1\t4096\t1721915848\t282820\n",
 			"a.log": "A log file\nwith 2 lines\n",
 			"b.log": "Another log file, with 1 line\n",
 			"c.log": "Lorem ipsum!!!!",
@@ -898,14 +897,8 @@ func TestCombine(t *testing.T) {
 		So(info.NumParents, ShouldEqual, 5)
 		So(info.NumChildren, ShouldEqual, 6)
 
-		u, err := user.Current()
-		So(err, ShouldBeNil)
-
-		uid, err := strconv.ParseUint(u.Uid, 10, 32)
-		So(err, ShouldBeNil)
-
-		gid, err := strconv.ParseUint(u.Gid, 10, 32)
-		So(err, ShouldBeNil)
+		uids := []uint32{1000}
+		gids := []uint32{2000}
 
 		for _, test := range [...]struct {
 			Directory   string
@@ -922,8 +915,8 @@ func TestCombine(t *testing.T) {
 				NumFiles:    10,
 				TotalSize:   32788,
 				NewestMTime: 7383773,
-				UIDs:        []uint32{uint32(uid)},
-				GIDs:        []uint32{uint32(gid)},
+				UIDs:        uids,
+				GIDs:        gids,
 				FTs:         []summary.DirGUTFileType{0, 2, 15},
 			},
 			{
@@ -931,8 +924,8 @@ func TestCombine(t *testing.T) {
 				NumFiles:    10,
 				TotalSize:   32788,
 				NewestMTime: 7383773,
-				UIDs:        []uint32{uint32(uid)},
-				GIDs:        []uint32{uint32(gid)},
+				UIDs:        uids,
+				GIDs:        gids,
 				FTs:         []summary.DirGUTFileType{0, 2, 15},
 			},
 			{
@@ -941,8 +934,8 @@ func TestCombine(t *testing.T) {
 				NumFiles:    10,
 				TotalSize:   32788,
 				NewestMTime: 7383773,
-				UIDs:        []uint32{uint32(uid)},
-				GIDs:        []uint32{uint32(gid)},
+				UIDs:        uids,
+				GIDs:        gids,
 				FTs:         []summary.DirGUTFileType{0, 2, 15},
 			},
 			{
@@ -951,8 +944,8 @@ func TestCombine(t *testing.T) {
 				NumFiles:    1,
 				TotalSize:   10,
 				NewestMTime: 7383773,
-				UIDs:        []uint32{uint32(uid)},
-				GIDs:        []uint32{uint32(gid)},
+				UIDs:        uids,
+				GIDs:        gids,
 				FTs:         []summary.DirGUTFileType{0},
 			},
 			{
@@ -960,8 +953,8 @@ func TestCombine(t *testing.T) {
 				NumFiles:    6,
 				TotalSize:   16404,
 				NewestMTime: 7383773,
-				UIDs:        []uint32{uint32(uid)},
-				GIDs:        []uint32{uint32(gid)},
+				UIDs:        uids,
+				GIDs:        gids,
 				FTs:         []summary.DirGUTFileType{0, 2, 15},
 			},
 			{
@@ -969,8 +962,8 @@ func TestCombine(t *testing.T) {
 				NumFiles:    2,
 				TotalSize:   8192,
 				NewestMTime: 314159,
-				UIDs:        []uint32{uint32(uid)},
-				GIDs:        []uint32{uint32(gid)},
+				UIDs:        uids,
+				GIDs:        gids,
 				FTs:         []summary.DirGUTFileType{2, 15},
 			},
 			{
