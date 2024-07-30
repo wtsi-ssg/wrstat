@@ -106,23 +106,28 @@ func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
 	cmd.Stderr = &stderr
 	cmd.ExtraFiles = append(cmd.ExtraFiles, pw)
 
-	go func() {
-		err = cmd.Run()
-
-		pw.Close()
-	}()
-
 	jd := json.NewDecoder(pr)
+	done := make(chan struct{})
 
-	for {
-		var j []*jobqueue.Job
+	go func() {
+		for {
+			var j []*jobqueue.Job
 
-		if errr := jd.Decode(&j); errr != nil {
-			break
+			if errr := jd.Decode(&j); errr != nil {
+				break
+			}
+
+			jobs = append(jobs, j...)
 		}
 
-		jobs = append(jobs, j...)
-	}
+		close(done)
+	}()
+
+	err = cmd.Run()
+
+	pw.Close()
+
+	<-done
 
 	return stdout.String(), stderr.String(), jobs, err
 }
