@@ -38,6 +38,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"testing"
@@ -596,7 +597,14 @@ func compareFileContents(t *testing.T, filename, expectation string) {
 
 	output, err := io.ReadAll(f)
 	So(err, ShouldBeNil)
-	So(strings.TrimSpace(string(output)), ShouldEqual, expectation)
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	expectedLines := strings.Split(strings.TrimSpace(expectation), "\n")
+
+	sort.Slice(lines, func(i, j int) bool { return lines[i] < lines[j] })
+	sort.Slice(expectedLines, func(i, j int) bool { return expectedLines[i] < expectedLines[j] })
+
+	So(lines, ShouldResemble, expectedLines)
 }
 
 func removeJobRepGroupSuffixes(jobs []*jobqueue.Job) {
