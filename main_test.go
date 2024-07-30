@@ -116,8 +116,8 @@ func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
 
 	for {
 		var j []*jobqueue.Job
-		err := jd.Decode(&j)
-		if err != nil {
+
+		if err = jd.Decode(&j); err != nil {
 			break
 		}
 
@@ -129,9 +129,10 @@ func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
 
 func TestVersion(t *testing.T) {
 	Convey("wrstat prints the correct version", t, func() {
-		output, _, _, err := runWRStat("version")
+		output, stderr, _, err := runWRStat("version")
 		So(err, ShouldBeNil)
 		So(strings.TrimSpace(output), ShouldEqual, "TESTVERSION")
+		So(stderr, ShouldBeBlank)
 	})
 }
 
@@ -142,6 +143,8 @@ func TestCron(t *testing.T) {
 }
 
 func multiTests(t *testing.T, subcommand ...string) {
+	t.Helper()
+
 	walkReqs := &scheduler.Requirements{
 		RAM:   16000,
 		Time:  19 * time.Hour,
@@ -195,7 +198,9 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 		expectation := []*jobqueue.Job{
 			{
-				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
+				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
+					"wrstat-stat-path-%[4]s-%[3]s /some/path",
+					walk1DepGroup, workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -205,7 +210,9 @@ func multiTests(t *testing.T, subcommand ...string) {
 				DepGroups:    []string{walk1DepGroup},
 			},
 			{
-				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
+				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
+					"-i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
+					workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -266,7 +273,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 	Convey("wrstat gets the stats for a normal run", func() {
 		workingDir := t.TempDir()
-		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "/some/path", "/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")...)
+		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "/some/path", "/some-other/path",
+			"-f", "final_output", "-q", "quota_file", "-o", "owners_file")...)
 		So(err, ShouldBeNil)
 
 		So(len(jobs), ShouldEqual, 6)
@@ -280,7 +288,9 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 		expectation := []*jobqueue.Job{
 			{
-				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
+				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
+					"wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
+					workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -290,7 +300,9 @@ func multiTests(t *testing.T, subcommand ...string) {
 				DepGroups:    []string{walk1DepGroup},
 			},
 			{
-				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
+				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
+					"wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
+					workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -330,7 +342,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf(" basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"", workingDir, repGroup),
+				Cmd: fmt.Sprintf(" basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"",
+					workingDir, repGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-basedir-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-basedir",
@@ -365,7 +378,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 	Convey("wrstat gets the stats for a normal run with a partial merge", func() {
 		workingDir := t.TempDir()
-		_, _, jobs, err := runWRStat(append(subcommand, "-l", "/path/to/partial_merge", "-w", workingDir, "/some/path", "/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")...)
+		_, _, jobs, err := runWRStat(append(subcommand, "-l", "/path/to/partial_merge", "-w", workingDir, "/some/path",
+			"/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")...)
 		So(err, ShouldBeNil)
 
 		So(len(jobs), ShouldEqual, 7)
@@ -379,7 +393,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 		expectation := []*jobqueue.Job{
 			{
-				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
+				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
+					"-i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -389,7 +404,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 				DepGroups:    []string{walk1DepGroup},
 			},
 			{
-				Cmd:          fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
+				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
+					"-i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -444,7 +460,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf(" basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"", workingDir, repGroup),
+				Cmd: fmt.Sprintf(" basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"",
+					workingDir, repGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-basedir-%s-%s.merge", date, repGroup),
 				ReqGroup:     "wrstat-basedir",
@@ -751,7 +768,7 @@ func TestStat(t *testing.T) {
 		fi, err := os.Lstat(tmp)
 		So(err, ShouldBeNil)
 
-		atime := fi.Sys().(*syscall.Stat_t).Atim.Sec
+		atime := fi.Sys().(*syscall.Stat_t).Atim.Sec //nolint:forcetypeassert
 
 		groupExpectation := fmt.Sprintf("%s\t%s\t1\t10\n", g.Name, u.Username)
 
@@ -856,13 +873,14 @@ func TestCombine(t *testing.T) {
 		So(len(jobs), ShouldEqual, 0)
 
 		for file, contents := range map[string]string{
-			"combine.stats.gz":       "a\nb\nc\nd\ne\nf\ng\nh\n",
-			"combine.byusergroup.gz": "a\t7\t8\nc\t1\t2\nb\t3\t4\na\t5\t6\nd\t9\t10\nc\t11\t12\nb\t13\t14\nf\t15\t16\ne\t17\t18\nb\t19\t20\n",
-			"combine.bygroup":        "a\tb\tc\td\n1\t2\t3\t4\ne\tf\tg\th\n5\t6\t7\t8\n",
-			"combine.log.gz":         "A log file\nwith 2 lines\nAnother log file, with 1 line\nLorem ipsum!!!!",
+			"combine.stats.gz": "a\nb\nc\nd\ne\nf\ng\nh\n",
+			"combine.byusergroup.gz": "a\t7\t8\nc\t1\t2\nb\t3\t4\na\t5\t6\nd\t9\t10\n" +
+				"c\t11\t12\nb\t13\t14\nf\t15\t16\ne\t17\t18\nb\t19\t20\n",
+			"combine.bygroup": "a\tb\tc\td\n1\t2\t3\t4\ne\tf\tg\th\n5\t6\t7\t8\n",
+			"combine.log.gz":  "A log file\nwith 2 lines\nAnother log file, with 1 line\nLorem ipsum!!!!",
 		} {
-			f, err := os.Open(filepath.Join(tmp, file))
-			So(err, ShouldBeNil)
+			f, errr := os.Open(filepath.Join(tmp, file))
+			So(errr, ShouldBeNil)
 
 			var r io.Reader
 
@@ -873,8 +891,8 @@ func TestCombine(t *testing.T) {
 				r = f
 			}
 
-			buf, err := io.ReadAll(r)
-			So(err, ShouldBeNil)
+			buf, errr := io.ReadAll(r)
+			So(errr, ShouldBeNil)
 
 			f.Close()
 
@@ -1338,14 +1356,15 @@ func TestBasedirs(t *testing.T) {
 			So(err, ShouldBeNil)
 		}
 
-		go o.Output(&stringCloser{WriteCloser: pw})
+		go o.Output(&stringCloser{WriteCloser: pw}) //nolint:errcheck
 
 		err = db.Store(pr, 10000)
 		So(err, ShouldBeNil)
 
 		db.Close()
 
-		_, _, jobs, err := runWRStat("basedir", "-q", filepath.Join(configs, "quota"), "-o", filepath.Join(configs, "owners"), "-b", filepath.Join(configs, "baseDirsConfig"), dbTmp, outputTmp)
+		_, _, jobs, err := runWRStat("basedir", "-q", filepath.Join(configs, "quota"), "-o",
+			filepath.Join(configs, "owners"), "-b", filepath.Join(configs, "baseDirsConfig"), dbTmp, outputTmp)
 		So(err, ShouldBeNil)
 		So(len(jobs), ShouldEqual, 0)
 
@@ -1358,10 +1377,22 @@ func TestBasedirs(t *testing.T) {
 		removeHistory(gu)
 
 		groupExpectation := []*basedirs.Usage{
-			{GID: 9000, UIDs: []uint32{8000, 8001, 8002, 8003}, Name: "9000", Owner: "BOM1", BaseDir: "/someDirectory/a/team1", UsageSize: 260, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(33, 0))},
-			{GID: 9000, UIDs: []uint32{8000}, Name: "9000", Owner: "BOM1", BaseDir: "/someDirectory/c/team3", UsageSize: 30, UsageInodes: 2, Mtime: fixtimes.FixTime(time.Unix(66, 0))},
-			{GID: 9001, UIDs: []uint32{8010}, Name: "9001", Owner: "BOM2", BaseDir: "/someDirectory/a/mdt0/team2", UsageSize: 19092, UsageInodes: 3, Mtime: fixtimes.FixTime(time.Unix(48, 0))},
-			{GID: 9001, UIDs: []uint32{8010}, Name: "9001", Owner: "BOM2", BaseDir: "/someDirectory/b/team2", UsageSize: 200, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(57, 0))},
+			{
+				GID: 9000, UIDs: []uint32{8000, 8001, 8002, 8003}, Name: "9000", Owner: "BOM1", BaseDir: "/someDirectory/a/team1",
+				UsageSize: 260, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(33, 0)),
+			},
+			{
+				GID: 9000, UIDs: []uint32{8000}, Name: "9000", Owner: "BOM1", BaseDir: "/someDirectory/c/team3",
+				UsageSize: 30, UsageInodes: 2, Mtime: fixtimes.FixTime(time.Unix(66, 0)),
+			},
+			{
+				GID: 9001, UIDs: []uint32{8010}, Name: "9001", Owner: "BOM2", BaseDir: "/someDirectory/a/mdt0/team2",
+				UsageSize: 19092, UsageInodes: 3, Mtime: fixtimes.FixTime(time.Unix(48, 0)),
+			},
+			{
+				GID: 9001, UIDs: []uint32{8010}, Name: "9001", Owner: "BOM2", BaseDir: "/someDirectory/b/team2",
+				UsageSize: 200, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(57, 0)),
+			},
 		}
 
 		So(gu, ShouldResemble, groupExpectation)
@@ -1372,13 +1403,34 @@ func TestBasedirs(t *testing.T) {
 		removeHistory(uu)
 
 		userExpectation := []*basedirs.Usage{
-			{UID: 8000, GIDs: []uint32{9000}, Name: "8000", BaseDir: "/someDirectory/a/team1", UsageSize: 10, QuotaSize: 0, UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(21, 0))},
-			{UID: 8000, GIDs: []uint32{9000}, Name: "8000", BaseDir: "/someDirectory/c/team3", UsageSize: 30, QuotaSize: 0, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(66, 0))},
-			{UID: 8001, GIDs: []uint32{9000}, Name: "8001", BaseDir: "/someDirectory/a/team1", UsageSize: 50, QuotaSize: 0, UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(27, 0))},
-			{UID: 8002, GIDs: []uint32{9000}, Name: "8002", BaseDir: "/someDirectory/a/team1", UsageSize: 190, QuotaSize: 0, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(33, 0))},
-			{UID: 8003, GIDs: []uint32{9000}, Name: "8003", BaseDir: "/someDirectory/a/team1", UsageSize: 10, QuotaSize: 0, UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(24, 0))},
-			{UID: 8010, GIDs: []uint32{9001}, Name: "8010", BaseDir: "/someDirectory/a/mdt0/team2", UsageSize: 19092, QuotaSize: 0, UsageInodes: 3, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(48, 0))},
-			{UID: 8010, GIDs: []uint32{9001}, Name: "8010", BaseDir: "/someDirectory/b/team2", UsageSize: 200, QuotaSize: 0, UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(57, 0))},
+			{
+				UID: 8000, GIDs: []uint32{9000}, Name: "8000", BaseDir: "/someDirectory/a/team1", UsageSize: 10, QuotaSize: 0,
+				UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(21, 0)),
+			},
+			{
+				UID: 8000, GIDs: []uint32{9000}, Name: "8000", BaseDir: "/someDirectory/c/team3", UsageSize: 30, QuotaSize: 0,
+				UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(66, 0)),
+			},
+			{
+				UID: 8001, GIDs: []uint32{9000}, Name: "8001", BaseDir: "/someDirectory/a/team1", UsageSize: 50, QuotaSize: 0,
+				UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(27, 0)),
+			},
+			{
+				UID: 8002, GIDs: []uint32{9000}, Name: "8002", BaseDir: "/someDirectory/a/team1", UsageSize: 190, QuotaSize: 0,
+				UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(33, 0)),
+			},
+			{
+				UID: 8003, GIDs: []uint32{9000}, Name: "8003", BaseDir: "/someDirectory/a/team1", UsageSize: 10, QuotaSize: 0,
+				UsageInodes: 1, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(24, 0)),
+			},
+			{
+				UID: 8010, GIDs: []uint32{9001}, Name: "8010", BaseDir: "/someDirectory/a/mdt0/team2", UsageSize: 19092,
+				QuotaSize: 0, UsageInodes: 3, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(48, 0)),
+			},
+			{
+				UID: 8010, GIDs: []uint32{9001}, Name: "8010", BaseDir: "/someDirectory/b/team2", UsageSize: 200, QuotaSize: 0,
+				UsageInodes: 2, QuotaInodes: 0, Mtime: fixtimes.FixTime(time.Unix(57, 0)),
+			},
 		}
 
 		So(uu, ShouldResemble, userExpectation)
@@ -1394,7 +1446,8 @@ func removeHistory(b []*basedirs.Usage) {
 }
 
 func TestTidy(t *testing.T) {
-	Convey("For the tidy command, combine files within the source directory are cleaned up and moved to the final directory", t, func() {
+	Convey("For the tidy command, combine files within the source directory"+
+		"are cleaned up and moved to the final directory", t, func() {
 		srcDir := t.TempDir()
 		finalDir := t.TempDir()
 
