@@ -826,7 +826,7 @@ func TestStat(t *testing.T) {
 }
 
 func TestCombine(t *testing.T) {
-	Convey("", t, func() {
+	Convey("For the combine subcommand, it creates the expected output", t, func() {
 		tmp := t.TempDir()
 
 		for file, contents := range map[string]string{
@@ -1122,7 +1122,7 @@ func (f fileInfo) Sys() any {
 }
 
 func TestBasedirs(t *testing.T) {
-	Convey("", t, func() {
+	Convey("For the basedir subcommand, it creates the expected output", t, func() {
 		configs := t.TempDir()
 		dbTmp := t.TempDir()
 		outputTmp := t.TempDir()
