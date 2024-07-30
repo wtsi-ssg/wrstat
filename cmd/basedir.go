@@ -132,18 +132,6 @@ be blank), and the first column will be user_name instead of group_name.
 				"and the multi -f output directory")
 		}
 
-		f, err := os.Open(configPath)
-		if err != nil {
-			die("error opening config: %s", err)
-		}
-
-		basedirsConfig, err := basedirs.ParseConfig(f)
-		if err != nil {
-			die("error parsing basedirs config: %s", err)
-		}
-
-		f.Close()
-
 		if quotaPath == "" {
 			die("you must supply --quota")
 		}
@@ -156,6 +144,8 @@ be blank), and the first column will be user_name instead of group_name.
 		if err != nil {
 			die("failed to parse quota information: %s", err)
 		}
+
+		basedirsConfig := config()
 
 		t := time.Now()
 		tree, err := dgut.NewTree(dgutDBCombinePaths(args[0])...)
