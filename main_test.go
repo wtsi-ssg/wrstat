@@ -117,7 +117,7 @@ func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
 	for {
 		var j []*jobqueue.Job
 
-		if err = jd.Decode(&j); err != nil {
+		if errr := jd.Decode(&j); errr != nil {
 			break
 		}
 
@@ -199,7 +199,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		expectation := []*jobqueue.Job{
 			{
 				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
-					"wrstat-stat-path-%[4]s-%[3]s /some/path",
+					" wrstat-stat-path-%[4]s-%[3]s /some/path",
 					walk1DepGroup, workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
@@ -211,7 +211,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 			},
 			{
 				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
-					"-i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
+					" -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
 					workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
@@ -289,7 +289,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		expectation := []*jobqueue.Job{
 			{
 				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
-					"wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
+					" wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
 					workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
@@ -301,7 +301,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 			},
 			{
 				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
-					"wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
+					" wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
 					workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
@@ -394,7 +394,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		expectation := []*jobqueue.Job{
 			{
 				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
-					"-i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
+					" -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -405,7 +405,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 			},
 			{
 				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
-					"-i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
+					" -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
