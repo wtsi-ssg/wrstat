@@ -48,8 +48,10 @@ const userGroupPerm = 0770
 var appLogger = log15.New()
 
 // these variables are accessible by all subcommands.
-var deployment string
-var sudo bool
+var (
+	deployment string
+	sudo       bool
+)
 
 const connectTimeout = 10 * time.Second
 
@@ -179,7 +181,6 @@ func newScheduler(cwd, queue string) (*scheduler.Scheduler, func()) {
 	}
 
 	s, err := scheduler.New(deployment, cwd, queue, connectTimeout, appLogger, sudo)
-
 	if err != nil {
 		die("%s", err)
 	}
@@ -208,7 +209,7 @@ func dateStamp() string {
 	return t.Format("20060102")
 }
 
-var runJobs string //nolint:gochecknoglobals
+var runJobs string
 
 // addJobsToQueue adds the jobs to wr's queue.
 func addJobsToQueue(s *scheduler.Scheduler, jobs []*jobqueue.Job) {
