@@ -58,6 +58,10 @@ func ParseConfig(r io.Reader) (Config, error) {
 
 		line = bytes.TrimSuffix(line, newLineByte)
 
+		if len(line) == 0 || line[0] == '#' {
+			continue
+		}
+
 		conf, err := parseLine(line)
 		if err != nil {
 			return nil, err
