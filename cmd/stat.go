@@ -105,7 +105,7 @@ joe	lemur	/disk1/dir1/dir1a	3	30
 joe	lemur	/disk1/dir2	1	10
 
 Likewise, it produces a similar file that also shows nested numbers, with these
-7 tab separated columns, with a ".dgut" suffix:
+8 tab separated columns, with a ".dgut" suffix:
 
 1. directory
 2. gid
