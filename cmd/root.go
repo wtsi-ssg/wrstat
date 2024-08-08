@@ -53,6 +53,9 @@ var (
 	sudo       bool
 )
 
+// a flag set by main tests to disable jobs being scheduled.
+var runJobs string
+
 const connectTimeout = 10 * time.Second
 
 // RootCmd represents the base command when called without any subcommands.
@@ -209,8 +212,6 @@ func dateStamp() string {
 	return t.Format("20060102")
 }
 
-var runJobs string
-
 // addJobsToQueue adds the jobs to wr's queue.
 func addJobsToQueue(s *scheduler.Scheduler, jobs []*jobqueue.Job) {
 	if runJobs != "" {
@@ -225,9 +226,9 @@ func addJobsToQueue(s *scheduler.Scheduler, jobs []*jobqueue.Job) {
 }
 
 func testPrint(jobs []*jobqueue.Job) {
-	const testOutput = 3
+	const testOutputFD = 3
 
-	w := os.NewFile(uintptr(testOutput), "/dev/stdin")
+	w := os.NewFile(uintptr(testOutputFD), "/dev/stdin")
 
 	json.NewEncoder(w).Encode(jobs) //nolint:errcheck,errchkjson
 }
