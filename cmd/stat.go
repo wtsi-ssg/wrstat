@@ -127,7 +127,6 @@ Likewise, it produces a similar file that also shows nested numbers, with these
     12 = compresed (.bzip2 | .gz | .tgz | .zip | .xz | .bgz suffix)
     13 = text (.csv | .tsv | .txt | .text | .md | .dat | readme suffix)
     14 = log (.log | .out | .o | .err | .e | .err | .oe suffix)
-    15 = directory
 5. number of files nested under 1 belonging to 2 and 3 and having filetype in 4.
 6. total file size in bytes of the files in 5.
 7. the oldest access time of the files in 5, in seconds since Unix epoch.
