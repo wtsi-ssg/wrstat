@@ -53,12 +53,13 @@ import (
 	"github.com/wtsi-ssg/wrstat/v4/summary"
 )
 
-const app = "wrstat"
+const app = "wrstat_test"
 
 func buildSelf() func() {
 	cmd := exec.Command(
 		"go", "build", "-tags", "netgo",
 		"-ldflags=-X github.com/wtsi-ssg/wrstat/v4/cmd.runJobs=0 -X github.com/wtsi-ssg/wrstat/v4/cmd.Version=TESTVERSION",
+		"-o", app,
 	)
 
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=1")
@@ -101,7 +102,7 @@ func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
 		return "", "", nil, err
 	}
 
-	cmd := exec.Command("./wrstat", args...)
+	cmd := exec.Command("./"+app, args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	cmd.ExtraFiles = append(cmd.ExtraFiles, pw)
