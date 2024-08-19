@@ -1583,7 +1583,10 @@ func TestEnd2End(t *testing.T) {
 		wd, err := os.Getwd()
 		So(err, ShouldBeNil)
 
-		build := exec.Command("singularity", "build", "--fakeroot", "--bind", wd+":/opt/wrstat", sif, def)
+		build := exec.Command( //nolint:gosec
+			"singularity", "build",
+			"--fakeroot",
+			"--bind", wd+":/opt/wrstat", sif, def)
 
 		err = build.Run()
 		So(err, ShouldBeNil)
@@ -1666,7 +1669,7 @@ func TestEnd2End(t *testing.T) {
 			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n",
 			u.Gid, GROUPA, USERA, GROUPB, USERB, GROUPC, USERC, GROUPD, USERD, GROUPE, USERE))
 
-		cmd := exec.Command("singularity", "run",
+		cmd := exec.Command("singularity", "run", //nolint:gosec
 			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group",
 			"--home", tmpHome,
 			"--overlay", files, sif)
