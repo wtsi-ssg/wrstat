@@ -1592,17 +1592,17 @@ func TestEnd2End(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		const (
-			USERA = 20000
-			USERB = 20001
-			USERC = 20002
-			USERD = 20003
-			USERE = 20004
+			USER_A = 20000
+			USER_B = 20001
+			USER_C = 20002
+			USER_D = 20003
+			USER_E = 20004
 
-			GROUPA = 30000
-			GROUPB = 30001
-			GROUPC = 30002
-			GROUPD = 30003
-			GROUPE = 30004
+			GROUP_A = 30000
+			GROUP_B = 30001
+			GROUP_C = 30002
+			GROUP_D = 30003
+			GROUP_E = 30004
 		)
 
 		root := newDir("/", 0, 0)
@@ -1612,36 +1612,36 @@ func TestEnd2End(t *testing.T) {
 		root.Mkdir("objects/store2", 0, 0)
 		root.Mkdir("objects/store3", 0, 0)
 		root.Mkdir("objects/store1/data", 0, 0)
-		root.Mkdir("objects/store1/data/sheets", USERA, GROUPA)
-		root.Create("objects/store1/data/sheets/doc1.txt", USERA, GROUPA, 2048)
-		root.Create("objects/store1/data/sheets/doc2.txt", USERA, GROUPA, 8192)
-		root.Mkdir("objects/store1/data/dbs", USERB, GROUPA)
-		root.Create("objects/store1/data/dbs/dbA.db", USERB, GROUPA, 12345)
-		root.Create("objects/store1/data/dbs/dbB.db", USERB, GROUPA, 54321)
-		root.Mkdir("objects/store1/data/temp", USERC, GROUPA)
-		root.Mkdir("objects/store1/data/temp/a", USERC, GROUPA)
-		root.Create("objects/store1/data/temp/a/a.bed", USERC, GROUPA, 1000)
-		root.Mkdir("objects/store1/data/temp/b", USERC, GROUPA)
-		root.Create("objects/store1/data/temp/b/b.bed", USERC, GROUPA, 2000)
-		root.Mkdir("objects/store1/data/temp/c", USERC, GROUPA)
-		root.Create("objects/store1/data/temp/c/c.bed", USERC, GROUPA, 3000)
+		root.Mkdir("objects/store1/data/sheets", USER_A, GROUP_A)
+		root.Create("objects/store1/data/sheets/doc1.txt", USER_A, GROUP_A, 2048)
+		root.Create("objects/store1/data/sheets/doc2.txt", USER_A, GROUP_A, 8192)
+		root.Mkdir("objects/store1/data/dbs", USER_B, GROUP_A)
+		root.Create("objects/store1/data/dbs/dbA.db", USER_B, GROUP_A, 12345)
+		root.Create("objects/store1/data/dbs/dbB.db", USER_B, GROUP_A, 54321)
+		root.Mkdir("objects/store1/data/temp", USER_C, GROUP_A)
+		root.Mkdir("objects/store1/data/temp/a", USER_C, GROUP_A)
+		root.Create("objects/store1/data/temp/a/a.bed", USER_C, GROUP_A, 1000)
+		root.Mkdir("objects/store1/data/temp/b", USER_C, GROUP_A)
+		root.Create("objects/store1/data/temp/b/b.bed", USER_C, GROUP_A, 2000)
+		root.Mkdir("objects/store1/data/temp/c", USER_C, GROUP_A)
+		root.Create("objects/store1/data/temp/c/c.bed", USER_C, GROUP_A, 3000)
 		root.Mkdir("objects/store2", 0, 0)
 		root.Mkdir("objects/store2/part0", 0, 0)
 		root.Mkdir("objects/store2/part1", 0, 0)
 		root.Mkdir("objects/store2/part0/teams", 0, 0)
-		root.Mkdir("objects/store2/part0/teams/team1", USERA, GROUPA)
-		root.Mkdir("objects/store2/part0/teams/team2", USERB, GROUPB)
-		root.Mkdir("objects/store2/part0/teams/team3", USERC, GROUPC)
-		root.Mkdir("objects/store2/part1/other", USERD, GROUPA)
-		root.Mkdir("objects/store2/part1/other/myDir", USERD, GROUPA)
+		root.Mkdir("objects/store2/part0/teams/team1", USER_A, GROUP_A)
+		root.Mkdir("objects/store2/part0/teams/team2", USER_B, GROUP_B)
+		root.Mkdir("objects/store2/part0/teams/team3", USER_C, GROUP_C)
+		root.Mkdir("objects/store2/part1/other", USER_D, GROUP_A)
+		root.Mkdir("objects/store2/part1/other/myDir", USER_D, GROUP_A)
 		root.Mkdir("objects/store2/important", 0, 0)
-		root.Mkdir("objects/store2/important/docs", USERB, GROUPD)
+		root.Mkdir("objects/store2/important/docs", USER_B, GROUP_D)
 
 		root.Mkdir("simple", 0, 0)
-		root.Mkdir("simple/A", USERA, GROUPA)
-		root.Create("simple/A/a.file", USERA, GROUPA, 1)
-		root.Mkdir("simple/E", USERE, GROUPE)
-		root.Create("simple/E/b.tmp", USERE, GROUPE, 2)
+		root.Mkdir("simple/A", USER_A, GROUP_A)
+		root.Create("simple/A/a.file", USER_A, GROUP_A, 1)
+		root.Mkdir("simple/E", USER_E, GROUP_E)
+		root.Create("simple/E/b.tmp", USER_E, GROUP_E, 2)
 
 		err = root.Write(files, "", "")
 		So(err, ShouldBeNil)
@@ -1657,7 +1657,7 @@ func TestEnd2End(t *testing.T) {
 			"U%[7]d:x:%[7]d:%[8]d::/:/bin/sh\n"+
 			"U%[9]d:x:%[9]d:%[10]d::/:/bin/sh\n"+
 			"U%[11]d:x:%[11]d:%[12]d::/:/bin/sh\n",
-			u.Uid, u.Gid, USERA, GROUPA, USERB, GROUPB, USERC, GROUPC, USERD, GROUPD, USERE, GROUPE))
+			u.Uid, u.Gid, USER_A, GROUP_A, USER_B, GROUP_B, USER_C, GROUP_C, USER_D, GROUP_D, USER_E, GROUP_E))
 
 		writeFileString(t, groups, fmt.Sprintf(""+
 			"root:x:0:\n"+
@@ -1667,7 +1667,7 @@ func TestEnd2End(t *testing.T) {
 			"G%[6]d:x:%[6]d:U%[7]d::/:/bin/sh\n"+
 			"G%[8]d:x:%[8]d:U%[9]d::/:/bin/sh\n"+
 			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n",
-			u.Gid, GROUPA, USERA, GROUPB, USERB, GROUPC, USERC, GROUPD, USERD, GROUPE, USERE))
+			u.Gid, GROUP_A, USER_A, GROUP_B, USER_B, GROUP_C, USER_C, GROUP_D, USER_D, GROUP_E, USER_E))
 
 		cmd := exec.Command("singularity", "run", //nolint:gosec
 			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group",
@@ -1681,7 +1681,7 @@ func TestEnd2End(t *testing.T) {
 			"U%[1]d\t\t/simple/A\t19954\t1\t0\t1\t0\tOK\n"+
 			"U%[2]d\t\t/objects/store1/data/dbs\t19954\t66666\t0\t2\t0\tOK\n"+
 			"U%[3]d\t\t/objects/store1/data/temp\t19954\t6000\t0\t3\t0\tOK\n"+
-			"U%[4]d\t\t/simple/E\t19954\t2\t0\t1\t0\tOK", USERA, USERB, USERC, USERE)
+			"U%[4]d\t\t/simple/E\t19954\t2\t0\t1\t0\tOK", USER_A, USER_B, USER_C, USER_E)
 
 		ub, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.userusage.tsv"))
 		So(err, ShouldBeNil)
@@ -1692,7 +1692,7 @@ func TestEnd2End(t *testing.T) {
 		groupBaseDirs := fmt.Sprintf(``+
 			"G%[1]d\t\t/objects/store1/data\t19954\t82906\t0\t7\t0\tNot OK\n"+
 			"G%[1]d\t\t/simple/A\t19954\t1\t0\t1\t0\tNot OK\n"+
-			"G%[2]d\t\t/simple/E\t19954\t2\t0\t1\t0\tNot OK", GROUPA, GROUPE)
+			"G%[2]d\t\t/simple/E\t19954\t2\t0\t1\t0\tNot OK", GROUP_A, GROUP_E)
 
 		gb, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.groupusage.tsv"))
 		So(err, ShouldBeNil)
