@@ -1562,8 +1562,6 @@ stop
 `
 
 func TestEnd2End(t *testing.T) {
-	t.Parallel()
-
 	if !commandExists("singularity") || !commandExists("sqfstar") {
 		SkipConvey("need both 'singularity' and 'sqfstar' installed to run this test.", t, func() {})
 
@@ -1655,7 +1653,8 @@ func TestEnd2End(t *testing.T) {
 			"U%[5]d:x:%[5]d:%[6]d::/:/bin/sh\n"+
 			"U%[7]d:x:%[7]d:%[8]d::/:/bin/sh\n"+
 			"U%[9]d:x:%[9]d:%[10]d::/:/bin/sh\n"+
-			"U%[11]d:x:%[11]d:%[12]d::/:/bin/sh\n", u.Uid, u.Gid, USERA, GROUPA, USERB, GROUPB, USERC, GROUPC, USERD, GROUPD, USERE, GROUPE))
+			"U%[11]d:x:%[11]d:%[12]d::/:/bin/sh\n",
+			u.Uid, u.Gid, USERA, GROUPA, USERB, GROUPB, USERC, GROUPC, USERD, GROUPD, USERE, GROUPE))
 
 		writeFileString(t, groups, fmt.Sprintf(""+
 			"root:x:0:\n"+
@@ -1664,15 +1663,15 @@ func TestEnd2End(t *testing.T) {
 			"G%[4]d:x:%[4]d:U%[5]d::/:/bin/sh\n"+
 			"G%[6]d:x:%[6]d:U%[7]d::/:/bin/sh\n"+
 			"G%[8]d:x:%[8]d:U%[9]d::/:/bin/sh\n"+
-			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n", u.Gid, GROUPA, USERA, GROUPB, USERB, GROUPC, USERC, GROUPD, USERD, GROUPE, USERE))
+			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n",
+			u.Gid, GROUPA, USERA, GROUPB, USERB, GROUPC, USERC, GROUPD, USERD, GROUPE, USERE))
 
-		cmd := exec.Command("singularity", "run", "--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group", "--home", tmpHome, "--overlay", files, sif)
+		cmd := exec.Command("singularity", "run",
+			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group",
+			"--home", tmpHome,
+			"--overlay", files, sif)
 
 		So(cmd.Run(), ShouldBeNil)
-
-		// fmt.Println("singularity", "shell", "--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group", "--home", tmpHome, "--overlay", files, sif)
-
-		// time.Sleep(10 * time.Minute)
 
 		userBaseDirs := fmt.Sprintf(``+
 			"U%[1]d\t\t/objects/store1/data/sheets\t19954\t10240\t0\t2\t0\tOK\n"+
@@ -1700,7 +1699,7 @@ func TestEnd2End(t *testing.T) {
 	})
 }
 
-var pseudoNow = time.Unix(0, 0)
+var pseudoNow = time.Unix(0, 0) //nolint:gochecknoglobals
 
 func commandExists(exe string) bool {
 	_, err := exec.LookPath(exe)
@@ -1776,11 +1775,11 @@ func (d *dir) mkdir(name string, uid, gid int) *dir {
 	return e
 }
 
-func (d *dir) mkfile(name string, size int64, uid, gid int) bool {
+func (d *dir) mkfile(name string, size int64, uid, gid int) {
 	d.updateAccess()
 
 	if d.hasName(name) {
-		return false
+		return
 	}
 
 	d.updateMod()
@@ -1802,8 +1801,6 @@ func (d *dir) mkfile(name string, size int64, uid, gid int) bool {
 		AccessTime: pseudoNow,
 		ChangeTime: pseudoNow,
 	}
-
-	return true
 }
 
 func (d *dir) rmdir(name string) bool {
@@ -1870,14 +1867,12 @@ func (d *dir) Mkdir(path string, uid, gid int) *dir {
 	return d
 }
 
-func (d *dir) Create(path string, uid, gid int, size int64) bool {
+func (d *dir) Create(path string, uid, gid int, size int64) {
 	dir, file := filepath.Split(path)
 
-	if d = d.Mkdir(strings.TrimSuffix(dir, "/"), uid, gid); d == nil {
-		return false
+	if d = d.Mkdir(strings.TrimSuffix(dir, "/"), uid, gid); d != nil {
+		d.mkfile(file, size, uid, gid)
 	}
-
-	return d.mkfile(file, size, uid, gid)
 }
 
 func (d *dir) RemoveDir(path string) bool {
@@ -1905,7 +1900,7 @@ func (d *dir) Write(path string, quota, owners string) (err error) {
 	cmd := exec.Command("sqfstar", path)
 	cmd.Stdin = pr
 
-	if err := cmd.Start(); err != nil {
+	if err = cmd.Start(); err != nil {
 		return err
 	}
 
@@ -1927,7 +1922,7 @@ func (d *dir) Write(path string, quota, owners string) (err error) {
 		return err
 	}
 
-	tw.WriteHeader(&tar.Header{
+	if err := tw.WriteHeader(&tar.Header{
 		Typeflag:   tar.TypeReg,
 		Name:       "/quota",
 		Size:       int64(len(quota)),
@@ -1937,13 +1932,15 @@ func (d *dir) Write(path string, quota, owners string) (err error) {
 		ModTime:    pseudoNow,
 		AccessTime: pseudoNow,
 		ChangeTime: pseudoNow,
-	})
+	}); err != nil {
+		return err
+	}
 
 	if _, err := io.WriteString(tw, quota); err != nil {
 		return err
 	}
 
-	tw.WriteHeader(&tar.Header{
+	if err := tw.WriteHeader(&tar.Header{
 		Typeflag:   tar.TypeReg,
 		Name:       "/owners",
 		Size:       int64(len(owners)),
@@ -1953,7 +1950,9 @@ func (d *dir) Write(path string, quota, owners string) (err error) {
 		ModTime:    pseudoNow,
 		AccessTime: pseudoNow,
 		ChangeTime: pseudoNow,
-	})
+	}); err != nil {
+		return err
+	}
 
 	if _, err := io.WriteString(tw, owners); err != nil {
 		return err
@@ -1975,7 +1974,7 @@ func (z *zeroReader) Read(p []byte) (int, error) {
 		n = *z
 	}
 
-	*z -= zeroReader(n)
+	*z -= n
 
 	return int(n), nil
 }
