@@ -1432,7 +1432,7 @@ func removeHistory(b []*basedirs.Usage) {
 }
 
 func TestTidy(t *testing.T) {
-	Convey("For the tidy command, combine files within the source directory"+
+	Convey("For the tidy command, combine files within the source directory "+
 		"are cleaned up and moved to the final directory", t, func() {
 		srcDir := t.TempDir()
 		finalDir := t.TempDir()
