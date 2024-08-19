@@ -1601,6 +1601,8 @@ func TestEnd2End(t *testing.T) {
 		base := t.TempDir()
 		def := filepath.Join(base, "singularity.def")
 		sif := filepath.Join(base, "singularity.sif")
+		users := filepath.Join(base, "passwd")
+		groups := filepath.Join(base, "groups")
 		files := filepath.Join(base, "files.sqfs")
 		tmpTemp := t.TempDir()
 		tmpHome := t.TempDir()
@@ -1675,33 +1677,69 @@ func TestEnd2End(t *testing.T) {
 		err = root.Write(files, "", "")
 		So(err, ShouldBeNil)
 
-		cmd := exec.Command("singularity", "run", "--bind", tmpTemp+":/tmp", "--home", tmpHome, "--overlay", files, sif)
+		u, err := user.Current()
+		So(err, ShouldBeNil)
+
+		f, err = os.Create(users)
+		So(err, ShouldBeNil)
+
+		_, err = io.WriteString(f, fmt.Sprintf(""+
+			"root:x:0:0::/:/bin/sh\n"+
+			"user:x:%[1]s:%[2]s::/:/bin/sh\n"+
+			"U%[3]d:x:%[3]d:%[4]d::/:/bin/sh\n"+
+			"U%[5]d:x:%[5]d:%[6]d::/:/bin/sh\n"+
+			"U%[7]d:x:%[7]d:%[8]d::/:/bin/sh\n"+
+			"U%[9]d:x:%[9]d:%[10]d::/:/bin/sh\n"+
+			"U%[11]d:x:%[11]d:%[12]d::/:/bin/sh\n", u.Uid, u.Gid, USERA, GROUPA, USERB, GROUPB, USERC, GROUPC, USERD, GROUPD, USERE, GROUPE))
+
+		So(err, ShouldBeNil)
+		So(f.Close(), ShouldBeNil)
+
+		f, err = os.Create(groups)
+		So(err, ShouldBeNil)
+
+		_, err = io.WriteString(f, fmt.Sprintf(""+
+			"root:x:0:\n"+
+			"group:x:%[1]s:user::/:/bin/sh\n"+
+			"G%[2]d:x:%[2]d:U%[3]d::/:/bin/sh\n"+
+			"G%[4]d:x:%[4]d:U%[5]d::/:/bin/sh\n"+
+			"G%[6]d:x:%[6]d:U%[7]d::/:/bin/sh\n"+
+			"G%[8]d:x:%[8]d:U%[9]d::/:/bin/sh\n"+
+			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n", u.Gid, GROUPA, USERA, GROUPB, USERB, GROUPC, USERC, GROUPD, USERD, GROUPE, USERE))
+		So(err, ShouldBeNil)
+		So(f.Close(), ShouldBeNil)
+
+		cmd := exec.Command("singularity", "run", "--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group", "--home", tmpHome, "--overlay", files, sif)
 
 		So(cmd.Run(), ShouldBeNil)
 
-		userBaseDirs := `` +
-			"20000\t\t/objects/store1/data/sheets\t19954\t10240\t0\t2\t0\tOK\n" +
-			"20000\t\t/simple/A\t19954\t1\t0\t1\t0\tOK\n" +
-			"20001\t\t/objects/store1/data/dbs\t19954\t66666\t0\t2\t0\tOK\n" +
-			"20002\t\t/objects/store1/data/temp\t19954\t6000\t0\t3\t0\tOK\n" +
-			"20004\t\t/simple/E\t19954\t2\t0\t1\t0\tOK"
+		// fmt.Println("singularity", "shell", "--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group", "--home", tmpHome, "--overlay", files, sif)
 
-		u, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.userusage.tsv"))
+		// time.Sleep(10 * time.Minute)
+
+		userBaseDirs := fmt.Sprintf(``+
+			"U%[1]d\t\t/objects/store1/data/sheets\t19954\t10240\t0\t2\t0\tOK\n"+
+			"U%[1]d\t\t/simple/A\t19954\t1\t0\t1\t0\tOK\n"+
+			"U%[2]d\t\t/objects/store1/data/dbs\t19954\t66666\t0\t2\t0\tOK\n"+
+			"U%[3]d\t\t/objects/store1/data/temp\t19954\t6000\t0\t3\t0\tOK\n"+
+			"U%[4]d\t\t/simple/E\t19954\t2\t0\t1\t0\tOK", USERA, USERB, USERC, USERE)
+
+		ub, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.userusage.tsv"))
 		So(err, ShouldBeNil)
-		So(len(u), ShouldEqual, 1)
+		So(len(ub), ShouldEqual, 1)
 
-		compareFileContents(t, filepath.Join(tmpTemp, u[0]), userBaseDirs)
+		compareFileContents(t, filepath.Join(tmpTemp, ub[0]), userBaseDirs)
 
-		groupBaseDirs := `` +
-			"30000\t\t/objects/store1/data\t19954\t82906\t0\t7\t0\tNot OK\n" +
-			"30000\t\t/simple/A\t19954\t1\t0\t1\t0\tNot OK\n" +
-			"30004\t\t/simple/E\t19954\t2\t0\t1\t0\tNot OK"
+		groupBaseDirs := fmt.Sprintf(``+
+			"G%[1]d\t\t/objects/store1/data\t19954\t82906\t0\t7\t0\tNot OK\n"+
+			"G%[1]d\t\t/simple/A\t19954\t1\t0\t1\t0\tNot OK\n"+
+			"G%[2]d\t\t/simple/E\t19954\t2\t0\t1\t0\tNot OK", GROUPA, GROUPE)
 
-		g, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.groupusage.tsv"))
+		gb, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.groupusage.tsv"))
 		So(err, ShouldBeNil)
-		So(len(g), ShouldEqual, 1)
+		So(len(gb), ShouldEqual, 1)
 
-		compareFileContents(t, filepath.Join(tmpTemp, g[0]), groupBaseDirs)
+		compareFileContents(t, filepath.Join(tmpTemp, gb[0]), groupBaseDirs)
 	})
 }
 
