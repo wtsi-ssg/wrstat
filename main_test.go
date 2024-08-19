@@ -1605,7 +1605,7 @@ func TestEnd2End(t *testing.T) {
 			GROUPE = 30004
 		)
 
-		root := newDir("/", 0, 0, false)
+		root := newDir("/", 0, 0)
 
 		root.Mkdir("objects", 0, 0)
 		root.Mkdir("objects/store1", 0, 0)
@@ -1718,7 +1718,7 @@ type dir struct {
 	tar.Header
 }
 
-func newDir(name string, uid, gid int, sticky bool) *dir {
+func newDir(name string, uid, gid int) *dir {
 	return &dir{
 		dirs:  make(map[string]*dir),
 		files: make(map[string]*tar.Header),
@@ -1732,7 +1732,6 @@ func newDir(name string, uid, gid int, sticky bool) *dir {
 			AccessTime: pseudoNow,
 			ChangeTime: pseudoNow,
 		},
-		stickyGroup: sticky,
 	}
 }
 
@@ -1772,7 +1771,7 @@ func (d *dir) mkdir(name string, uid, gid int) *dir {
 		gid = d.Gid
 	}
 
-	e := newDir(filepath.Join(d.Name, name), uid, gid, d.stickyGroup)
+	e := newDir(filepath.Join(d.Name, name), uid, gid)
 	d.dirs[name] = e
 
 	return e
