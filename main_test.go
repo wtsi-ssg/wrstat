@@ -519,10 +519,7 @@ func TestWalk(t *testing.T) {
 		}
 
 		for _, file := range [...]string{"/a/b/c/test.txt", "/a/b/f/test2.csv", "/a/test3"} {
-			f, err := os.Create(filepath.Join(tmp, file))
-			So(err, ShouldBeNil)
-			err = f.Close()
-			So(err, ShouldBeNil)
+			writeFileString(t, filepath.Join(tmp, file), "")
 		}
 
 		depgroup := "test-group"
@@ -611,6 +608,17 @@ func TestWalk(t *testing.T) {
 	})
 }
 
+func writeFileString(t *testing.T, path, contents string) {
+	t.Helper()
+
+	f, err := os.Create(path)
+	So(err, ShouldBeNil)
+
+	_, err = io.WriteString(f, contents)
+	So(err, ShouldBeNil)
+	So(f.Close(), ShouldBeNil)
+}
+
 func compareFileContents(t *testing.T, filename, expectation string) {
 	t.Helper()
 
@@ -682,14 +690,7 @@ func TestStat(t *testing.T) {
 				err := os.MkdirAll(filepath.Dir(path), 0755)
 				So(err, ShouldBeNil)
 
-				f, err := os.Create(path)
-				So(err, ShouldBeNil)
-
-				_, err = f.Write(make([]byte, stats.length))
-				So(err, ShouldBeNil)
-
-				err = f.Close()
-				So(err, ShouldBeNil)
+				writeFileString(t, path, strings.Repeat("\x00", stats.length))
 			} else {
 				err := os.MkdirAll(path, 0755)
 				So(err, ShouldBeNil)
@@ -864,14 +865,7 @@ func TestCombine(t *testing.T) {
 			"b.log": "Another log file, with 1 line\n",
 			"c.log": "Lorem ipsum!!!!",
 		} {
-			f, err := os.Create(filepath.Join(tmp, file))
-			So(err, ShouldBeNil)
-
-			_, err = io.WriteString(f, contents)
-			So(err, ShouldBeNil)
-
-			err = f.Close()
-			So(err, ShouldBeNil)
+			writeFileString(t, filepath.Join(tmp, file), contents)
 		}
 
 		_, _, jobs, err := runWRStat("combine", tmp)
@@ -1028,14 +1022,7 @@ func TestMergsDBs(t *testing.T) {
 				err := os.MkdirAll(filepath.Dir(p), 0755)
 				So(err, ShouldBeNil)
 
-				f, err := os.Create(p)
-				So(err, ShouldBeNil)
-
-				_, err = io.WriteString(f, filepath.Join(dir, file))
-				So(err, ShouldBeNil)
-
-				err = f.Close()
-				So(err, ShouldBeNil)
+				writeFileString(t, p, filepath.Join(dir, file))
 
 				err = os.Chtimes(p, mt, mt)
 				So(err, ShouldBeNil)
@@ -1137,14 +1124,7 @@ func TestBasedirs(t *testing.T) {
 				"/someDirectory/\t2\t2\n" +
 				"/someDirectory/a/mdt0\t3\t3",
 		} {
-			f, err := os.Create(filepath.Join(configs, file))
-			So(err, ShouldBeNil)
-
-			_, err = io.WriteString(f, contents)
-			So(err, ShouldBeNil)
-
-			err = f.Close()
-			So(err, ShouldBeNil)
+			writeFileString(t, filepath.Join(configs, file), contents)
 		}
 
 		err := os.MkdirAll(filepath.Join(dbTmp, "a", "b", "combine.dgut.db"), 0755)
@@ -1475,14 +1455,7 @@ func TestTidy(t *testing.T) {
 			err := os.MkdirAll(filepath.Dir(fp), 0755)
 			So(err, ShouldBeNil)
 
-			f, err := os.Create(fp)
-			So(err, ShouldBeNil)
-
-			_, err = io.WriteString(f, file)
-			So(err, ShouldBeNil)
-
-			err = f.Close()
-			So(err, ShouldBeNil)
+			writeFileString(t, fp, file)
 		}
 
 		_, _, jobs, err := runWRStat("tidy", "-d", "today", "-f", finalDir, srcDir)
@@ -1607,12 +1580,7 @@ func TestEnd2End(t *testing.T) {
 		tmpTemp := t.TempDir()
 		tmpHome := t.TempDir()
 
-		f, err := os.Create(def)
-		So(err, ShouldBeNil)
-
-		_, err = io.WriteString(f, singDef)
-		So(err, ShouldBeNil)
-		So(f.Close(), ShouldBeNil)
+		writeFileString(t, def, singDef)
 
 		wd, err := os.Getwd()
 		So(err, ShouldBeNil)
@@ -1680,10 +1648,7 @@ func TestEnd2End(t *testing.T) {
 		u, err := user.Current()
 		So(err, ShouldBeNil)
 
-		f, err = os.Create(users)
-		So(err, ShouldBeNil)
-
-		_, err = io.WriteString(f, fmt.Sprintf(""+
+		writeFileString(t, users, fmt.Sprintf(""+
 			"root:x:0:0::/:/bin/sh\n"+
 			"user:x:%[1]s:%[2]s::/:/bin/sh\n"+
 			"U%[3]d:x:%[3]d:%[4]d::/:/bin/sh\n"+
@@ -1692,13 +1657,7 @@ func TestEnd2End(t *testing.T) {
 			"U%[9]d:x:%[9]d:%[10]d::/:/bin/sh\n"+
 			"U%[11]d:x:%[11]d:%[12]d::/:/bin/sh\n", u.Uid, u.Gid, USERA, GROUPA, USERB, GROUPB, USERC, GROUPC, USERD, GROUPD, USERE, GROUPE))
 
-		So(err, ShouldBeNil)
-		So(f.Close(), ShouldBeNil)
-
-		f, err = os.Create(groups)
-		So(err, ShouldBeNil)
-
-		_, err = io.WriteString(f, fmt.Sprintf(""+
+		writeFileString(t, groups, fmt.Sprintf(""+
 			"root:x:0:\n"+
 			"group:x:%[1]s:user::/:/bin/sh\n"+
 			"G%[2]d:x:%[2]d:U%[3]d::/:/bin/sh\n"+
@@ -1706,8 +1665,6 @@ func TestEnd2End(t *testing.T) {
 			"G%[6]d:x:%[6]d:U%[7]d::/:/bin/sh\n"+
 			"G%[8]d:x:%[8]d:U%[9]d::/:/bin/sh\n"+
 			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n", u.Gid, GROUPA, USERA, GROUPB, USERB, GROUPC, USERC, GROUPD, USERD, GROUPE, USERE))
-		So(err, ShouldBeNil)
-		So(f.Close(), ShouldBeNil)
 
 		cmd := exec.Command("singularity", "run", "--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group", "--home", tmpHome, "--overlay", files, sif)
 
