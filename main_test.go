@@ -28,6 +28,7 @@
 package main
 
 import (
+	"archive/tar"
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
@@ -811,9 +812,8 @@ func TestStat(t *testing.T) {
 		for file, contents := range map[string]string{
 			"dir.walk.stats":       statsExpectation,
 			"dir.walk.bygroup":     groupExpectation,
-			"dir.walk.byusergroup": userGroupExpectation,
-			"dir.walk.dgut":        walkExpectations,
-			"dir.walk.log":         "",
+			"dir.walk.byusergroup": userGroupExpectation, "dir.walk.dgut": walkExpectations,
+			"dir.walk.log": "",
 		} {
 			f, err := os.Open(filepath.Join(statDir, file))
 			So(err, ShouldBeNil)
@@ -1516,4 +1516,471 @@ func TestTidy(t *testing.T) {
 			So(string(contents), ShouldEqual, expected)
 		}
 	})
+}
+
+const singDef = `Bootstrap: docker
+From: golang:1.22-alpine
+Stage: build
+
+%setup
+
+mkdir -p $SINGULARITY_ROOTFS/opt/wr
+mkdir -p $SINGULARITY_ROOTFS/opt/wrstat
+
+%post
+
+apk add git make gcc musl-dev
+
+git clone --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr
+cd /opt/wr
+make install
+
+cd /opt/wrstat
+make installnonpm
+
+Bootstrap: docker
+From: alpine
+Stage: final
+
+%files from build
+
+/go/bin/wr /usr/local/bin/wr
+/go/bin/wrstat /usr/local/bin/wrstat
+
+%setup
+
+mkdir -p $SINGULARITY_ROOTFS/opt/wrstat
+
+%post
+
+apk add --no-cache coreutils
+
+%runscript
+
+stop() {
+	wr manager stop
+
+	exit ${1:-0}
+}
+
+waitForJobs() {
+	until [ $(wr status | wc -l) -le 1 ]; do 
+		if [ $(wr status -b | wc -l ) -gt 1 ]; then
+			stop 1
+		fi;
+
+		sleep 1s
+	done
+}
+
+mkdir -p /tmp/working/partial/
+mkdir -p /tmp/working/complete/
+mkdir -p /tmp/final/
+
+WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1
+
+wrstat multi -m 0 -p -w /tmp/working/partial/ /simple/*
+waitForJobs
+
+wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial -q /quota -o /owners /objects/*
+waitForJobs
+
+stop
+`
+
+func TestEnd2End(t *testing.T) {
+	t.Parallel()
+
+	if !commandExists("singularity") || !commandExists("sqfstar") {
+		SkipConvey("need both 'singularity' and 'sqfstar' installed to run this test.", t, func() {})
+
+		return
+	}
+
+	Convey("Test full end-2-end", t, func() {
+		base := t.TempDir()
+		def := filepath.Join(base, "singularity.def")
+		sif := filepath.Join(base, "singularity.sif")
+		files := filepath.Join(base, "files.sqfs")
+		tmpTemp := t.TempDir()
+		tmpHome := t.TempDir()
+
+		f, err := os.Create(def)
+		So(err, ShouldBeNil)
+
+		_, err = io.WriteString(f, singDef)
+		So(err, ShouldBeNil)
+		So(f.Close(), ShouldBeNil)
+
+		wd, err := os.Getwd()
+		So(err, ShouldBeNil)
+
+		build := exec.Command("singularity", "build", "--fakeroot", "--bind", wd+":/opt/wrstat", sif, def)
+
+		err = build.Run()
+		So(err, ShouldBeNil)
+
+		const (
+			USERA = 20000
+			USERB = 20001
+			USERC = 20002
+			USERD = 20003
+			USERE = 20004
+
+			GROUPA = 30000
+			GROUPB = 30001
+			GROUPC = 30002
+			GROUPD = 30003
+			GROUPE = 30004
+		)
+
+		root := newDir("/", 0, 0, false)
+
+		root.Mkdir("objects", 0, 0)
+		root.Mkdir("objects/store1", 0, 0)
+		root.Mkdir("objects/store2", 0, 0)
+		root.Mkdir("objects/store3", 0, 0)
+		root.Mkdir("objects/store1/data", 0, 0)
+		root.Mkdir("objects/store1/data/sheets", USERA, GROUPA)
+		root.Create("objects/store1/data/sheets/doc1.txt", USERA, GROUPA, 2048)
+		root.Create("objects/store1/data/sheets/doc2.txt", USERA, GROUPA, 8192)
+		root.Mkdir("objects/store1/data/dbs", USERB, GROUPA)
+		root.Create("objects/store1/data/dbs/dbA.db", USERB, GROUPA, 12345)
+		root.Create("objects/store1/data/dbs/dbB.db", USERB, GROUPA, 54321)
+		root.Mkdir("objects/store1/data/temp", USERC, GROUPA)
+		root.Mkdir("objects/store1/data/temp/a", USERC, GROUPA)
+		root.Create("objects/store1/data/temp/a/a.bed", USERC, GROUPA, 1000)
+		root.Mkdir("objects/store1/data/temp/b", USERC, GROUPA)
+		root.Create("objects/store1/data/temp/b/b.bed", USERC, GROUPA, 2000)
+		root.Mkdir("objects/store1/data/temp/c", USERC, GROUPA)
+		root.Create("objects/store1/data/temp/c/c.bed", USERC, GROUPA, 3000)
+		root.Mkdir("objects/store2", 0, 0)
+		root.Mkdir("objects/store2/part0", 0, 0)
+		root.Mkdir("objects/store2/part1", 0, 0)
+		root.Mkdir("objects/store2/part0/teams", 0, 0)
+		root.Mkdir("objects/store2/part0/teams/team1", USERA, GROUPA)
+		root.Mkdir("objects/store2/part0/teams/team2", USERB, GROUPB)
+		root.Mkdir("objects/store2/part0/teams/team3", USERC, GROUPC)
+		root.Mkdir("objects/store2/part1/other", USERD, GROUPA)
+		root.Mkdir("objects/store2/part1/other/myDir", USERD, GROUPA)
+		root.Mkdir("objects/store2/important", 0, 0)
+		root.Mkdir("objects/store2/important/docs", USERB, GROUPD)
+
+		root.Mkdir("simple", 0, 0)
+		root.Mkdir("simple/A", USERA, GROUPA)
+		root.Create("simple/A/a.file", USERA, GROUPA, 1)
+		root.Mkdir("simple/E", USERE, GROUPE)
+		root.Create("simple/E/b.tmp", USERE, GROUPE, 2)
+
+		err = root.Write(files, "", "")
+		So(err, ShouldBeNil)
+
+		cmd := exec.Command("singularity", "run", "--bind", tmpTemp+":/tmp", "--home", tmpHome, "--overlay", files, sif)
+
+		So(cmd.Run(), ShouldBeNil)
+
+		userBaseDirs := `` +
+			"20000\t\t/objects/store1/data/sheets\t19954\t10240\t0\t2\t0\tOK\n" +
+			"20000\t\t/simple/A\t19954\t1\t0\t1\t0\tOK\n" +
+			"20001\t\t/objects/store1/data/dbs\t19954\t66666\t0\t2\t0\tOK\n" +
+			"20002\t\t/objects/store1/data/temp\t19954\t6000\t0\t3\t0\tOK\n" +
+			"20004\t\t/simple/E\t19954\t2\t0\t1\t0\tOK"
+
+		u, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.userusage.tsv"))
+		So(err, ShouldBeNil)
+		So(len(u), ShouldEqual, 1)
+
+		compareFileContents(t, filepath.Join(tmpTemp, u[0]), userBaseDirs)
+
+		groupBaseDirs := `` +
+			"30000\t\t/objects/store1/data\t19954\t82906\t0\t7\t0\tNot OK\n" +
+			"30000\t\t/simple/A\t19954\t1\t0\t1\t0\tNot OK\n" +
+			"30004\t\t/simple/E\t19954\t2\t0\t1\t0\tNot OK"
+
+		g, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.groupusage.tsv"))
+		So(err, ShouldBeNil)
+		So(len(g), ShouldEqual, 1)
+
+		compareFileContents(t, filepath.Join(tmpTemp, g[0]), groupBaseDirs)
+	})
+}
+
+var pseudoNow = time.Unix(0, 0)
+
+func commandExists(exe string) bool {
+	_, err := exec.LookPath(exe)
+
+	return err == nil
+}
+
+type dir struct {
+	dirs        map[string]*dir
+	files       map[string]*tar.Header
+	stickyGroup bool
+
+	tar.Header
+}
+
+func newDir(name string, uid, gid int, sticky bool) *dir {
+	return &dir{
+		dirs:  make(map[string]*dir),
+		files: make(map[string]*tar.Header),
+		Header: tar.Header{
+			Typeflag:   tar.TypeDir,
+			Name:       name,
+			Uid:        uid,
+			Gid:        gid,
+			Mode:       0777,
+			ModTime:    pseudoNow,
+			AccessTime: pseudoNow,
+			ChangeTime: pseudoNow,
+		},
+		stickyGroup: sticky,
+	}
+}
+
+func (d *dir) hasName(name string) bool {
+	if _, ok := d.dirs[name]; ok {
+		return true
+	}
+
+	if _, ok := d.files[name]; ok {
+		return true
+	}
+
+	return false
+}
+
+func (d *dir) updateAccess() {
+	pseudoNow = pseudoNow.Add(time.Second)
+	d.AccessTime = pseudoNow
+}
+
+func (d *dir) updateMod() {
+	d.ModTime = pseudoNow
+}
+
+func (d *dir) mkdir(name string, uid, gid int) *dir {
+	d.updateAccess()
+
+	if e, ok := d.dirs[name]; ok {
+		return e
+	} else if _, ok := d.files[name]; ok {
+		return nil
+	}
+
+	d.updateMod()
+
+	if d.stickyGroup {
+		gid = d.Gid
+	}
+
+	e := newDir(filepath.Join(d.Name, name), uid, gid, d.stickyGroup)
+	d.dirs[name] = e
+
+	return e
+}
+
+func (d *dir) mkfile(name string, size int64, uid, gid int) bool {
+	d.updateAccess()
+
+	if d.hasName(name) {
+		return false
+	}
+
+	d.updateMod()
+
+	if d.stickyGroup {
+		gid = d.Gid
+	}
+
+	d.files[name] = &tar.Header{
+		Typeflag:   tar.TypeReg,
+		Name:       filepath.Join(d.Name, name),
+		Size:       size,
+		Uid:        uid,
+		Gid:        gid,
+		Uname:      fmt.Sprintf("U%d", uid),
+		Gname:      fmt.Sprintf("G%d", gid),
+		Mode:       0777,
+		ModTime:    pseudoNow,
+		AccessTime: pseudoNow,
+		ChangeTime: pseudoNow,
+	}
+
+	return true
+}
+
+func (d *dir) rmdir(name string) bool {
+	d.updateAccess()
+
+	if _, ok := d.dirs[name]; !ok {
+		return false
+	}
+
+	d.updateMod()
+
+	delete(d.dirs, name)
+
+	return true
+}
+
+func (d *dir) rm(name string) bool {
+	d.updateAccess()
+
+	if _, ok := d.files[name]; !ok {
+		return false
+	}
+
+	d.updateMod()
+
+	delete(d.files, name)
+
+	return true
+}
+
+func (d *dir) write(w *tar.Writer) error {
+	if err := w.WriteHeader(&d.Header); err != nil {
+		return err
+	}
+
+	for _, e := range d.dirs {
+		if err := e.write(w); err != nil {
+			return err
+		}
+	}
+
+	for _, f := range d.files {
+		if err := w.WriteHeader(f); err != nil {
+			return err
+		}
+
+		zr := zeroReader(f.Size)
+
+		if _, err := io.Copy(w, &zr); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *dir) Mkdir(path string, uid, gid int) *dir {
+	for _, part := range strings.Split(path, "/") {
+		if d = d.mkdir(part, uid, gid); d == nil {
+			break
+		}
+	}
+
+	return d
+}
+
+func (d *dir) Create(path string, uid, gid int, size int64) bool {
+	dir, file := filepath.Split(path)
+
+	if d = d.Mkdir(strings.TrimSuffix(dir, "/"), uid, gid); d == nil {
+		return false
+	}
+
+	return d.mkfile(file, size, uid, gid)
+}
+
+func (d *dir) RemoveDir(path string) bool {
+	dir, file := filepath.Split(path)
+
+	if d = d.Mkdir(dir, 0, 0); d == nil {
+		return false
+	}
+
+	return d.rmdir(file)
+}
+
+func (d *dir) Remove(path string) bool {
+	dir, file := filepath.Split(path)
+
+	if d = d.Mkdir(dir, 0, 0); d == nil {
+		return false
+	}
+
+	return d.rm(file)
+}
+
+func (d *dir) Write(path string, quota, owners string) (err error) {
+	pr, pw := io.Pipe()
+	cmd := exec.Command("sqfstar", path)
+	cmd.Stdin = pr
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	tw := tar.NewWriter(pw)
+
+	defer func() {
+		for _, fn := range [...]func() error{
+			tw.Close,
+			pw.Close,
+			cmd.Wait,
+		} {
+			if errr := fn(); errr != nil && err != nil {
+				err = errr
+			}
+		}
+	}()
+
+	if err := d.write(tw); err != nil {
+		return err
+	}
+
+	tw.WriteHeader(&tar.Header{
+		Typeflag:   tar.TypeReg,
+		Name:       "/quota",
+		Size:       int64(len(quota)),
+		Uid:        0,
+		Gid:        0,
+		Mode:       0777,
+		ModTime:    pseudoNow,
+		AccessTime: pseudoNow,
+		ChangeTime: pseudoNow,
+	})
+
+	if _, err := io.WriteString(tw, quota); err != nil {
+		return err
+	}
+
+	tw.WriteHeader(&tar.Header{
+		Typeflag:   tar.TypeReg,
+		Name:       "/owners",
+		Size:       int64(len(owners)),
+		Uid:        0,
+		Gid:        0,
+		Mode:       0777,
+		ModTime:    pseudoNow,
+		AccessTime: pseudoNow,
+		ChangeTime: pseudoNow,
+	})
+
+	if _, err := io.WriteString(tw, owners); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type zeroReader int
+
+func (z *zeroReader) Read(p []byte) (int, error) {
+	if *z == 0 {
+		return 0, io.EOF
+	}
+
+	n := zeroReader(len(p))
+
+	if n > *z {
+		n = *z
+	}
+
+	*z -= zeroReader(n)
+
+	return int(n), nil
 }
