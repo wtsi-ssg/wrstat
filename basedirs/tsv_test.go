@@ -38,6 +38,29 @@ func TestTSV(t *testing.T) {
 				},
 			},
 			{
+				Input: "# A comment\n/some/path/\t1\t2\n/some/other/path\t3\t4\n/some/much/longer/path/\t999\t911\n",
+				Output: Config{
+					{
+						Prefix:  "/some/much/longer/path/",
+						Score:   5,
+						Splits:  999,
+						MinDirs: 911,
+					},
+					{
+						Prefix:  "/some/path/",
+						Score:   3,
+						Splits:  1,
+						MinDirs: 2,
+					},
+					{
+						Prefix:  "/some/other/path",
+						Score:   3,
+						Splits:  3,
+						MinDirs: 4,
+					},
+				},
+			},
+			{
 				Input: "/some/path\t12\n/some/other/path\t3\t4",
 				Error: ErrBadTSV,
 			},
