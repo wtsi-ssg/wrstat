@@ -56,7 +56,10 @@ var (
 // a flag set by main tests to disable jobs being scheduled.
 var runJobs string
 
-const connectTimeout = 10 * time.Second
+const (
+	connectTimeout = 10 * time.Second
+	testOutputFD   = 3
+)
 
 // RootCmd represents the base command when called without any subcommands.
 var RootCmd = &cobra.Command{
@@ -226,9 +229,7 @@ func addJobsToQueue(s *scheduler.Scheduler, jobs []*jobqueue.Job) {
 }
 
 func testPrint(jobs []*jobqueue.Job) {
-	const testOutputFD = 3
-
-	w := os.NewFile(uintptr(testOutputFD), "/dev/stdin")
+	w := os.NewFile(uintptr(testOutputFD), "/dev/stdout")
 
 	json.NewEncoder(w).Encode(jobs) //nolint:errcheck,errchkjson
 }

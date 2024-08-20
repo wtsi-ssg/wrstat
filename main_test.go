@@ -189,7 +189,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 	date := time.Now().Format("20060102")
 
-	Convey("wrstat gets the stats for a partial run", func() {
+	Convey("A partial 'wrstat multi' command produces the correct jobs to run", func() {
 		workingDir := t.TempDir()
 		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "-p", "/some/path", "/some-other/path")...)
 		So(err, ShouldBeNil)
@@ -278,7 +278,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		So(jobs, ShouldResemble, expectation)
 	})
 
-	Convey("wrstat gets the stats for a normal run", func() {
+	Convey("A full 'wrstat multi' command produces the correct jobs to run", func() {
 		workingDir := t.TempDir()
 		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "/some/path", "/some-other/path",
 			"-f", "final_output", "-q", "quota_file", "-o", "owners_file")...)
@@ -383,7 +383,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		So(jobs, ShouldResemble, expectation)
 	})
 
-	Convey("wrstat gets the stats for a normal run with a partial merge", func() {
+	Convey("A full `wrstat multi` command with partial merge produces the correct jobs to run", func() {
 		workingDir := t.TempDir()
 		_, _, jobs, err := runWRStat(append(subcommand, "-l", "/path/to/partial_merge", "-w", workingDir, "/some/path",
 			"/some-other/path", "-f", "final_output", "-q", "quota_file", "-o", "owners_file")...)
@@ -627,7 +627,14 @@ func compareFileContents(t *testing.T, filename, expectation string) {
 
 	defer f.Close()
 
-	output, err := io.ReadAll(f)
+	var r io.Reader = f
+
+	if strings.HasSuffix(filename, ".gz") {
+		r, err = gzip.NewReader(f)
+		So(err, ShouldBeNil)
+	}
+
+	output, err := io.ReadAll(r)
 	So(err, ShouldBeNil)
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
@@ -1001,7 +1008,7 @@ func TestCombine(t *testing.T) {
 }
 
 func TestMergsDBs(t *testing.T) {
-	Convey("For the mergedbs subcommand, it copies and delete the correct files", t, func() {
+	Convey("For the mergedbs subcommand, it copies and deletes the correct files", t, func() {
 		srcDir := t.TempDir()
 		destDir := t.TempDir()
 
@@ -1664,45 +1671,123 @@ func TestEnd2End(t *testing.T) {
 
 		So(cmd.Run(), ShouldBeNil)
 
-		userBaseDirs := fmt.Sprintf(``+
-			"U%[1]d\t\t/objects/store1/data/sheets\t%[6]d\t10240\t0\t2\t0\tOK\n"+
-			"U%[1]d\t\t/objects/store2/part0/teams/team1\t%[6]d\t300\t0\t2\t0\tOK\n"+
-			"U%[1]d\t\t/simple/A\t%[6]d\t1\t0\t1\t0\tOK\n"+
-			"U%[2]d\t\t/objects/store1/data/dbs\t%[6]d\t66666\t0\t2\t0\tOK\n"+
-			"U%[2]d\t\t/objects/store2/important/docs\t%[6]d\t1200\t0\t1\t0\tOK\n"+
-			"U%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
-			"U%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
-			"U%[4]d\t\t/objects/store2/part1/other/myDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
-			"U%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK", UserA, UserB, UserC, UserD, UserE,
-			time.Now().Unix()/86400,
-		)
+		for file, contents := range map[string]string{
+			"*basedirs.userusage.tsv": fmt.Sprintf(``+
+				"U%[1]d\t\t/objects/store1/data/sheets\t%[6]d\t10240\t0\t2\t0\tOK\n"+
+				"U%[1]d\t\t/objects/store2/part0/teams/team1\t%[6]d\t300\t0\t2\t0\tOK\n"+
+				"U%[1]d\t\t/simple/A\t%[6]d\t1\t0\t1\t0\tOK\n"+
+				"U%[2]d\t\t/objects/store1/data/dbs\t%[6]d\t66666\t0\t2\t0\tOK\n"+
+				"U%[2]d\t\t/objects/store2/important/docs\t%[6]d\t1200\t0\t1\t0\tOK\n"+
+				"U%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
+				"U%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
+				"U%[4]d\t\t/objects/store2/part1/other/myDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
+				"U%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK", UserA, UserB, UserC, UserD, UserE,
+				time.Now().Unix()/86400),
+			"*basedirs.groupusage.tsv": fmt.Sprintf(``+
+				"G%[1]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tNot OK\n"+
+				"G%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tNot OK\n"+
+				"G%[1]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tNot OK\n"+
+				"G%[1]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t100\t0\t1\t0\tNot OK\n"+
+				"G%[1]d\t\t/objects/store2/part1/other/myDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
+				"G%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tNot OK\n"+
+				"G%[2]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t200\t0\t1\t0\tNot OK\n"+
+				"G%[2]d\t\t/objects/store2/part0/teams/team2\t%[5]d\t1000\t0\t1\t0\tNot OK\n"+
+				"G%[3]d\t\t/objects/store2/important/docs\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
+				"G%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK",
+				GroupA, GroupB, GroupD, GroupE,
+				time.Now().Unix()/86400),
+			"????????_A.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t1", GroupA, UserA),
+			"????????_E.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t2", GroupE, UserE),
+			"????????_store1.*.bygroup": fmt.Sprintf(``+
+				"G%[1]d\tU%[2]d\t2\t10240\n"+
+				"G%[1]d\tU%[3]d\t2\t66666\n"+
+				"G%[1]d\tU%[4]d\t3\t6000",
+				GroupA, UserA, UserB, UserC),
+			"????????_store2.*.bygroup": fmt.Sprintf(``+
+				"G%[1]d\tU%[4]d\t2\t3047\n"+
+				"G%[1]d\tU%[5]d\t1\t100\n"+
+				"G%[2]d\tU%[5]d\t1\t200\n"+
+				"G%[2]d\tU%[6]d\t1\t1000\n"+
+				"G%[3]d\tU%[6]d\t1\t1200\n"+
+				"G%[3]d\tU%[4]d\t1\t1024",
+				GroupA, GroupB, GroupD, UserD, UserA, UserB),
+			"????????_store3.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t1024", GroupA, UserA),
+			"????????_A.*.byusergroup.gz": fmt.Sprintf(``+
+				"U%[1]d\tG%[2]d\t/\t1\t1\n"+
+				"U%[1]d\tG%[2]d\t/simple\t1\t1\n"+
+				"U%[1]d\tG%[2]d\t/simple/A\t1\t1\n", UserA, GroupA),
+			"????????_E.*.byusergroup.gz": fmt.Sprintf(``+
+				"U%[1]d\tG%[2]d\t/\t1\t2\n"+
+				"U%[1]d\tG%[2]d\t/simple\t1\t2\n"+
+				"U%[1]d\tG%[2]d\t/simple/E\t1\t2\n", UserE, GroupE),
+			"????????_store1.*.byusergroup.gz": fmt.Sprintf(``+
+				"U%[1]d\tG%[4]d\t/\t2\t10240\n"+
+				"U%[1]d\tG%[4]d\t/objects\t2\t10240\n"+
+				"U%[1]d\tG%[4]d\t/objects/store1\t2\t10240\n"+
+				"U%[1]d\tG%[4]d\t/objects/store1/data\t2\t10240\n"+
+				"U%[1]d\tG%[4]d\t/objects/store1/data/sheets\t2\t10240\n"+
+				"U%[2]d\tG%[4]d\t/\t2\t66666\n"+
+				"U%[2]d\tG%[4]d\t/objects\t2\t66666\n"+
+				"U%[2]d\tG%[4]d\t/objects/store1\t2\t66666\n"+
+				"U%[2]d\tG%[4]d\t/objects/store1/data\t2\t66666\n"+
+				"U%[2]d\tG%[4]d\t/objects/store1/data/dbs\t2\t66666\n"+
+				"U%[3]d\tG%[4]d\t/\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t/objects\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t/objects/store1\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t/objects/store1/data\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t/objects/store1/data/temp\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t/objects/store1/data/temp/a\t1\t1000\n"+
+				"U%[3]d\tG%[4]d\t/objects/store1/data/temp/b\t1\t2000\n"+
+				"U%[3]d\tG%[4]d\t/objects/store1/data/temp/c\t1\t3000",
+				UserA, UserB, UserC, GroupA),
+			"????????_store2.*.byusergroup.gz": fmt.Sprintf(``+
+				"U%[1]d\tG%[4]d\t/\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t/objects\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t/objects/store2\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t/objects/store2/part0\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t/objects/store2/part0/teams\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t/objects/store2/part0/teams/team1\t1\t100\n"+
+				"U%[1]d\tG%[5]d\t/\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t/objects\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t/objects/store2\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t/objects/store2/part0\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t/objects/store2/part0/teams\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t/objects/store2/part0/teams/team1\t1\t200\n"+
+				"U%[2]d\tG%[5]d\t/\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t/objects\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t/objects/store2\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t/objects/store2/part0\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t/objects/store2/part0/teams\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t/objects/store2/part0/teams/team2\t1\t1000\n"+
+				"U%[2]d\tG%[6]d\t/\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t/objects\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t/objects/store2\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t/objects/store2/important\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t/objects/store2/important/docs\t1\t1200\n"+
+				"U%[3]d\tG%[4]d\t/\t2\t3047\n"+
+				"U%[3]d\tG%[4]d\t/objects\t2\t3047\n"+
+				"U%[3]d\tG%[4]d\t/objects/store2\t2\t3047\n"+
+				"U%[3]d\tG%[4]d\t/objects/store2/part1\t2\t3047\n"+
+				"U%[3]d\tG%[4]d\t/objects/store2/part1/other\t1\t2048\n"+
+				"U%[3]d\tG%[4]d\t/objects/store2/part1/other/myDir\t1\t2048\n"+
+				"U%[3]d\tG%[6]d\t/\t1\t1024\n"+
+				"U%[3]d\tG%[6]d\t/objects\t1\t1024\n"+
+				"U%[3]d\tG%[6]d\t/objects/store2\t1\t1024\n"+
+				"U%[3]d\tG%[6]d\t/objects/store2/part1\t1\t1024\n"+
+				"U%[3]d\tG%[6]d\t/objects/store2/part1/other\t1\t1024",
+				UserA, UserB, UserD, GroupA, GroupB, GroupD),
+			"????????_store3.*.byusergroup.gz": fmt.Sprintf(``+
+				"U%[1]d\tG%[2]d\t/\t1\t1024\n"+
+				"U%[1]d\tG%[2]d\t/objects\t1\t1024\n"+
+				"U%[1]d\tG%[2]d\t/objects/store3\t1\t1024",
+				UserA, GroupA),
+		} {
+			files, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
+			So(err, ShouldBeNil)
+			So(len(files), ShouldEqual, 1)
 
-		ub, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.userusage.tsv"))
-		So(err, ShouldBeNil)
-		So(len(ub), ShouldEqual, 1)
-
-		compareFileContents(t, filepath.Join(tmpTemp, ub[0]), userBaseDirs)
-
-		groupBaseDirs := fmt.Sprintf(``+
-			"G%[1]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tNot OK\n"+
-			"G%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tNot OK\n"+
-			"G%[1]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tNot OK\n"+
-			"G%[1]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t100\t0\t1\t0\tNot OK\n"+
-			"G%[1]d\t\t/objects/store2/part1/other/myDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
-			"G%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tNot OK\n"+
-			"G%[2]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t200\t0\t1\t0\tNot OK\n"+
-			"G%[2]d\t\t/objects/store2/part0/teams/team2\t%[5]d\t1000\t0\t1\t0\tNot OK\n"+
-			"G%[3]d\t\t/objects/store2/important/docs\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
-			"G%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK",
-			GroupA, GroupB, GroupD, GroupE,
-			time.Now().Unix()/86400,
-		)
-
-		gb, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.groupusage.tsv"))
-		So(err, ShouldBeNil)
-		So(len(gb), ShouldEqual, 1)
-
-		compareFileContents(t, filepath.Join(tmpTemp, gb[0]), groupBaseDirs)
+			compareFileContents(t, filepath.Join(tmpTemp, files[0]), contents)
+		}
 	})
 }
 
