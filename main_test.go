@@ -1554,7 +1554,8 @@ func TestEnd2End(t *testing.T) {
 			"stop")
 		writeFileString(t, filepath.Join(tmpTemp, "owners"), "")
 		writeFileString(t, filepath.Join(tmpTemp, "quota"), "")
-		writeFileString(t, filepath.Join(tmpTemp, "basedirs"), "/objects\t4\t4\n/simple\t1\t2\n/objects/store2/part0\t4\t5\n/objects/store2/part1\t4\t5")
+		writeFileString(t, filepath.Join(tmpTemp, "basedirs"),
+			"/objects\t4\t4\n/simple\t1\t2\n/objects/store2/part0\t4\t5\n/objects/store2/part1\t4\t5")
 
 		So(os.Chmod(buildScript, 0777), ShouldBeNil)
 		So(os.Chmod(runScript, 0777), ShouldBeNil)
@@ -1656,7 +1657,8 @@ func TestEnd2End(t *testing.T) {
 			u.Gid, GroupA, UserA, GroupB, UserB, GroupC, UserC, GroupD, UserD, GroupE, UserE))
 
 		cmd := exec.Command("singularity", "run", //nolint:gosec
-			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group,"+binDir+":/build,"+runScript+":/run.sh",
+			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group,"+
+				binDir+":/build,"+runScript+":/run.sh",
 			"--home", tmpHome,
 			"--overlay", files, sif, "/run.sh")
 
