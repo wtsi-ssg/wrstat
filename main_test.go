@@ -1548,12 +1548,13 @@ func TestEnd2End(t *testing.T) {
 			"waitForJobs\n"+
 			"\n"+
 			"wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial "+
-			"-q /tmp/quota -o /tmp/owners /objects/*\n"+
+			"-q /tmp/quota -b /tmp/basedirs -o /tmp/owners /objects/*\n"+
 			"waitForJobs\n"+
 			"\n"+
 			"stop")
 		writeFileString(t, filepath.Join(tmpTemp, "owners"), "")
 		writeFileString(t, filepath.Join(tmpTemp, "quota"), "")
+		writeFileString(t, filepath.Join(tmpTemp, "basedirs"), "/objects\t4\t4\n/simple\t1\t2\n/objects/store2/part0\t4\t5\n/objects/store2/part1\t4\t5")
 
 		So(os.Chmod(buildScript, 0777), ShouldBeNil)
 		So(os.Chmod(runScript, 0777), ShouldBeNil)
@@ -1608,12 +1609,19 @@ func TestEnd2End(t *testing.T) {
 		root.Mkdir("objects/store2/part1", 0, 0)
 		root.Mkdir("objects/store2/part0/teams", 0, 0)
 		root.Mkdir("objects/store2/part0/teams/team1", UserA, GroupA)
+		root.Create("objects/store2/part0/teams/team1/a.txt", UserA, GroupA, 100)
+		root.Create("objects/store2/part0/teams/team1/b.txt", UserA, GroupB, 200)
 		root.Mkdir("objects/store2/part0/teams/team2", UserB, GroupB)
-		root.Mkdir("objects/store2/part0/teams/team3", UserC, GroupC)
+		root.Create("objects/store2/part0/teams/team2/c.txt", UserB, GroupB, 1000)
+		root.Create("objects/store2/part1/other.bed", UserD, GroupA, 999)
 		root.Mkdir("objects/store2/part1/other", UserD, GroupA)
+		root.Create("objects/store2/part1/other/my.tmp.gz", UserD, GroupD, 1024)
 		root.Mkdir("objects/store2/part1/other/myDir", UserD, GroupA)
+		root.Create("objects/store2/part1/other/myDir/my.tmp.old", UserD, GroupA, 2048)
 		root.Mkdir("objects/store2/important", 0, 0)
 		root.Mkdir("objects/store2/important/docs", UserB, GroupD)
+		root.Create("objects/store2/important/docs/my.doc", UserB, GroupD, 1200)
+		root.Create("objects/store3/aFile", UserA, GroupA, 1024)
 
 		root.Mkdir("simple", 0, 0)
 		root.Mkdir("simple/A", UserA, GroupA)
@@ -1655,11 +1663,15 @@ func TestEnd2End(t *testing.T) {
 		So(cmd.Run(), ShouldBeNil)
 
 		userBaseDirs := fmt.Sprintf(``+
-			"U%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tOK\n"+
-			"U%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tOK\n"+
-			"U%[2]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tOK\n"+
-			"U%[3]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tOK\n"+
-			"U%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tOK", UserA, UserB, UserC, UserE,
+			"U%[1]d\t\t/objects/store1/data/sheets\t%[6]d\t10240\t0\t2\t0\tOK\n"+
+			"U%[1]d\t\t/objects/store2/part0/teams/team1\t%[6]d\t300\t0\t2\t0\tOK\n"+
+			"U%[1]d\t\t/simple/A\t%[6]d\t1\t0\t1\t0\tOK\n"+
+			"U%[2]d\t\t/objects/store1/data/dbs\t%[6]d\t66666\t0\t2\t0\tOK\n"+
+			"U%[2]d\t\t/objects/store2/important/docs\t%[6]d\t1200\t0\t1\t0\tOK\n"+
+			"U%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
+			"U%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
+			"U%[4]d\t\t/objects/store2/part1/other/myDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
+			"U%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK", UserA, UserB, UserC, UserD, UserE,
 			time.Now().Unix()/86400,
 		)
 
@@ -1670,9 +1682,17 @@ func TestEnd2End(t *testing.T) {
 		compareFileContents(t, filepath.Join(tmpTemp, ub[0]), userBaseDirs)
 
 		groupBaseDirs := fmt.Sprintf(``+
-			"G%[1]d\t\t/objects/store1/data\t%[3]d\t82906\t0\t7\t0\tNot OK\n"+
-			"G%[1]d\t\t/simple/A\t%[3]d\t1\t0\t1\t0\tNot OK\n"+
-			"G%[2]d\t\t/simple/E\t%[3]d\t2\t0\t1\t0\tNot OK", GroupA, GroupE,
+			"G%[1]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tNot OK\n"+
+			"G%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tNot OK\n"+
+			"G%[1]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tNot OK\n"+
+			"G%[1]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t100\t0\t1\t0\tNot OK\n"+
+			"G%[1]d\t\t/objects/store2/part1/other/myDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
+			"G%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tNot OK\n"+
+			"G%[2]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t200\t0\t1\t0\tNot OK\n"+
+			"G%[2]d\t\t/objects/store2/part0/teams/team2\t%[5]d\t1000\t0\t1\t0\tNot OK\n"+
+			"G%[3]d\t\t/objects/store2/important/docs\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
+			"G%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK",
+			GroupA, GroupB, GroupD, GroupE,
 			time.Now().Unix()/86400,
 		)
 
