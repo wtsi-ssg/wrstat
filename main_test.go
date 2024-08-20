@@ -1515,7 +1515,8 @@ func TestEnd2End(t *testing.T) {
 		So(buildSif.Run(), ShouldBeNil)
 
 		writeFileString(t, buildScript, "#!/bin/bash\n"+
-			"git clone --depth 1 --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr && cd /opt/wr/ && GOPATH=/build/ make install\n"+
+			"git clone --depth 1 --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr &&"+
+			"cd /opt/wr/ && GOPATH=/build/ make install\n"+
 			"cd /opt/wrstat && GOPATH=/build/ make installnonpm\n"+
 			"chmod -R +w /build")
 		writeFileString(t, runScript, "#!/bin/bash\n"+
@@ -1546,7 +1547,8 @@ func TestEnd2End(t *testing.T) {
 			"wrstat multi -m 0 -p -w /tmp/working/partial/ /simple/*\n"+
 			"waitForJobs\n"+
 			"\n"+
-			"wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial -q /quota -o /owners /objects/*\n"+
+			"wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial"+
+			"-q /quota -o /owners /objects/*\n"+
 			"waitForJobs\n"+
 			"\n"+
 			"stop")
@@ -1566,17 +1568,17 @@ func TestEnd2End(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		const (
-			USER_A = 20000
-			USER_B = 20001
-			USER_C = 20002
-			USER_D = 20003
-			USER_E = 20004
+			UserA = 20000
+			UserB = 20001
+			UserC = 20002
+			UserD = 20003
+			UserE = 20004
 
-			GROUP_A = 30000
-			GROUP_B = 30001
-			GROUP_C = 30002
-			GROUP_D = 30003
-			GROUP_E = 30004
+			GroupA = 30000
+			GroupB = 30001
+			GroupC = 30002
+			GroupD = 30003
+			GroupE = 30004
 		)
 
 		root := newDir("/", 0, 0)
@@ -1586,36 +1588,36 @@ func TestEnd2End(t *testing.T) {
 		root.Mkdir("objects/store2", 0, 0)
 		root.Mkdir("objects/store3", 0, 0)
 		root.Mkdir("objects/store1/data", 0, 0)
-		root.Mkdir("objects/store1/data/sheets", USER_A, GROUP_A)
-		root.Create("objects/store1/data/sheets/doc1.txt", USER_A, GROUP_A, 2048)
-		root.Create("objects/store1/data/sheets/doc2.txt", USER_A, GROUP_A, 8192)
-		root.Mkdir("objects/store1/data/dbs", USER_B, GROUP_A)
-		root.Create("objects/store1/data/dbs/dbA.db", USER_B, GROUP_A, 12345)
-		root.Create("objects/store1/data/dbs/dbB.db", USER_B, GROUP_A, 54321)
-		root.Mkdir("objects/store1/data/temp", USER_C, GROUP_A)
-		root.Mkdir("objects/store1/data/temp/a", USER_C, GROUP_A)
-		root.Create("objects/store1/data/temp/a/a.bed", USER_C, GROUP_A, 1000)
-		root.Mkdir("objects/store1/data/temp/b", USER_C, GROUP_A)
-		root.Create("objects/store1/data/temp/b/b.bed", USER_C, GROUP_A, 2000)
-		root.Mkdir("objects/store1/data/temp/c", USER_C, GROUP_A)
-		root.Create("objects/store1/data/temp/c/c.bed", USER_C, GROUP_A, 3000)
+		root.Mkdir("objects/store1/data/sheets", UserA, GroupA)
+		root.Create("objects/store1/data/sheets/doc1.txt", UserA, GroupA, 2048)
+		root.Create("objects/store1/data/sheets/doc2.txt", UserA, GroupA, 8192)
+		root.Mkdir("objects/store1/data/dbs", UserB, GroupA)
+		root.Create("objects/store1/data/dbs/dbA.db", UserB, GroupA, 12345)
+		root.Create("objects/store1/data/dbs/dbB.db", UserB, GroupA, 54321)
+		root.Mkdir("objects/store1/data/temp", UserC, GroupA)
+		root.Mkdir("objects/store1/data/temp/a", UserC, GroupA)
+		root.Create("objects/store1/data/temp/a/a.bed", UserC, GroupA, 1000)
+		root.Mkdir("objects/store1/data/temp/b", UserC, GroupA)
+		root.Create("objects/store1/data/temp/b/b.bed", UserC, GroupA, 2000)
+		root.Mkdir("objects/store1/data/temp/c", UserC, GroupA)
+		root.Create("objects/store1/data/temp/c/c.bed", UserC, GroupA, 3000)
 		root.Mkdir("objects/store2", 0, 0)
 		root.Mkdir("objects/store2/part0", 0, 0)
 		root.Mkdir("objects/store2/part1", 0, 0)
 		root.Mkdir("objects/store2/part0/teams", 0, 0)
-		root.Mkdir("objects/store2/part0/teams/team1", USER_A, GROUP_A)
-		root.Mkdir("objects/store2/part0/teams/team2", USER_B, GROUP_B)
-		root.Mkdir("objects/store2/part0/teams/team3", USER_C, GROUP_C)
-		root.Mkdir("objects/store2/part1/other", USER_D, GROUP_A)
-		root.Mkdir("objects/store2/part1/other/myDir", USER_D, GROUP_A)
+		root.Mkdir("objects/store2/part0/teams/team1", UserA, GroupA)
+		root.Mkdir("objects/store2/part0/teams/team2", UserB, GroupB)
+		root.Mkdir("objects/store2/part0/teams/team3", UserC, GroupC)
+		root.Mkdir("objects/store2/part1/other", UserD, GroupA)
+		root.Mkdir("objects/store2/part1/other/myDir", UserD, GroupA)
 		root.Mkdir("objects/store2/important", 0, 0)
-		root.Mkdir("objects/store2/important/docs", USER_B, GROUP_D)
+		root.Mkdir("objects/store2/important/docs", UserB, GroupD)
 
 		root.Mkdir("simple", 0, 0)
-		root.Mkdir("simple/A", USER_A, GROUP_A)
-		root.Create("simple/A/a.file", USER_A, GROUP_A, 1)
-		root.Mkdir("simple/E", USER_E, GROUP_E)
-		root.Create("simple/E/b.tmp", USER_E, GROUP_E, 2)
+		root.Mkdir("simple/A", UserA, GroupA)
+		root.Create("simple/A/a.file", UserA, GroupA, 1)
+		root.Mkdir("simple/E", UserE, GroupE)
+		root.Create("simple/E/b.tmp", UserE, GroupE, 2)
 
 		err = root.Write(files, "", "")
 		So(err, ShouldBeNil)
@@ -1631,7 +1633,7 @@ func TestEnd2End(t *testing.T) {
 			"U%[7]d:x:%[7]d:%[8]d::/:/bin/sh\n"+
 			"U%[9]d:x:%[9]d:%[10]d::/:/bin/sh\n"+
 			"U%[11]d:x:%[11]d:%[12]d::/:/bin/sh\n",
-			u.Uid, u.Gid, USER_A, GROUP_A, USER_B, GROUP_B, USER_C, GROUP_C, USER_D, GROUP_D, USER_E, GROUP_E))
+			u.Uid, u.Gid, UserA, GroupA, UserB, GroupB, UserC, GroupC, UserD, GroupD, UserE, GroupE))
 
 		writeFileString(t, groups, fmt.Sprintf(""+
 			"root:x:0:\n"+
@@ -1641,7 +1643,7 @@ func TestEnd2End(t *testing.T) {
 			"G%[6]d:x:%[6]d:U%[7]d::/:/bin/sh\n"+
 			"G%[8]d:x:%[8]d:U%[9]d::/:/bin/sh\n"+
 			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n",
-			u.Gid, GROUP_A, USER_A, GROUP_B, USER_B, GROUP_C, USER_C, GROUP_D, USER_D, GROUP_E, USER_E))
+			u.Gid, GroupA, UserA, GroupB, UserB, GroupC, UserC, GroupD, UserD, GroupE, UserE))
 
 		cmd := exec.Command("singularity", "run", //nolint:gosec
 			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group,"+binDir+":/build,"+runScript+":/run.sh",
@@ -1655,7 +1657,7 @@ func TestEnd2End(t *testing.T) {
 			"U%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tOK\n"+
 			"U%[2]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tOK\n"+
 			"U%[3]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tOK\n"+
-			"U%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tOK", USER_A, USER_B, USER_C, USER_E,
+			"U%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tOK", UserA, UserB, UserC, UserE,
 			time.Now().Unix()/86400,
 		)
 
@@ -1668,7 +1670,7 @@ func TestEnd2End(t *testing.T) {
 		groupBaseDirs := fmt.Sprintf(``+
 			"G%[1]d\t\t/objects/store1/data\t%[3]d\t82906\t0\t7\t0\tNot OK\n"+
 			"G%[1]d\t\t/simple/A\t%[3]d\t1\t0\t1\t0\tNot OK\n"+
-			"G%[2]d\t\t/simple/E\t%[3]d\t2\t0\t1\t0\tNot OK", GROUP_A, GROUP_E,
+			"G%[2]d\t\t/simple/E\t%[3]d\t2\t0\t1\t0\tNot OK", GroupA, GroupE,
 			time.Now().Unix()/86400,
 		)
 
