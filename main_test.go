@@ -1491,76 +1491,6 @@ func TestTidy(t *testing.T) {
 	})
 }
 
-const singDef = `Bootstrap: docker
-From: golang:1.22-alpine
-Stage: build
-
-%setup
-
-mkdir -p $SINGULARITY_ROOTFS/opt/wr
-mkdir -p $SINGULARITY_ROOTFS/opt/wrstat
-
-%post
-
-apk add git make gcc musl-dev
-
-git clone --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr
-cd /opt/wr
-make install
-
-cd /opt/wrstat
-make installnonpm
-
-Bootstrap: docker
-From: alpine
-Stage: final
-
-%files from build
-
-/go/bin/wr /usr/local/bin/wr
-/go/bin/wrstat /usr/local/bin/wrstat
-
-%setup
-
-mkdir -p $SINGULARITY_ROOTFS/opt/wrstat
-
-%post
-
-apk add --no-cache coreutils
-
-%runscript
-
-stop() {
-	wr manager stop
-
-	exit ${1:-0}
-}
-
-waitForJobs() {
-	until [ $(wr status | wc -l) -le 1 ]; do 
-		if [ $(wr status -b | wc -l ) -gt 1 ]; then
-			stop 1
-		fi;
-
-		sleep 1s
-	done
-}
-
-mkdir -p /tmp/working/partial/
-mkdir -p /tmp/working/complete/
-mkdir -p /tmp/final/
-
-WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1
-
-wrstat multi -m 0 -p -w /tmp/working/partial/ /simple/*
-waitForJobs
-
-wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial -q /quota -o /owners /objects/*
-waitForJobs
-
-stop
-`
-
 func TestEnd2End(t *testing.T) {
 	if !commandExists("singularity") || !commandExists("sqfstar") {
 		SkipConvey("need both 'singularity' and 'sqfstar' installed to run this test.", t, func() {})
@@ -1570,23 +1500,67 @@ func TestEnd2End(t *testing.T) {
 
 	Convey("Test full end-2-end", t, func() {
 		base := t.TempDir()
-		def := filepath.Join(base, "singularity.def")
+		buildScript := filepath.Join(base, "build.sh")
+		runScript := filepath.Join(base, "run.sh")
 		sif := filepath.Join(base, "singularity.sif")
 		users := filepath.Join(base, "passwd")
 		groups := filepath.Join(base, "groups")
 		files := filepath.Join(base, "files.sqfs")
+		wrSrc := t.TempDir()
+		binDir := t.TempDir()
 		tmpTemp := t.TempDir()
 		tmpHome := t.TempDir()
 
-		writeFileString(t, def, singDef)
+		buildSif := exec.Command("singularity", "build", sif, "docker://okteto/golang:1.22")
+		So(buildSif.Run(), ShouldBeNil)
+
+		writeFileString(t, buildScript, "#!/bin/bash\n"+
+			"git clone --depth 1 --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr && cd /opt/wr/ && GOPATH=/build/ make install\n"+
+			"cd /opt/wrstat && GOPATH=/build/ make installnonpm\n"+
+			"chmod -R +w /build")
+		writeFileString(t, runScript, "#!/bin/bash\n"+
+			"export PATH=\"/build/bin:$PATH\"\n"+
+			"\n"+
+			"stop() {\n"+
+			"	wr manager stop\n"+
+			"\n"+
+			"	exit ${1:-0}\n"+
+			"}\n"+
+			"\n"+
+			"waitForJobs() {\n"+
+			"	until [ $(wr status | wc -l) -le 1 ]; do \n"+
+			"		if [ $(wr status -b | wc -l ) -gt 1 ]; then\n"+
+			"			stop 1\n"+
+			"		fi;\n"+
+			"\n"+
+			"		sleep 1s\n"+
+			"	done\n"+
+			"}\n"+
+			"\n"+
+			"mkdir -p /tmp/working/partial/\n"+
+			"mkdir -p /tmp/working/complete/\n"+
+			"mkdir -p /tmp/final/\n"+
+			"\n"+
+			"yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1\n"+
+			"\n"+
+			"wrstat multi -m 0 -p -w /tmp/working/partial/ /simple/*\n"+
+			"waitForJobs\n"+
+			"\n"+
+			"wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial -q /quota -o /owners /objects/*\n"+
+			"waitForJobs\n"+
+			"\n"+
+			"stop")
+
+		So(os.Chmod(buildScript, 0777), ShouldBeNil)
+		So(os.Chmod(runScript, 0777), ShouldBeNil)
 
 		wd, err := os.Getwd()
 		So(err, ShouldBeNil)
 
 		build := exec.Command( //nolint:gosec
-			"singularity", "build",
-			"--fakeroot",
-			"--bind", wd+":/opt/wrstat", sif, def)
+			"singularity", "run",
+			"--bind", wrSrc+":/opt/wr,"+wd+":/opt/wrstat,"+binDir+":/build,"+buildScript+":/run.sh",
+			"--home", tmpHome, sif, "/run.sh")
 
 		err = build.Run()
 		So(err, ShouldBeNil)
@@ -1670,18 +1644,20 @@ func TestEnd2End(t *testing.T) {
 			u.Gid, GROUP_A, USER_A, GROUP_B, USER_B, GROUP_C, USER_C, GROUP_D, USER_D, GROUP_E, USER_E))
 
 		cmd := exec.Command("singularity", "run", //nolint:gosec
-			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group",
+			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group,"+binDir+":/build,"+runScript+":/run.sh",
 			"--home", tmpHome,
-			"--overlay", files, sif)
+			"--overlay", files, sif, "/run.sh")
 
 		So(cmd.Run(), ShouldBeNil)
 
 		userBaseDirs := fmt.Sprintf(``+
-			"U%[1]d\t\t/objects/store1/data/sheets\t19954\t10240\t0\t2\t0\tOK\n"+
-			"U%[1]d\t\t/simple/A\t19954\t1\t0\t1\t0\tOK\n"+
-			"U%[2]d\t\t/objects/store1/data/dbs\t19954\t66666\t0\t2\t0\tOK\n"+
-			"U%[3]d\t\t/objects/store1/data/temp\t19954\t6000\t0\t3\t0\tOK\n"+
-			"U%[4]d\t\t/simple/E\t19954\t2\t0\t1\t0\tOK", USER_A, USER_B, USER_C, USER_E)
+			"U%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tOK\n"+
+			"U%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tOK\n"+
+			"U%[2]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tOK\n"+
+			"U%[3]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tOK\n"+
+			"U%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tOK", USER_A, USER_B, USER_C, USER_E,
+			time.Now().Unix()/86400,
+		)
 
 		ub, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.userusage.tsv"))
 		So(err, ShouldBeNil)
@@ -1690,9 +1666,11 @@ func TestEnd2End(t *testing.T) {
 		compareFileContents(t, filepath.Join(tmpTemp, ub[0]), userBaseDirs)
 
 		groupBaseDirs := fmt.Sprintf(``+
-			"G%[1]d\t\t/objects/store1/data\t19954\t82906\t0\t7\t0\tNot OK\n"+
-			"G%[1]d\t\t/simple/A\t19954\t1\t0\t1\t0\tNot OK\n"+
-			"G%[2]d\t\t/simple/E\t19954\t2\t0\t1\t0\tNot OK", GROUP_A, GROUP_E)
+			"G%[1]d\t\t/objects/store1/data\t%[3]d\t82906\t0\t7\t0\tNot OK\n"+
+			"G%[1]d\t\t/simple/A\t%[3]d\t1\t0\t1\t0\tNot OK\n"+
+			"G%[2]d\t\t/simple/E\t%[3]d\t2\t0\t1\t0\tNot OK", GROUP_A, GROUP_E,
+			time.Now().Unix()/86400,
+		)
 
 		gb, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*basedirs.groupusage.tsv"))
 		So(err, ShouldBeNil)
