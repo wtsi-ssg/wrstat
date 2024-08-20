@@ -1547,11 +1547,13 @@ func TestEnd2End(t *testing.T) {
 			"wrstat multi -m 0 -p -w /tmp/working/partial/ /simple/*\n"+
 			"waitForJobs\n"+
 			"\n"+
-			"wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial"+
-			"-q /quota -o /owners /objects/*\n"+
+			"wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial "+
+			"-q /tmp/quota -o /tmp/owners /objects/*\n"+
 			"waitForJobs\n"+
 			"\n"+
 			"stop")
+		writeFileString(t, filepath.Join(tmpTemp, "owners"), "")
+		writeFileString(t, filepath.Join(tmpTemp, "quota"), "")
 
 		So(os.Chmod(buildScript, 0777), ShouldBeNil)
 		So(os.Chmod(runScript, 0777), ShouldBeNil)
