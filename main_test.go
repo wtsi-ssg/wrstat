@@ -1590,17 +1590,17 @@ func TestEnd2End(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		const (
-			UserA = 20000
-			UserB = 20001
-			UserC = 20002
-			UserD = 20003
-			UserE = 20004
+			UserA = 40000
+			UserB = 40001
+			UserC = 40002
+			UserD = 40003
+			UserE = 40004
 
-			GroupA = 30000
-			GroupB = 30001
-			GroupC = 30002
-			GroupD = 30003
-			GroupE = 30004
+			GroupA = 50000
+			GroupB = 50001
+			GroupC = 50002
+			GroupD = 50003
+			GroupE = 50004
 		)
 
 		root := newDir("/", 0, 0)
@@ -1798,49 +1798,54 @@ func TestEnd2End(t *testing.T) {
 			"????????_store1.*.logs.gz": "",
 			"????????_store2.*.logs.gz": "",
 			"????????_store3.*.logs.gz": "",
-			"????????_A.*.stats.gz": "" +
-				"L3NpbXBsZS9BL2EuZmlsZQ==\t1\t20000\t30000\t160\t160\t160\tf\t\x00\t1\t34\n" +
-				"L3NpbXBsZS9B\t0\t20000\t30000\t160\t160\t160\td\t\x00\t2\t32",
-			"????????_E.*.stats.gz": "" +
-				"L3NpbXBsZS9FL2IudG1w\t2\t20004\t30004\t165\t165\t165\tf\t\x00\t1\t34\n" +
-				"L3NpbXBsZS9F\t0\t20004\t30004\t165\t165\t165\td\t\x00\t2\t32",
-			"????????_store1.*.stats.gz": "" +
-				"L29iamVjdHMvc3RvcmUx\t0\t0\t0\t10\t10\t10\td\t\x00\t3\t32\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGE=\t0\t0\t0\t42\t42\t42\td\t\x00\t5\t32\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcA==\t0\t20002\t30000\t69\t69\t69\td\t\x00\t5\t32\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9jL2MuYmVk\t512\t20002\t30000\t75\t75\t75\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9j\t0\t20002\t30000\t75\t75\t75\td\t\x00\t2\t32\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJzL2RiQS5kYg==\t512\t20001\t30000\t33\t33\t33\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJzL2RiQi5kYg==\t512\t20001\t30000\t38\t38\t38\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJz\t0\t20001\t30000\t38\t38\t38\td\t\x00\t2\t32\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRzL2RvYzEudHh0\t512\t20000\t30000\t19\t19\t19\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRzL2RvYzIudHh0\t512\t20000\t30000\t24\t24\t24\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRz\t0\t20000\t30000\t24\t24\t24\td\t\x00\t2\t32\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9hL2EuYmVk\t512\t20002\t30000\t53\t53\t53\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9h\t0\t20002\t30000\t53\t53\t53\td\t\x00\t2\t32\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9iL2IuYmVk\t512\t20002\t30000\t64\t64\t64\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9i\t0\t20002\t30000\t64\t64\t64\td\t\x00\t2\t32",
-			"????????_store2.*.stats.gz": "" +
-				"L29iamVjdHMvc3RvcmUy\t0\t0\t0\t142\t142\t142\td\t\x00\t5\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyLmJlZA==\t512\t20003\t30000\t119\t119\t119\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQx\t0\t0\t0\t123\t123\t123\td\t\x00\t3\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215LnRtcC5neg==\t512\t20003\t30003\t128\t128\t128\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVy\t0\t20003\t30000\t133\t133\t133\td\t\x00\t3\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215RGlyL215LnRtcC5vbGQ=\t512\t20003\t30000\t139\t139\t139\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215RGly\t0\t20003\t30000\t139\t139\t139\td\t\x00\t2\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudA==\t0\t0\t0\t146\t146\t146\td\t\x00\t3\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudC9kb2NzL215LmRvYw==\t512\t20001\t30003\t151\t151\t151\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudC9kb2Nz\t0\t20001\t30003\t151\t151\t151\td\t\x00\t2\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQw\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1z\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0yL2MudHh0\t512\t20001\t30001\t115\t115\t115\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0y\t0\t20001\t30001\t115\t115\t115\td\t\x00\t2\t32\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0xL2EudHh0\t100\t20000\t30000\t98\t98\t98\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0xL2IudHh0\t200\t20000\t30001\t104\t104\t104\tf\t\x00\t1\t34\n" +
-				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0x\t0\t20000\t30000\t104\t104\t104\td\t\x00\t2\t32",
-			"????????_store3.*.stats.gz": "" +
-				"L29iamVjdHMvc3RvcmUzL2FGaWxl\t512\t20000\t30000\t154\t154\t154\tf\t\x00\t1\t34\n" +
+			"????????_A.*.stats.gz": fmt.Sprintf(""+
+				"L3NpbXBsZS9BL2EuZmlsZQ==\t1\t%[1]d\t%[2]d\t160\t160\t160\tf\t\x00\t1\t34\n"+
+				"L3NpbXBsZS9B\t0\t%[1]d\t%[2]d\t160\t160\t160\td\t\x00\t2\t32",
+				UserA, GroupA),
+			"????????_E.*.stats.gz": fmt.Sprintf(""+
+				"L3NpbXBsZS9FL2IudG1w\t2\t%[1]d\t%[2]d\t165\t165\t165\tf\t\x00\t1\t34\n"+
+				"L3NpbXBsZS9F\t0\t%[1]d\t%[2]d\t165\t165\t165\td\t\x00\t2\t32",
+				UserE, GroupE),
+			"????????_store1.*.stats.gz": fmt.Sprintf(""+
+				"L29iamVjdHMvc3RvcmUx\t0\t0\t0\t10\t10\t10\td\t\x00\t3\t32\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGE=\t0\t0\t0\t42\t42\t42\td\t\x00\t5\t32\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcA==\t0\t%[1]d\t%[2]d\t69\t69\t69\td\t\x00\t5\t32\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9jL2MuYmVk\t512\t%[1]d\t%[2]d\t75\t75\t75\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9j\t0\t%[1]d\t%[2]d\t75\t75\t75\td\t\x00\t2\t32\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJzL2RiQS5kYg==\t512\t%[3]d\t%[2]d\t33\t33\t33\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJzL2RiQi5kYg==\t512\t%[3]d\t%[2]d\t38\t38\t38\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJz\t0\t%[3]d\t%[2]d\t38\t38\t38\td\t\x00\t2\t32\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRzL2RvYzEudHh0\t512\t%[4]d\t%[2]d\t19\t19\t19\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRzL2RvYzIudHh0\t512\t%[4]d\t%[2]d\t24\t24\t24\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRz\t0\t%[4]d\t%[2]d\t24\t24\t24\td\t\x00\t2\t32\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9hL2EuYmVk\t512\t%[1]d\t%[2]d\t53\t53\t53\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9h\t0\t%[1]d\t%[2]d\t53\t53\t53\td\t\x00\t2\t32\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9iL2IuYmVk\t512\t%[1]d\t%[2]d\t64\t64\t64\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9i\t0\t%[1]d\t%[2]d\t64\t64\t64\td\t\x00\t2\t32",
+				UserC, GroupA, UserB, UserA),
+			"????????_store2.*.stats.gz": fmt.Sprintf(""+
+				"L29iamVjdHMvc3RvcmUy\t0\t0\t0\t142\t142\t142\td\t\x00\t5\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyLmJlZA==\t512\t%[1]d\t%[2]d\t119\t119\t119\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQx\t0\t0\t0\t123\t123\t123\td\t\x00\t3\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215LnRtcC5neg==\t512\t%[1]d\t%[3]d\t128\t128\t128\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVy\t0\t%[1]d\t%[2]d\t133\t133\t133\td\t\x00\t3\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215RGlyL215LnRtcC5vbGQ=\t512\t%[1]d\t%[2]d\t139\t139\t139\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215RGly\t0\t%[1]d\t%[2]d\t139\t139\t139\td\t\x00\t2\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudA==\t0\t0\t0\t146\t146\t146\td\t\x00\t3\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudC9kb2NzL215LmRvYw==\t512\t%[4]d\t%[3]d\t151\t151\t151\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudC9kb2Nz\t0\t%[4]d\t%[3]d\t151\t151\t151\td\t\x00\t2\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQw\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1z\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0yL2MudHh0\t512\t%[4]d\t%[5]d\t115\t115\t115\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0y\t0\t%[4]d\t%[5]d\t115\t115\t115\td\t\x00\t2\t32\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0xL2EudHh0\t100\t%[6]d\t%[2]d\t98\t98\t98\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0xL2IudHh0\t200\t%[6]d\t%[5]d\t104\t104\t104\tf\t\x00\t1\t34\n"+
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0x\t0\t%[6]d\t%[2]d\t104\t104\t104\td\t\x00\t2\t32",
+				UserD, GroupA, GroupD, UserB, GroupB, UserA),
+			"????????_store3.*.stats.gz": fmt.Sprintf(""+
+				"L29iamVjdHMvc3RvcmUzL2FGaWxl\t512\t%d\t%d\t154\t154\t154\tf\t\x00\t1\t34\n"+
 				"L29iamVjdHMvc3RvcmUz\t0\t0\t0\t154\t154\t154\td\t\x00\t2\t32",
+				UserA, GroupA),
 		} {
 			files, errr := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
 			So(errr, ShouldBeNil)
