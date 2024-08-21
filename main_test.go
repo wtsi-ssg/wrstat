@@ -1546,6 +1546,9 @@ func TestEnd2End(t *testing.T) {
 			"	exit ${1:-0}\n"+
 			"}\n"+
 			"\n"+
+			"trap stop SIGINT\n"+
+			"trap stop EXIT\n"+
+			"\n"+
 			"waitForJobs() {\n"+
 			"	until [ $(wr status | wc -l) -le 1 ]; do \n"+
 			"		if [ $(wr status -b | wc -l ) -gt 1 ]; then\n"+
