@@ -1843,8 +1843,8 @@ func TestEnd2End(t *testing.T) {
 				"L29iamVjdHMvc3RvcmUzL2FGaWxl\t512\t20000\t30000\t154\t154\t154\tf\t\x00\t1\t34\n" +
 				"L29iamVjdHMvc3RvcmUz\t0\t0\t0\t154\t154\t154\td\t\x00\t2\t32",
 		} {
-			files, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
-			So(err, ShouldBeNil)
+			files, errr := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
+			So(errr, ShouldBeNil)
 			So(len(files), ShouldEqual, 1)
 
 			compareFileContents(t, filepath.Join(tmpTemp, files[0]), contents)
