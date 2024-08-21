@@ -1585,7 +1585,7 @@ func TestEnd2End(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		build := exec.Command( //nolint:gosec
-			"singularity", "run",
+			"singularity", "run", "-e",
 			"--bind", wrSrc+":/opt/wr,"+wd+":/opt/wrstat,"+binDir+":/build,"+buildScript+":/run.sh",
 			"--home", tmpHome, sif, "/run.sh")
 
@@ -1677,7 +1677,7 @@ func TestEnd2End(t *testing.T) {
 			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n",
 			u.Gid, GroupA, UserA, GroupB, UserB, GroupC, UserC, GroupD, UserD, GroupE, UserE))
 
-		cmd := exec.Command("singularity", "run", //nolint:gosec
+		cmd := exec.Command("singularity", "run", "-e", //nolint:gosec
 			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group,"+
 				binDir+":/build,"+runScript+":/run.sh",
 			"--home", tmpHome,
