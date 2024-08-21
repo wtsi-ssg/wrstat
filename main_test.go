@@ -1693,7 +1693,8 @@ func TestEnd2End(t *testing.T) {
 				"U%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
 				"U%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
 				"U%[4]d\t\t/objects/store2/part1/other/myDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
-				"U%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK", UserA, UserB, UserC, UserD, UserE,
+				"U%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK",
+				UserA, UserB, UserC, UserD, UserE,
 				time.Now().Unix()/86400),
 			"*basedirs.groupusage.tsv": fmt.Sprintf(``+
 				"G%[1]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tNot OK\n"+
@@ -1848,6 +1849,48 @@ func TestEnd2End(t *testing.T) {
 
 			compareFileContents(t, filepath.Join(tmpTemp, files[0]), contents)
 		}
+
+		db, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", "*.basedirs.db"))
+		So(err, ShouldBeNil)
+		So(len(db), ShouldEqual, 1)
+
+		bdb, err := basedirs.NewReader(filepath.Join(tmpTemp, db[0]), filepath.Join(tmpTemp, "owners"))
+		So(err, ShouldBeNil)
+
+		userUsage := fmt.Sprintf(``+
+			"%[1]d\t\t/objects/store1/data/sheets\t%[6]d\t10240\t0\t2\t0\tOK\n"+
+			"%[1]d\t\t/objects/store2/part0/teams/team1\t%[6]d\t300\t0\t2\t0\tOK\n"+
+			"%[1]d\t\t/simple/A\t%[6]d\t1\t0\t1\t0\tOK\n"+
+			"%[2]d\t\t/objects/store1/data/dbs\t%[6]d\t66666\t0\t2\t0\tOK\n"+
+			"%[2]d\t\t/objects/store2/important/docs\t%[6]d\t1200\t0\t1\t0\tOK\n"+
+			"%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
+			"%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
+			"%[4]d\t\t/objects/store2/part1/other/myDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
+			"%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK\n",
+			UserA, UserB, UserC, UserD, UserE,
+			time.Now().Unix()/86400)
+
+		groupUsage := fmt.Sprintf(``+
+			"%[1]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tNot OK\n"+
+			"%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tNot OK\n"+
+			"%[1]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tNot OK\n"+
+			"%[1]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t100\t0\t1\t0\tNot OK\n"+
+			"%[1]d\t\t/objects/store2/part1/other/myDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
+			"%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tNot OK\n"+
+			"%[2]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t200\t0\t1\t0\tNot OK\n"+
+			"%[2]d\t\t/objects/store2/part0/teams/team2\t%[5]d\t1000\t0\t1\t0\tNot OK\n"+
+			"%[3]d\t\t/objects/store2/important/docs\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
+			"%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK\n",
+			GroupA, GroupB, GroupD, GroupE,
+			time.Now().Unix()/86400)
+
+		uut, err := bdb.UserUsageTable()
+		So(err, ShouldBeNil)
+		So(uut, ShouldEqual, userUsage)
+
+		gut, err := bdb.GroupUsageTable()
+		So(err, ShouldBeNil)
+		So(gut, ShouldEqual, groupUsage)
 	})
 }
 
