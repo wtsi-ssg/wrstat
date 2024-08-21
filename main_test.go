@@ -39,6 +39,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"syscall"
@@ -643,7 +644,18 @@ func compareFileContents(t *testing.T, filename, expectation string) {
 	sort.Slice(lines, func(i, j int) bool { return lines[i] < lines[j] })
 	sort.Slice(expectedLines, func(i, j int) bool { return expectedLines[i] < expectedLines[j] })
 
-	So(lines, ShouldResemble, expectedLines)
+	if len(expectedLines) > 0 && strings.ContainsRune(expectedLines[0], 0) {
+		So(len(lines), ShouldEqual, len(expectedLines))
+
+		for n, line := range expectedLines {
+			parts := strings.SplitN(line, "\x00", 2)
+			So(len(parts), ShouldEqual, 2)
+			So(lines[n], ShouldStartWith, parts[0])
+			So(lines[n], ShouldEndWith, parts[1])
+		}
+	} else {
+		So(lines, ShouldResemble, expectedLines)
+	}
 }
 
 func removeJobRepGroupSuffixes(jobs []*jobqueue.Job) {
@@ -1781,6 +1793,54 @@ func TestEnd2End(t *testing.T) {
 				"U%[1]d\tG%[2]d\t/objects\t1\t1024\n"+
 				"U%[1]d\tG%[2]d\t/objects/store3\t1\t1024",
 				UserA, GroupA),
+			"????????_A.*.logs.gz":      "",
+			"????????_E.*.logs.gz":      "",
+			"????????_store1.*.logs.gz": "",
+			"????????_store2.*.logs.gz": "",
+			"????????_store3.*.logs.gz": "",
+			"????????_A.*.stats.gz": "" +
+				"L3NpbXBsZS9BL2EuZmlsZQ==\t1\t20000\t30000\t160\t160\t160\tf\t\x00\t1\t34\n" +
+				"L3NpbXBsZS9B\t0\t20000\t30000\t160\t160\t160\td\t\x00\t2\t32",
+			"????????_E.*.stats.gz": "" +
+				"L3NpbXBsZS9FL2IudG1w\t2\t20004\t30004\t165\t165\t165\tf\t\x00\t1\t34\n" +
+				"L3NpbXBsZS9F\t0\t20004\t30004\t165\t165\t165\td\t\x00\t2\t32",
+			"????????_store1.*.stats.gz": "" +
+				"L29iamVjdHMvc3RvcmUx\t0\t0\t0\t10\t10\t10\td\t\x00\t3\t32\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGE=\t0\t0\t0\t42\t42\t42\td\t\x00\t5\t32\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcA==\t0\t20002\t30000\t69\t69\t69\td\t\x00\t5\t32\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9jL2MuYmVk\t512\t20002\t30000\t75\t75\t75\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9j\t0\t20002\t30000\t75\t75\t75\td\t\x00\t2\t32\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJzL2RiQS5kYg==\t512\t20001\t30000\t33\t33\t33\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJzL2RiQi5kYg==\t512\t20001\t30000\t38\t38\t38\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvZGJz\t0\t20001\t30000\t38\t38\t38\td\t\x00\t2\t32\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRzL2RvYzEudHh0\t512\t20000\t30000\t19\t19\t19\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRzL2RvYzIudHh0\t512\t20000\t30000\t24\t24\t24\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvc2hlZXRz\t0\t20000\t30000\t24\t24\t24\td\t\x00\t2\t32\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9hL2EuYmVk\t512\t20002\t30000\t53\t53\t53\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9h\t0\t20002\t30000\t53\t53\t53\td\t\x00\t2\t32\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9iL2IuYmVk\t512\t20002\t30000\t64\t64\t64\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUxL2RhdGEvdGVtcC9i\t0\t20002\t30000\t64\t64\t64\td\t\x00\t2\t32",
+			"????????_store2.*.stats.gz": "" +
+				"L29iamVjdHMvc3RvcmUy\t0\t0\t0\t142\t142\t142\td\t\x00\t5\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyLmJlZA==\t512\t20003\t30000\t119\t119\t119\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQx\t0\t0\t0\t123\t123\t123\td\t\x00\t3\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215LnRtcC5neg==\t512\t20003\t30003\t128\t128\t128\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVy\t0\t20003\t30000\t133\t133\t133\td\t\x00\t3\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215RGlyL215LnRtcC5vbGQ=\t512\t20003\t30000\t139\t139\t139\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQxL290aGVyL215RGly\t0\t20003\t30000\t139\t139\t139\td\t\x00\t2\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudA==\t0\t0\t0\t146\t146\t146\td\t\x00\t3\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudC9kb2NzL215LmRvYw==\t512\t20001\t30003\t151\t151\t151\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUyL2ltcG9ydGFudC9kb2Nz\t0\t20001\t30003\t151\t151\t151\td\t\x00\t2\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQw\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1z\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0yL2MudHh0\t512\t20001\t30001\t115\t115\t115\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0y\t0\t20001\t30001\t115\t115\t115\td\t\x00\t2\t32\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0xL2EudHh0\t100\t20000\t30000\t98\t98\t98\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0xL2IudHh0\t200\t20000\t30001\t104\t104\t104\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUyL3BhcnQwL3RlYW1zL3RlYW0x\t0\t20000\t30000\t104\t104\t104\td\t\x00\t2\t32",
+			"????????_store3.*.stats.gz": "" +
+				"L29iamVjdHMvc3RvcmUzL2FGaWxl\t512\t20000\t30000\t154\t154\t154\tf\t\x00\t1\t34\n" +
+				"L29iamVjdHMvc3RvcmUz\t0\t0\t0\t154\t154\t154\td\t\x00\t2\t32",
 		} {
 			files, err := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
 			So(err, ShouldBeNil)
@@ -1927,13 +1987,17 @@ func (d *dir) write(w *tar.Writer) error {
 		return err
 	}
 
-	for _, e := range d.dirs {
+	for _, k := range sortKeys(d.dirs) {
+		e := d.dirs[k]
+
 		if err := e.write(w); err != nil {
 			return err
 		}
 	}
 
-	for _, f := range d.files {
+	for _, k := range sortKeys(d.files) {
+		f := d.files[k]
+
 		if err := w.WriteHeader(f); err != nil {
 			return err
 		}
@@ -1946,6 +2010,18 @@ func (d *dir) write(w *tar.Writer) error {
 	}
 
 	return nil
+}
+
+func sortKeys[Map ~map[string]V, V any](m Map) []string {
+	keys := make([]string, 0, len(m))
+
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	slices.Sort(keys)
+
+	return keys
 }
 
 func (d *dir) Mkdir(path string, uid, gid int) *dir {
