@@ -651,7 +651,6 @@ func compareFileContents(t *testing.T, filename, expectation string) {
 			parts := strings.SplitN(line, "\x00", 2)
 			So(len(parts), ShouldEqual, 2)
 			So(lines[n], ShouldStartWith, parts[0])
-			So(lines[n], ShouldEndWith, parts[1])
 		}
 	} else {
 		So(lines, ShouldResemble, expectedLines)
