@@ -6,7 +6,7 @@ require (
 	github.com/VertebrateResequencing/wr v0.32.2
 	github.com/adhocore/gronx v1.8.1
 	github.com/dustin/go-humanize v1.0.1
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v2.16.0+incompatible
 	github.com/klauspost/pgzip v1.2.6
@@ -25,7 +25,10 @@ require (
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 )
 
-require github.com/otiai10/copy v1.14.0
+require (
+	github.com/otiai10/copy v1.14.0
+	github.com/wtsi-hgi/wrstat-server/v4 v4.0.0-20240822100946-5430b125bb9d
+)
 
 require (
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
@@ -153,7 +156,7 @@ require (
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/term v0.21.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
