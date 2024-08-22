@@ -218,6 +218,8 @@ func doMultiScheduling(args []string) error {
 	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
 
 	if partialDirMerge != "" {
+		s.DisableSudo()
+
 		unique = scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
 	}
 

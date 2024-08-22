@@ -89,6 +89,10 @@ func New(deployment, cwd, queue string, timeout time.Duration, logger log15.Logg
 	}, err
 }
 
+func (s *Scheduler) DisableSudo() {
+	s.sudo = false
+}
+
 // pickCWD checks the given directory exists, returns an error. If the given
 // dir is blank, returns the current working directory.
 func pickCWD(cwd string) (string, error) {

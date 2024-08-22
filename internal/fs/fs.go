@@ -167,7 +167,7 @@ func CopyDirectoryPreservingTimestamp(source, dest string) error {
 		return err
 	}
 
-	matches, err := filepath.Glob(source + "/*")
+	matches, err := filepath.Glob(filepath.Join(source, "*"))
 	if err != nil {
 		return err
 	}

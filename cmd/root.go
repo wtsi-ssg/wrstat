@@ -30,6 +30,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,10 +48,18 @@ const userGroupPerm = 0770
 var appLogger = log15.New()
 
 // these variables are accessible by all subcommands.
-var deployment string
-var sudo bool
+var (
+	deployment string
+	sudo       bool
+)
 
-const connectTimeout = 10 * time.Second
+// a flag set by main tests to disable jobs being scheduled.
+var runJobs string
+
+const (
+	connectTimeout = 10 * time.Second
+	testOutputFD   = 3
+)
 
 // RootCmd represents the base command when called without any subcommands.
 var RootCmd = &cobra.Command{
@@ -173,8 +182,11 @@ func die(msg string, a ...interface{}) {
 //
 // If you provide a non-blank queue, that queue will be used when scheduling.
 func newScheduler(cwd, queue string) (*scheduler.Scheduler, func()) {
-	s, err := scheduler.New(deployment, cwd, queue, connectTimeout, appLogger, sudo)
+	if runJobs != "" {
+		return testScheduler()
+	}
 
+	s, err := scheduler.New(deployment, cwd, queue, connectTimeout, appLogger, sudo)
 	if err != nil {
 		die("%s", err)
 	}
@@ -205,7 +217,23 @@ func dateStamp() string {
 
 // addJobsToQueue adds the jobs to wr's queue.
 func addJobsToQueue(s *scheduler.Scheduler, jobs []*jobqueue.Job) {
+	if runJobs != "" {
+		testPrint(jobs)
+
+		return
+	}
+
 	if err := s.SubmitJobs(jobs); err != nil {
 		die("failed to add jobs to wr's queue: %s", err)
 	}
+}
+
+func testPrint(jobs []*jobqueue.Job) {
+	w := os.NewFile(uintptr(testOutputFD), "/dev/stdout")
+
+	json.NewEncoder(w).Encode(jobs) //nolint:errcheck,errchkjson
+}
+
+func testScheduler() (*scheduler.Scheduler, func()) {
+	return &scheduler.Scheduler{}, func() {}
 }
