@@ -1535,7 +1535,7 @@ func TestEnd2End(t *testing.T) {
 		writeFileString(t, buildScript, "#!/bin/bash\n"+
 			"git clone --depth 1 --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr &&"+
 			"cd /opt/wr/ && GOPATH=/build/ make install\n"+
-			"cd /opt/wrstat && GOPATH=/build/ make installnonpm\n"+
+			"cd /opt/wrstat && GOPATH=/build/ make install\n"+
 			"chmod -R +w /build")
 		writeFileString(t, runScript, "#!/bin/bash\n"+
 			"export PATH=\"/build/bin:$PATH\"\n"+

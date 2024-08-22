@@ -34,11 +34,15 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	gas "github.com/wtsi-hgi/go-authserver"
 )
 
-const ErrNoDirEntryFound = gas.Error("file not found in directory")
+type noDirEntryFoundError struct{}
+
+func (noDirEntryFoundError) Error() string {
+	return "file not found in directory"
+}
+
+var ErrNoDirEntryFound noDirEntryFoundError
 
 const DirPerms = 0755
 

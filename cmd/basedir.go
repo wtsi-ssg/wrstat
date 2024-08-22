@@ -51,9 +51,11 @@ const (
 )
 
 // options for this cmd.
-var quotaPath string
-var ownersPath string
-var configPath string
+var (
+	quotaPath  string
+	ownersPath string
+	configPath string
+)
 
 // basedirCmd represents the basedir command.
 var basedirCmd = &cobra.Command{
