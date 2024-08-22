@@ -48,12 +48,13 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
-	defaultWhereSplits             = 2
-	defaultSize                    = "50M"
-	hoursPerDay                    = 24
-	jwtBasename                    = ".wrstat.jwt"
-	errBadGroupArea                = Error("unknown group area")
-	privatePerms       os.FileMode = 0600
+	defaultWhereSplits              = 2
+	defaultSize                     = "50M"
+	hoursPerDay                     = 24
+	jwtBasename                     = ".wrstat.jwt"
+	errBadGroupArea                 = Error("unknown group area")
+	privatePerms        os.FileMode = 0600
+	serverTokenBasename             = ".wrstat.servertoken"
 )
 
 // options for this cmd.

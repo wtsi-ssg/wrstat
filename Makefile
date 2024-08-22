@@ -28,10 +28,10 @@ install:
 	@go install -tags netgo ${LDFLAGS}
 	@echo Installed to ${GOPATH}/bin/wrstat
 
-installnonpm: export CGO_ENABLED = 1
-installnonpm:
+installnoserver: export CGO_ENABLED = 1
+installnoserver:
 	@rm -f ${GOPATH}/bin/wrstat
-	@go install -tags netgo ${LDFLAGS}
+	@go install -tags netgo,noserver ${LDFLAGS}
 	@echo installed to ${GOPATH}/bin/wrstat
 
 test: export CGO_ENABLED = 1
