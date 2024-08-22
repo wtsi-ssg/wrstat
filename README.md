@@ -10,8 +10,6 @@ of its work.
 
 ## Build
 
-[NPM](https://www.npmjs.com/) is required to build this project.
-
 ```
 git clone https://github.com/wtsi-ssg/wrstat/
 cd wrstat
