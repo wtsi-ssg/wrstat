@@ -2004,34 +2004,6 @@ func (d *dir) mkfile(name string, size int64, uid, gid int) {
 	}
 }
 
-func (d *dir) rmdir(name string) bool {
-	d.updateAccess()
-
-	if _, ok := d.dirs[name]; !ok {
-		return false
-	}
-
-	d.updateMod()
-
-	delete(d.dirs, name)
-
-	return true
-}
-
-func (d *dir) rm(name string) bool {
-	d.updateAccess()
-
-	if _, ok := d.files[name]; !ok {
-		return false
-	}
-
-	d.updateMod()
-
-	delete(d.files, name)
-
-	return true
-}
-
 func (d *dir) write(w *tar.Writer) error {
 	if err := w.WriteHeader(&d.Header); err != nil {
 		return err
@@ -2090,26 +2062,6 @@ func (d *dir) Create(path string, uid, gid int, size int64) {
 	if d = d.Mkdir(strings.TrimSuffix(dir, "/"), uid, gid); d != nil {
 		d.mkfile(file, size, uid, gid)
 	}
-}
-
-func (d *dir) RemoveDir(path string) bool {
-	dir, file := filepath.Split(path)
-
-	if d = d.Mkdir(dir, 0, 0); d == nil {
-		return false
-	}
-
-	return d.rmdir(file)
-}
-
-func (d *dir) Remove(path string) bool {
-	dir, file := filepath.Split(path)
-
-	if d = d.Mkdir(dir, 0, 0); d == nil {
-		return false
-	}
-
-	return d.rm(file)
 }
 
 func (d *dir) Write(path string, quota, owners string) (err error) {
