@@ -36,13 +36,13 @@ import (
 	"time"
 )
 
-type errNoDirEntryFound struct{}
+type noDirEntryFoundError struct{}
 
-func (errNoDirEntryFound) Error() string {
+func (noDirEntryFoundError) Error() string {
 	return "file not found in directory"
 }
 
-var ErrNoDirEntryFound errNoDirEntryFound
+var ErrNoDirEntryFound noDirEntryFoundError
 
 const DirPerms = 0755
 
