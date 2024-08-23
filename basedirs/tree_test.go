@@ -32,8 +32,8 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
-	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
+	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
+	internaldb "github.com/wtsi-ssg/wrstat/v5/internal/db"
 )
 
 func TestTree(t *testing.T) {

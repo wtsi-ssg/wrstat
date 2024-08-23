@@ -31,7 +31,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v4/neaten"
+	"github.com/wtsi-ssg/wrstat/v5/neaten"
 )
 
 const uniqueLen = 20

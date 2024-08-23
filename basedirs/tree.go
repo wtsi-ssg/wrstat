@@ -26,7 +26,7 @@
 package basedirs
 
 import (
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dgut"
 )
 
 // getAllGIDsandUIDsInTree gets all the unix group and user IDs that own files

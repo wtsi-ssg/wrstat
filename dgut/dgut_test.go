@@ -33,8 +33,8 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ugorji/go/codec"
-	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
-	"github.com/wtsi-ssg/wrstat/v4/summary"
+	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 	bolt "go.etcd.io/bbolt"
 )
 

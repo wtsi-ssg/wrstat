@@ -34,9 +34,9 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	"github.com/wtsi-ssg/wrstat/v4/fs"
-	"github.com/wtsi-ssg/wrstat/v4/summary"
+	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/fs"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
 // TestDGUTFiles tests that the DGUT files merge properly to the output.

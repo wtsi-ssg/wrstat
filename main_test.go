@@ -49,10 +49,10 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v4/basedirs"
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
-	"github.com/wtsi-ssg/wrstat/v4/summary"
+	"github.com/wtsi-ssg/wrstat/v5/basedirs"
+	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
 const app = "wrstat_test"
@@ -60,7 +60,7 @@ const app = "wrstat_test"
 func buildSelf() func() {
 	cmd := exec.Command(
 		"go", "build", "-tags", "netgo",
-		"-ldflags=-X github.com/wtsi-ssg/wrstat/v4/cmd.runJobs=0 -X github.com/wtsi-ssg/wrstat/v4/cmd.Version=TESTVERSION",
+		"-ldflags=-X github.com/wtsi-ssg/wrstat/v5/cmd.runJobs=0 -X github.com/wtsi-ssg/wrstat/v5/cmd.Version=TESTVERSION",
 		"-o", app,
 	)
 

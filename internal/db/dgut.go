@@ -36,9 +36,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
-	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
+	"github.com/wtsi-ssg/wrstat/v5/internal/fs"
 )
 
 const DirPerms = fs.DirPerms

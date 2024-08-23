@@ -29,8 +29,8 @@ package internaldb
 import (
 	"testing"
 
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
+	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
 )
 
 // CreateExampleDGUTDBForBasedirs makes a tree database with data useful for

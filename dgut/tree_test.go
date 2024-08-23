@@ -31,10 +31,10 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
-	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
-	"github.com/wtsi-ssg/wrstat/v4/internal/split"
-	"github.com/wtsi-ssg/wrstat/v4/summary"
+	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
+	"github.com/wtsi-ssg/wrstat/v5/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v5/internal/split"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
 func TestTree(t *testing.T) {
