@@ -37,8 +37,8 @@ import (
 	"time"
 
 	"github.com/ugorji/go/codec"
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	"github.com/wtsi-ssg/wrstat/v4/summary"
+	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 	bolt "go.etcd.io/bbolt"
 )
 

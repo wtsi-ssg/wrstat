@@ -32,7 +32,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v4/fs"
+	"github.com/wtsi-ssg/wrstat/v5/fs"
 )
 
 // TestByUserGroupFiles tests that the .byusergroup files merge and compress

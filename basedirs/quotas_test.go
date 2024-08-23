@@ -29,7 +29,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
+	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
 )
 
 func TestQuotas(t *testing.T) {

@@ -36,7 +36,7 @@ import (
 
 	bs "github.com/wtsi-ssg/wr/backoff/time"
 	"github.com/wtsi-ssg/wr/retry"
-	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v5/internal/fs"
 )
 
 type Error string

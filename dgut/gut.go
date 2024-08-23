@@ -29,7 +29,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/wtsi-ssg/wrstat/v4/summary"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 	"golang.org/x/exp/constraints"
 )
 

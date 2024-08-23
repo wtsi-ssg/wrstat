@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v5/internal/fs"
 )
 
 const SentinelComplete = "combine.complete"

@@ -10,9 +10,9 @@ import (
 
 	"github.com/rs/xid"
 	. "github.com/smartystreets/goconvey/convey"
-	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
-	ifs "github.com/wtsi-ssg/wrstat/v4/internal/fs"
-	"github.com/wtsi-ssg/wrstat/v4/neaten"
+	internaldb "github.com/wtsi-ssg/wrstat/v5/internal/db"
+	ifs "github.com/wtsi-ssg/wrstat/v5/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v5/neaten"
 )
 
 func TestMerge(t *testing.T) {

@@ -30,8 +30,8 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v4/combine"
-	"github.com/wtsi-ssg/wrstat/v4/fs"
+	"github.com/wtsi-ssg/wrstat/v5/combine"
+	"github.com/wtsi-ssg/wrstat/v5/fs"
 )
 
 const combineStatsOutputFileBasename = "combine.stats.gz"

@@ -27,7 +27,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v4/merge"
+	"github.com/wtsi-ssg/wrstat/v5/merge"
 )
 
 const mergeArgs = 2

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wtsi-ssg/wrstat/v4/internal/split"
+	"github.com/wtsi-ssg/wrstat/v5/internal/split"
 )
 
 type ConfigAttrs struct {

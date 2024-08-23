@@ -38,12 +38,12 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v4/dgut"
-	internaldata "github.com/wtsi-ssg/wrstat/v4/internal/data"
-	internaldb "github.com/wtsi-ssg/wrstat/v4/internal/db"
-	"github.com/wtsi-ssg/wrstat/v4/internal/fixtimes"
-	"github.com/wtsi-ssg/wrstat/v4/internal/fs"
-	"github.com/wtsi-ssg/wrstat/v4/summary"
+	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
+	internaldb "github.com/wtsi-ssg/wrstat/v5/internal/db"
+	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
+	"github.com/wtsi-ssg/wrstat/v5/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
