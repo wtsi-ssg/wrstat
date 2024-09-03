@@ -679,7 +679,7 @@ func TestStat(t *testing.T) {
 			atimes, ctimes []int64
 		)
 
-		for _, stats := range [...]File{
+		for _, fileDefinition := range [...]File{
 			{
 				name:   "aDirectory/aFile",
 				mtime:  time.Unix(7383773, 0),
@@ -702,13 +702,13 @@ func TestStat(t *testing.T) {
 				mtime: time.Unix(271828, 0),
 			},
 		} {
-			path := filepath.Join(tmp, stats.name)
+			path := filepath.Join(tmp, fileDefinition.name)
 
-			if stats.length > 0 {
+			if fileDefinition.length > 0 {
 				err := os.MkdirAll(filepath.Dir(path), 0755)
 				So(err, ShouldBeNil)
 
-				writeFileString(t, path, strings.Repeat("\x00", stats.length))
+				writeFileString(t, path, strings.Repeat("\x00", fileDefinition.length))
 			} else {
 				err := os.MkdirAll(path, 0755)
 				So(err, ShouldBeNil)
@@ -725,13 +725,13 @@ func TestStat(t *testing.T) {
 			atimes = append(atimes, statt.Atim.Sec)
 			ctimes = append(ctimes, statt.Ctim.Sec)
 
-			err = os.Chtimes(path, time.Time{}, stats.mtime)
+			err = os.Chtimes(path, time.Time{}, fileDefinition.mtime)
 			So(err, ShouldBeNil)
 		}
 
-		statDir := t.TempDir()
-		statFilePath := filepath.Join(statDir, "dir.walk")
-		statFile, err := os.Create(statFilePath)
+		workDir := t.TempDir()
+		walkFilePath := filepath.Join(workDir, "dir.walk")
+		walkFile, err := os.Create(walkFilePath)
 		So(err, ShouldBeNil)
 
 		err = fs.WalkDir(os.DirFS(tmp), ".", func(path string, _ fs.DirEntry, err error) error {
@@ -739,17 +739,17 @@ func TestStat(t *testing.T) {
 				return err
 			}
 
-			_, err = io.WriteString(statFile, filepath.Join(tmp, path)+"\n")
+			_, err = io.WriteString(walkFile, filepath.Join(tmp, path)+"\n")
 			So(err, ShouldBeNil)
 
 			return nil
 		})
 		So(err, ShouldBeNil)
 
-		err = statFile.Close()
+		err = walkFile.Close()
 		So(err, ShouldBeNil)
 
-		_, _, jobs, err := runWRStat("stat", statFilePath)
+		_, _, jobs, err := runWRStat("stat", walkFilePath)
 
 		So(err, ShouldBeNil)
 		So(len(jobs), ShouldEqual, 0)
@@ -834,7 +834,7 @@ func TestStat(t *testing.T) {
 			"dir.walk.byusergroup": userGroupExpectation, "dir.walk.dgut": walkExpectations,
 			"dir.walk.log": "",
 		} {
-			f, err := os.Open(filepath.Join(statDir, file))
+			f, err := os.Open(filepath.Join(workDir, file))
 			So(err, ShouldBeNil)
 
 			data, err := io.ReadAll(f)
