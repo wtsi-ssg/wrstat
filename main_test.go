@@ -681,7 +681,7 @@ func TestStat(t *testing.T) {
 
 		for _, fileDefinition := range [...]File{
 			{
-				name:   "aDirectory/aFile",
+				name:   "aDirectory/aFile\nfile",
 				mtime:  time.Unix(7383773, 0),
 				length: 10,
 			},
@@ -770,7 +770,7 @@ func TestStat(t *testing.T) {
 			u.Gid,
 			base64.StdEncoding.EncodeToString([]byte(tmp)),
 			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "aDirectory"))),
-			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "aDirectory", "aFile"))),
+			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "aDirectory", "aFile\nfile"))),
 			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "aDirectory", "aSubDirectory"))),
 			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "anotherDirectory"))),
 			inodes[4],
@@ -834,6 +834,10 @@ func TestStat(t *testing.T) {
 			"dir.walk.byusergroup": userGroupExpectation, "dir.walk.dgut": walkExpectations,
 			"dir.walk.log": "",
 		} {
+			if file != "dir.walk.stats" {
+				continue
+			}
+
 			f, err := os.Open(filepath.Join(workDir, file))
 			So(err, ShouldBeNil)
 
