@@ -51,6 +51,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/basedirs"
 	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
@@ -552,18 +553,13 @@ func TestWalk(t *testing.T) {
 
 		So(jobs, ShouldResemble, jobsExpectation)
 
-		compareFileContents(t, walk1, fmt.Sprintf(`%[1]s
-%[1]s/a/test3
-%[1]s/a
-%[1]s/a/g
-%[1]s/a/g/h
-%[1]s/a/b
-%[1]s/a/b/f/test2.csv
-%[1]s/a/b/f
-%[1]s/a/b/c/test.txt
-%[1]s/a/b/c
-%[1]s/a/b/c/d
-%[1]s/a/b/c/d/e`, tmp))
+		expected := ""
+		for _, subPath := range []string{"", "/a", "/a/b", "/a/b/c", "/a/b/c/d", "/a/b/c/d/e",
+			"/a/b/c/test.txt", "/a/b/f", "/a/b/f/test2.csv", "/a/g", "/a/g/h", "/a/test3"} {
+			expected += encode.Base64Encode(tmp+subPath) + "\n"
+		}
+
+		compareFileContents(t, walk1, expected)
 
 		_, _, jobs, err = runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "2")
 		So(err, ShouldBeNil)
@@ -739,7 +735,7 @@ func TestStat(t *testing.T) {
 				return err
 			}
 
-			_, err = io.WriteString(walkFile, filepath.Join(tmp, path)+"\n")
+			_, err = io.WriteString(walkFile, encode.Base64Encode(filepath.Join(tmp, path))+"\n")
 			So(err, ShouldBeNil)
 
 			return nil

@@ -36,6 +36,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 const errTestFail = Error("test fail")
@@ -194,7 +195,7 @@ func createScanInput(t *testing.T) io.Reader {
 	t.Helper()
 
 	pathEmpty, pathContent := createTestFiles(t)
-	r := strings.NewReader(pathEmpty + "\n/foo/bar\n" + pathContent)
+	r := strings.NewReader(encode.Base64Encode(pathEmpty) + "\n" + encode.Base64Encode("/foo/bar") + "\n" + encode.Base64Encode(pathContent))
 
 	return r
 }
