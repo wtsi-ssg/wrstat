@@ -31,6 +31,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 const userOnlyPerm = 0700
@@ -100,7 +102,7 @@ func NewFiles(outDir string, n int) (*Files, error) {
 // It will terminate the walk if writes to our output files fail.
 func (f *Files) WritePaths() PathCallback {
 	return func(entry *Dirent) error {
-		return f.writePath(entry.Path)
+		return f.writePath(encode.Base64Encode(entry.Path))
 	}
 }
 

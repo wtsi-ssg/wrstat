@@ -28,11 +28,12 @@
 package stat
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io/fs"
 	"os"
 	"syscall"
+
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 type FileType string
@@ -93,7 +94,7 @@ func (fs *FileStats) correctSize(stat *syscall.Stat_t) {
 // calculated correctly (the info only contains the basename).
 func File(absPath string, info os.FileInfo) *FileStats {
 	fs := &FileStats{
-		Base64Path: base64Encode(absPath),
+		Base64Path: encode.Base64Encode(absPath),
 		Size:       info.Size(),
 		Type:       modeToType(info.Mode()),
 	}
@@ -112,11 +113,6 @@ func File(absPath string, info os.FileInfo) *FileStats {
 	}
 
 	return fs
-}
-
-// base64Encode encodes the given string in base64.
-func base64Encode(val string) string {
-	return base64.StdEncoding.EncodeToString([]byte(val))
 }
 
 // modeToType turns a FileMode retrieved from a FileInfo into one of our

@@ -34,6 +34,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 func TestStatFile(t *testing.T) {
@@ -70,8 +71,8 @@ func TestStatFile(t *testing.T) {
 	})
 
 	Convey("base64Encode() works correctly", t, func() {
-		So(base64Encode("/a/path/reg"), ShouldEqual, "L2EvcGF0aC9yZWc=")
-		So(base64Encode("/a/path/link"), ShouldEqual, "L2EvcGF0aC9saW5r")
+		So(encode.Base64Encode("/a/path/reg"), ShouldEqual, "L2EvcGF0aC9yZWc=")
+		So(encode.Base64Encode("/a/path/link"), ShouldEqual, "L2EvcGF0aC9saW5r")
 	})
 
 	Convey("File() returns the correct interpretation of FileInfo", t, func() {
