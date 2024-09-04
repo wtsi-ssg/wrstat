@@ -520,7 +520,7 @@ func TestWalk(t *testing.T) {
 			So(err, ShouldBeNil)
 		}
 
-		for _, file := range [...]string{"/a/b/c/test.txt", "/a/b/f/test2.csv", "/a/test3"} {
+		for _, file := range [...]string{"/a/b/c/test.txt", "/a/b/f/tes\nt2.csv", "/a/test3"} {
 			writeFileString(t, filepath.Join(tmp, file), "")
 		}
 
@@ -555,7 +555,7 @@ func TestWalk(t *testing.T) {
 
 		expected := ""
 		for _, subPath := range []string{"", "/a", "/a/b", "/a/b/c", "/a/b/c/d", "/a/b/c/d/e",
-			"/a/b/c/test.txt", "/a/b/f", "/a/b/f/test2.csv", "/a/g", "/a/g/h", "/a/test3"} {
+			"/a/b/c/test.txt", "/a/b/f", "/a/b/f/tes\nt2.csv", "/a/g", "/a/g/h", "/a/test3"} {
 			expected += encode.Base64Encode(tmp+subPath) + "\n"
 		}
 
