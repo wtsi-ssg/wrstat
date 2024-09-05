@@ -55,9 +55,9 @@ var statCmd = &cobra.Command{
 	Short: "Stat paths",
 	Long: `Stat paths in a given file.
 
-Given a file containing an absolute file path per line (eg. as produced by
-'wrstat walk'), this creates a new file with stats for each of those file paths.
-The new file is named after the input file with a ".stats" suffix.
+Given a file containing a base64 encoded absolute file path per line (eg. as
+produced by 'wrstat walk'), this creates a new file with stats for each of those
+file paths. The new file is named after the input file with a ".stats" suffix.
 
 The output file format is 11 tab separated columns with the following contents:
 1. Base64 encoded path to the file.
