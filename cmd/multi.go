@@ -142,7 +142,7 @@ exists, and you have a wrstat server using the database files inside, the server
 will automatically start using the new data and delete the old.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		checkMultiArgs(args)
-		err := doMultiScheduling(args)
+		err := doMultiScheduling(args, sudo)
 		if err != nil {
 			die("%s", err)
 		}
@@ -203,8 +203,8 @@ func checkStandardFlags() {
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
-func doMultiScheduling(args []string) error {
-	s, d := newScheduler(workDir, forcedQueue)
+func doMultiScheduling(args []string, sudo bool) error {
+	s, d := newScheduler(workDir, forcedQueue, sudo)
 	defer d()
 
 	unique := scheduler.UniqueString()
@@ -218,12 +218,11 @@ func doMultiScheduling(args []string) error {
 	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
 
 	if partialDirMerge != "" {
-		s.DisableSudo()
-
 		unique = scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
 	}
 
 	if createPartial {
+		s.DisableSudo()
 		schedulePartialSentinel(outputRoot, unique, s)
 
 		return nil

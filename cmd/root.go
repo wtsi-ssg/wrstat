@@ -146,14 +146,18 @@ func die(msg string, a ...interface{}) {
 // function you should defer.
 //
 // If you provide a non-blank queue, that queue will be used when scheduling.
-func newScheduler(cwd, queue string) (*scheduler.Scheduler, func()) {
+func newScheduler(cwd, queue string, sudo bool) (*scheduler.Scheduler, func()) {
 	if runJobs != "" {
-		return testScheduler()
+		return testScheduler(sudo)
 	}
 
-	s, err := scheduler.New(deployment, cwd, queue, connectTimeout, appLogger, sudo)
+	s, err := scheduler.New(deployment, cwd, queue, connectTimeout, appLogger)
 	if err != nil {
 		die("%s", err)
+	}
+
+	if sudo {
+		s.EnableSudo()
 	}
 
 	return s, func() {
@@ -199,6 +203,11 @@ func testPrint(jobs []*jobqueue.Job) {
 	json.NewEncoder(w).Encode(jobs) //nolint:errcheck,errchkjson
 }
 
-func testScheduler() (*scheduler.Scheduler, func()) {
-	return &scheduler.Scheduler{}, func() {}
+func testScheduler(sudo bool) (*scheduler.Scheduler, func()) {
+	s := &scheduler.Scheduler{}
+	if sudo {
+		s.EnableSudo()
+	}
+
+	return s, func() {}
 }
