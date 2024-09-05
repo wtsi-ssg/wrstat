@@ -129,6 +129,7 @@ func (p *Paths) Scan(paths io.Reader) error {
 
 func base64Decode(val string) (string, error) {
 	data, err := base64.StdEncoding.DecodeString(val)
+
 	return string(data), err
 }
 

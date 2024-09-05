@@ -195,7 +195,8 @@ func createScanInput(t *testing.T) io.Reader {
 	t.Helper()
 
 	pathEmpty, pathContent := createTestFiles(t)
-	r := strings.NewReader(encode.Base64Encode(pathEmpty) + "\n" + encode.Base64Encode("/foo/bar") + "\n" + encode.Base64Encode(pathContent))
+	r := strings.NewReader(encode.Base64Encode(pathEmpty) + "\n" +
+		encode.Base64Encode("/foo/bar") + "\n" + encode.Base64Encode(pathContent))
 
 	return r
 }
