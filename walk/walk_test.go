@@ -37,6 +37,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 const permNoWrite = 0500
@@ -225,7 +226,12 @@ func prepareTestDirs(t *testing.T) (string, string, map[string]int) {
 
 	replaceFileWithSymlink(t, paths)
 
-	return walkDir, outDir, paths
+	pathsEncoded := make(map[string]int, len(paths))
+	for k, v := range paths {
+		pathsEncoded[encode.Base64Encode(k)] = v
+	}
+
+	return walkDir, outDir, pathsEncoded
 }
 
 // fillDirWithFiles fills the given directory with files, size dirs wide and
@@ -236,7 +242,11 @@ func fillDirWithFiles(t *testing.T, dir string, size int, paths map[string]int) 
 	for i := 1; i <= size; i++ {
 		base := fmt.Sprintf("%d", i)
 		path := filepath.Join(dir, base)
+
 		filePath := path + ".file"
+		if len(paths) == 1 {
+			filePath += "\ntest"
+		}
 
 		paths[path] = 0
 		paths[filePath] = 0

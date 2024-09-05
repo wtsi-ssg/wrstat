@@ -51,6 +51,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/basedirs"
 	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
@@ -519,7 +520,7 @@ func TestWalk(t *testing.T) {
 			So(err, ShouldBeNil)
 		}
 
-		for _, file := range [...]string{"/a/b/c/test.txt", "/a/b/f/test2.csv", "/a/test3"} {
+		for _, file := range [...]string{"/a/b/c/test.txt", "/a/b/f/tes\nt2.csv", "/a/test3"} {
 			writeFileString(t, filepath.Join(tmp, file), "")
 		}
 
@@ -552,18 +553,13 @@ func TestWalk(t *testing.T) {
 
 		So(jobs, ShouldResemble, jobsExpectation)
 
-		compareFileContents(t, walk1, fmt.Sprintf(`%[1]s
-%[1]s/a/test3
-%[1]s/a
-%[1]s/a/g
-%[1]s/a/g/h
-%[1]s/a/b
-%[1]s/a/b/f/test2.csv
-%[1]s/a/b/f
-%[1]s/a/b/c/test.txt
-%[1]s/a/b/c
-%[1]s/a/b/c/d
-%[1]s/a/b/c/d/e`, tmp))
+		expected := ""
+		for _, subPath := range []string{"", "/a", "/a/b", "/a/b/c", "/a/b/c/d", "/a/b/c/d/e",
+			"/a/b/c/test.txt", "/a/b/f", "/a/b/f/tes\nt2.csv", "/a/g", "/a/g/h", "/a/test3"} {
+			expected += encode.Base64Encode(tmp+subPath) + "\n"
+		}
+
+		compareFileContents(t, walk1, expected)
 
 		_, _, jobs, err = runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "2")
 		So(err, ShouldBeNil)
@@ -679,9 +675,9 @@ func TestStat(t *testing.T) {
 			atimes, ctimes []int64
 		)
 
-		for _, stats := range [...]File{
+		for _, fileDefinition := range [...]File{
 			{
-				name:   "aDirectory/aFile",
+				name:   "aDirectory/aFile\nfile",
 				mtime:  time.Unix(7383773, 0),
 				length: 10,
 			},
@@ -702,13 +698,13 @@ func TestStat(t *testing.T) {
 				mtime: time.Unix(271828, 0),
 			},
 		} {
-			path := filepath.Join(tmp, stats.name)
+			path := filepath.Join(tmp, fileDefinition.name)
 
-			if stats.length > 0 {
+			if fileDefinition.length > 0 {
 				err := os.MkdirAll(filepath.Dir(path), 0755)
 				So(err, ShouldBeNil)
 
-				writeFileString(t, path, strings.Repeat("\x00", stats.length))
+				writeFileString(t, path, strings.Repeat("\x00", fileDefinition.length))
 			} else {
 				err := os.MkdirAll(path, 0755)
 				So(err, ShouldBeNil)
@@ -725,13 +721,13 @@ func TestStat(t *testing.T) {
 			atimes = append(atimes, statt.Atim.Sec)
 			ctimes = append(ctimes, statt.Ctim.Sec)
 
-			err = os.Chtimes(path, time.Time{}, stats.mtime)
+			err = os.Chtimes(path, time.Time{}, fileDefinition.mtime)
 			So(err, ShouldBeNil)
 		}
 
-		statDir := t.TempDir()
-		statFilePath := filepath.Join(statDir, "dir.walk")
-		statFile, err := os.Create(statFilePath)
+		workDir := t.TempDir()
+		walkFilePath := filepath.Join(workDir, "dir.walk")
+		walkFile, err := os.Create(walkFilePath)
 		So(err, ShouldBeNil)
 
 		err = fs.WalkDir(os.DirFS(tmp), ".", func(path string, _ fs.DirEntry, err error) error {
@@ -739,17 +735,17 @@ func TestStat(t *testing.T) {
 				return err
 			}
 
-			_, err = io.WriteString(statFile, filepath.Join(tmp, path)+"\n")
+			_, err = io.WriteString(walkFile, encode.Base64Encode(filepath.Join(tmp, path))+"\n")
 			So(err, ShouldBeNil)
 
 			return nil
 		})
 		So(err, ShouldBeNil)
 
-		err = statFile.Close()
+		err = walkFile.Close()
 		So(err, ShouldBeNil)
 
-		_, _, jobs, err := runWRStat("stat", statFilePath)
+		_, _, jobs, err := runWRStat("stat", walkFilePath)
 
 		So(err, ShouldBeNil)
 		So(len(jobs), ShouldEqual, 0)
@@ -770,7 +766,7 @@ func TestStat(t *testing.T) {
 			u.Gid,
 			base64.StdEncoding.EncodeToString([]byte(tmp)),
 			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "aDirectory"))),
-			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "aDirectory", "aFile"))),
+			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "aDirectory", "aFile\nfile"))),
 			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "aDirectory", "aSubDirectory"))),
 			base64.StdEncoding.EncodeToString([]byte(filepath.Join(tmp, "anotherDirectory"))),
 			inodes[4],
@@ -834,7 +830,11 @@ func TestStat(t *testing.T) {
 			"dir.walk.byusergroup": userGroupExpectation, "dir.walk.dgut": walkExpectations,
 			"dir.walk.log": "",
 		} {
-			f, err := os.Open(filepath.Join(statDir, file))
+			if file != "dir.walk.stats" {
+				continue
+			}
+
+			f, err := os.Open(filepath.Join(workDir, file))
 			So(err, ShouldBeNil)
 
 			data, err := io.ReadAll(f)

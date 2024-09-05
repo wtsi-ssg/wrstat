@@ -27,6 +27,7 @@ package stat
 
 import (
 	"bufio"
+	"encoding/base64"
 	"io"
 	"io/fs"
 	"sync"
@@ -85,9 +86,9 @@ func (p *Paths) AddOperation(name string, op Operation) error {
 	return nil
 }
 
-// Scan scans through the given reader which should consist of an absolute file
-// path per line. It calls our Statter.Lstat() on each, and passes the absolute
-// path and FileInfo to any Operation callbacks you've added.
+// Scan scans through the given reader which should consist of a base64 encoded
+// absolute file path per line. It calls our Statter.Lstat() on each, and passes
+// the absolute path and FileInfo to any Operation callbacks you've added.
 //
 // Operations are run concurrently (so should not do something like write to the
 // same file) and their errors logged, but otherwise ignored.
@@ -104,7 +105,11 @@ func (p *Paths) Scan(paths io.Reader) error {
 	var wg sync.WaitGroup
 
 	for scanner.Scan() {
-		path := scanner.Text()
+		path, err := base64Decode(scanner.Text())
+		if err != nil {
+			return err
+		}
+
 		info, err := p.timeLstat(r, path)
 
 		wg.Wait()
@@ -120,6 +125,12 @@ func (p *Paths) Scan(paths io.Reader) error {
 	p.stopReporting()
 
 	return scanner.Err()
+}
+
+func base64Decode(val string) (string, error) {
+	data, err := base64.StdEncoding.DecodeString(val)
+
+	return string(data), err
 }
 
 // startReporting calls StartReproting on all our reporters.
