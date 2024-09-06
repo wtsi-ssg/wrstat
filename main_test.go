@@ -191,93 +191,12 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 	date := time.Now().Format("20060102")
 
-	Convey("A partial 'wrstat multi' command produces the correct jobs to run", func() {
-		workingDir := t.TempDir()
-		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "-p", "/some/path", "/some-other/path")...)
-		So(err, ShouldBeNil)
+	Convey("A partial 'wrstat multi' command produces the correct jobs to run, with sudo enabled", func() {
+		testPartial(t, true, subcommand, date, walkReqs, touchReqs, combineReqs)
+	})
 
-		So(len(jobs), ShouldEqual, 5)
-		So(len(jobs[0].DepGroups), ShouldEqual, 1)
-		So(len(jobs[1].DepGroups), ShouldEqual, 1)
-		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
-
-		walk1DepGroup := jobs[0].DepGroups[0]
-		walk2DepGroup := jobs[1].DepGroups[0]
-		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
-
-		expectation := []*jobqueue.Job{
-			{
-				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
-					" wrstat-stat-path-%[4]s-%[3]s /some/path",
-					walk1DepGroup, workingDir, repGroup, date),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-walk",
-				Requirements: walkReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{walk1DepGroup},
-			},
-			{
-				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
-					" -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
-					workingDir, repGroup, date),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-walk",
-				Requirements: walkReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{walk2DepGroup},
-			},
-			{
-				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk1DepGroup),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-combine",
-				Requirements: combineReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{repGroup},
-				Dependencies: jobqueue.Dependencies{
-					{
-						DepGroup: walk1DepGroup,
-					},
-				},
-			},
-			{
-				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk2DepGroup),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-combine",
-				Requirements: combineReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{repGroup},
-				Dependencies: jobqueue.Dependencies{
-					{
-						DepGroup: walk2DepGroup,
-					},
-				},
-			},
-			{
-				Cmd:          fmt.Sprintf("touch %s/%s/combine.complete", workingDir, repGroup),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-touchSentinel-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-sentinel",
-				Requirements: touchReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{repGroup + ".sentinel"},
-				Dependencies: jobqueue.Dependencies{
-					{
-						DepGroup: repGroup,
-					},
-				},
-			},
-		}
-
-		So(jobs, ShouldResemble, expectation)
+	Convey("A partial 'wrstat multi' command produces the correct jobs to run, with sudo not enabled", func() {
+		testPartial(t, false, subcommand, date, walkReqs, touchReqs, combineReqs)
 	})
 
 	Convey("A full 'wrstat multi' command produces the correct jobs to run", func() {
@@ -295,11 +214,14 @@ func multiTests(t *testing.T, subcommand ...string) {
 		walk2DepGroup := jobs[1].DepGroups[0]
 		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
 
+		exe, err := filepath.Abs(app)
+		So(err, ShouldBeNil)
+
 		expectation := []*jobqueue.Job{
 			{
-				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
+				Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
 					" wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
-					workingDir, repGroup, date),
+					workingDir, repGroup, date, exe),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -309,9 +231,9 @@ func multiTests(t *testing.T, subcommand ...string) {
 				DepGroups:    []string{walk1DepGroup},
 			},
 			{
-				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
+				Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
 					" wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
-					workingDir, repGroup, date),
+					workingDir, repGroup, date, exe),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -321,7 +243,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				DepGroups:    []string{walk2DepGroup},
 			},
 			{
-				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk1DepGroup),
+				Cmd:          fmt.Sprintf("%s combine %s/%s/path/%s", exe, workingDir, repGroup, walk1DepGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-combine",
@@ -336,7 +258,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk2DepGroup),
+				Cmd:          fmt.Sprintf("%s combine %s/%s/path/%s", exe, workingDir, repGroup, walk2DepGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-combine",
@@ -351,8 +273,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd: fmt.Sprintf(" basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"",
-					workingDir, repGroup),
+				Cmd: fmt.Sprintf("%s basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"",
+					exe, workingDir, repGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-basedir-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-basedir",
@@ -367,7 +289,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf(" tidy -f final_output -d %s %s/%s", date, workingDir, repGroup),
+				Cmd:          fmt.Sprintf("%s tidy -f final_output -d %s %s/%s", exe, date, workingDir, repGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-tidy-final_output-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-tidy",
@@ -400,10 +322,13 @@ func multiTests(t *testing.T, subcommand ...string) {
 		walk2DepGroup := jobs[1].DepGroups[0]
 		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
 
+		exe, err := filepath.Abs(app)
+		So(err, ShouldBeNil)
+
 		expectation := []*jobqueue.Job{
 			{
-				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
-					" -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date),
+				Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
+					" -i wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup, workingDir, repGroup, date, exe),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -413,8 +338,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 				DepGroups:    []string{walk1DepGroup},
 			},
 			{
-				Cmd: fmt.Sprintf(" walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
-					" -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date),
+				Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
+					" -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup, workingDir, repGroup, date, exe),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-walk",
@@ -424,7 +349,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				DepGroups:    []string{walk2DepGroup},
 			},
 			{
-				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk1DepGroup),
+				Cmd:          fmt.Sprintf("%s combine %s/%s/path/%s", exe, workingDir, repGroup, walk1DepGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-combine",
@@ -439,7 +364,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf(" combine %s/%s/path/%s", workingDir, repGroup, walk2DepGroup),
+				Cmd:          fmt.Sprintf("%s combine %s/%s/path/%s", exe, workingDir, repGroup, walk2DepGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-combine",
@@ -454,7 +379,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf(" mergedbs  \"/path/to/partial_merge\" \"%s/%s\"", workingDir, repGroup),
+				Cmd:          fmt.Sprintf("%s mergedbs  \"/path/to/partial_merge\" \"%s/%s\"", exe, workingDir, repGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-mergedirs-partial_merge-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-merge",
@@ -469,8 +394,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd: fmt.Sprintf(" basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"",
-					workingDir, repGroup),
+				Cmd: fmt.Sprintf("%s basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"",
+					exe, workingDir, repGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-basedir-%s-%s.merge", date, repGroup),
 				ReqGroup:     "wrstat-basedir",
@@ -485,7 +410,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf(" tidy -f final_output -d %s %s/%s", date, workingDir, repGroup),
+				Cmd:          fmt.Sprintf("%s tidy -f final_output -d %s %s/%s", exe, date, workingDir, repGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-tidy-final_output-%s-%s.merge", date, repGroup),
 				ReqGroup:     "wrstat-tidy",
@@ -502,6 +427,112 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 		So(jobs, ShouldResemble, expectation)
 	})
+}
+
+func testPartial(t *testing.T, sudo bool, subcommand []string, date string, walkReqs,
+	touchReqs, combineReqs *scheduler.Requirements) {
+	t.Helper()
+
+	workingDir := t.TempDir()
+
+	args := append(subcommand, "-w", workingDir, "-p", "/some/path", "/some-other/path") //nolint:gocritic
+	prefix := ""
+	extraArg := ""
+
+	if sudo {
+		prefix += "sudo "
+		extraArg += " --sudo"
+		args = slices.Insert(args, 1, "--sudo")
+	}
+
+	_, _, jobs, err := runWRStat(args...)
+	So(err, ShouldBeNil)
+
+	So(len(jobs), ShouldEqual, 5)
+	So(len(jobs[0].DepGroups), ShouldEqual, 1)
+	So(len(jobs[1].DepGroups), ShouldEqual, 1)
+	So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
+
+	walk1DepGroup := jobs[0].DepGroups[0]
+	walk2DepGroup := jobs[1].DepGroups[0]
+	repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
+
+	exe, err := filepath.Abs(app)
+	So(err, ShouldBeNil)
+
+	expectation := []*jobqueue.Job{
+		{
+			Cmd: fmt.Sprintf("%[5]s%[7]s walk -n 1000000%[6]s  -d %[1]s -o %[2]s/%[3]s/path/%[1]s -i"+
+				" wrstat-stat-path-%[4]s-%[3]s /some/path",
+				walk1DepGroup, workingDir, repGroup, date, prefix, extraArg, exe),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-walk",
+			Requirements: walkReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{walk1DepGroup},
+		},
+		{
+			Cmd: fmt.Sprintf("%[5]s%[7]s walk -n 1000000%[6]s  -d %[1]s -o %[2]s/%[3]s/path/%[1]s"+
+				" -i wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
+				workingDir, repGroup, date, prefix, extraArg, exe),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-walk",
+			Requirements: walkReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{walk2DepGroup},
+		},
+		{
+			Cmd:          fmt.Sprintf("%s%s combine %s/%s/path/%s", prefix, exe, workingDir, repGroup, walk1DepGroup),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-combine",
+			Requirements: combineReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{repGroup},
+			Dependencies: jobqueue.Dependencies{
+				{
+					DepGroup: walk1DepGroup,
+				},
+			},
+		},
+		{
+			Cmd:          fmt.Sprintf("%s%s combine %s/%s/path/%s", prefix, exe, workingDir, repGroup, walk2DepGroup),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-combine",
+			Requirements: combineReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{repGroup},
+			Dependencies: jobqueue.Dependencies{
+				{
+					DepGroup: walk2DepGroup,
+				},
+			},
+		},
+		{
+			Cmd:          fmt.Sprintf("touch %s/%s/combine.complete", workingDir, repGroup),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-touchSentinel-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-sentinel",
+			Requirements: touchReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{repGroup + ".sentinel"},
+			Dependencies: jobqueue.Dependencies{
+				{
+					DepGroup: repGroup,
+				},
+			},
+		},
+	}
+
+	So(jobs, ShouldResemble, expectation)
 }
 
 func TestMulti(t *testing.T) {
@@ -531,9 +562,12 @@ func TestWalk(t *testing.T) {
 
 		walk1 := filepath.Join(out, "walk.1")
 
+		exe, err := filepath.Abs(app)
+		So(err, ShouldBeNil)
+
 		jobsExpectation := []*jobqueue.Job{
 			{
-				Cmd:        " stat " + walk1,
+				Cmd:        exe + " stat " + walk1,
 				CwdMatters: true,
 				RepGroup:   "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:   "wrstat-stat",
@@ -568,7 +602,7 @@ func TestWalk(t *testing.T) {
 
 		jobsExpectation = []*jobqueue.Job{
 			{
-				Cmd:        " stat " + walk1,
+				Cmd:        exe + " stat " + walk1,
 				CwdMatters: true,
 				RepGroup:   "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:   "wrstat-stat",
@@ -583,7 +617,7 @@ func TestWalk(t *testing.T) {
 				DepGroups: []string{depgroup},
 			},
 			{
-				Cmd:        " stat " + walk2,
+				Cmd:        exe + " stat " + walk2,
 				CwdMatters: true,
 				RepGroup:   "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:   "wrstat-stat",

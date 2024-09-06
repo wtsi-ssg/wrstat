@@ -61,12 +61,10 @@ type Scheduler struct {
 }
 
 // New returns a Scheduler that is connected to wr manager using the given
-// deployment, timeout and logger. If sudo is true, NewJob() will prefix 'sudo'
-// to commands. Added jobs will have the given cwd, which matters. If cwd is
-// blank, the current working dir is used. If queue is not blank, that queue
-// will be used during NewJob().
-func New(deployment, cwd, queue string, timeout time.Duration, logger log15.Logger,
-	sudo bool) (*Scheduler, error) {
+// deployment, timeout and logger. Added jobs will have the given cwd, which
+// matters. If cwd is blank, the current working dir is used. If queue is not
+// blank, that queue will be used during NewJob().
+func New(deployment, cwd, queue string, timeout time.Duration, logger log15.Logger) (*Scheduler, error) {
 	cwd, err := pickCWD(cwd)
 	if err != nil {
 		return nil, err
@@ -85,12 +83,17 @@ func New(deployment, cwd, queue string, timeout time.Duration, logger log15.Logg
 		exe:   exe,
 		queue: queue,
 		jq:    jq,
-		sudo:  sudo,
 	}, err
 }
 
+// DisableSudo is used to disable sudo if it was enabled with EnableSudo.
 func (s *Scheduler) DisableSudo() {
 	s.sudo = false
+}
+
+// EnableSudo causes NewJob() to prefix 'sudo' to commands.
+func (s *Scheduler) EnableSudo() {
+	s.sudo = true
 }
 
 // pickCWD checks the given directory exists, returns an error. If the given
@@ -108,6 +111,13 @@ func pickCWD(cwd string) (string, error) {
 // Executable is a convenience function that returns the same as
 // os.Executable(), but without the error.
 func (s *Scheduler) Executable() string {
+	if s.exe == "" {
+		exe, err := os.Executable()
+		if err == nil {
+			s.exe = exe
+		}
+	}
+
 	return s.exe
 }
 

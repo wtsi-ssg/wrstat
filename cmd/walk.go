@@ -89,7 +89,7 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		desiredDir := checkArgs(outputDir, depGroup, args)
 
-		s, d := newScheduler("", forcedQueue)
+		s, d := newScheduler("", forcedQueue, sudo)
 		defer d()
 
 		if walkID == "" {
