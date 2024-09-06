@@ -538,7 +538,7 @@ func testPartial(t *testing.T, sudo bool, subcommand []string, date string, walk
 	Convey("…finishing the partial run runs the correct jobs", func() {
 		workingDir := t.TempDir()
 		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "-f", "final_output", "-q", "quota_file",
-			"-o", "owners_file", "-c", "/some/path", "/some-other/path")...)
+			"-o", "owners_file", "-z", "/some/path", "/some-other/path")...)
 		So(err, ShouldBeNil)
 
 		So(len(jobs), ShouldEqual, 2)
