@@ -162,7 +162,8 @@ func init() {
 		"from specified directory after merging")
 	multiCmd.Flags().BoolVarP(&createPartial, "create_partial_dir", "p", false, "perform the walk, "+
 		"stat, and combine steps only")
-	multiCmd.Flags().BoolVarP(&finishPartial, "partial_dir_finish", "z", false, "perform the basedir and tidy step on a partial run")
+	multiCmd.Flags().BoolVarP(&finishPartial, "partial_dir_finish", "z", false, "perform the basedir "+
+		"and tidy step on a partial run")
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
@@ -217,7 +218,7 @@ func doMultiScheduling(args []string, sudo bool) error {
 		return err
 	}
 
-	if !finishPartial {
+	if !finishPartial { //nolint:nestif
 		scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
 
 		if partialDirMerge != "" {
