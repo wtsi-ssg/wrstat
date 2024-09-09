@@ -192,11 +192,11 @@ func multiTests(t *testing.T, subcommand ...string) {
 	date := time.Now().Format("20060102")
 
 	Convey("A partial 'wrstat multi' command produces the correct jobs to run, with sudo enabled", func() {
-		testPartial(t, true, subcommand, date, walkReqs, touchReqs, combineReqs)
+		testPartial(t, true, subcommand, date, walkReqs, touchReqs, combineReqs, baseDirsReqs, tidyReqs)
 	})
 
 	Convey("A partial 'wrstat multi' command produces the correct jobs to run, with sudo not enabled", func() {
-		testPartial(t, false, subcommand, date, walkReqs, touchReqs, combineReqs)
+		testPartial(t, false, subcommand, date, walkReqs, touchReqs, combineReqs, baseDirsReqs, tidyReqs)
 	})
 
 	Convey("A full 'wrstat multi' command produces the correct jobs to run", func() {
@@ -430,7 +430,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 }
 
 func testPartial(t *testing.T, sudo bool, subcommand []string, date string, walkReqs,
-	touchReqs, combineReqs *scheduler.Requirements) {
+	touchReqs, combineReqs, baseDirsReqs, tidyReqs *scheduler.Requirements,
+) {
 	t.Helper()
 
 	workingDir := t.TempDir()
@@ -533,6 +534,51 @@ func testPartial(t *testing.T, sudo bool, subcommand []string, date string, walk
 	}
 
 	So(jobs, ShouldResemble, expectation)
+
+	Convey("…finishing the partial run runs the correct jobs", func() {
+		workingDir := t.TempDir()
+		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "-f", "final_output", "-q", "quota_file",
+			"-o", "owners_file", "-z", "/some/path", "/some-other/path")...)
+		So(err, ShouldBeNil)
+
+		So(len(jobs), ShouldEqual, 2)
+
+		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
+		expectation := []*jobqueue.Job{
+			{
+				Cmd: fmt.Sprintf("%s basedir -q \"quota_file\" -o \"owners_file\"  \"%s/%s\" \"final_output\"",
+					exe, workingDir, repGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-basedir-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-basedir",
+				Requirements: baseDirsReqs,
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{repGroup + ".basedir"},
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: repGroup,
+					},
+				},
+			},
+			{
+				Cmd:          fmt.Sprintf("%s tidy -f final_output -d %s %s/%s", exe, date, workingDir, repGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-tidy-final_output-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-tidy",
+				Requirements: tidyReqs,
+				Override:     1,
+				Retries:      30,
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: repGroup + ".basedir",
+					},
+				},
+			},
+		}
+
+		So(jobs, ShouldResemble, expectation)
+	})
 }
 
 func TestMulti(t *testing.T) {
@@ -588,8 +634,10 @@ func TestWalk(t *testing.T) {
 		So(jobs, ShouldResemble, jobsExpectation)
 
 		expected := ""
-		for _, subPath := range []string{"", "/a", "/a/b", "/a/b/c", "/a/b/c/d", "/a/b/c/d/e",
-			"/a/b/c/test.txt", "/a/b/f", "/a/b/f/tes\nt2.csv", "/a/g", "/a/g/h", "/a/test3"} {
+		for _, subPath := range []string{
+			"", "/a", "/a/b", "/a/b/c", "/a/b/c/d", "/a/b/c/d/e",
+			"/a/b/c/test.txt", "/a/b/f", "/a/b/f/tes\nt2.csv", "/a/g", "/a/g/h", "/a/test3",
+		} {
 			expected += encode.Base64Encode(tmp+subPath) + "\n"
 		}
 
