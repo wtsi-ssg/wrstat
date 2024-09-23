@@ -213,6 +213,7 @@ func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath strin
 
 	for i, path := range outPaths {
 		jobs[i] = s.NewJob(cmd+path, repGrp, "wrstat-stat", depGroup, "", req)
+		jobs[i].LimitGroups = []string{"wrstat-stat"}
 	}
 
 	addJobsToQueue(s, jobs)
