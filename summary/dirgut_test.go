@@ -35,6 +35,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 func TestDirGUTFileType(t *testing.T) {
@@ -389,12 +390,12 @@ func TestDirGUT(t *testing.T) {
 					So(errr, ShouldBeNil)
 					output := string(o)
 
-					So(output, ShouldContainSubstring, "/a/b/c/d\t2\t10\t7\t1\t2\t200\t200\n")
-					So(output, ShouldContainSubstring, "/a/b/c\t"+cuidKey+"\t2\t30\t0\t0\n")
-					So(output, ShouldContainSubstring, "/a/b\t"+cuidKey+"\t3\t60\t0\t0\n")
-					So(output, ShouldContainSubstring, "/a/b\t2\t2\t13\t1\t5\t0\t0\n")
-					So(output, ShouldContainSubstring, "/a/b\t2\t2\t6\t1\t3\t100\t0\n")
-					So(output, ShouldContainSubstring, "/\t3\t2\t13\t1\t6\t0\t0\n")
+					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c/d")+"\t2\t10\t7\t1\t2\t200\t200\n")
+					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c")+"\t"+cuidKey+"\t2\t30\t0\t0\n")
+					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+"\t"+cuidKey+"\t3\t60\t0\t0\n")
+					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+"\t2\t2\t13\t1\t5\t0\t0\n")
+					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+"\t2\t2\t6\t1\t3\t100\t0\n")
+					So(output, ShouldContainSubstring, encode.Base64Encode("/")+"\t3\t2\t13\t1\t6\t0\t0\n")
 
 					So(checkFileIsSorted(outPath), ShouldBeTrue)
 				})

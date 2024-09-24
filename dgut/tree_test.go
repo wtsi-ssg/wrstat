@@ -32,6 +32,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/internal/fs"
 	"github.com/wtsi-ssg/wrstat/v5/internal/split"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
@@ -227,11 +228,11 @@ func TestTree(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		db := NewDB(paths1[0])
-		data := strings.NewReader("/\t1\t11\t6\t1\t1\t20\t20\n" +
-			"/a\t1\t11\t6\t1\t1\t20\t20\n" +
-			"/a/b\t1\t11\t6\t1\t1\t20\t20\n" +
-			"/a/b/c\t1\t11\t6\t1\t1\t20\t20\n" +
-			"/a/b/c/d\t1\t11\t6\t1\t1\t20\t20\n")
+		data := strings.NewReader(encode.Base64Encode("/") + "\t1\t11\t6\t1\t1\t20\t20\n" +
+			encode.Base64Encode("/a") + "\t1\t11\t6\t1\t1\t20\t20\n" +
+			encode.Base64Encode("/a/b") + "\t1\t11\t6\t1\t1\t20\t20\n" +
+			encode.Base64Encode("/a/b/c") + "\t1\t11\t6\t1\t1\t20\t20\n" +
+			encode.Base64Encode("/a/b/c/d") + "\t1\t11\t6\t1\t1\t20\t20\n")
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 
@@ -239,11 +240,11 @@ func TestTree(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		db = NewDB(paths2[0])
-		data = strings.NewReader("/\t1\t11\t6\t1\t1\t15\t15\n" +
-			"/a\t1\t11\t6\t1\t1\t15\t15\n" +
-			"/a/b\t1\t11\t6\t1\t1\t15\t15\n" +
-			"/a/b/c\t1\t11\t6\t1\t1\t15\t15\n" +
-			"/a/b/c/e\t1\t11\t6\t1\t1\t15\t15\n")
+		data = strings.NewReader(encode.Base64Encode("/") + "\t1\t11\t6\t1\t1\t15\t15\n" +
+			encode.Base64Encode("/a") + "\t1\t11\t6\t1\t1\t15\t15\n" +
+			encode.Base64Encode("/a/b") + "\t1\t11\t6\t1\t1\t15\t15\n" +
+			encode.Base64Encode("/a/b/c") + "\t1\t11\t6\t1\t1\t15\t15\n" +
+			encode.Base64Encode("/a/b/c/e") + "\t1\t11\t6\t1\t1\t15\t15\n")
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 

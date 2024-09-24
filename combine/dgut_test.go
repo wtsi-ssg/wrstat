@@ -36,6 +36,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/dgut"
 	"github.com/wtsi-ssg/wrstat/v5/fs"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
@@ -121,7 +122,7 @@ func buildDGUTContent(directory, gid, uid string, filetype, nestedFiles,
 	splitDir := recursivePath(directory)
 
 	for _, split := range splitDir {
-		DGUTContents += split + fmt.Sprintf("\t%s\t%s\t%d\t%d\t%d\t%d\t%d\n",
+		DGUTContents += encode.Base64Encode(split) + fmt.Sprintf("\t%s\t%s\t%d\t%d\t%d\t%d\t%d\n",
 			gid, uid, filetype, nestedFiles, fileSize, oldestAtime, newestAtime)
 	}
 
