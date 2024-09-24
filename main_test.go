@@ -1618,47 +1618,46 @@ func TestEnd2End(t *testing.T) {
 		buildSif := exec.Command("singularity", "build", sif, "docker://okteto/golang:1.22")
 		So(buildSif.Run(), ShouldBeNil)
 
-		writeFileString(t, buildScript, "#!/bin/bash\n"+
-			"git clone --depth 1 --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr &&"+
-			"cd /opt/wr/ && GOPATH=/build/ make install\n"+
-			"cd /opt/wrstat && GOPATH=/build/ make install\n"+
-			"chmod -R +w /build")
-		writeFileString(t, runScript, "#!/bin/bash\n"+
-			"export PATH=\"/build/bin:$PATH\"\n"+
-			"\n"+
-			"stop() {\n"+
-			"	wr manager stop\n"+
-			"\n"+
-			"	exit ${1:-0}\n"+
-			"}\n"+
-			"\n"+
-			"trap stop SIGINT\n"+
-			"trap stop EXIT\n"+
-			"\n"+
-			"waitForJobs() {\n"+
-			"	until [ $(wr status | wc -l) -le 1 ]; do \n"+
-			"		if [ $(wr status -b | wc -l ) -gt 1 ]; then\n"+
-			"			stop 1\n"+
-			"		fi;\n"+
-			"\n"+
-			"		sleep 1s\n"+
-			"	done\n"+
-			"}\n"+
-			"\n"+
-			"mkdir -p /tmp/working/partial/\n"+
-			"mkdir -p /tmp/working/complete/\n"+
-			"mkdir -p /tmp/final/\n"+
-			"\n"+
-			"yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1\n"+
-			"\n"+
-			"wrstat multi -m 0 -p -w /tmp/working/partial/ /simple/*\n"+
-			"waitForJobs\n"+
-			"\n"+
-			"wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial "+
-			"-q /tmp/quota -b /tmp/basedirs -o /tmp/owners /objects/*\n"+
-			"waitForJobs\n"+
-			"\n"+
-			"stop")
+		writeFileString(t, buildScript, `#!/bin/bash
+git clone --depth 1 --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr &&
+cd /opt/wr/ && GOPATH=/build/ make install;
+cd /opt/wrstat && GOPATH=/build/ make install;
+chmod -R +w /build;`)
+		writeFileString(t, runScript, `#!/bin/bash
+export PATH="/build/bin:$PATH";
+
+stop() {
+	wr manager stop;
+
+	exit ${1:-0};
+}
+
+trap stop SIGINT;
+trap stop EXIT;
+
+waitForJobs() {
+	until [ $(wr status | wc -l) -le 1 ]; do
+		if [ $(wr status -b | wc -l ) -gt 1 ]; then
+			stop 1;
+		fi;
+
+		sleep 1s;
+	done;
+}
+
+mkdir -p /tmp/working/partial/;
+mkdir -p /tmp/working/complete/;
+mkdir -p /tmp/final/;
+
+yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1;
+
+wrstat multi -m 0 -p -w /tmp/working/partial/ /simple/*;
+waitForJobs;
+
+wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial -q /tmp/quota -b /tmp/basedirs -o /tmp/owners /objects/*;
+waitForJobs;
+
+stop;`)
 		writeFileString(t, filepath.Join(tmpTemp, "owners"), "")
 		writeFileString(t, filepath.Join(tmpTemp, "quota"), "")
 		writeFileString(t, filepath.Join(tmpTemp, "basedirs"),
@@ -1724,11 +1723,11 @@ func TestEnd2End(t *testing.T) {
 		root.Create("objects/store2/part1/other.bed", UserD, GroupA, 999)
 		root.Mkdir("objects/store2/part1/other", UserD, GroupA)
 		root.Create("objects/store2/part1/other/my.tmp.gz", UserD, GroupD, 1024)
-		root.Mkdir("objects/store2/part1/other/myDir", UserD, GroupA)
-		root.Create("objects/store2/part1/other/myDir/my.tmp.old", UserD, GroupA, 2048)
+		root.Mkdir("objects/store2/part1/other/my\nDir", UserD, GroupA)
+		root.Create("objects/store2/part1/other/my\nDir/my.tmp.old", UserD, GroupA, 2048)
 		root.Mkdir("objects/store2/important", 0, 0)
-		root.Mkdir("objects/store2/important/docs", UserB, GroupD)
-		root.Create("objects/store2/important/docs/my.doc", UserB, GroupD, 1200)
+		root.Mkdir("objects/store2/important/docs\t", UserB, GroupD)
+		root.Create("objects/store2/important/docs\t/my.doc", UserB, GroupD, 1200)
 		root.Create("objects/store3/aFile", UserA, GroupA, 1024)
 
 		root.Mkdir("simple", 0, 0)
@@ -1777,10 +1776,10 @@ func TestEnd2End(t *testing.T) {
 				"U%[1]d\t\t/objects/store2/part0/teams/team1\t%[6]d\t300\t0\t2\t0\tOK\n"+
 				"U%[1]d\t\t/simple/A\t%[6]d\t1\t0\t1\t0\tOK\n"+
 				"U%[2]d\t\t/objects/store1/data/dbs\t%[6]d\t66666\t0\t2\t0\tOK\n"+
-				"U%[2]d\t\t/objects/store2/important/docs\t%[6]d\t1200\t0\t1\t0\tOK\n"+
+				"U%[2]d\t\t/objects/store2/important/docs\t\t%[6]d\t1200\t0\t1\t0\tOK\n"+
 				"U%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
 				"U%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
-				"U%[4]d\t\t/objects/store2/part1/other/myDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
+				"U%[4]d\t\t/objects/store2/part1/other/my\nDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
 				"U%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK",
 				UserA, UserB, UserC, UserD, UserE,
 				time.Now().Unix()/86400),
@@ -1789,11 +1788,11 @@ func TestEnd2End(t *testing.T) {
 				"G%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tNot OK\n"+
 				"G%[1]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tNot OK\n"+
 				"G%[1]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t100\t0\t1\t0\tNot OK\n"+
-				"G%[1]d\t\t/objects/store2/part1/other/myDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
+				"G%[1]d\t\t/objects/store2/part1/other/my\nDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
 				"G%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tNot OK\n"+
 				"G%[2]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t200\t0\t1\t0\tNot OK\n"+
 				"G%[2]d\t\t/objects/store2/part0/teams/team2\t%[5]d\t1000\t0\t1\t0\tNot OK\n"+
-				"G%[3]d\t\t/objects/store2/important/docs\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
+				"G%[3]d\t\t/objects/store2/important/docs\t\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
 				"G%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK",
 				GroupA, GroupB, GroupD, GroupE,
 				time.Now().Unix()/86400),
@@ -1864,13 +1863,13 @@ func TestEnd2End(t *testing.T) {
 				"U%[2]d\tG%[6]d\t/objects\t1\t1200\n"+
 				"U%[2]d\tG%[6]d\t/objects/store2\t1\t1200\n"+
 				"U%[2]d\tG%[6]d\t/objects/store2/important\t1\t1200\n"+
-				"U%[2]d\tG%[6]d\t/objects/store2/important/docs\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t/objects/store2/important/docs\t\t1\t1200\n"+
 				"U%[3]d\tG%[4]d\t/\t2\t3047\n"+
 				"U%[3]d\tG%[4]d\t/objects\t2\t3047\n"+
 				"U%[3]d\tG%[4]d\t/objects/store2\t2\t3047\n"+
 				"U%[3]d\tG%[4]d\t/objects/store2/part1\t2\t3047\n"+
 				"U%[3]d\tG%[4]d\t/objects/store2/part1/other\t1\t2048\n"+
-				"U%[3]d\tG%[4]d\t/objects/store2/part1/other/myDir\t1\t2048\n"+
+				"U%[3]d\tG%[4]d\t/objects/store2/part1/other/my\nDir\t1\t2048\n"+
 				"U%[3]d\tG%[6]d\t/\t1\t1024\n"+
 				"U%[3]d\tG%[6]d\t/objects\t1\t1024\n"+
 				"U%[3]d\tG%[6]d\t/objects/store2\t1\t1024\n"+
@@ -1918,12 +1917,12 @@ func TestEnd2End(t *testing.T) {
 				encode.Base64Encode("/objects/store2/part1")+"\t0\t0\t0\t123\t123\t123\td\t\x00\t3\t32\n"+
 				encode.Base64Encode("/objects/store2/part1/other/my.tmp.gz")+"\t512\t%[1]d\t%[3]d\t128\t128\t128\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store2/part1/other")+"\t0\t%[1]d\t%[2]d\t133\t133\t133\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store2/part1/other/myDir/my.tmp.old")+
+				encode.Base64Encode("/objects/store2/part1/other/my\nDir/my.tmp.old")+
 				"\t512\t%[1]d\t%[2]d\t139\t139\t139\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part1/other/myDir")+"\t0\t%[1]d\t%[2]d\t139\t139\t139\td\t\x00\t2\t32\n"+
+				encode.Base64Encode("/objects/store2/part1/other/my\nDir")+"\t0\t%[1]d\t%[2]d\t139\t139\t139\td\t\x00\t2\t32\n"+
 				encode.Base64Encode("/objects/store2/important")+"\t0\t0\t0\t146\t146\t146\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store2/important/docs/my.doc")+"\t512\t%[4]d\t%[3]d\t151\t151\t151\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/important/docs")+"\t0\t%[4]d\t%[3]d\t151\t151\t151\td\t\x00\t2\t32\n"+
+				encode.Base64Encode("/objects/store2/important/docs\t/my.doc")+"\t512\t%[4]d\t%[3]d\t151\t151\t151\tf\t\x00\t1\t34\n"+
+				encode.Base64Encode("/objects/store2/important/docs\t")+"\t0\t%[4]d\t%[3]d\t151\t151\t151\td\t\x00\t2\t32\n"+
 				encode.Base64Encode("/objects/store2/part0")+"\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n"+
 				encode.Base64Encode("/objects/store2/part0/teams")+"\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n"+
 				encode.Base64Encode("/objects/store2/part0/teams/team2/c.txt")+
@@ -1958,10 +1957,10 @@ func TestEnd2End(t *testing.T) {
 			"%[1]d\t\t/objects/store2/part0/teams/team1\t%[6]d\t300\t0\t2\t0\tOK\n"+
 			"%[1]d\t\t/simple/A\t%[6]d\t1\t0\t1\t0\tOK\n"+
 			"%[2]d\t\t/objects/store1/data/dbs\t%[6]d\t66666\t0\t2\t0\tOK\n"+
-			"%[2]d\t\t/objects/store2/important/docs\t%[6]d\t1200\t0\t1\t0\tOK\n"+
+			"%[2]d\t\t/objects/store2/important/docs\t\t%[6]d\t1200\t0\t1\t0\tOK\n"+
 			"%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
 			"%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
-			"%[4]d\t\t/objects/store2/part1/other/myDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
+			"%[4]d\t\t/objects/store2/part1/other/my\nDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
 			"%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK\n",
 			UserA, UserB, UserC, UserD, UserE,
 			time.Now().Unix()/86400)
@@ -1971,11 +1970,11 @@ func TestEnd2End(t *testing.T) {
 			"%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tNot OK\n"+
 			"%[1]d\t\t/objects/store1/data/temp\t%[5]d\t6000\t0\t3\t0\tNot OK\n"+
 			"%[1]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t100\t0\t1\t0\tNot OK\n"+
-			"%[1]d\t\t/objects/store2/part1/other/myDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
+			"%[1]d\t\t/objects/store2/part1/other/my\nDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
 			"%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tNot OK\n"+
 			"%[2]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t200\t0\t1\t0\tNot OK\n"+
 			"%[2]d\t\t/objects/store2/part0/teams/team2\t%[5]d\t1000\t0\t1\t0\tNot OK\n"+
-			"%[3]d\t\t/objects/store2/important/docs\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
+			"%[3]d\t\t/objects/store2/important/docs\t\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
 			"%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK\n",
 			GroupA, GroupB, GroupD, GroupE,
 			time.Now().Unix()/86400)
