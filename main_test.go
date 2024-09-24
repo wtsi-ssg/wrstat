@@ -959,8 +959,10 @@ func TestCombine(t *testing.T) {
 				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
 				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t2\t3\t8202\t1721915848\t7383773\n" +
 				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t15\t2\t8192\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") + "\t2000\t1000\t2\t1\t4096\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") + "\t2000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
+				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") +
+				"\t2000\t1000\t2\t1\t4096\t1721915848\t314159\n" +
+				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") +
+				"\t2000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
 				encode.Base64Encode("/some/directory/001/anotherDirectory") + "\t2000\t1000\t2\t1\t4096\t1721915848\t282820\n" +
 				encode.Base64Encode("/some/directory/001/anotherDirectory") + "\t2000\t1000\t15\t1\t4096\t1721915848\t282820\n",
 			"a.log": "A log file\nwith 2 lines\n",
@@ -1916,17 +1918,20 @@ func TestEnd2End(t *testing.T) {
 				encode.Base64Encode("/objects/store2/part1")+"\t0\t0\t0\t123\t123\t123\td\t\x00\t3\t32\n"+
 				encode.Base64Encode("/objects/store2/part1/other/my.tmp.gz")+"\t512\t%[1]d\t%[3]d\t128\t128\t128\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store2/part1/other")+"\t0\t%[1]d\t%[2]d\t133\t133\t133\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store2/part1/other/myDir/my.tmp.old")+"\t512\t%[1]d\t%[2]d\t139\t139\t139\tf\t\x00\t1\t34\n"+
+				encode.Base64Encode("/objects/store2/part1/other/myDir/my.tmp.old")+
+				"\t512\t%[1]d\t%[2]d\t139\t139\t139\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store2/part1/other/myDir")+"\t0\t%[1]d\t%[2]d\t139\t139\t139\td\t\x00\t2\t32\n"+
 				encode.Base64Encode("/objects/store2/important")+"\t0\t0\t0\t146\t146\t146\td\t\x00\t3\t32\n"+
 				encode.Base64Encode("/objects/store2/important/docs/my.doc")+"\t512\t%[4]d\t%[3]d\t151\t151\t151\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store2/important/docs")+"\t0\t%[4]d\t%[3]d\t151\t151\t151\td\t\x00\t2\t32\n"+
 				encode.Base64Encode("/objects/store2/part0")+"\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n"+
 				encode.Base64Encode("/objects/store2/part0/teams")+"\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n"+
-				encode.Base64Encode("/objects/store2/part0/teams/team2/c.txt")+"\t512\t%[4]d\t%[5]d\t115\t115\t115\tf\t\x00\t1\t34\n"+
+				encode.Base64Encode("/objects/store2/part0/teams/team2/c.txt")+
+				"\t512\t%[4]d\t%[5]d\t115\t115\t115\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store2/part0/teams/team2")+"\t0\t%[4]d\t%[5]d\t115\t115\t115\td\t\x00\t2\t32\n"+
 				encode.Base64Encode("/objects/store2/part0/teams/team1/a.txt")+"\t100\t%[6]d\t%[2]d\t98\t98\t98\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part0/teams/team1/b.txt")+"\t200\t%[6]d\t%[5]d\t104\t104\t104\tf\t\x00\t1\t34\n"+
+				encode.Base64Encode("/objects/store2/part0/teams/team1/b.txt")+
+				"\t200\t%[6]d\t%[5]d\t104\t104\t104\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store2/part0/teams/team1")+"\t0\t%[6]d\t%[2]d\t104\t104\t104\td\t\x00\t2\t32",
 				UserD, GroupA, GroupD, UserB, GroupB, UserA),
 			"????????_store3.*.stats.gz": fmt.Sprintf(""+
