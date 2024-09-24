@@ -1654,7 +1654,8 @@ yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores
 wrstat multi -m 0 -p -w /tmp/working/partial/ /simple/*;
 waitForJobs;
 
-wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l /tmp/working/partial -q /tmp/quota -b /tmp/basedirs -o /tmp/owners /objects/*;
+wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l `+
+			`/tmp/working/partial -q /tmp/quota -b /tmp/basedirs -o /tmp/owners /objects/*;
 waitForJobs;
 
 stop;`)
@@ -1921,7 +1922,8 @@ stop;`)
 				"\t512\t%[1]d\t%[2]d\t139\t139\t139\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store2/part1/other/my\nDir")+"\t0\t%[1]d\t%[2]d\t139\t139\t139\td\t\x00\t2\t32\n"+
 				encode.Base64Encode("/objects/store2/important")+"\t0\t0\t0\t146\t146\t146\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store2/important/docs\t/my.doc")+"\t512\t%[4]d\t%[3]d\t151\t151\t151\tf\t\x00\t1\t34\n"+
+				encode.Base64Encode("/objects/store2/important/docs\t/my.doc")+
+				"\t512\t%[4]d\t%[3]d\t151\t151\t151\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store2/important/docs\t")+"\t0\t%[4]d\t%[3]d\t151\t151\t151\td\t\x00\t2\t32\n"+
 				encode.Base64Encode("/objects/store2/part0")+"\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n"+
 				encode.Base64Encode("/objects/store2/part0/teams")+"\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n"+
