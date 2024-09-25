@@ -116,6 +116,8 @@ func init() {
 		0, "force a specific number of parallel stat jobs (ignore -n if above 0)")
 	cronCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	cronCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
+	cronCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
+		"force queues with this substring to be avoided when scheduling jobs")
 	cronCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
 	cronCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	cronCmd.Flags().IntVarP(&maxMem, "max_mem", "m",

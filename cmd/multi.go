@@ -61,6 +61,7 @@ var (
 	multiStatJobs       int
 	multiCh             string
 	forcedQueue         string
+	queuesToAvoid       string
 	quota               string
 	maxMem              int
 	multiBasedirsConfig string
@@ -170,6 +171,8 @@ func init() {
 		0, "force a specific number of parallel stat jobs (ignore -n if above 0)")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
+	multiCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
+		"force queues with this substring to be avoided when scheduling jobs")
 	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
 	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", basedirRAM, "maximum MBs to reserve for any job")
@@ -207,7 +210,7 @@ func checkStandardFlags() {
 
 // doMultiScheduling does the main work of the multi sub-command.
 func doMultiScheduling(args []string, sudo bool) error {
-	s, d := newScheduler(workDir, forcedQueue, sudo)
+	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo) // TODO
 	defer d()
 
 	unique := scheduler.UniqueString()

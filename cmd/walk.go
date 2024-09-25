@@ -68,11 +68,10 @@ user that can sudo without a password when running wrstat, and supply the --sudo
 option to this command.
 
 For each entry recursively within the directory of interest, their paths are
-quickly retrieved (without doing any expensive stat calls) and written (base64
-encoded) to output files in the given output directory. The number of files is
-such that they will each contain about --inodes_per_stat entries (or if
---num_stats was supplied greater than zero, then there will be that number of
-output files).
+quickly retrieved (without doing any expensive stat calls) and written to output
+files in the given output directory. The number of files is such that they will
+each contain about --inodes_per_stat entries (or if --num_stats was supplied
+greater than zero, then there will be that number of output files).
 
 For each output file, a 'wrstat stat' job is then added to wr's queue with the
 given dependency group. For the meaning of the --ch option which is passed
@@ -89,7 +88,7 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		desiredDir := checkArgs(outputDir, depGroup, args)
 
-		s, d := newScheduler("", forcedQueue, sudo)
+		s, d := newScheduler("", forcedQueue, queuesToAvoid, sudo)
 		defer d()
 
 		if walkID == "" {
@@ -120,6 +119,8 @@ func init() {
 		"dependency group that stat jobs added to wr will belong to")
 	walkCmd.Flags().StringVar(&walkCh, "ch", "", "passed through to 'wrstat stat'")
 	walkCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
+	walkCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
+		"force queues with this substring to be avoided when scheduling jobs")
 }
 
 // checkArgs checks we have required args and returns desired dir.

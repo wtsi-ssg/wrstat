@@ -64,7 +64,7 @@ func TestStatFile(t *testing.T) {
 		defer server.Stop(ctx, true)
 
 		Convey("You can make a Scheduler", func() {
-			s, err := New(deployment, "", "", timeout, logger)
+			s, err := New(deployment, "", "", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -131,7 +131,7 @@ func TestStatFile(t *testing.T) {
 		Convey("You can make a Scheduler with a specified cwd and it creates jobs in there", func() {
 			cwd := t.TempDir()
 
-			s, err := New(deployment, cwd, "", timeout, logger)
+			s, err := New(deployment, cwd, "", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -144,19 +144,19 @@ func TestStatFile(t *testing.T) {
 			d := cdNonExistantDir(t)
 			defer d()
 
-			s, err := New(deployment, "", "", timeout, logger)
+			s, err := New(deployment, "", "", "", timeout, logger)
 			So(err, ShouldNotBeNil)
 			So(s, ShouldBeNil)
 		})
 
 		Convey("You can't create a Scheduler if you pass an invalid dir", func() {
-			s, err := New(deployment, "/non_existent", "", timeout, logger)
+			s, err := New(deployment, "/non_existent", "", "", timeout, logger)
 			So(err, ShouldNotBeNil)
 			So(s, ShouldBeNil)
 		})
 
 		Convey("You can make a Scheduler that creates sudo jobs", func() {
-			s, err := New(deployment, "", "", timeout, logger)
+			s, err := New(deployment, "", "", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 			s.EnableSudo()
@@ -166,7 +166,7 @@ func TestStatFile(t *testing.T) {
 		})
 
 		Convey("You can make a Scheduler with a Req override", func() {
-			s, err := New(deployment, "", "", timeout, logger)
+			s, err := New(deployment, "", "", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -179,7 +179,7 @@ func TestStatFile(t *testing.T) {
 		})
 
 		Convey("You can make a Scheduler with a queue override", func() {
-			s, err := New(deployment, "", "foo", timeout, logger)
+			s, err := New(deployment, "", "foo", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -190,13 +190,24 @@ func TestStatFile(t *testing.T) {
 			So(job.Override, ShouldEqual, 0)
 			So(job.Requirements.Other, ShouldResemble, map[string]string{"scheduler_queue": "foo"})
 		})
+
+		Convey("You can make a Scheduler with queues to avoid", func() {
+			s, err := New(deployment, "", "", "avoid", timeout, logger)
+			So(err, ShouldBeNil)
+			So(s, ShouldNotBeNil)
+			dreq := DefaultRequirements()
+			job := s.NewJob("cmd", "rep", "req", "", "", nil)
+			So(job.Requirements.RAM, ShouldEqual, dreq.RAM)
+			So(job.Override, ShouldEqual, 0)
+			So(job.Requirements.Other, ShouldResemble, map[string]string{"scheduler_queues_avoid": "avoid"})
+		})
 	})
 
 	Convey("When the jobqueue server is not up, you can't make a Scheduler", t, func() {
 		_, d := prepareWrConfig(t)
 		defer d()
 
-		s, err := New(deployment, "", "", timeout, logger)
+		s, err := New(deployment, "", "", "", timeout, logger)
 		So(err, ShouldNotBeNil)
 		So(s, ShouldBeNil)
 	})
