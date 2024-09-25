@@ -71,8 +71,8 @@ func TestStatFile(t *testing.T) {
 	})
 
 	Convey("base64Encode() works correctly", t, func() {
-		So(encode.Base64Encode("/a/path/reg"), ShouldEqual, "L2EvcGF0aC9yZWc=")
-		So(encode.Base64Encode("/a/path/link"), ShouldEqual, "L2EvcGF0aC9saW5r")
+		So(encode.Base64Encode("/a/path/reg"), ShouldEqual, "9q2jQ43oO0xmNKQ=")
+		So(encode.Base64Encode("/a/path/link"), ShouldEqual, "9q2jQ43oO0xgOKtf")
 	})
 
 	Convey("File() returns the correct interpretation of FileInfo", t, func() {
@@ -128,7 +128,7 @@ func testFileStats(path string, size int64, filetype string) {
 
 	So(stats.ToString(), ShouldEqual, fmt.Sprintf(
 		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
-		"L2Ficy9wYXRoL3RvL2ZpbGU=", size, stat.Uid, stat.Gid,
+		encode.Base64Encode("/abs/path/to/file"), size, stat.Uid, stat.Gid,
 		stat.Atim.Sec, stat.Mtim.Sec, stat.Ctim.Sec,
 		filetype, stat.Ino, stat.Nlink, stat.Dev))
 }

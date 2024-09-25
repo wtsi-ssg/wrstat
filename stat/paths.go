@@ -27,13 +27,13 @@ package stat
 
 import (
 	"bufio"
-	"encoding/base64"
 	"io"
 	"io/fs"
 	"sync"
 	"time"
 
 	"github.com/inconshreveable/log15"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/reporter"
 )
 
@@ -105,7 +105,7 @@ func (p *Paths) Scan(paths io.Reader) error {
 	var wg sync.WaitGroup
 
 	for scanner.Scan() {
-		path, err := base64Decode(scanner.Text())
+		path, err := encode.Base64Decode(scanner.Text())
 		if err != nil {
 			return err
 		}
@@ -125,12 +125,6 @@ func (p *Paths) Scan(paths io.Reader) error {
 	p.stopReporting()
 
 	return scanner.Err()
-}
-
-func base64Decode(val string) (string, error) {
-	data, err := base64.StdEncoding.DecodeString(val)
-
-	return string(data), err
 }
 
 // startReporting calls StartReproting on all our reporters.

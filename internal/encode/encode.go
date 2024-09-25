@@ -27,9 +27,37 @@
 
 package encode
 
-import "encoding/base64"
+import (
+	"encoding/base64"
+	"unsafe"
+)
 
-// Base64Encode encodes the given string in base64.
+var encoding = base64.NewEncoding("+/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz") //nolint:gochecknoglobals,lll
+
+// Base64Encode encodes the given string to a lexically ordered base64.
 func Base64Encode(val string) string {
-	return base64.StdEncoding.EncodeToString([]byte(val))
+	if val == "" {
+		return ""
+	}
+
+	buf := make([]byte, encoding.EncodedLen(len(val)))
+
+	encoding.Encode(buf, unsafe.Slice(unsafe.StringData(val), len(val)))
+
+	return unsafe.String(&buf[0], len(buf))
+}
+
+// Base64Decode decodes the given encoded string from a lexically ordered Base64
+// encoding.
+func Base64Decode(val string) (string, error) {
+	if val == "" {
+		return "", nil
+	}
+
+	str, err := encoding.DecodeString(val)
+	if err != nil {
+		return "", err
+	}
+
+	return unsafe.String(&str[0], len(str)), nil
 }

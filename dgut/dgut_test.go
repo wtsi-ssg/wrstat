@@ -34,41 +34,42 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ugorji/go/codec"
 	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
 func TestDGUT(t *testing.T) {
 	Convey("You can parse a single line of dgut data", t, func() {
-		line := "/\t1\t101\t0\t3\t30\t50\t50\n"
+		line := encode.Base64Encode("/") + "\t1\t101\t0\t3\t30\t50\t50\n"
 		dir, gut, err := parseDGUTLine(line)
 		So(err, ShouldBeNil)
 		So(dir, ShouldEqual, "/")
 		So(gut, ShouldResemble, &GUT{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30, Atime: 50, Mtime: 50})
 
 		Convey("But invalid data won't parse", func() {
-			_, _, err = parseDGUTLine("/\t1\t101\t0\t3\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\t3\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine("/\tfoo\t101\t0\t3\t30\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\tfoo\t101\t0\t3\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine("/\t1\tfoo\t0\t3\t30\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\tfoo\t0\t3\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine("/\t1\t101\tfoo\t3\t30\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\tfoo\t3\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine("/\t1\t101\t0\tfoo\t30\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\tfoo\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine("/\t1\t101\t0\t3\tfoo\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\t3\tfoo\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine("/\t1\t101\t0\t3\t30\tfoo\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\t3\t30\tfoo\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine("/\t1\t101\t0\t3\t30\t50\tfoo\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\t3\t30\t50\tfoo\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			So(err.Error(), ShouldEqual, "the provided data was not in dgut format")
@@ -379,9 +380,9 @@ func TestDGUT(t *testing.T) {
 					})
 
 					Convey("Store()ing multiple times", func() {
-						data = strings.NewReader("/\t3\t103\t7\t2\t2\t25\t25\n" +
-							"/a/i\t3\t103\t7\t1\t1\t25\t25\n" +
-							"/i\t3\t103\t7\t1\t1\t30\t30\n")
+						data = strings.NewReader(encode.Base64Encode("/") + "\t3\t103\t7\t2\t2\t25\t25\n" +
+							encode.Base64Encode("/a/i") + "\t3\t103\t7\t1\t1\t25\t25\n" +
+							encode.Base64Encode("/i") + "\t3\t103\t7\t1\t1\t30\t30\n")
 
 						Convey("to the same db file doesn't work", func() {
 							err = db.Store(data, 4)

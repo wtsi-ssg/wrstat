@@ -27,7 +27,6 @@
 package combine
 
 import (
-	b64 "encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,6 +34,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/fs"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 // TestStatFiles tests that the stat files concatenate and compress properly.
@@ -53,7 +53,7 @@ func TestStatFiles(t *testing.T) {
 				actualContent, err := fs.ReadCompressedFile(outputPath)
 				So(err, ShouldBeNil)
 
-				encodedDir := b64.StdEncoding.EncodeToString([]byte(dir))
+				encodedDir := encode.Base64Encode(dir)
 
 				expectedOutput := fmt.Sprintf(
 					"%s\t5\t345\t152\t217434\t82183\t147\t'f'\t3\t7\t28472\t\n"+
@@ -82,7 +82,7 @@ func buildStatFiles(t *testing.T) (string, []*os.File, *os.File, string) {
 
 		_, err = f.WriteString(fmt.Sprintf(
 			"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%q\t%d\t%d\t%d\t\n",
-			b64.StdEncoding.EncodeToString([]byte(dir)),
+			encode.Base64Encode(dir),
 			5+i,
 			345,
 			152,

@@ -32,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
@@ -113,12 +114,17 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 		return "", nil, ErrBlankLine
 	}
 
+	path, err := encode.Base64Decode(parts[0])
+	if err != nil {
+		return "", nil, err
+	}
+
 	ints, err := gutLinePartsToInts(parts)
 	if err != nil {
 		return "", nil, err
 	}
 
-	return parts[0], &GUT{
+	return path, &GUT{
 		GID:   uint32(ints[0]),
 		UID:   uint32(ints[1]),
 		FT:    summary.DirGUTFileType(ints[2]),

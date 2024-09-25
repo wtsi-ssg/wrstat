@@ -34,6 +34,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 // DirGUTFileType is one of the special file types that the
@@ -473,7 +475,11 @@ func (d *DirGroupUserType) Output(output StringCloser) error {
 
 		for j, dgut := range dguts {
 			s := summaries[j]
-			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\n", dir, dgut, s.count, s.size, s.atime, s.mtime))
+			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\n",
+				encode.Base64Encode(dir),
+				dgut,
+				s.count, s.size,
+				s.atime, s.mtime))
 
 			if errw != nil {
 				return errw
