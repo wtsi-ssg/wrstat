@@ -83,7 +83,7 @@ invocations of cron, do 'sudo wrstsat cron --kill'.
 
 		taskr := tasker.New(tasker.Option{})
 		taskr.Task(crontab, func(ctx context.Context) (int, error) {
-			err := doMultiScheduling(args, sudo)
+			err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, sudo)
 
 			if runJobs != "" {
 				os.Exit(0)

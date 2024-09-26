@@ -144,7 +144,7 @@ exists, and you have a wrstat server using the database files inside, the server
 will automatically start using the new data and delete the old.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		checkMultiArgs(args)
-		err := doMultiScheduling(args, sudo)
+		err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, sudo)
 		if err != nil {
 			die("%s", err)
 		}
@@ -209,8 +209,8 @@ func checkStandardFlags() {
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
-func doMultiScheduling(args []string, sudo bool) error {
-	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo) // TODO
+func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string, sudo bool) error {
+	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
 	unique := scheduler.UniqueString()
