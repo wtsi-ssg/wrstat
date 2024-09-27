@@ -222,7 +222,7 @@ func (s *Scheduler) determineOverrideAndReq(req *jqs.Requirements) (*jqs.Require
 		req.Other = other
 	}
 
-	return req, uint8(override) //nolint:gosec
+	return req, uint8(override)
 }
 
 // SubmitJobs adds the given jobs to wr's queue, passing through current

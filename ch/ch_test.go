@@ -471,7 +471,7 @@ func (b *badInfo) Size() int64 { return -1 }
 
 func (b *badInfo) Mode() fs.FileMode {
 	if b.perm != 0 {
-		return fs.FileMode(b.perm) //nolint:gosec
+		return fs.FileMode(b.perm)
 	}
 
 	return os.ModePerm

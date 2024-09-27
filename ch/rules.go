@@ -221,7 +221,7 @@ func defaultUserToUID(userName string) (uint32, error) {
 		return 0, err
 	}
 
-	return uint32(uid), nil //nolint:gosec
+	return uint32(uid), nil
 }
 
 func defaultGroupToGID(groupName string) (uint32, error) {
@@ -235,7 +235,7 @@ func defaultGroupToGID(groupName string) (uint32, error) {
 		return 0, err
 	}
 
-	return uint32(gid), nil //nolint:gosec
+	return uint32(gid), nil
 }
 
 func defaultDirToUser(directory string) (uint32, error) {
