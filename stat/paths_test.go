@@ -150,6 +150,7 @@ func addTestOperations(p *Paths) (*int, *int) {
 	checkN := 0
 	err := p.AddOperation("check", func(absPath string, info fs.FileInfo) error {
 		<-time.After(5 * time.Millisecond)
+
 		checkN++
 
 		return checkFileDetails(absPath, info)

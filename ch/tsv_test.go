@@ -67,6 +67,7 @@ func TestTSV(t *testing.T) {
 				So(len(cols), ShouldEqual, 5)
 				So(cols[0], ShouldStartWith, "/")
 				So(cols[4], ShouldNotEndWith, "\n")
+
 				rules++
 			}
 

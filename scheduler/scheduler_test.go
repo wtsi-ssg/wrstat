@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -60,6 +61,7 @@ func TestStatFile(t *testing.T) {
 	Convey("When the jobqueue server is up", t, func() {
 		config, d := prepareWrConfig(t)
 		defer d()
+
 		server := serve(t, config)
 		defer server.Stop(ctx, true)
 
@@ -115,6 +117,7 @@ func TestStatFile(t *testing.T) {
 
 				Convey("which you can't add to the queue if the server is down", func() {
 					server.Stop(ctx, true)
+
 					err = s.SubmitJobs([]*jobqueue.Job{job, job2})
 					So(err, ShouldNotBeNil)
 				})
@@ -195,6 +198,7 @@ func TestStatFile(t *testing.T) {
 			s, err := New(deployment, "", "", "avoid", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
+
 			dreq := DefaultRequirements()
 			job := s.NewJob("cmd", "rep", "req", "", "", nil)
 			So(job.Requirements.RAM, ShouldEqual, dreq.RAM)
@@ -282,8 +286,8 @@ func prepareWrConfig(t *testing.T) (jobqueue.ServerConfig, func()) {
 	}
 
 	config := jobqueue.ServerConfig{
-		Port:            fmt.Sprintf("%d", clientPort),
-		WebPort:         fmt.Sprintf("%d", webPort),
+		Port:            strconv.Itoa(clientPort),
+		WebPort:         strconv.Itoa(webPort),
 		SchedulerName:   "local",
 		SchedulerConfig: &jqs.ConfigLocal{Shell: "bash"},
 		DBFile:          filepath.Join(managerDirActual, "db"),
@@ -348,11 +352,11 @@ func serveWithRetries(t *testing.T, config jobqueue.ServerConfig) (server *jobqu
 
 			ticker.Stop()
 
-			return
+			return server, err
 		case <-limit:
 			ticker.Stop()
 
-			return
+			return server, err
 		}
 	}
 }

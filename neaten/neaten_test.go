@@ -39,7 +39,7 @@ import (
 
 const modePermUser = 0770
 
-func TestTidy(t *testing.T) { //nolint:gocognit
+func TestTidy(t *testing.T) {
 	date := "20220829"
 	srcUniversal := "cci4fafnu1ia052l75sg"
 	srcUniqueGo := "cci4fafnu1ia052l75t0"

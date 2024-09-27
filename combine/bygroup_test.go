@@ -54,8 +54,6 @@ func TestByGroupFiles(t *testing.T) {
 				So(err, ShouldBeNil)
 
 				actualContent := string(b)
-				So(err, ShouldBeNil)
-
 				expectedContent := "group1\tuser1\t3\t5\ngroup2\tuser2\t7\t9\ngroup3\tuser3\t11\t13\n"
 				So(actualContent, ShouldEqual, expectedContent)
 			})

@@ -45,8 +45,8 @@ type Statter interface {
 	Lstat(path string) (info fs.FileInfo, err error)
 }
 
-// StatterWithTimeout is is a Statter implementation. NB: this is NOT thread
-// safe; you should only call Lstat() one at a time.
+// StatterWithTimeout is a Statter implementation. NB: this is NOT thread safe;
+// you should only call Lstat() one at a time.
 type StatterWithTimeout struct {
 	timeout         time.Duration
 	maxAttempts     int
@@ -83,7 +83,7 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 
 		timer.Stop()
 
-		return
+		return info, err
 	case <-timer.C:
 		if s.currentAttempts <= s.maxAttempts {
 			s.logger.Warn("an lstat call exceeded timeout, will retry", "path", path, "attempts", s.currentAttempts)
@@ -96,7 +96,7 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 		err = errLstatSlow
 		s.currentAttempts = 0
 
-		return
+		return info, err
 	}
 }
 

@@ -27,9 +27,9 @@
 package neaten
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -48,6 +48,7 @@ func TestCopyDB(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		makeFakeDgutDB(t, sourceDir, 0)
+
 		destSubFolders := 3
 		for i := 0; i < destSubFolders; i++ {
 			makeFakeDgutDB(t, destDir, i)
@@ -99,7 +100,7 @@ func makeFakeDgutDB(t *testing.T, dir string, subFolderNum int) {
 }
 
 func subDir(dir string, subFolderNum int) string {
-	return filepath.Join(dir, fmt.Sprintf("%d", subFolderNum))
+	return filepath.Join(dir, strconv.Itoa(subFolderNum))
 }
 
 func checkDgutDBDir(t *testing.T, dir string, subFolderNum int) error {

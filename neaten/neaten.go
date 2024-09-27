@@ -32,6 +32,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -302,7 +303,7 @@ func (t *Tidy) findAndMoveDBs(inSuffix, outSuffix string) error {
 			return err
 		}
 
-		dest := filepath.Join(dbsDir, fmt.Sprintf("%d", i))
+		dest := filepath.Join(dbsDir, strconv.Itoa(i))
 
 		err = t.renameAndCorrectPerms(source, dest)
 		if err != nil {
@@ -339,7 +340,7 @@ func (t *Tidy) makeDBsDir(dgutDBsSuffix string) (string, error) {
 // matchPermsInsideDir does matchPerms for all the files in the given dir
 // recursively.
 func (t *Tidy) matchPermsInsideDir(dir string) error {
-	return filepath.WalkDir(dir, func(path string, de fs.DirEntry, err error) error {
+	return filepath.WalkDir(dir, func(path string, _ fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

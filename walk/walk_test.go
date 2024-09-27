@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -46,9 +47,11 @@ func TestWalk(t *testing.T) {
 	Convey("Given a directory to walk and an output directory", t, func() {
 		walkDir, outDir, expectedPaths := prepareTestDirs(t)
 
-		var mu sync.Mutex
+		var (
+			mu         sync.Mutex
+			walkErrors []error
+		)
 
-		var walkErrors []error
 		cb := func(_ string, err error) {
 			mu.Lock()
 			defer mu.Unlock()
@@ -68,8 +71,8 @@ func TestWalk(t *testing.T) {
 			n := 4
 			files, err := NewFiles(outDir, n)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths(), true, false)
 
+			w := New(files.WritePaths(), true, false)
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldBeNil)
 
@@ -85,9 +88,9 @@ func TestWalk(t *testing.T) {
 					So(files.Paths[i-1], ShouldEqual, outPath)
 
 					found, dups, _ := checkPaths(string(content), expectedPaths)
-
 					So(found, ShouldBeGreaterThanOrEqualTo, 20)
 					So(dups, ShouldEqual, 0)
+
 					totalFound += found
 				} else {
 					So(errr, ShouldNotBeNil)
@@ -118,18 +121,20 @@ func TestWalk(t *testing.T) {
 		Convey("Write errors during a walk are reported and the walk terminated", func() {
 			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths(), true, false)
 
+			w := New(files.WritePaths(), true, false)
 			err = files.files[0].Close()
 			So(err, ShouldBeNil)
 
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldNotBeNil)
+
 			lenErrors := len(walkErrors)
 			So(lenErrors, ShouldBeGreaterThanOrEqualTo, 1)
 			So(w.err, ShouldNotBeNil)
 
 			var writeError *WriteError
+
 			So(errors.As(walkErrors[0], &writeError), ShouldBeTrue)
 
 			werr := walkErrors[0].(*WriteError) //nolint:errcheck,errorlint,forcetypeassert
@@ -145,12 +150,14 @@ func TestWalk(t *testing.T) {
 		Convey("Read errors during a walk are reported and the path skipped", func() {
 			files, err := NewFiles(outDir, 1)
 			So(err, ShouldBeNil)
-			w := New(files.WritePaths(), true, false)
 
+			w := New(files.WritePaths(), true, false)
 			err = w.Walk("/root", cb)
 			So(err, ShouldBeNil)
 			So(len(walkErrors), ShouldEqual, 1)
+
 			var writeError *WriteError
+
 			So(errors.As(walkErrors[0], &writeError), ShouldBeFalse)
 
 			outPath := filepath.Join(outDir, "walk.1")
@@ -163,11 +170,13 @@ func TestWalk(t *testing.T) {
 			file := filepath.Join(tdir, "file")
 			f, err := os.Create(file)
 			So(err, ShouldBeNil)
+
 			err = f.Close()
 			So(err, ShouldBeNil)
 
 			info, err := os.Stat(file)
 			So(err, ShouldBeNil)
+
 			u, ok := info.Sys().(*syscall.Stat_t)
 			So(ok, ShouldBeTrue)
 			So(u.Ino, ShouldNotEqual, 0)
@@ -240,7 +249,7 @@ func fillDirWithFiles(t *testing.T, dir string, size int, paths map[string]int) 
 	t.Helper()
 
 	for i := 1; i <= size; i++ {
-		base := fmt.Sprintf("%d", i)
+		base := strconv.Itoa(i)
 		path := filepath.Join(dir, base)
 
 		filePath := path + ".file"

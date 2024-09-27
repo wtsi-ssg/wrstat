@@ -94,7 +94,7 @@ $ wrstat multi -w [/working/directory] -f [/final/output/dir] [/a /b /c]`,
 // the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		die(err.Error())
+		die(err.Error()) //nolint:govet
 	}
 }
 

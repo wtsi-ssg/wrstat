@@ -101,6 +101,7 @@ func TestCh(t *testing.T) {
 			humgenRule := dir + "\t*\t^\trw^rw^***\trw*rws***\n"
 			rs, err := NewRulesStore().FromTSV(NewTSVReader(strings.NewReader(humgenRule)))
 			So(err, ShouldBeNil)
+
 			ch := New(rs, l)
 			So(ch, ShouldNotBeNil)
 
@@ -194,6 +195,7 @@ func TestCh(t *testing.T) {
 
 				info, err = os.Lstat(slink)
 				So(err, ShouldBeNil)
+
 				_, gid := getIDsFromFileInfo(info)
 				So(gid, ShouldEqual, otherGID)
 
@@ -295,9 +297,9 @@ func createTestFiles(t *testing.T, primaryGID, otherGID int) (string, []string, 
 	return dir, []string{p1, p2, p3, p4}, []fs.FileInfo{i1, i2, i3, i4}
 }
 
-// createTestFile creates the given empty file and sets its group to to the
-// given GID and applies the given perms. Returns stat of the file created.
-// Fatal on error.
+// createTestFile creates the given empty file and sets its group to the given
+// GID and applies the given perms. Returns stat of the file created. Fatal on
+// error.
 func createTestFile(t *testing.T, path string, gid int, perms fs.FileMode) fs.FileInfo {
 	t.Helper()
 
@@ -412,7 +414,7 @@ func is660(t *testing.T, path string) bool {
 }
 
 // newLogger returns a logger that logs to the returned buffer.
-func newLogger() (*bytes.Buffer, log15.Logger) {
+func newLogger() (*bytes.Buffer, log15.Logger) { //nolint:ireturn
 	buff := new(bytes.Buffer)
 	l := log15.New()
 	l.SetHandler(log15.StreamHandler(buff, log15.LogfmtFormat()))
@@ -469,7 +471,7 @@ func (b *badInfo) Size() int64 { return -1 }
 
 func (b *badInfo) Mode() fs.FileMode {
 	if b.perm != 0 {
-		return fs.FileMode(b.perm)
+		return fs.FileMode(b.perm) //nolint:gosec
 	}
 
 	return os.ModePerm

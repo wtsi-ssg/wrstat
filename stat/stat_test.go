@@ -73,6 +73,7 @@ func TestLstat(t *testing.T) {
 				info, err = s.Lstat(pathContent)
 				So(err, ShouldNotBeNil)
 				So(info, ShouldBeNil)
+
 				logStr := buff.String()
 				So(logStr, ShouldContainSubstring, `lvl=warn msg="an lstat call exceeded timeout, will retry"`)
 				So(logStr, ShouldContainSubstring, `lvl=warn msg="an lstat call exceeded timeout, giving up"`)
@@ -82,9 +83,11 @@ func TestLstat(t *testing.T) {
 				So(logStr, ShouldNotContainSubstring, `attempts=4`)
 
 				buff.Reset()
+
 				info, err = s.Lstat("/foo")
 				So(err, ShouldNotBeNil)
 				So(info, ShouldBeNil)
+
 				logStr = buff.String()
 				So(logStr, ShouldContainSubstring, `lvl=warn msg="an lstat call exceeded timeout, will retry"`)
 				So(logStr, ShouldContainSubstring, `lvl=warn msg="an lstat call exceeded timeout, giving up"`)
@@ -98,7 +101,7 @@ func TestLstat(t *testing.T) {
 }
 
 // newLogger returns a logger that logs to the returned buffer.
-func newLogger() (*bytes.Buffer, log15.Logger) {
+func newLogger() (*bytes.Buffer, log15.Logger) { //nolint:ireturn
 	buff := new(bytes.Buffer)
 	l := log15.New()
 	l.SetHandler(log15.StreamHandler(buff, log15.LogfmtFormat()))

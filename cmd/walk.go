@@ -204,7 +204,7 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath string, s *scheduler.Scheduler) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
-	cmd := fmt.Sprintf("%s stat ", s.Executable())
+	cmd := s.Executable() + " stat "
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
 	}

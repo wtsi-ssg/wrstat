@@ -63,10 +63,10 @@ func New(operation string, logger log15.Logger) *Reporter {
 	}
 }
 
-// Enable will cause future TimeOperation() calls to to time the operation.
-// This is so that if not enabled, you can have TimeOperation() calls throughout
-// your code and it won't be expensive since they will do nothing until you
-// chose to Enable() the reporter. NB: this is NOT thread safe.
+// Enable will cause future TimeOperation() calls to time the operation. This is
+// so that if not enabled, you can have TimeOperation() calls throughout your
+// code and it won't be expensive since they will do nothing until you chose to
+// Enable() the reporter. NB: this is NOT thread safe.
 func (r *Reporter) Enable() {
 	r.enabled = true
 }

@@ -217,11 +217,12 @@ func (s *Scheduler) determineOverrideAndReq(req *jqs.Requirements) (*jqs.Require
 		if other == nil {
 			other = make(map[string]string)
 		}
+
 		other["scheduler_queues_avoid"] = s.queuesAvoid
 		req.Other = other
 	}
 
-	return req, uint8(override)
+	return req, uint8(override) //nolint:gosec
 }
 
 // SubmitJobs adds the given jobs to wr's queue, passing through current
