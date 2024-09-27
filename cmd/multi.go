@@ -222,7 +222,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	}
 
 	if !finishPartial { //nolint:nestif
-		scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
+		scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
 
 		if partialDirMerge != "" {
 			unique = scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
@@ -246,12 +246,12 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	numStatJobs, inodesPerStat int, yamlPath, queue string, s *scheduler.Scheduler,
+	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid string, s *scheduler.Scheduler,
 ) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
-	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue)
+	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid)
 
 	reqWalk, reqCombine := reqs()
 
@@ -273,7 +273,8 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 
 // buildWalkCommand builds a wrstat walk command line based on the given n,
 // yaml path, queue, and if sudo is in effect.
-func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int, yamlPath, queue string) string {
+func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int,
+	yamlPath, queue, queuesAvoid string) string {
 	cmd := s.Executable() + " walk "
 
 	if numStatJobs > 0 {
@@ -288,6 +289,10 @@ func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int, ya
 
 	if queue != "" {
 		cmd += fmt.Sprintf("--queue %s ", queue)
+	}
+
+	if queuesAvoid != "" {
+		cmd += fmt.Sprintf("--queues_avoid %s ", queuesAvoid)
 	}
 
 	if sudo {
