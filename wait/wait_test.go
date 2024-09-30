@@ -57,11 +57,15 @@ func TestWaitForMatchingPrefixOfLatestSuffix(t *testing.T) {
 
 		oldSourcePath := filepath.Join(sourceDir, oldSourceDate+middle+suffix)
 		createFile(t, oldSourcePath)
+
 		sourcePath := filepath.Join(sourceDir, sourceDate+middle+suffix)
+
 		<-time.After(10 * time.Millisecond)
 		createFile(t, sourcePath)
+
 		destPath := filepath.Join(destDir, destDate+middle+suffix)
 		createFile(t, destPath)
+
 		trickDestPath := filepath.Join(destDir, sourceDate+middle+"trick")
 		createFile(t, trickDestPath)
 
@@ -71,6 +75,7 @@ func TestWaitForMatchingPrefixOfLatestSuffix(t *testing.T) {
 			So(err, ShouldNotBeNil)
 
 			<-time.After(10 * time.Millisecond)
+
 			destPath := filepath.Join(destDir, sourceDate+middle+suffix)
 			createFile(t, destPath)
 
@@ -84,6 +89,7 @@ func TestWaitForMatchingPrefixOfLatestSuffix(t *testing.T) {
 				newDate := "20240110"
 
 				<-time.After(10 * time.Millisecond)
+
 				destPath = filepath.Join(destDir, newDate+middle+suffix)
 				createFile(t, destPath)
 
@@ -171,6 +177,7 @@ func TestWaitUntilFileIsOld(t *testing.T) {
 		Convey("And it waits longer if the file is touched while waiting", func() {
 			err = os.Chtimes(file, time.Time{}, time.Now())
 			So(err, ShouldBeNil)
+
 			extra := 50 * time.Millisecond
 			errCh := make(chan error)
 

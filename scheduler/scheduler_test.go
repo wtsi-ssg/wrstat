@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -60,11 +61,12 @@ func TestStatFile(t *testing.T) {
 	Convey("When the jobqueue server is up", t, func() {
 		config, d := prepareWrConfig(t)
 		defer d()
+
 		server := serve(t, config)
 		defer server.Stop(ctx, true)
 
 		Convey("You can make a Scheduler", func() {
-			s, err := New(deployment, "", "", timeout, logger)
+			s, err := New(deployment, "", "", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -115,6 +117,7 @@ func TestStatFile(t *testing.T) {
 
 				Convey("which you can't add to the queue if the server is down", func() {
 					server.Stop(ctx, true)
+
 					err = s.SubmitJobs([]*jobqueue.Job{job, job2})
 					So(err, ShouldNotBeNil)
 				})
@@ -131,7 +134,7 @@ func TestStatFile(t *testing.T) {
 		Convey("You can make a Scheduler with a specified cwd and it creates jobs in there", func() {
 			cwd := t.TempDir()
 
-			s, err := New(deployment, cwd, "", timeout, logger)
+			s, err := New(deployment, cwd, "", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -144,19 +147,19 @@ func TestStatFile(t *testing.T) {
 			d := cdNonExistantDir(t)
 			defer d()
 
-			s, err := New(deployment, "", "", timeout, logger)
+			s, err := New(deployment, "", "", "", timeout, logger)
 			So(err, ShouldNotBeNil)
 			So(s, ShouldBeNil)
 		})
 
 		Convey("You can't create a Scheduler if you pass an invalid dir", func() {
-			s, err := New(deployment, "/non_existent", "", timeout, logger)
+			s, err := New(deployment, "/non_existent", "", "", timeout, logger)
 			So(err, ShouldNotBeNil)
 			So(s, ShouldBeNil)
 		})
 
 		Convey("You can make a Scheduler that creates sudo jobs", func() {
-			s, err := New(deployment, "", "", timeout, logger)
+			s, err := New(deployment, "", "", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 			s.EnableSudo()
@@ -166,7 +169,7 @@ func TestStatFile(t *testing.T) {
 		})
 
 		Convey("You can make a Scheduler with a Req override", func() {
-			s, err := New(deployment, "", "", timeout, logger)
+			s, err := New(deployment, "", "", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -179,7 +182,7 @@ func TestStatFile(t *testing.T) {
 		})
 
 		Convey("You can make a Scheduler with a queue override", func() {
-			s, err := New(deployment, "", "foo", timeout, logger)
+			s, err := New(deployment, "", "foo", "", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -190,13 +193,25 @@ func TestStatFile(t *testing.T) {
 			So(job.Override, ShouldEqual, 0)
 			So(job.Requirements.Other, ShouldResemble, map[string]string{"scheduler_queue": "foo"})
 		})
+
+		Convey("You can make a Scheduler with queues to avoid", func() {
+			s, err := New(deployment, "", "", "avoid", timeout, logger)
+			So(err, ShouldBeNil)
+			So(s, ShouldNotBeNil)
+
+			dreq := DefaultRequirements()
+			job := s.NewJob("cmd", "rep", "req", "", "", nil)
+			So(job.Requirements.RAM, ShouldEqual, dreq.RAM)
+			So(job.Override, ShouldEqual, 0)
+			So(job.Requirements.Other, ShouldResemble, map[string]string{"scheduler_queues_avoid": "avoid"})
+		})
 	})
 
 	Convey("When the jobqueue server is not up, you can't make a Scheduler", t, func() {
 		_, d := prepareWrConfig(t)
 		defer d()
 
-		s, err := New(deployment, "", "", timeout, logger)
+		s, err := New(deployment, "", "", "", timeout, logger)
 		So(err, ShouldNotBeNil)
 		So(s, ShouldBeNil)
 	})
@@ -271,8 +286,8 @@ func prepareWrConfig(t *testing.T) (jobqueue.ServerConfig, func()) {
 	}
 
 	config := jobqueue.ServerConfig{
-		Port:            fmt.Sprintf("%d", clientPort),
-		WebPort:         fmt.Sprintf("%d", webPort),
+		Port:            strconv.Itoa(clientPort),
+		WebPort:         strconv.Itoa(webPort),
 		SchedulerName:   "local",
 		SchedulerConfig: &jqs.ConfigLocal{Shell: "bash"},
 		DBFile:          filepath.Join(managerDirActual, "db"),
@@ -337,11 +352,11 @@ func serveWithRetries(t *testing.T, config jobqueue.ServerConfig) (server *jobqu
 
 			ticker.Stop()
 
-			return
+			return server, err
 		case <-limit:
 			ticker.Stop()
 
-			return
+			return server, err
 		}
 	}
 }

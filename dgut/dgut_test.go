@@ -193,6 +193,7 @@ func TestDGUT(t *testing.T) {
 			i := 0
 			cb := func(dgut *DGUT) {
 				So(alterDgutForTest(dgut), ShouldResemble, expected[i])
+
 				i++
 			}
 
@@ -394,6 +395,7 @@ func TestDGUT(t *testing.T) {
 							path2 := paths[0] + ".2"
 							err = os.Mkdir(path2, os.ModePerm)
 							So(err, ShouldBeNil)
+
 							db2 := NewDB(path2)
 							err = db2.Store(data, 4)
 							So(err, ShouldBeNil)

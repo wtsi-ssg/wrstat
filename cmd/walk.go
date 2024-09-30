@@ -89,7 +89,7 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		desiredDir := checkArgs(outputDir, depGroup, args)
 
-		s, d := newScheduler("", forcedQueue, sudo)
+		s, d := newScheduler("", forcedQueue, queuesToAvoid, sudo)
 		defer d()
 
 		if walkID == "" {
@@ -120,6 +120,8 @@ func init() {
 		"dependency group that stat jobs added to wr will belong to")
 	walkCmd.Flags().StringVar(&walkCh, "ch", "", "passed through to 'wrstat stat'")
 	walkCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
+	walkCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
+		"force queues with this substring to be avoided when scheduling jobs")
 }
 
 // checkArgs checks we have required args and returns desired dir.
@@ -202,7 +204,7 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath string, s *scheduler.Scheduler) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
-	cmd := fmt.Sprintf("%s stat ", s.Executable())
+	cmd := s.Executable() + " stat "
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
 	}

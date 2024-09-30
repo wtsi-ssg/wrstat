@@ -261,6 +261,7 @@ func TestRules(t *testing.T) {
 				So(rule.changeUser, ShouldBeTrue)
 				So(rule.gid, ShouldEqual, 101)
 				So(rule.changeGroup, ShouldBeTrue)
+
 				expectedUGO := &ugoPerms{
 					user: perms{
 						read:    set,

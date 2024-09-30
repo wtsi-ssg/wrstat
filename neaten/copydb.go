@@ -27,7 +27,6 @@
 package neaten
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -76,7 +75,7 @@ func copySourceDirsToDestDir(sourceDir, destDir string, nextDestSubDirNum int) e
 	}
 
 	for i, entry := range sourceEntries {
-		nextDestDir := filepath.Join(destDir, fmt.Sprintf("%d", nextDestSubDirNum+i))
+		nextDestDir := filepath.Join(destDir, strconv.Itoa(nextDestSubDirNum+i))
 
 		err = copy.Copy(filepath.Join(sourceDir, entry.Name()), nextDestDir)
 		if err != nil {

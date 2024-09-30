@@ -47,7 +47,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func TestBaseDirs(t *testing.T) { //nolint:gocognit
+func TestBaseDirs(t *testing.T) {
 	const (
 		defaultSplits  = 4
 		defaultMinDirs = 4

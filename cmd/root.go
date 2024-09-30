@@ -145,13 +145,15 @@ func die(msg string, a ...interface{}) {
 // newScheduler returns a new Scheduler, exiting on error. It also returns a
 // function you should defer.
 //
-// If you provide a non-blank queue, that queue will be used when scheduling.
-func newScheduler(cwd, queue string, sudo bool) (*scheduler.Scheduler, func()) {
+// If you provide a non-blank queue, that queue will be used when scheduling. If
+// you provide a non-black queuesAvoid, queues with that substring will be
+// avoided.
+func newScheduler(cwd, queue, queuesAvoid string, sudo bool) (*scheduler.Scheduler, func()) {
 	if runJobs != "" {
 		return testScheduler(sudo)
 	}
 
-	s, err := scheduler.New(deployment, cwd, queue, connectTimeout, appLogger)
+	s, err := scheduler.New(deployment, cwd, queue, queuesAvoid, connectTimeout, appLogger)
 	if err != nil {
 		die("%s", err)
 	}

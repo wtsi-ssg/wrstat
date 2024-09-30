@@ -39,14 +39,17 @@ func TestDirent(t *testing.T) {
 		reg := filepath.Join(tdir, "reg")
 		f, err := os.Create(reg)
 		So(err, ShouldBeNil)
+
 		err = f.Close()
 		So(err, ShouldBeNil)
+
 		sym := filepath.Join(tdir, "sym")
 		err = os.Symlink(reg, sym)
 		So(err, ShouldBeNil)
 
 		info, err := os.Lstat(tdir)
 		So(err, ShouldBeNil)
+
 		d := &Dirent{Type: info.Mode().Type()}
 		So(d.IsDir(), ShouldBeTrue)
 		So(d.IsRegular(), ShouldBeFalse)
@@ -54,6 +57,7 @@ func TestDirent(t *testing.T) {
 
 		info, err = os.Lstat(reg)
 		So(err, ShouldBeNil)
+
 		d = &Dirent{Type: info.Mode().Type()}
 		So(d.IsDir(), ShouldBeFalse)
 		So(d.IsRegular(), ShouldBeTrue)
@@ -61,6 +65,7 @@ func TestDirent(t *testing.T) {
 
 		info, err = os.Lstat(sym)
 		So(err, ShouldBeNil)
+
 		d = &Dirent{Type: info.Mode().Type()}
 		So(d.IsDir(), ShouldBeFalse)
 		So(d.IsRegular(), ShouldBeFalse)

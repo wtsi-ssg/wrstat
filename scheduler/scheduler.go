@@ -53,18 +53,20 @@ const reqDisk = 1
 // Scheduler can be used to schedule commands to be executed by adding them to
 // wr's queue.
 type Scheduler struct {
-	cwd   string
-	exe   string
-	jq    *jobqueue.Client
-	sudo  bool
-	queue string
+	cwd         string
+	exe         string
+	jq          *jobqueue.Client
+	sudo        bool
+	queue       string
+	queuesAvoid string
 }
 
 // New returns a Scheduler that is connected to wr manager using the given
 // deployment, timeout and logger. Added jobs will have the given cwd, which
 // matters. If cwd is blank, the current working dir is used. If queue is not
-// blank, that queue will be used during NewJob().
-func New(deployment, cwd, queue string, timeout time.Duration, logger log15.Logger) (*Scheduler, error) {
+// blank, that queue will be used during NewJob(). If queuesAvoid is not blank,
+// queues including that substring will be avoided during NewJob().
+func New(deployment, cwd, queue, queuesAvoid string, timeout time.Duration, logger log15.Logger) (*Scheduler, error) {
 	cwd, err := pickCWD(cwd)
 	if err != nil {
 		return nil, err
@@ -79,10 +81,11 @@ func New(deployment, cwd, queue string, timeout time.Duration, logger log15.Logg
 	exe, err := os.Executable()
 
 	return &Scheduler{
-		cwd:   cwd,
-		exe:   exe,
-		queue: queue,
-		jq:    jq,
+		cwd:         cwd,
+		exe:         exe,
+		queue:       queue,
+		jq:          jq,
+		queuesAvoid: queuesAvoid,
 	}, err
 }
 
@@ -206,6 +209,16 @@ func (s *Scheduler) determineOverrideAndReq(req *jqs.Requirements) (*jqs.Require
 		}
 
 		other["scheduler_queue"] = s.queue
+		req.Other = other
+	}
+
+	if s.queuesAvoid != "" {
+		other := req.Other
+		if other == nil {
+			other = make(map[string]string)
+		}
+
+		other["scheduler_queues_avoid"] = s.queuesAvoid
 		req.Other = other
 	}
 

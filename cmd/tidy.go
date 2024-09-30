@@ -38,8 +38,6 @@ import (
 // it if it does not already exist.
 const destDirPerms = 0770
 
-const dgutDBsSuffix = "dgut.dbs"
-const dgutDBsSentinelBasename = ".dgut.dbs.updated"
 const disableDeletion = false
 
 // options for this cmd.

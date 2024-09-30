@@ -61,6 +61,7 @@ var (
 	multiStatJobs       int
 	multiCh             string
 	forcedQueue         string
+	queuesToAvoid       string
 	quota               string
 	maxMem              int
 	multiBasedirsConfig string
@@ -143,7 +144,7 @@ exists, and you have a wrstat server using the database files inside, the server
 will automatically start using the new data and delete the old.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		checkMultiArgs(args)
-		err := doMultiScheduling(args, sudo)
+		err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, sudo)
 		if err != nil {
 			die("%s", err)
 		}
@@ -170,6 +171,8 @@ func init() {
 		0, "force a specific number of parallel stat jobs (ignore -n if above 0)")
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
+	multiCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
+		"force queues with this substring to be avoided when scheduling jobs")
 	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
 	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", basedirRAM, "maximum MBs to reserve for any job")
@@ -206,8 +209,8 @@ func checkStandardFlags() {
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
-func doMultiScheduling(args []string, sudo bool) error {
-	s, d := newScheduler(workDir, forcedQueue, sudo)
+func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string, sudo bool) error {
+	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
 	unique := scheduler.UniqueString()
@@ -219,7 +222,7 @@ func doMultiScheduling(args []string, sudo bool) error {
 	}
 
 	if !finishPartial { //nolint:nestif
-		scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, s)
+		scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
 
 		if partialDirMerge != "" {
 			unique = scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
@@ -243,12 +246,12 @@ func doMultiScheduling(args []string, sudo bool) error {
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	numStatJobs, inodesPerStat int, yamlPath, queue string, s *scheduler.Scheduler,
+	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid string, s *scheduler.Scheduler,
 ) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 
-	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue)
+	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid)
 
 	reqWalk, reqCombine := reqs()
 
@@ -270,7 +273,8 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
 
 // buildWalkCommand builds a wrstat walk command line based on the given n,
 // yaml path, queue, and if sudo is in effect.
-func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int, yamlPath, queue string) string {
+func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int,
+	yamlPath, queue, queuesAvoid string) string {
 	cmd := s.Executable() + " walk "
 
 	if numStatJobs > 0 {
@@ -285,6 +289,10 @@ func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int, ya
 
 	if queue != "" {
 		cmd += fmt.Sprintf("--queue %s ", queue)
+	}
+
+	if queuesAvoid != "" {
+		cmd += fmt.Sprintf("--queues_avoid %s ", queuesAvoid)
 	}
 
 	if sudo {

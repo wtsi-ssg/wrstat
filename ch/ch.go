@@ -40,15 +40,6 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
-const (
-	modePermUser              = 0700
-	modePermGroup             = 0070
-	modePermUserToGroupShift  = 3
-	modeUserExecutable        = 0100
-	modeGroupExecutable       = 0010
-	modeUserGroupReadWritable = 0660
-)
-
 // Ch is used to chmod and chown files such that they match their desired group.
 type Ch struct {
 	rs     *RulesStore

@@ -39,9 +39,13 @@ func processDgutFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup f
 
 	go dgutStore(db, reader, errCh)
 
-	if err := MergeSummaryLines(sortMergeOutput, dgutSumCols,
-		numSummaryColumnsDGUT, sumCountAndSizeAndKeepOldestAtime, writer); err != nil {
-
+	if err := MergeSummaryLines(
+		sortMergeOutput,
+		dgutSumCols,
+		numSummaryColumnsDGUT,
+		sumCountAndSizeAndKeepOldestAtime,
+		writer,
+	); err != nil {
 		return err
 	}
 

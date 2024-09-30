@@ -97,6 +97,7 @@ func TestWatch(t *testing.T) {
 
 			calls := tracker.numCalls()
 			So(calls, ShouldEqual, 0)
+
 			_, ok := tracker.report(before)
 			So(ok, ShouldBeFalse)
 
@@ -105,8 +106,10 @@ func TestWatch(t *testing.T) {
 
 			Convey("Changing the file's mtime calls cb after some time", func() {
 				<-time.After(2 * pollFrequency)
+
 				calls := tracker.numCalls()
 				So(calls, ShouldEqual, 0)
+
 				_, ok = tracker.report(latest)
 				So(ok, ShouldBeFalse)
 
@@ -128,6 +131,7 @@ func TestWatch(t *testing.T) {
 
 					calls = tracker.numCalls()
 					So(calls, ShouldEqual, 0)
+
 					_, ok = tracker.report(latest)
 					So(ok, ShouldBeFalse)
 				})

@@ -61,6 +61,7 @@ func TestReporter(t *testing.T) {
 		Convey("You can carry out operations", func() {
 			err := r.TimeOperation(op)
 			So(err, ShouldBeNil)
+
 			r.Report()
 			So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=foo count=0 time=0s ops/s=n/a`)
 
@@ -72,9 +73,11 @@ func TestReporter(t *testing.T) {
 				So(err, ShouldBeNil)
 				err = r.TimeOperation(op)
 				So(err, ShouldBeNil)
+
 				opErr = errTest
 				err = r.TimeOperation(op)
 				So(err, ShouldNotBeNil)
+
 				opErr = nil
 
 				r.Report()
@@ -92,6 +95,7 @@ func TestReporter(t *testing.T) {
 
 		Convey("You can report operation timings regularly", func() {
 			r.StartReporting(13 * time.Millisecond)
+
 			for i := 0; i < 6; i++ {
 				err := r.TimeOperation(op)
 				So(err, ShouldBeNil)
@@ -99,6 +103,7 @@ func TestReporter(t *testing.T) {
 
 			r.StopReporting()
 			So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=foo count=2`)
+
 			reg := regexp.MustCompile("report since last")
 			matches := reg.FindAllStringIndex(buff.String(), -1)
 			So(len(matches), ShouldBeBetweenOrEqual, 2, 5)
