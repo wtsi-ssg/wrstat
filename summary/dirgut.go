@@ -122,14 +122,14 @@ func FileTypeStringToDirGUTFileType(ft string) (DirGUTFileType, error) {
 
 // gutStore is a sortable map with gid,uid,filetype as keys and summaryWithAtime
 // as values.
-type gutStore map[string]*summaryWithAtime
+type gutStore map[string]*summaryWithTimes
 
 // add will auto-vivify a summary for the given key (which should have been
 // generated with statToGUTKey()) and call add(size, atime, mtime) on it.
 func (store gutStore) add(key string, size int64, atime int64, mtime int64) {
 	s, ok := store[key]
 	if !ok {
-		s = &summaryWithAtime{}
+		s = &summaryWithTimes{}
 		store[key] = s
 	}
 
@@ -138,7 +138,7 @@ func (store gutStore) add(key string, size int64, atime int64, mtime int64) {
 
 // sort returns a slice of our summaryWithAtime values, sorted by our dgut keys
 // which are also returned.
-func (store gutStore) sort() ([]string, []*summaryWithAtime) {
+func (store gutStore) sort() ([]string, []*summaryWithTimes) {
 	return sortSummaryStore(store)
 }
 
@@ -439,10 +439,16 @@ type StringCloser interface {
 // Output will write summary information for all the paths previously added. The
 // format is (tab separated):
 //
-// directory gid uid filetype filecount filesize atime mtime
+// directory gid uid filetype filecount filesize atime mtime filesizeA7y
+// filesizeA5y filesizeA3y filesizeA2y filesizeA1y filesizeA6m filesizeA2m
+// filesizeA1m filesizeM7y filesizeM5y filesizeM3y filesizeM2y filesizeM1y
+// filesizeM6m filesizeM2m filesizeM1m
 //
 // Where atime is oldest access time in seconds since Unix epoch of any file
 // nested within directory. mtime is similar, but the newest modification time.
+// Where the filesize[AM][/d][ym] columns are the total size of files nested
+// within directory where the a or m time [AM] is older than the specified
+// number of years or months.
 //
 // directory, gid, uid and filetype are sorted. The sort on the columns is not
 // numeric, but alphabetical. So gid 10 will come before gid 2.
@@ -475,11 +481,13 @@ func (d *DirGroupUserType) Output(output StringCloser) error {
 
 		for j, dgut := range dguts {
 			s := summaries[j]
-			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\n",
+			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
 				encode.Base64Encode(dir),
 				dgut,
 				s.count, s.size,
-				s.atime, s.mtime))
+				s.atime, s.mtime,
+				s.filesizeM7y, s.filesizeM5y, s.filesizeM3y, s.filesizeM2y,
+				s.filesizeM1y, s.filesizeM6m, s.filesizeM2m, s.filesizeM1m))
 
 			if errw != nil {
 				return errw
