@@ -213,13 +213,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
-	var unique string
-
-	if finishPartial == "" {
-		unique = scheduler.UniqueString()
-	} else {
-		unique = finishPartial
-	}
+	unique := uniqueOrPartial(finishPartial)
 
 	outputRoot := filepath.Join(workDir, unique)
 
@@ -247,6 +241,14 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	scheduleTidyJob(outputRoot, finalDir, unique, s)
 
 	return nil
+}
+
+func uniqueOrPartial(partial string) string {
+	if finishPartial == "" {
+		return scheduler.UniqueString()
+	}
+
+	return finishPartial
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
