@@ -56,7 +56,7 @@ var (
 	partialDirMerge     string
 	partialDirClean     bool
 	createPartial       bool
-	finishPartial       bool
+	finishPartial       string
 	multiInodes         int
 	multiStatJobs       int
 	multiCh             string
@@ -163,7 +163,7 @@ func init() {
 		"from specified directory after merging")
 	multiCmd.Flags().BoolVarP(&createPartial, "create_partial_dir", "p", false, "perform the walk, "+
 		"stat, and combine steps only")
-	multiCmd.Flags().BoolVarP(&finishPartial, "partial_dir_finish", "z", false, "perform the basedir "+
+	multiCmd.Flags().StringVarP(&finishPartial, "partial_dir_finish", "z", "", "perform the basedir "+
 		"and tidy step on a partial run")
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
@@ -213,7 +213,14 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
-	unique := scheduler.UniqueString()
+	var unique string
+
+	if finishPartial == "" {
+		unique = scheduler.UniqueString()
+	} else {
+		unique = finishPartial
+	}
+
 	outputRoot := filepath.Join(workDir, unique)
 
 	err := os.MkdirAll(outputRoot, userGroupPerm)
@@ -221,7 +228,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 		return err
 	}
 
-	if !finishPartial { //nolint:nestif
+	if finishPartial == "" { //nolint:nestif
 		scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
 
 		if partialDirMerge != "" {
