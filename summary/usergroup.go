@@ -310,7 +310,8 @@ func (u *Usergroup) Output(output StringCloser) error {
 // outputGroupDirectorySummariesForUser sortes the groups for this user and
 // calls outputDirectorySummariesForGroup.
 func outputGroupDirectorySummariesForUser(output StringCloser, username string,
-	gStore groupStore, gidLookupCache map[uint32]string) error {
+	gStore groupStore, gidLookupCache map[uint32]string,
+) error {
 	groupnames, dStores := gStore.sort(gidLookupCache)
 
 	for i, groupname := range groupnames {
@@ -328,7 +329,8 @@ func outputDirectorySummariesForGroup(output StringCloser, username, groupname s
 	dirs, summaries := dStore.sort()
 
 	for i, s := range summaries {
-		_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%d\n", username, groupname, encode.Base64Encode(dirs[i]), s.count, s.size))
+		_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%d\n",
+			username, groupname, encode.Base64Encode(dirs[i]), s.count, s.size))
 		if errw != nil {
 			return errw
 		}
