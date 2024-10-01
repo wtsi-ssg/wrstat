@@ -37,6 +37,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 func TestUsergroup(t *testing.T) {
@@ -102,7 +103,8 @@ func TestUsergroup(t *testing.T) {
 					g, errl := user.LookupGroupId(strconv.Itoa(2))
 					So(errl, ShouldBeNil)
 
-					So(output, ShouldContainSubstring, os.Getenv("USER")+"\t"+g.Name+"\t/a/b/c\t2\t30\n")
+					So(output, ShouldContainSubstring, os.Getenv("USER")+"\t"+
+						g.Name+"\t"+encode.Base64Encode("/a/b/c")+"\t2\t30\n")
 
 					So(checkFileIsSorted(outPath), ShouldBeTrue)
 				})
