@@ -307,48 +307,69 @@ func TestDirGUT(t *testing.T) {
 		So(dgut, ShouldNotBeNil)
 
 		Convey("You can add file info with a range of Atimes to it", func() {
-			mi := newMockInfoWithAtime(10, 2, 2, false, 5256000) // 2 months
-			mi.mtime = 7884000                                   // 3 months
+			atime1 := time.Now().Unix() - (secondsIn2m + 100000)      // > 2 m
+			mtime1 := time.Now().Unix() - (secondsIn2m + secondsIn1m) // 3 m
+
+			So(getNumOfSatisfyingIntervals(atime1, time.Now().Unix(), 8), ShouldEqual, 2)
+
+			mi := newMockInfoWithAtime(10, 2, 2, false, atime1)
+			mi.mtime = mtime1
 			err = dgut.Add("/a/b/c/1.bam", mi)
 			So(err, ShouldBeNil)
 
-			mi = newMockInfoWithAtime(10, 2, 3, false, 18396000) // 7 months
-			mi.mtime = 21024000                                  // 8 months
+			atime2 := time.Now().Unix() - (secondsIn6m + secondsIn1m) // 7 m
+			mtime2 := time.Now().Unix() - (secondsIn6m + secondsIn2m) // 8 m
+
+			So(getNumOfSatisfyingIntervals(atime2, time.Now().Unix(), 8), ShouldEqual, 3)
+
+			mi = newMockInfoWithAtime(10, 2, 3, false, atime2)
+			mi.mtime = mtime2
 			err = dgut.Add("/a/b/c/2.bam", mi)
 			So(err, ShouldBeNil)
 
-			mi = newMockInfoWithAtime(10, 2, 4, false, 34164000) // 13 months ( > 1y)
-			mi.mtime = 252460800                                 // 8 years
+			atime3 := time.Now().Unix() - (secondsIn1y + secondsIn1m) // 1 y 1 m
+			mtime3 := time.Now().Unix() - (secondsIn1y + secondsIn6m) // 1 y 6 m
+			mi = newMockInfoWithAtime(10, 2, 4, false, atime3)
+			mi.mtime = mtime3
 			err = dgut.Add("/a/b/c/3.txt", mi)
 			So(err, ShouldBeNil)
 
-			mi = newMockInfoWithAtime(10, 2, 5, false, 97236000) // 37 months ( > 3y)
-			mi.mtime = 126230400                                 // 4 years
+			atime4 := time.Now().Unix() - (secondsIn3y + secondsIn1y) // 4 y
+			mtime4 := time.Now().Unix() - (secondsIn3y + secondsIn3y) // 6 y
+
+			So(getNumOfSatisfyingIntervals(atime4, time.Now().Unix(), 8), ShouldEqual, 6)
+
+			mi = newMockInfoWithAtime(10, 2, 5, false, atime4)
+			mi.mtime = mtime4
 			err = dgut.Add("/a/b/c/4.bam", mi)
 			So(err, ShouldBeNil)
 
-			mi = newMockInfoWithAtime(10, 2, 6, false, 160308000) // 61 months ( > 5y)
-			mi.mtime = 160308000                                  // 61 months
+			atime5 := time.Now().Unix() - (secondsIn5y + secondsIn1m) // 5 y 1 m
+			mtime5 := time.Now().Unix() - (secondsIn7y + secondsIn1m) // 7 y 1 m
+			mi = newMockInfoWithAtime(10, 2, 6, false, atime5)
+			mi.mtime = mtime5
 			err = dgut.Add("/a/b/c/5.cram", mi)
 			So(err, ShouldBeNil)
 
-			mi = newMockInfoWithAtime(10, 2, 7, false, 223380000) // 85 months ( > 7y)
-			mi.mtime = 223380000                                  // 85 months
+			atime6 := time.Now().Unix() - (secondsIn7y + secondsIn1m) // 7 y 1 m
+			mtime6 := time.Now().Unix() - (secondsIn7y + secondsIn1m) // 7 y 1 m
+			mi = newMockInfoWithAtime(10, 2, 7, false, atime6)
+			mi.mtime = mtime6
 			err = dgut.Add("/a/b/c/6.cram", mi)
 			So(err, ShouldBeNil)
 
 			So(dgut.store["/a/b/c"]["2\t10\t6"], ShouldResemble, &summaryWithTimes{summary{3, 10},
-				7884000, 126230400,
+				atime4, mtime1,
 				0, 0, 5, 5, 5, 8, 10, 10,
-				0, 0, 5, 5, 5, 8, 10, 10})
+				0, 5, 5, 5, 5, 8, 10, 10})
 			So(dgut.store["/a/b/c"]["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{2, 13},
-				160308000, 223380000,
+				atime6, mtime5,
 				7, 13, 13, 13, 13, 13, 13, 13,
-				7, 13, 13, 13, 13, 13, 13, 13})
+				13, 13, 13, 13, 13, 13, 13, 13})
 			So(dgut.store["/a/b/c"]["2\t10\t13"], ShouldResemble, &summaryWithTimes{summary{1, 4},
-				252460800, 252460800,
-				4, 4, 4, 4, 4, 4, 4, 4,
-				4, 4, 4, 4, 4, 4, 4, 4})
+				atime3, mtime3,
+				0, 0, 0, 0, 4, 4, 4, 4,
+				0, 0, 0, 0, 4, 4, 4, 4})
 
 			Convey("And then given an output file", func() {
 				dir := t.TempDir()
@@ -368,11 +389,11 @@ func TestDirGUT(t *testing.T) {
 					output := string(o)
 
 					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c")+
-						"\t2\t10\t6\t3\t10\t7884000\t126230400\t0\t0\t5\t5\t5\t8\t10\t10\n")
+						"\t2\t10\t6\t3\t10\t"+strconv.Itoa(int(atime4))+"\t"+strconv.Itoa(int(mtime1))+"\t0\t0\t5\t5\t5\t8\t10\t10\t0\t5\t5\t5\t5\t8\t10\t10\n")
 					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c")+
-						"\t2\t10\t7\t2\t13\t160308000\t223380000\t7\t13\t13\t13\t13\t13\t13\t13\n")
+						"\t2\t10\t7\t2\t13\t"+strconv.Itoa(int(atime6))+"\t"+strconv.Itoa(int(mtime5))+"\t7\t13\t13\t13\t13\t13\t13\t13\t13\t13\t13\t13\t13\t13\t13\t13\n")
 					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c")+
-						"\t2\t10\t13\t1\t4\t252460800\t252460800\t4\t4\t4\t4\t4\t4\t4\t4\n")
+						"\t2\t10\t13\t1\t4\t"+strconv.Itoa(int(atime3))+"\t"+strconv.Itoa(int(mtime3))+"\t0\t0\t0\t0\t4\t4\t4\t4\t0\t0\t0\t0\t4\t4\t4\t4\n")
 
 					So(checkFileIsSorted(outPath), ShouldBeTrue)
 				})
@@ -415,20 +436,20 @@ func TestDirGUT(t *testing.T) {
 			So(dgut.store["/a/b/c"]["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/a/b/c"]["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3}, 100, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+				3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/a/b/c"]["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/a/b/c"]["3\t2\t1"], ShouldBeNil)
 			So(dgut.store["/a/b/c"]["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{2, 4}, 200, 250,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+				4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4})
 			So(dgut.store["/a/b/c/d"]["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{1, 2}, 200, 200,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+				2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2})
 			So(dgut.store["/a/b/c"]["10\t2\t7"], ShouldResemble, &summaryWithTimes{summary{1, 2}, 301, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+				2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0})
 
 			swa := dgut.store["/a/b"]["2\t10\t15"]
 			if swa.atime >= before {
-				swa.updateATime(18)
+				swa.atime = 18
 			}
 
 			So(swa, ShouldResemble, &summaryWithTimes{summary{1, 4096}, 18, 0,
@@ -436,7 +457,7 @@ func TestDirGUT(t *testing.T) {
 
 			swa = dgut.store["/a/b/c"]["2\t10\t15"]
 			if swa.atime >= before {
-				swa.updateATime(18)
+				swa.atime = 18
 			}
 
 			So(swa, ShouldResemble, &summaryWithTimes{summary{1, 4096}, 18, 0,
@@ -448,7 +469,7 @@ func TestDirGUT(t *testing.T) {
 			So(dgut.store["/a/b"]["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/a/b"]["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3}, 100, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+				3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/a/b"]["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
@@ -457,7 +478,7 @@ func TestDirGUT(t *testing.T) {
 			So(dgut.store["/a"]["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/a"]["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3}, 100, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+				3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/a"]["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
@@ -466,7 +487,7 @@ func TestDirGUT(t *testing.T) {
 			So(dgut.store["/"]["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/"]["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3}, 100, 0,
-				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+				3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0})
 			So(dgut.store["/"]["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
@@ -487,17 +508,17 @@ func TestDirGUT(t *testing.T) {
 					output := string(o)
 
 					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c/d")+
-						"\t2\t10\t7\t1\t2\t200\t200\t0\t0\t0\t0\t0\t0\t0\t0\n")
+						"\t2\t10\t7\t1\t2\t200\t200\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\t2\n")
 					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c")+
-						"\t"+cuidKey+"\t2\t30\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
+						"\t"+cuidKey+"\t2\t30\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
 					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+
-						"\t"+cuidKey+"\t3\t60\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
+						"\t"+cuidKey+"\t3\t60\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
 					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+
-						"\t2\t2\t13\t1\t5\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
+						"\t2\t2\t13\t1\t5\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
 					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+
-						"\t2\t2\t6\t1\t3\t100\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
+						"\t2\t2\t6\t1\t3\t100\t0\t3\t3\t3\t3\t3\t3\t3\t3\t0\t0\t0\t0\t0\t0\t0\t0\n")
 					So(output, ShouldContainSubstring, encode.Base64Encode("/")+
-						"\t3\t2\t13\t1\t6\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
+						"\t3\t2\t13\t1\t6\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
 
 					So(checkFileIsSorted(outPath), ShouldBeTrue)
 				})

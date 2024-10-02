@@ -44,8 +44,8 @@ const ErrInvalidFormat = Error("the provided data was not in dgut format")
 const ErrBlankLine = Error("the provided line had no information")
 
 const (
-	gutDataCols    = 8
-	gutDataIntCols = 7
+	gutDataCols    = 24
+	gutDataIntCols = 23
 )
 
 type dgutParserCallBack func(*DGUT)
@@ -125,13 +125,29 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 	}
 
 	return path, &GUT{
-		GID:   uint32(ints[0]),
-		UID:   uint32(ints[1]),
-		FT:    summary.DirGUTFileType(ints[2]),
-		Count: ints[3],
-		Size:  ints[4],
-		Atime: int64(ints[5]),
-		Mtime: int64(ints[6]),
+		GID:         uint32(ints[0]),
+		UID:         uint32(ints[1]),
+		FT:          summary.DirGUTFileType(ints[2]),
+		Count:       ints[3],
+		Size:        ints[4],
+		Atime:       int64(ints[5]),
+		Mtime:       int64(ints[6]),
+		FilesizeA7y: int64(ints[7]),
+		FilesizeA5y: int64(ints[8]),
+		FilesizeA3y: int64(ints[9]),
+		FilesizeA2y: int64(ints[10]),
+		FilesizeA1y: int64(ints[11]),
+		FilesizeA6m: int64(ints[12]),
+		FilesizeA2m: int64(ints[13]),
+		FilesizeA1m: int64(ints[14]),
+		FilesizeM7y: int64(ints[15]),
+		FilesizeM5y: int64(ints[16]),
+		FilesizeM3y: int64(ints[17]),
+		FilesizeM2y: int64(ints[18]),
+		FilesizeM1y: int64(ints[19]),
+		FilesizeM6m: int64(ints[20]),
+		FilesizeM2m: int64(ints[21]),
+		FilesizeM1m: int64(ints[22]),
 	}, nil
 }
 
@@ -166,7 +182,7 @@ func gutLinePartsToInts(parts []string) ([]uint64, error) {
 		return nil, ErrInvalidFormat
 	}
 
-	for i := 3; i < 7; i++ {
+	for i := 3; i < gutDataIntCols; i++ {
 		if ints[i], err = strconv.ParseUint(parts[i+1], 10, 64); err != nil {
 			return nil, ErrInvalidFormat
 		}

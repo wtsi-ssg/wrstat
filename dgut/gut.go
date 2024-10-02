@@ -35,14 +35,30 @@ import (
 
 // GUT handles group,user,type,count,size information.
 type GUT struct {
-	GID        uint32
-	UID        uint32
-	FT         summary.DirGUTFileType
-	Count      uint64
-	Size       uint64
-	Atime      int64 // seconds since Unix epoch
-	Mtime      int64 // seconds since Unix epoch
-	updateTime time.Time
+	GID         uint32
+	UID         uint32
+	FT          summary.DirGUTFileType
+	Count       uint64
+	Size        uint64
+	Atime       int64 // seconds since Unix epoch
+	Mtime       int64 // seconds since Unix epoch
+	updateTime  time.Time
+	FilesizeA7y int64
+	FilesizeA5y int64
+	FilesizeA3y int64
+	FilesizeA2y int64
+	FilesizeA1y int64
+	FilesizeA6m int64
+	FilesizeA2m int64
+	FilesizeA1m int64
+	FilesizeM7y int64
+	FilesizeM5y int64
+	FilesizeM3y int64
+	FilesizeM2y int64
+	FilesizeM1y int64
+	FilesizeM6m int64
+	FilesizeM2m int64
+	FilesizeM1m int64
 }
 
 // Filter can be applied to a GUT to see if it has one of the specified GIDs,

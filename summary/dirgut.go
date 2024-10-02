@@ -481,11 +481,13 @@ func (d *DirGroupUserType) Output(output StringCloser) error {
 
 		for j, dgut := range dguts {
 			s := summaries[j]
-			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
 				encode.Base64Encode(dir),
 				dgut,
 				s.count, s.size,
 				s.atime, s.mtime,
+				s.filesizeA7y, s.filesizeA5y, s.filesizeA3y, s.filesizeA2y,
+				s.filesizeA1y, s.filesizeA6m, s.filesizeA2m, s.filesizeA1m,
 				s.filesizeM7y, s.filesizeM5y, s.filesizeM3y, s.filesizeM2y,
 				s.filesizeM1y, s.filesizeM6m, s.filesizeM2m, s.filesizeM1m))
 

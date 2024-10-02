@@ -27,6 +27,21 @@
 
 package summary
 
+import (
+	"time"
+)
+
+const (
+	secondsIn1m = 2628000
+	secondsIn2m = 5256000
+	secondsIn6m = 15768000
+	secondsIn1y = 31557600
+	secondsIn2y = 63115200
+	secondsIn3y = 94672800
+	secondsIn5y = 157788000
+	secondsIn7y = 220903200
+)
+
 // summary holds count and size and lets you accumulate count and size as you
 // add more things with a size.
 type summary struct {
@@ -82,59 +97,47 @@ func (s *summaryWithTimes) add(size int64, atime int64, mtime int64) {
 }
 
 func (s *summaryWithTimes) setTimes(size, atime, mtime int64) {
-	timeMap := map[int64][]*int64{
-		2628000:   {&s.filesizeA1m, &s.filesizeM1m},
-		5256000:   {&s.filesizeA2m, &s.filesizeM2m},
-		15768000:  {&s.filesizeA6m, &s.filesizeM6m},
-		31557600:  {&s.filesizeA1y, &s.filesizeM1y},
-		63115200:  {&s.filesizeA2y, &s.filesizeM2y},
-		94672800:  {&s.filesizeA3y, &s.filesizeM3y},
-		157788000: {&s.filesizeA5y, &s.filesizeM5y},
-		220903200: {&s.filesizeA7y, &s.filesizeM7y},
-	}
+	curTime := time.Now().Unix()
 
-	keys := []int64{2628000, 5256000, 15768000, 31557600, 63115200, 94672800, 157788000, 220903200}
+	aToSet := []*int64{&s.filesizeA1m, &s.filesizeA2m, &s.filesizeA6m, &s.filesizeA1y,
+		&s.filesizeA2y, &s.filesizeA3y, &s.filesizeA5y, &s.filesizeA7y}
+	mToSet := []*int64{&s.filesizeM1m, &s.filesizeM2m, &s.filesizeM6m, &s.filesizeM1y,
+		&s.filesizeM2y, &s.filesizeM3y, &s.filesizeM5y, &s.filesizeM7y}
 
 	if atime != 0 {
-		setATimes(size, atime, keys, timeMap)
+		setIntervals(getNumOfSatisfyingIntervals(atime, curTime, len(aToSet)), size, aToSet)
 	}
 
 	if mtime != 0 {
-		setMTimes(size, mtime, keys, timeMap)
-
+		setIntervals(getNumOfSatisfyingIntervals(mtime, curTime, len(mToSet)), size, mToSet)
 	}
 }
 
-func setATimes(size, time int64, keys []int64, timeMap map[int64][]*int64) {
-	for _, v := range keys {
-		if time < v {
-			break
-		}
-
-		*timeMap[v][0] += size
+func getNumOfSatisfyingIntervals(amTime, curTime int64, toSet int) int {
+	switch {
+	case amTime < curTime-secondsIn7y:
+		return toSet
+	case amTime < curTime-secondsIn5y:
+		return toSet - 1
+	case amTime < curTime-secondsIn3y:
+		return toSet - 2
+	case amTime < curTime-secondsIn2y:
+		return toSet - 3
+	case amTime < curTime-secondsIn1y:
+		return toSet - 4
+	case amTime < curTime-secondsIn6m:
+		return toSet - 5
+	case amTime < curTime-secondsIn2m:
+		return toSet - 6
+	case amTime < curTime-secondsIn1m:
+		return toSet - 7
+	default:
+		return 0
 	}
 }
 
-func setMTimes(size, time int64, keys []int64, timeMap map[int64][]*int64) {
-	for _, v := range keys {
-		if time < v {
-			break
-		}
-
-		*timeMap[v][1] += size
-	}
-}
-
-func (s *summaryWithTimes) updateATime(atime int64) {
-	s.atime = atime
-	s.resetATimes()
-
-	s.setTimes(s.size, atime, 0)
-}
-
-func (s *summaryWithTimes) resetATimes() {
-	for _, v := range []*int64{&s.filesizeA7y, &s.filesizeA5y, &s.filesizeA3y, &s.filesizeA2y,
-		&s.filesizeA1y, &s.filesizeA6m, &s.filesizeA2m, &s.filesizeA1m} {
-		*v = 0
+func setIntervals(numIntervals int, size int64, toSet []*int64) {
+	for i := 0; i <= numIntervals-1; i++ {
+		*toSet[i] += size
 	}
 }

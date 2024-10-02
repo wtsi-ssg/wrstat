@@ -41,40 +41,53 @@ import (
 
 func TestDGUT(t *testing.T) {
 	Convey("You can parse a single line of dgut data", t, func() {
-		line := encode.Base64Encode("/") + "\t1\t101\t0\t3\t30\t50\t50\n"
+		line := encode.Base64Encode("/") + "\t1\t101\t0\t3\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n"
 		dir, gut, err := parseDGUTLine(line)
 		So(err, ShouldBeNil)
 		So(dir, ShouldEqual, "/")
-		So(gut, ShouldResemble, &GUT{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30, Atime: 50, Mtime: 50})
+		So(gut, ShouldResemble, &GUT{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30, Atime: 50, Mtime: 50,
+			FilesizeA7y: 0, FilesizeA5y: 1, FilesizeA3y: 1, FilesizeA2y: 2,
+			FilesizeA1y: 3, FilesizeA6m: 3, FilesizeA2m: 3, FilesizeA1m: 5,
+			FilesizeM7y: 0, FilesizeM5y: 0, FilesizeM3y: 0, FilesizeM2y: 1,
+			FilesizeM1y: 2, FilesizeM6m: 3, FilesizeM2m: 3, FilesizeM1m: 5,
+		})
 
 		Convey("But invalid data won't parse", func() {
-			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\t3\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\t1\t101\t0\t3\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\tfoo\t101\t0\t3\t30\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\tfoo\t101\t0\t3\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\tfoo\t0\t3\t30\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\t1\tfoo\t0\t3\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\tfoo\t3\t30\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\t1\t101\tfoo\t3\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\tfoo\t30\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\t1\t101\t0\tfoo\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\t3\tfoo\t50\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\t1\t101\t0\t3\tfoo\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\t3\t30\tfoo\t50\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\t1\t101\t0\t3\t30\tfoo\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
-			_, _, err = parseDGUTLine(encode.Base64Encode("/") + "\t1\t101\t0\t3\t30\t50\tfoo\n")
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\t1\t101\t0\t3\t30\t50\tfoo\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			So(err.Error(), ShouldEqual, "the provided data was not in dgut format")
 
-			_, _, err = parseDGUTLine("\t\t\t\t\t\t\t\n")
+			_, _, err = parseDGUTLine("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n")
 			So(err, ShouldEqual, ErrBlankLine)
 
 			So(err.Error(), ShouldEqual, "the provided line had no information")
@@ -169,7 +182,7 @@ func TestDGUT(t *testing.T) {
 		ch := new(codec.BincHandle)
 		dirb, b := expected[0].encodeToBytes(ch)
 		So(len(dirb), ShouldEqual, 1)
-		So(len(b), ShouldEqual, 336)
+		So(len(b), ShouldEqual, 1879)
 
 		d := decodeDGUTbytes(ch, dirb, b)
 		So(d, ShouldResemble, expected[0])
@@ -381,9 +394,10 @@ func TestDGUT(t *testing.T) {
 					})
 
 					Convey("Store()ing multiple times", func() {
-						data = strings.NewReader(encode.Base64Encode("/") + "\t3\t103\t7\t2\t2\t25\t25\n" +
-							encode.Base64Encode("/a/i") + "\t3\t103\t7\t1\t1\t25\t25\n" +
-							encode.Base64Encode("/i") + "\t3\t103\t7\t1\t1\t30\t30\n")
+						data = strings.NewReader(encode.Base64Encode("/") +
+							"\t3\t103\t7\t2\t2\t25\t25\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n" +
+							encode.Base64Encode("/a/i") + "\t3\t103\t7\t1\t1\t25\t25\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n" +
+							encode.Base64Encode("/i") + "\t3\t103\t7\t1\t1\t30\t30\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
 
 						Convey("to the same db file doesn't work", func() {
 							err = db.Store(data, 4)
@@ -527,13 +541,37 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 	dgutData = internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
 
 	expectedRootGUTs = GUTs{
-		{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
-		{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
-		{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80},
-		{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60},
-		{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75},
-		{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
-		{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+			FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+			FilesizeA2m: 5, FilesizeA1m: 5,
+			FilesizeM7y: 1029, FilesizeM5y: 1029, FilesizeM3y: 1029, FilesizeM2y: 1029, FilesizeM1y: 1029, FilesizeM6m: 1029,
+			FilesizeM2m: 1029, FilesizeM1m: 1029},
+		{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1,
+			FilesizeM7y: 8192, FilesizeM5y: 8192, FilesizeM3y: 8192, FilesizeM2y: 8192, FilesizeM1y: 8192, FilesizeM6m: 8192,
+			FilesizeM2m: 8192, FilesizeM1m: 8192},
+		{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
+			FilesizeA7y: 10, FilesizeA5y: 10, FilesizeA3y: 10, FilesizeA2y: 10, FilesizeA1y: 10, FilesizeA6m: 10,
+			FilesizeA2m: 10, FilesizeA1m: 10,
+			FilesizeM7y: 10, FilesizeM5y: 10, FilesizeM3y: 10, FilesizeM2y: 10, FilesizeM1y: 10, FilesizeM6m: 10,
+			FilesizeM2m: 10, FilesizeM1m: 10},
+		{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
+			FilesizeA7y: 30, FilesizeA5y: 30, FilesizeA3y: 30, FilesizeA2y: 30, FilesizeA1y: 30, FilesizeA6m: 30,
+			FilesizeA2m: 30, FilesizeA1m: 30,
+			FilesizeM7y: 30, FilesizeM5y: 30, FilesizeM3y: 30, FilesizeM2y: 30, FilesizeM1y: 30, FilesizeM6m: 30,
+			FilesizeM2m: 30, FilesizeM1m: 30},
+		{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
+			FilesizeA7y: 40, FilesizeA5y: 40, FilesizeA3y: 40, FilesizeA2y: 40, FilesizeA1y: 40, FilesizeA6m: 40,
+			FilesizeA2m: 40, FilesizeA1m: 40,
+			FilesizeM7y: 40, FilesizeM5y: 40, FilesizeM3y: 40, FilesizeM2y: 40, FilesizeM1y: 40, FilesizeM6m: 40,
+			FilesizeM2m: 40, FilesizeM1m: 40},
+		{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
+			FilesizeM7y: 2048, FilesizeM5y: 2048, FilesizeM3y: 2048, FilesizeM2y: 2048, FilesizeM1y: 2048, FilesizeM6m: 2048,
+			FilesizeM2m: 2048, FilesizeM1m: 2048},
+		{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
+			FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+			FilesizeA2m: 5, FilesizeA1m: 5,
+			FilesizeM7y: 5, FilesizeM5y: 5, FilesizeM3y: 5, FilesizeM2y: 5, FilesizeM1y: 5, FilesizeM6m: 5,
+			FilesizeM2m: 5, FilesizeM1m: 5},
 	}
 
 	expected = []*DGUT{
@@ -548,72 +586,158 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60},
-				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+					FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+					FilesizeA2m: 5, FilesizeA1m: 5,
+					FilesizeM7y: 1029, FilesizeM5y: 1029, FilesizeM3y: 1029, FilesizeM2y: 1029, FilesizeM1y: 1029, FilesizeM6m: 1029,
+					FilesizeM2m: 1029, FilesizeM1m: 1029},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 7168, FilesizeM5y: 7168, FilesizeM3y: 7168, FilesizeM2y: 7168, FilesizeM1y: 7168, FilesizeM6m: 7168,
+					FilesizeM2m: 7168, FilesizeM1m: 7168},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
+					FilesizeA7y: 10, FilesizeA5y: 10, FilesizeA3y: 10, FilesizeA2y: 10, FilesizeA1y: 10, FilesizeA6m: 10,
+					FilesizeA2m: 10, FilesizeA1m: 10,
+					FilesizeM7y: 10, FilesizeM5y: 10, FilesizeM3y: 10, FilesizeM2y: 10, FilesizeM1y: 10, FilesizeM6m: 10,
+					FilesizeM2m: 10, FilesizeM1m: 10},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
+					FilesizeA7y: 30, FilesizeA5y: 30, FilesizeA3y: 30, FilesizeA2y: 30, FilesizeA1y: 30, FilesizeA6m: 30,
+					FilesizeA2m: 30, FilesizeA1m: 30,
+					FilesizeM7y: 30, FilesizeM5y: 30, FilesizeM3y: 30, FilesizeM2y: 30, FilesizeM1y: 30, FilesizeM6m: 30,
+					FilesizeM2m: 30, FilesizeM1m: 30},
+				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
+					FilesizeA7y: 40, FilesizeA5y: 40, FilesizeA3y: 40, FilesizeA2y: 40, FilesizeA1y: 40, FilesizeA6m: 40,
+					FilesizeA2m: 40, FilesizeA1m: 40,
+					FilesizeM7y: 40, FilesizeM5y: 40, FilesizeM3y: 40, FilesizeM2y: 40, FilesizeM1y: 40, FilesizeM6m: 40,
+					FilesizeM2m: 40, FilesizeM1m: 40},
 			},
 		},
 		{
 			Dir: "/a/b/d",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60},
-				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 3072, FilesizeM5y: 3072, FilesizeM3y: 3072, FilesizeM2y: 3072, FilesizeM1y: 3072, FilesizeM6m: 3072,
+					FilesizeM2m: 3072, FilesizeM1m: 3072},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
+					FilesizeA7y: 30, FilesizeA5y: 30, FilesizeA3y: 30, FilesizeA2y: 30, FilesizeA1y: 30, FilesizeA6m: 30,
+					FilesizeA2m: 30, FilesizeA1m: 30,
+					FilesizeM7y: 30, FilesizeM5y: 30, FilesizeM3y: 30, FilesizeM2y: 30, FilesizeM1y: 30, FilesizeM6m: 30,
+					FilesizeM2m: 30, FilesizeM1m: 30},
+				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
+					FilesizeA7y: 40, FilesizeA5y: 40, FilesizeA3y: 40, FilesizeA2y: 40, FilesizeA1y: 40, FilesizeA6m: 40,
+					FilesizeA2m: 40, FilesizeA1m: 40,
+					FilesizeM7y: 40, FilesizeM5y: 40, FilesizeM3y: 40, FilesizeM2y: 40, FilesizeM1y: 40, FilesizeM6m: 40,
+					FilesizeM2m: 40, FilesizeM1m: 40},
 			},
 		},
 		{
 			Dir: "/a/b/d/f",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 1024, FilesizeM5y: 1024, FilesizeM3y: 1024, FilesizeM2y: 1024, FilesizeM1y: 1024, FilesizeM6m: 1024,
+					FilesizeM2m: 1024, FilesizeM1m: 1024},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 1, Size: 10, Atime: 50, Mtime: 50,
+					FilesizeA7y: 10, FilesizeA5y: 10, FilesizeA3y: 10, FilesizeA2y: 10, FilesizeA1y: 10, FilesizeA6m: 10,
+					FilesizeA2m: 10, FilesizeA1m: 10,
+					FilesizeM7y: 10, FilesizeM5y: 10, FilesizeM3y: 10, FilesizeM2y: 10, FilesizeM1y: 10, FilesizeM6m: 10,
+					FilesizeM2m: 10, FilesizeM1m: 10},
 			},
 		},
 		{
 			Dir: "/a/b/d/g",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 2, Size: 20, Atime: 60, Mtime: 60},
-				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 1024, FilesizeM5y: 1024, FilesizeM3y: 1024, FilesizeM2y: 1024, FilesizeM1y: 1024, FilesizeM6m: 1024,
+					FilesizeM2m: 1024, FilesizeM1m: 1024},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 2, Size: 20, Atime: 60, Mtime: 60,
+					FilesizeA7y: 20, FilesizeA5y: 20, FilesizeA3y: 20, FilesizeA2y: 20, FilesizeA1y: 20, FilesizeA6m: 20,
+					FilesizeA2m: 20, FilesizeA1m: 20,
+					FilesizeM7y: 20, FilesizeM5y: 20, FilesizeM3y: 20, FilesizeM2y: 20, FilesizeM1y: 20, FilesizeM6m: 20,
+					FilesizeM2m: 20, FilesizeM1m: 20},
+				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
+					FilesizeA7y: 40, FilesizeA5y: 40, FilesizeA3y: 40, FilesizeA2y: 40, FilesizeA1y: 40, FilesizeA6m: 40,
+					FilesizeA2m: 40, FilesizeA1m: 40,
+					FilesizeM7y: 40, FilesizeM5y: 40, FilesizeM3y: 40, FilesizeM2y: 40, FilesizeM1y: 40, FilesizeM6m: 40,
+					FilesizeM2m: 40, FilesizeM1m: 40},
 			},
 		},
 		{
 			Dir: "/a/b/e",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+					FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+					FilesizeA2m: 5, FilesizeA1m: 5,
+					FilesizeM7y: 1029, FilesizeM5y: 1029, FilesizeM3y: 1029, FilesizeM2y: 1029, FilesizeM1y: 1029, FilesizeM6m: 1029,
+					FilesizeM2m: 1029, FilesizeM1m: 1029},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 3072, FilesizeM5y: 3072, FilesizeM3y: 3072, FilesizeM2y: 3072, FilesizeM1y: 3072, FilesizeM6m: 3072,
+					FilesizeM2m: 3072, FilesizeM1m: 3072},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
+					FilesizeA7y: 10, FilesizeA5y: 10, FilesizeA3y: 10, FilesizeA2y: 10, FilesizeA1y: 10, FilesizeA6m: 10,
+					FilesizeA2m: 10, FilesizeA1m: 10,
+					FilesizeM7y: 10, FilesizeM5y: 10, FilesizeM3y: 10, FilesizeM2y: 10, FilesizeM1y: 10, FilesizeM6m: 10,
+					FilesizeM2m: 10, FilesizeM1m: 10},
 			},
 		},
 		{
 			Dir: "/a/b/e/h",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+					FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+					FilesizeA2m: 5, FilesizeA1m: 5,
+					FilesizeM7y: 1029, FilesizeM5y: 1029, FilesizeM3y: 1029, FilesizeM2y: 1029, FilesizeM1y: 1029, FilesizeM6m: 1029,
+					FilesizeM2m: 1029, FilesizeM1m: 1029},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 2048, FilesizeM5y: 2048, FilesizeM3y: 2048, FilesizeM2y: 2048, FilesizeM1y: 2048, FilesizeM6m: 2048,
+					FilesizeM2m: 2048, FilesizeM1m: 2048},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
+					FilesizeA7y: 10, FilesizeA5y: 10, FilesizeA3y: 10, FilesizeA2y: 10, FilesizeA1y: 10, FilesizeA6m: 10,
+					FilesizeA2m: 10, FilesizeA1m: 10,
+					FilesizeM7y: 10, FilesizeM5y: 10, FilesizeM3y: 10, FilesizeM2y: 10, FilesizeM1y: 10, FilesizeM6m: 10,
+					FilesizeM2m: 10, FilesizeM1m: 10},
 			},
 		},
 		{
 			Dir: "/a/b/e/h/tmp",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+					FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+					FilesizeA2m: 5, FilesizeA1m: 5,
+					FilesizeM7y: 1029, FilesizeM5y: 1029, FilesizeM3y: 1029, FilesizeM2y: 1029, FilesizeM1y: 1029, FilesizeM6m: 1029,
+					FilesizeM2m: 1029, FilesizeM1m: 1029},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 1024, FilesizeM5y: 1024, FilesizeM3y: 1024, FilesizeM2y: 1024, FilesizeM1y: 1024, FilesizeM6m: 1024,
+					FilesizeM2m: 1024, FilesizeM1m: 1024},
+				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 1, Size: 5, Atime: 80, Mtime: 80,
+					FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+					FilesizeA2m: 5, FilesizeA1m: 5,
+					FilesizeM7y: 5, FilesizeM5y: 5, FilesizeM3y: 5, FilesizeM2y: 5, FilesizeM1y: 5, FilesizeM6m: 5,
+					FilesizeM2m: 5, FilesizeM1m: 5},
 			},
 		},
 		{
 			Dir: "/a/c",
 			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
-				{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 2048, FilesizeM5y: 2048, FilesizeM3y: 2048, FilesizeM2y: 2048, FilesizeM1y: 2048, FilesizeM6m: 2048,
+					FilesizeM2m: 2048, FilesizeM1m: 2048},
+				{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
+					FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+					FilesizeA2m: 5, FilesizeA1m: 5,
+					FilesizeM7y: 5, FilesizeM5y: 5, FilesizeM3y: 5, FilesizeM2y: 5, FilesizeM1y: 5, FilesizeM6m: 5,
+					FilesizeM2m: 5, FilesizeM1m: 5},
 			},
 		},
 		{
 			Dir: "/a/c/d",
 			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
-				{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
+					FilesizeM7y: 1024, FilesizeM5y: 1024, FilesizeM3y: 1024, FilesizeM2y: 1024, FilesizeM1y: 1024, FilesizeM6m: 1024,
+					FilesizeM2m: 1024, FilesizeM1m: 1024},
+				{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
+					FilesizeA7y: 5, FilesizeA5y: 5, FilesizeA3y: 5, FilesizeA2y: 5, FilesizeA1y: 5, FilesizeA6m: 5,
+					FilesizeA2m: 5, FilesizeA1m: 5,
+					FilesizeM7y: 5, FilesizeM5y: 5, FilesizeM3y: 5, FilesizeM2y: 5, FilesizeM1y: 5, FilesizeM6m: 5,
+					FilesizeM2m: 5, FilesizeM1m: 5},
 			},
 		},
 	}
