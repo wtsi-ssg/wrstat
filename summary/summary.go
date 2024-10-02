@@ -27,9 +27,15 @@
 
 package summary
 
-import (
-	"time"
+const (
+	secondsInAMonth = 2628000
+	secondsInAYear  = secondsInAMonth * 12
 )
+
+var ageThresholds = [8]int64{ //nolint:gochecknoglobals
+	secondsInAMonth, secondsInAMonth * 2, secondsInAMonth * 6, secondsInAYear,
+	secondsInAYear * 2, secondsInAYear * 3, secondsInAYear * 5, secondsInAYear * 7,
+}
 
 // summary holds count and size and lets you accumulate count and size as you
 // add more things with a size.
@@ -44,29 +50,15 @@ func (s *summary) add(size int64) {
 	s.size += size
 }
 
-// summaryWithTimes is like summary, but also holds the oldest atime and
-// newest mtime add()ed.
+// summaryWithTimes is like summary, but also holds the oldest atime,
+// newest mtime add()ed, size by access age and size by modify age.
 type summaryWithTimes struct {
 	summary
-	refTime     time.Time
-	atime       int64 // seconds since Unix epoch
-	mtime       int64 // seconds since Unix epoch
-	filesizeA7y int64
-	filesizeA5y int64
-	filesizeA3y int64
-	filesizeA2y int64
-	filesizeA1y int64
-	filesizeA6m int64
-	filesizeA2m int64
-	filesizeA1m int64
-	filesizeM7y int64
-	filesizeM5y int64
-	filesizeM3y int64
-	filesizeM2y int64
-	filesizeM1y int64
-	filesizeM6m int64
-	filesizeM2m int64
-	filesizeM1m int64
+	refTime         int64
+	atime           int64 // seconds since Unix epoch
+	mtime           int64 // seconds since Unix epoch
+	sizeByAccessAge [8]int64
+	sizeByModifyAge [8]int64
 }
 
 // add will increment our count and add the given size to our size. It also
@@ -76,7 +68,13 @@ type summaryWithTimes struct {
 func (s *summaryWithTimes) add(size int64, atime int64, mtime int64) {
 	s.summary.add(size)
 
-	s.setAgeSizes(size, atime, mtime)
+	if atime != 0 {
+		s.setAgeSizes(size, atime, &s.sizeByAccessAge)
+	}
+
+	if mtime != 0 {
+		s.setAgeSizes(size, mtime, &s.sizeByModifyAge)
+	}
 
 	if atime > 0 && (s.atime == 0 || atime < s.atime) {
 		s.atime = atime
@@ -87,92 +85,12 @@ func (s *summaryWithTimes) add(size int64, atime int64, mtime int64) {
 	}
 }
 
-func (s *summaryWithTimes) setAgeSizes(size, atime, mtime int64) {
+func (s *summaryWithTimes) setAgeSizes(size int64, age int64, sizeByAge *[8]int64) {
+	for i := range sizeByAge {
+		if age > s.refTime-ageThresholds[i] {
+			return
+		}
 
-	if atime != 0 {
-		s.setAtimeSizes(size, time.Unix(atime, 0))
-	}
-
-	if mtime != 0 {
-		s.setMtimeSizes(size, time.Unix(mtime, 0))
-	}
-}
-
-func (s *summaryWithTimes) setAtimeSizes(size int64, t time.Time) {
-	if t.After(s.refTime.AddDate(0, -1, 0)) {
-		return
-	}
-
-	s.filesizeA1m += size
-
-	if t.After(s.refTime.AddDate(0, -2, 0)) {
-		return
-	}
-
-	s.filesizeA2m += size
-
-	if t.After(s.refTime.AddDate(0, -6, 0)) {
-		return
-	}
-
-	s.filesizeA6m += size
-
-	if t.After(s.refTime.AddDate(-1, 0, 0)) {
-		return
-	}
-
-	s.filesizeA1y += size
-
-	if t.After(s.refTime.AddDate(-2, 0, 0)) {
-		return
-	}
-
-	s.filesizeA2y += size
-
-	if t.After(s.refTime.AddDate(-3, 0, 0)) {
-		return
-	}
-
-	s.filesizeA3y += size
-
-	if t.After(s.refTime.AddDate(-5, 0, 0)) {
-		return
-	}
-
-	s.filesizeA5y += size
-
-	if t.After(s.refTime.AddDate(-7, 0, 0)) {
-		return
-	}
-
-	s.filesizeA7y += size
-}
-
-func (s *summaryWithTimes) setMtimeSizes(size int64, t time.Time) {
-	switch {
-	case t.Before(s.refTime.AddDate(0, -1, 0)):
-		s.filesizeM1m += size
-		fallthrough
-	case t.Before(s.refTime.AddDate(0, -2, 0)):
-		s.filesizeM2m += size
-		fallthrough
-	case t.Before(s.refTime.AddDate(0, -6, 0)):
-		s.filesizeM6m += size
-		fallthrough
-	case t.Before(s.refTime.AddDate(-1, 0, 0)):
-		s.filesizeM1y += size
-		fallthrough
-	case t.Before(s.refTime.AddDate(-2, 0, 0)):
-		s.filesizeM2y += size
-		fallthrough
-	case t.Before(s.refTime.AddDate(-3, 0, 0)):
-		s.filesizeM3y += size
-		fallthrough
-	case t.Before(s.refTime.AddDate(-5, 0, 0)):
-		s.filesizeM5y += size
-		fallthrough
-	case t.Before(s.refTime.AddDate(-7, 0, 0)):
-		//fmt.Println(t, " is before ", s.refTime.AddDate(-7, 0, 0))
-		s.filesizeM7y += size
+		sizeByAge[i] += size
 	}
 }

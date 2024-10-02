@@ -124,7 +124,7 @@ func FileTypeStringToDirGUTFileType(ft string) (DirGUTFileType, error) {
 // as values.
 type gutStore struct {
 	sumMap  map[string]*summaryWithTimes
-	refTime time.Time
+	refTime int64
 }
 
 // add will auto-vivify a summary for the given key (which should have been
@@ -148,7 +148,7 @@ func (store gutStore) sort() ([]string, []*summaryWithTimes) {
 // dirToGUTStore is a sortable map of directory to gutStore.
 type dirToGUTStore struct {
 	gsMap   map[string]gutStore
-	refTime time.Time
+	refTime int64
 }
 
 // getGUTStore auto-vivifies a gutStore for the given dir and returns it.
@@ -197,7 +197,7 @@ type DirGroupUserType struct {
 // NewByDirGroupUserType returns a DirGroupUserType.
 func NewByDirGroupUserType() *DirGroupUserType {
 	return &DirGroupUserType{
-		store: dirToGUTStore{make(map[string]gutStore), time.Now()},
+		store: dirToGUTStore{make(map[string]gutStore), time.Now().Unix()},
 		typeCheckers: map[DirGUTFileType]typeChecker{
 			DGUTFileTypeTemp:       isTemp,
 			DGUTFileTypeVCF:        isVCF,
@@ -487,15 +487,16 @@ func (d *DirGroupUserType) Output(output StringCloser) error {
 
 		for j, dgut := range dguts {
 			s := summaries[j]
-			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d"+
+				"\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
 				encode.Base64Encode(dir),
 				dgut,
 				s.count, s.size,
 				s.atime, s.mtime,
-				s.filesizeA7y, s.filesizeA5y, s.filesizeA3y, s.filesizeA2y,
-				s.filesizeA1y, s.filesizeA6m, s.filesizeA2m, s.filesizeA1m,
-				s.filesizeM7y, s.filesizeM5y, s.filesizeM3y, s.filesizeM2y,
-				s.filesizeM1y, s.filesizeM6m, s.filesizeM2m, s.filesizeM1m))
+				s.sizeByAccessAge[0], s.sizeByAccessAge[1], s.sizeByAccessAge[2], s.sizeByAccessAge[3],
+				s.sizeByAccessAge[4], s.sizeByAccessAge[5], s.sizeByAccessAge[6], s.sizeByAccessAge[7],
+				s.sizeByModifyAge[0], s.sizeByModifyAge[1], s.sizeByModifyAge[2], s.sizeByModifyAge[3],
+				s.sizeByModifyAge[4], s.sizeByModifyAge[5], s.sizeByModifyAge[6], s.sizeByModifyAge[7]))
 
 			if errw != nil {
 				return errw
