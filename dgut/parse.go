@@ -125,29 +125,15 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 	}
 
 	return path, &GUT{
-		GID:         uint32(ints[0]),
-		UID:         uint32(ints[1]),
-		FT:          summary.DirGUTFileType(ints[2]),
-		Count:       ints[3],
-		Size:        ints[4],
-		Atime:       int64(ints[5]),
-		Mtime:       int64(ints[6]),
-		FilesizeA7y: int64(ints[7]),
-		FilesizeA5y: int64(ints[8]),
-		FilesizeA3y: int64(ints[9]),
-		FilesizeA2y: int64(ints[10]),
-		FilesizeA1y: int64(ints[11]),
-		FilesizeA6m: int64(ints[12]),
-		FilesizeA2m: int64(ints[13]),
-		FilesizeA1m: int64(ints[14]),
-		FilesizeM7y: int64(ints[15]),
-		FilesizeM5y: int64(ints[16]),
-		FilesizeM3y: int64(ints[17]),
-		FilesizeM2y: int64(ints[18]),
-		FilesizeM1y: int64(ints[19]),
-		FilesizeM6m: int64(ints[20]),
-		FilesizeM2m: int64(ints[21]),
-		FilesizeM1m: int64(ints[22]),
+		GID:             uint32(ints[0]),
+		UID:             uint32(ints[1]),
+		FT:              summary.DirGUTFileType(ints[2]),
+		Count:           uint64(ints[3]),
+		Size:            uint64(ints[4]),
+		Atime:           ints[5],
+		Mtime:           ints[6],
+		SizeByAccessAge: ([8]int64)(ints[7:15]),
+		SizeByModifyAge: ([8]int64)(ints[15:]),
 	}, nil
 }
 
@@ -165,25 +151,25 @@ func splitDGUTLine(line string) ([]string, error) {
 
 // gutLinePartsToInts takes the output of splitDGUTLine() and returns the last
 // 7 columns as ints.
-func gutLinePartsToInts(parts []string) ([]uint64, error) {
-	ints := make([]uint64, gutDataIntCols)
+func gutLinePartsToInts(parts []string) ([]int64, error) {
+	ints := make([]int64, gutDataIntCols)
 
 	var err error
 
-	if ints[0], err = strconv.ParseUint(parts[1], 10, 32); err != nil {
+	if ints[0], err = strconv.ParseInt(parts[1], 10, 32); err != nil {
 		return nil, ErrInvalidFormat
 	}
 
-	if ints[1], err = strconv.ParseUint(parts[2], 10, 32); err != nil {
+	if ints[1], err = strconv.ParseInt(parts[2], 10, 32); err != nil {
 		return nil, ErrInvalidFormat
 	}
 
-	if ints[2], err = strconv.ParseUint(parts[3], 10, 8); err != nil {
+	if ints[2], err = strconv.ParseInt(parts[3], 10, 8); err != nil {
 		return nil, ErrInvalidFormat
 	}
 
 	for i := 3; i < gutDataIntCols; i++ {
-		if ints[i], err = strconv.ParseUint(parts[i+1], 10, 64); err != nil {
+		if ints[i], err = strconv.ParseInt(parts[i+1], 10, 64); err != nil {
 			return nil, ErrInvalidFormat
 		}
 	}
