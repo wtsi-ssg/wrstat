@@ -1649,6 +1649,7 @@ waitForJobs() {
 mkdir -p /tmp/working/partial/;
 mkdir -p /tmp/working/complete/;
 mkdir -p /tmp/final/;
+mkdir -p /tmp/final/simple/;
 
 yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1;
 
@@ -1657,6 +1658,10 @@ waitForJobs;
 
 wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ -l `+
 			`/tmp/working/partial -q /tmp/quota -b /tmp/basedirs -o /tmp/owners /objects/*;
+waitForJobs;
+
+wrstat multi -m 0 -z "$(basename /tmp/working/partial/*)" -w /tmp/working/partial/ `+
+			`-f /tmp/final/simple -q /tmp/quota -b /tmp/basedirs -o /tmp/owners;
 waitForJobs;
 
 stop;`)
@@ -1783,7 +1788,7 @@ stop;`)
 				"U%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
 				"U%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
 				"U%[4]d\t\t/objects/store2/part1/other/my\nDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
-				"U%[5]d\t\t/objects/store2/part1/other/my\nDir\t19997\t2048\t0\t1\t0\tOK\n"+
+				"U%[5]d\t\t/objects/store2/part1/other/my\nDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
 				"U%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK",
 				UserA, UserB, UserC, UserD, UserE,
 				time.Now().Unix()/86400),
@@ -1952,6 +1957,37 @@ stop;`)
 				encode.Base64Encode("/objects/store3/aFile")+"\t512\t%d\t%d\t160\t160\t160\tf\t\x00\t1\t34\n"+
 				encode.Base64Encode("/objects/store3")+"\t0\t0\t0\t160\t160\t160\td\t\x00\t2\t32",
 				UserA, GroupA),
+
+			"simple/*basedirs.userusage.tsv": fmt.Sprintf(``+
+				"U%[1]d\t\t/simple/A\t%[3]d\t1\t0\t1\t0\tOK\n"+
+				"U%[2]d\t\t/simple/E\t%[3]d\t2\t0\t1\t0\tOK",
+				UserA, UserE,
+				time.Now().Unix()/86400),
+			"simple/*basedirs.groupusage.tsv": fmt.Sprintf(``+
+				"G%[1]d\t\t/simple/A\t%[3]d\t1\t0\t1\t0\tNot OK\n"+
+				"G%[2]d\t\t/simple/E\t%[3]d\t2\t0\t1\t0\tNot OK",
+				GroupA, GroupE,
+				time.Now().Unix()/86400),
+			"simple/????????_A.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t1", GroupA, UserA),
+			"simple/????????_E.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t2", GroupE, UserE),
+			"simple/????????_A.*.byusergroup.gz": fmt.Sprintf(``+
+				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/")+"\t1\t1\n"+
+				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple")+"\t1\t1\n"+
+				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple/A")+"\t1\t1\n", UserA, GroupA),
+			"simple/????????_E.*.byusergroup.gz": fmt.Sprintf(``+
+				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/")+"\t1\t2\n"+
+				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple")+"\t1\t2\n"+
+				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple/E")+"\t1\t2\n", UserE, GroupE),
+			"simple/????????_A.*.logs.gz": "",
+			"simple/????????_E.*.logs.gz": "",
+			"simple/????????_A.*.stats.gz": fmt.Sprintf(""+
+				encode.Base64Encode("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t166\t166\t166\tf\t\x00\t1\t34\n"+
+				encode.Base64Encode("/simple/A")+"\t0\t%[1]d\t%[2]d\t166\t166\t166\td\t\x00\t2\t32",
+				UserA, GroupA),
+			"simple/????????_E.*.stats.gz": fmt.Sprintf(""+
+				encode.Base64Encode("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t171\t171\t171\tf\t\x00\t2\t34\n"+
+				encode.Base64Encode("/simple/E")+"\t0\t%[1]d\t%[2]d\t171\t171\t171\td\t\x00\t3\t32",
+				UserE, GroupE),
 		} {
 			files, errr := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
 			So(errr, ShouldBeNil)
@@ -1976,7 +2012,7 @@ stop;`)
 			"%[2]d\t\t/objects/store2/part0/teams/team2\t%[6]d\t1000\t0\t1\t0\tOK\n"+
 			"%[3]d\t\t/objects/store1/data/temp\t%[6]d\t6000\t0\t3\t0\tOK\n"+
 			"%[4]d\t\t/objects/store2/part1/other/my\nDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
-			"%[5]d\t\t/objects/store2/part1/other/my\nDir\t19997\t2048\t0\t1\t0\tOK\n"+
+			"%[5]d\t\t/objects/store2/part1/other/my\nDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
 			"%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK\n",
 			UserA, UserB, UserC, UserD, UserE,
 			time.Now().Unix()/86400)
@@ -1990,7 +2026,7 @@ stop;`)
 			"%[1]d\t\t/simple/A\t%[5]d\t1\t0\t1\t0\tNot OK\n"+
 			"%[2]d\t\t/objects/store2/part0/teams/team1\t%[5]d\t200\t0\t1\t0\tNot OK\n"+
 			"%[2]d\t\t/objects/store2/part0/teams/team2\t%[5]d\t1000\t0\t1\t0\tNot OK\n"+
-			"%[2]d\t\t/objects/store2/part1/other/my\nDir\t19997\t2048\t0\t1\t0\tNot OK\n"+
+			"%[2]d\t\t/objects/store2/part1/other/my\nDir\t%[5]d\t2048\t0\t1\t0\tNot OK\n"+
 			"%[3]d\t\t/objects/store2/important/docs\t\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
 			"%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK\n",
 			GroupA, GroupB, GroupD, GroupE,
