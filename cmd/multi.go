@@ -189,7 +189,7 @@ func checkMultiArgs(args []string) {
 		checkStandardFlags()
 	}
 
-	if len(args) == 0 {
+	if len(args) == 0 && finishPartial == "" {
 		die("at least 1 directory of interest must be supplied")
 	}
 }
