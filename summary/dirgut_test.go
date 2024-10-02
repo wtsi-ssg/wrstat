@@ -302,65 +302,62 @@ func TestDirGUT(t *testing.T) {
 
 	cuid := uint32(cuidI)
 
-	FocusConvey("Given a Usergroup", t, func() {
+	Convey("Given a Usergroup", t, func() {
 		dgut := NewByDirGroupUserType()
 		So(dgut, ShouldNotBeNil)
 
-		FocusConvey("You can add file info with a range of Atimes to it", func() {
-			atime1 := dgut.store.refTime.AddDate(0, -2, -1).Unix()
-			mtime1 := dgut.store.refTime.AddDate(0, -3, 0).Unix()
+		Convey("You can add file info with a range of Atimes to it", func() {
+			atime1 := time.Now().Unix() - (secondsIn2m + 100000)      // > 2 m
+			mtime1 := time.Now().Unix() - (secondsIn2m + secondsIn1m) // 3 m
 			mi := newMockInfoWithAtime(10, 2, 2, false, atime1)
 			mi.mtime = mtime1
 			err = dgut.Add("/a/b/c/1.bam", mi)
 			So(err, ShouldBeNil)
 
-			atime2 := dgut.store.refTime.AddDate(0, -7, 0).Unix()
-			mtime2 := dgut.store.refTime.AddDate(0, -8, 0).Unix()
+			atime2 := time.Now().Unix() - (secondsIn6m + secondsIn1m) // 7 m
+			mtime2 := time.Now().Unix() - (secondsIn6m + secondsIn2m) // 8 m
 			mi = newMockInfoWithAtime(10, 2, 3, false, atime2)
 			mi.mtime = mtime2
 			err = dgut.Add("/a/b/c/2.bam", mi)
 			So(err, ShouldBeNil)
 
-			atime3 := dgut.store.refTime.AddDate(-1, -1, 0).Unix()
-			mtime3 := dgut.store.refTime.AddDate(-1, -6, 0).Unix()
+			atime3 := time.Now().Unix() - (secondsIn1y + secondsIn1m) // 1 y 1 m
+			mtime3 := time.Now().Unix() - (secondsIn1y + secondsIn6m) // 1 y 6 m
 			mi = newMockInfoWithAtime(10, 2, 4, false, atime3)
 			mi.mtime = mtime3
 			err = dgut.Add("/a/b/c/3.txt", mi)
 			So(err, ShouldBeNil)
 
-			atime4 := dgut.store.refTime.AddDate(-4, 0, 0).Unix()
-			mtime4 := dgut.store.refTime.AddDate(-6, 0, 0).Unix()
+			atime4 := time.Now().Unix() - (secondsIn3y + secondsIn1y) // 4 y
+			mtime4 := time.Now().Unix() - (secondsIn3y + secondsIn3y) // 6 y
 			mi = newMockInfoWithAtime(10, 2, 5, false, atime4)
 			mi.mtime = mtime4
 			err = dgut.Add("/a/b/c/4.bam", mi)
 			So(err, ShouldBeNil)
 
-			atime5 := dgut.store.refTime.AddDate(-5, -1, 0).Unix()
-			mtime5 := dgut.store.refTime.AddDate(-7, -1, 0).Unix()
+			atime5 := time.Now().Unix() - (secondsIn5y + secondsIn1m) // 5 y 1 m
+			mtime5 := time.Now().Unix() - (secondsIn7y + secondsIn1m) // 7 y 1 m
 			mi = newMockInfoWithAtime(10, 2, 6, false, atime5)
 			mi.mtime = mtime5
 			err = dgut.Add("/a/b/c/5.cram", mi)
 			So(err, ShouldBeNil)
 
-			atime6 := dgut.store.refTime.AddDate(-7, -1, 0).Unix()
-			mtime6 := dgut.store.refTime.AddDate(-7, -1, 0).Unix()
+			atime6 := time.Now().Unix() - (secondsIn7y + secondsIn1m) // 7 y 1 m
+			mtime6 := time.Now().Unix() - (secondsIn7y + secondsIn1m) // 7 y 1 m
 			mi = newMockInfoWithAtime(10, 2, 7, false, atime6)
 			mi.mtime = mtime6
 			err = dgut.Add("/a/b/c/6.cram", mi)
 			So(err, ShouldBeNil)
 
-			So(dgut.store.gsMap["/a/b/c"].sumMap["2\t10\t6"], ShouldResemble, &summaryWithTimes{summary{3, 10},
-				dgut.store.refTime,
+			So(dgut.store["/a/b/c"]["2\t10\t6"], ShouldResemble, &summaryWithTimes{summary{3, 10},
 				atime4, mtime1,
 				0, 0, 5, 5, 5, 8, 10, 10,
 				0, 5, 5, 5, 5, 8, 10, 10})
-			So(dgut.store.gsMap["/a/b/c"].sumMap["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{2, 13},
-				dgut.store.refTime,
+			So(dgut.store["/a/b/c"]["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{2, 13},
 				atime6, mtime5,
 				7, 13, 13, 13, 13, 13, 13, 13,
 				13, 13, 13, 13, 13, 13, 13, 13})
-			So(dgut.store.gsMap["/a/b/c"].sumMap["2\t10\t13"], ShouldResemble, &summaryWithTimes{summary{1, 4},
-				dgut.store.refTime,
+			So(dgut.store["/a/b/c"]["2\t10\t13"], ShouldResemble, &summaryWithTimes{summary{1, 4},
 				atime3, mtime3,
 				0, 0, 0, 0, 4, 4, 4, 4,
 				0, 0, 0, 0, 4, 4, 4, 4})
@@ -418,92 +415,71 @@ func TestDirGUT(t *testing.T) {
 			err = dgut.Add("/a/b/c/d", newMockInfoWithAtime(10, 2, 4096, true, 50))
 			So(err, ShouldBeNil)
 
-			So(dgut.store.gsMap["/a/b/c"], ShouldNotBeNil)
-			So(dgut.store.gsMap["/a/b"], ShouldNotBeNil)
-			So(dgut.store.gsMap["/a"], ShouldNotBeNil)
-			So(dgut.store.gsMap["/"], ShouldNotBeNil)
-			So(dgut.store.gsMap[""], ShouldBeNil)
+			So(dgut.store["/a/b/c"], ShouldNotBeNil)
+			So(dgut.store["/a/b"], ShouldNotBeNil)
+			So(dgut.store["/a"], ShouldNotBeNil)
+			So(dgut.store["/"], ShouldNotBeNil)
+			So(dgut.store[""], ShouldBeNil)
 
 			cuidKey := fmt.Sprintf("2\t%d\t13", cuid)
-			So(dgut.store.gsMap["/a/b/c"].sumMap[cuidKey], ShouldResemble, &summaryWithTimes{summary{2, 30},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a/b/c"][cuidKey], ShouldResemble, &summaryWithTimes{summary{2, 30}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a/b/c"].sumMap["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a/b/c"]["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a/b/c"].sumMap["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3},
-				dgut.store.refTime, 100, 0,
+			So(dgut.store["/a/b/c"]["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3}, 100, 0,
 				3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a/b/c"].sumMap["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a/b/c"]["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a/b/c"].sumMap["3\t2\t1"], ShouldBeNil)
-			So(dgut.store.gsMap["/a/b/c"].sumMap["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{2, 4},
-				dgut.store.refTime, 200, 250,
+			So(dgut.store["/a/b/c"]["3\t2\t1"], ShouldBeNil)
+			So(dgut.store["/a/b/c"]["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{2, 4}, 200, 250,
 				4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4})
-			So(dgut.store.gsMap["/a/b/c/d"].sumMap["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{1, 2},
-				dgut.store.refTime, 200, 200,
+			So(dgut.store["/a/b/c/d"]["2\t10\t7"], ShouldResemble, &summaryWithTimes{summary{1, 2}, 200, 200,
 				2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2})
-			So(dgut.store.gsMap["/a/b/c"].sumMap["10\t2\t7"], ShouldResemble, &summaryWithTimes{summary{1, 2},
-				dgut.store.refTime, 301, 0,
+			So(dgut.store["/a/b/c"]["10\t2\t7"], ShouldResemble, &summaryWithTimes{summary{1, 2}, 301, 0,
 				2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0})
 
-			swa := dgut.store.gsMap["/a/b"].sumMap["2\t10\t15"]
+			swa := dgut.store["/a/b"]["2\t10\t15"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
 
-			So(swa, ShouldResemble, &summaryWithTimes{summary{1, 4096},
-				dgut.store.refTime, 18, 0,
+			So(swa, ShouldResemble, &summaryWithTimes{summary{1, 4096}, 18, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
-			swa = dgut.store.gsMap["/a/b/c"].sumMap["2\t10\t15"]
+			swa = dgut.store["/a/b/c"]["2\t10\t15"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
 
-			So(swa, ShouldResemble, &summaryWithTimes{summary{1, 4096},
-				dgut.store.refTime, 18, 0,
+			So(swa, ShouldResemble, &summaryWithTimes{summary{1, 4096}, 18, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a/b/c/d"].sumMap["2\t10\t15"], ShouldNotBeNil)
+			So(dgut.store["/a/b/c/d"]["2\t10\t15"], ShouldNotBeNil)
 
-			So(dgut.store.gsMap["/a/b"].sumMap[cuidKey], ShouldResemble, &summaryWithTimes{summary{3, 60},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a/b"][cuidKey], ShouldResemble, &summaryWithTimes{summary{3, 60}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a/b"].sumMap["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a/b"]["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a/b"].sumMap["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3},
-				dgut.store.refTime, 100, 0,
+			So(dgut.store["/a/b"]["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3}, 100, 0,
 				3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a/b"].sumMap["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a/b"]["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
-			So(dgut.store.gsMap["/a"].sumMap[cuidKey], ShouldResemble, &summaryWithTimes{summary{3, 60},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a"][cuidKey], ShouldResemble, &summaryWithTimes{summary{3, 60}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a"].sumMap["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a"]["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a"].sumMap["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3},
-				dgut.store.refTime, 100, 0,
+			So(dgut.store["/a"]["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3}, 100, 0,
 				3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/a"].sumMap["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/a"]["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
-			So(dgut.store.gsMap["/"].sumMap[cuidKey], ShouldResemble, &summaryWithTimes{summary{3, 60},
-				dgut.store.refTime, 0, 0, 0,
+			So(dgut.store["/"][cuidKey], ShouldResemble, &summaryWithTimes{summary{3, 60}, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/"].sumMap["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/"]["2\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 5}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/"].sumMap["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3},
-				dgut.store.refTime, 100, 0,
+			So(dgut.store["/"]["2\t2\t6"], ShouldResemble, &summaryWithTimes{summary{1, 3}, 100, 0,
 				3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0})
-			So(dgut.store.gsMap["/"].sumMap["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6},
-				dgut.store.refTime, 0, 0,
+			So(dgut.store["/"]["3\t2\t13"], ShouldResemble, &summaryWithTimes{summary{1, 6}, 0, 0,
 				0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 
 			Convey("And then given an output file", func() {

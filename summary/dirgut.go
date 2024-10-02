@@ -122,18 +122,15 @@ func FileTypeStringToDirGUTFileType(ft string) (DirGUTFileType, error) {
 
 // gutStore is a sortable map with gid,uid,filetype as keys and summaryWithAtime
 // as values.
-type gutStore struct {
-	sumMap  map[string]*summaryWithTimes
-	refTime time.Time
-}
+type gutStore map[string]*summaryWithTimes
 
 // add will auto-vivify a summary for the given key (which should have been
 // generated with statToGUTKey()) and call add(size, atime, mtime) on it.
 func (store gutStore) add(key string, size int64, atime int64, mtime int64) {
-	s, ok := store.sumMap[key]
+	s, ok := store[key]
 	if !ok {
-		s = &summaryWithTimes{refTime: store.refTime}
-		store.sumMap[key] = s
+		s = &summaryWithTimes{}
+		store[key] = s
 	}
 
 	s.add(size, atime, mtime)
@@ -142,21 +139,18 @@ func (store gutStore) add(key string, size int64, atime int64, mtime int64) {
 // sort returns a slice of our summaryWithAtime values, sorted by our dgut keys
 // which are also returned.
 func (store gutStore) sort() ([]string, []*summaryWithTimes) {
-	return sortSummaryStore(store.sumMap)
+	return sortSummaryStore(store)
 }
 
 // dirToGUTStore is a sortable map of directory to gutStore.
-type dirToGUTStore struct {
-	gsMap   map[string]gutStore
-	refTime time.Time
-}
+type dirToGUTStore map[string]gutStore
 
 // getGUTStore auto-vivifies a gutStore for the given dir and returns it.
 func (store dirToGUTStore) getGUTStore(dir string) gutStore {
-	gStore, ok := store.gsMap[dir]
+	gStore, ok := store[dir]
 	if !ok {
-		gStore = gutStore{make(map[string]*summaryWithTimes), store.refTime}
-		store.gsMap[dir] = gStore
+		gStore = make(gutStore)
+		store[dir] = gStore
 	}
 
 	return gStore
@@ -165,10 +159,10 @@ func (store dirToGUTStore) getGUTStore(dir string) gutStore {
 // sort returns a slice of our gutStore values, sorted by our directory keys
 // which are also returned.
 func (store dirToGUTStore) sort() ([]string, []gutStore) {
-	keys := make([]string, len(store.gsMap))
+	keys := make([]string, len(store))
 	i := 0
 
-	for k := range store.gsMap {
+	for k := range store {
 		keys[i] = k
 		i++
 	}
@@ -178,7 +172,7 @@ func (store dirToGUTStore) sort() ([]string, []gutStore) {
 	s := make([]gutStore, len(keys))
 
 	for i, k := range keys {
-		s[i] = store.gsMap[k]
+		s[i] = store[k]
 	}
 
 	return keys, s
@@ -197,7 +191,7 @@ type DirGroupUserType struct {
 // NewByDirGroupUserType returns a DirGroupUserType.
 func NewByDirGroupUserType() *DirGroupUserType {
 	return &DirGroupUserType{
-		store: dirToGUTStore{make(map[string]gutStore), time.Now()},
+		store: make(dirToGUTStore),
 		typeCheckers: map[DirGUTFileType]typeChecker{
 			DGUTFileTypeTemp:       isTemp,
 			DGUTFileTypeVCF:        isVCF,
