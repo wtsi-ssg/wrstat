@@ -244,11 +244,11 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 }
 
 func uniqueOrPartial(partial string) string {
-	if finishPartial == "" {
+	if partial == "" {
 		return scheduler.UniqueString()
 	}
 
-	return finishPartial
+	return partial
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
