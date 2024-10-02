@@ -109,7 +109,7 @@ func init() {
 	cronCmd.Flags().BoolVarP(&createPartial, "create_partial_dir", "p", false, "perform the walk, "+
 		"stat, and combine steps only")
 	cronCmd.Flags().StringVarP(&finishPartial, "partial_dir_finish", "z", "", "perform the basedir "+
-		"and tidy step on a partial run")
+		"and tidy step on a partial run, requires the name of the unique subdirectory the partial run files are in")
 	cronCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	cronCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
