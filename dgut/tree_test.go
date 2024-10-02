@@ -228,11 +228,16 @@ func TestTree(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		db := NewDB(paths1[0])
-		data := strings.NewReader(encode.Base64Encode("/") + "\t1\t11\t6\t1\t1\t20\t20\n" +
-			encode.Base64Encode("/a") + "\t1\t11\t6\t1\t1\t20\t20\n" +
-			encode.Base64Encode("/a/b") + "\t1\t11\t6\t1\t1\t20\t20\n" +
-			encode.Base64Encode("/a/b/c") + "\t1\t11\t6\t1\t1\t20\t20\n" +
-			encode.Base64Encode("/a/b/c/d") + "\t1\t11\t6\t1\t1\t20\t20\n")
+		data := strings.NewReader(encode.Base64Encode("/") +
+			"\t1\t11\t6\t1\t1\t20\t20\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n" +
+			encode.Base64Encode("/a") +
+			"\t1\t11\t6\t1\t1\t20\t20\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n" +
+			encode.Base64Encode("/a/b") +
+			"\t1\t11\t6\t1\t1\t20\t20\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n" +
+			encode.Base64Encode("/a/b/c") +
+			"\t1\t11\t6\t1\t1\t20\t20\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n" +
+			encode.Base64Encode("/a/b/c/d") +
+			"\t1\t11\t6\t1\t1\t20\t20\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n")
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 
@@ -240,11 +245,16 @@ func TestTree(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		db = NewDB(paths2[0])
-		data = strings.NewReader(encode.Base64Encode("/") + "\t1\t11\t6\t1\t1\t15\t15\n" +
-			encode.Base64Encode("/a") + "\t1\t11\t6\t1\t1\t15\t15\n" +
-			encode.Base64Encode("/a/b") + "\t1\t11\t6\t1\t1\t15\t15\n" +
-			encode.Base64Encode("/a/b/c") + "\t1\t11\t6\t1\t1\t15\t15\n" +
-			encode.Base64Encode("/a/b/c/e") + "\t1\t11\t6\t1\t1\t15\t15\n")
+		data = strings.NewReader(encode.Base64Encode("/") +
+			"\t1\t11\t6\t1\t1\t15\t15\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n" +
+			encode.Base64Encode("/a") +
+			"\t1\t11\t6\t1\t1\t15\t15\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n" +
+			encode.Base64Encode("/a/b") +
+			"\t1\t11\t6\t1\t1\t15\t15\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n" +
+			encode.Base64Encode("/a/b/c") +
+			"\t1\t11\t6\t1\t1\t15\t15\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n" +
+			encode.Base64Encode("/a/b/c/e") +
+			"\t1\t11\t6\t1\t1\t15\t15\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n")
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 

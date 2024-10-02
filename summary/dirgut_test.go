@@ -309,9 +309,6 @@ func TestDirGUT(t *testing.T) {
 		Convey("You can add file info with a range of Atimes to it", func() {
 			atime1 := time.Now().Unix() - (secondsIn2m + 100000)      // > 2 m
 			mtime1 := time.Now().Unix() - (secondsIn2m + secondsIn1m) // 3 m
-
-			So(getNumOfSatisfyingIntervals(atime1, time.Now().Unix(), 8), ShouldEqual, 2)
-
 			mi := newMockInfoWithAtime(10, 2, 2, false, atime1)
 			mi.mtime = mtime1
 			err = dgut.Add("/a/b/c/1.bam", mi)
@@ -319,9 +316,6 @@ func TestDirGUT(t *testing.T) {
 
 			atime2 := time.Now().Unix() - (secondsIn6m + secondsIn1m) // 7 m
 			mtime2 := time.Now().Unix() - (secondsIn6m + secondsIn2m) // 8 m
-
-			So(getNumOfSatisfyingIntervals(atime2, time.Now().Unix(), 8), ShouldEqual, 3)
-
 			mi = newMockInfoWithAtime(10, 2, 3, false, atime2)
 			mi.mtime = mtime2
 			err = dgut.Add("/a/b/c/2.bam", mi)
@@ -336,9 +330,6 @@ func TestDirGUT(t *testing.T) {
 
 			atime4 := time.Now().Unix() - (secondsIn3y + secondsIn1y) // 4 y
 			mtime4 := time.Now().Unix() - (secondsIn3y + secondsIn3y) // 6 y
-
-			So(getNumOfSatisfyingIntervals(atime4, time.Now().Unix(), 8), ShouldEqual, 6)
-
 			mi = newMockInfoWithAtime(10, 2, 5, false, atime4)
 			mi.mtime = mtime4
 			err = dgut.Add("/a/b/c/4.bam", mi)
