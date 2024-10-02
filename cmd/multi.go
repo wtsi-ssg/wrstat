@@ -214,7 +214,6 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	defer d()
 
 	unique := uniqueOrPartial(finishPartial)
-
 	outputRoot := filepath.Join(workDir, unique)
 
 	err := os.MkdirAll(outputRoot, userGroupPerm)
