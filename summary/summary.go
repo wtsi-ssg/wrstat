@@ -55,10 +55,10 @@ func (s *summary) add(size int64) {
 type summaryWithTimes struct {
 	summary
 	refTime         int64
-	atime           int64 // seconds since Unix epoch
-	mtime           int64 // seconds since Unix epoch
-	sizeByAccessAge [8]int64
-	sizeByModifyAge [8]int64
+	atime           int64    // seconds since Unix epoch
+	mtime           int64    // seconds since Unix epoch
+	sizeByAccessAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to access time
+	sizeByModifyAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to modify time
 }
 
 // add will increment our count and add the given size to our size. It also

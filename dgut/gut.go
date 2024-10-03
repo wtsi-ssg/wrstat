@@ -166,6 +166,10 @@ func (g GUTs) Summary(filter *Filter) *DirSummary {
 
 	var updateTime time.Time
 
+	var sizeByAccessAge [8]int64
+
+	var sizeByModifyAge [8]int64
+
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
 	uniqueFTs := make(map[summary.DirGUTFileType]bool)
@@ -181,22 +185,25 @@ func (g GUTs) Summary(filter *Filter) *DirSummary {
 			continue
 		}
 
-		addGUTToSummary(gut, &count, &size, &atime, &mtime, &updateTime, uniqueUIDs, uniqueGIDs)
+		addGUTToSummary(gut, &count, &size, &atime, &mtime, &sizeByAccessAge,
+			&sizeByModifyAge, &updateTime, uniqueUIDs, uniqueGIDs)
 	}
 
 	return &DirSummary{
-		Count: count,
-		Size:  size,
-		Atime: time.Unix(atime, 0),
-		Mtime: time.Unix(mtime, 0),
-		UIDs:  boolMapToSortedKeys(uniqueUIDs),
-		GIDs:  boolMapToSortedKeys(uniqueGIDs),
-		FTs:   boolMapToSortedKeys(uniqueFTs),
+		Count:           count,
+		Size:            size,
+		Atime:           time.Unix(atime, 0),
+		Mtime:           time.Unix(mtime, 0),
+		UIDs:            boolMapToSortedKeys(uniqueUIDs),
+		GIDs:            boolMapToSortedKeys(uniqueGIDs),
+		FTs:             boolMapToSortedKeys(uniqueFTs),
+		SizeByAccessAge: sizeByAccessAge,
+		SizeByModifyAge: sizeByModifyAge,
 	}
 }
 
 // addGUTToSummary alters the incoming arg summary values based on the gut.
-func addGUTToSummary(gut *GUT, count, size *uint64, atime *int64, mtime *int64,
+func addGUTToSummary(gut *GUT, count, size *uint64, atime, mtime *int64, sizeByAccessAge, sizeByModifyAge *[8]int64,
 	updateTime *time.Time, uniqueUIDs, uniqueGIDs map[uint32]bool) {
 	*count += gut.Count
 	*size += gut.Size
@@ -211,6 +218,11 @@ func addGUTToSummary(gut *GUT, count, size *uint64, atime *int64, mtime *int64,
 
 	if gut.updateTime.After(*updateTime) {
 		*updateTime = gut.updateTime
+	}
+
+	for i := range len(gut.SizeByAccessAge) {
+		sizeByAccessAge[i] += gut.SizeByAccessAge[i]
+		sizeByModifyAge[i] += gut.SizeByModifyAge[i]
 	}
 
 	uniqueUIDs[gut.UID] = true

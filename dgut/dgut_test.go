@@ -275,6 +275,8 @@ func TestDGUT(t *testing.T) {
 						So(ds.UIDs, ShouldResemble, expectedUIDs)
 						So(ds.GIDs, ShouldResemble, expectedGIDs)
 						So(ds.FTs, ShouldResemble, expectedFTs)
+						So(ds.SizeByAccessAge, ShouldEqual, [8]int64{85, 85, 85, 85, 85, 85, 85, 85})
+						So(ds.SizeByModifyAge, ShouldEqual, [8]int64{10325, 10325, 10325, 10325, 10325, 10325, 10325, 10325})
 
 						ds, errd = db.DirInfo("/a/c/d", nil)
 						So(errd, ShouldBeNil)
@@ -295,6 +297,8 @@ func TestDGUT(t *testing.T) {
 						So(ds.UIDs, ShouldResemble, expectedUIDs)
 						So(ds.GIDs, ShouldResemble, []uint32{1})
 						So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir})
+						So(ds.SizeByAccessAge, ShouldEqual, [8]int64{60, 60, 60, 60, 60, 60, 60, 60})
+						So(ds.SizeByModifyAge, ShouldEqual, [8]int64{1084, 1084, 1084, 1084, 1084, 1084, 1084, 1084})
 
 						_, errd = db.DirInfo("/foo", nil)
 						So(errd, ShouldNotBeNil)

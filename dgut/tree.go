@@ -51,19 +51,22 @@ func NewTree(paths ...string) (*Tree, error) {
 	return &Tree{db: db}, nil
 }
 
-// DirSummary holds nested file count, size, atime and mtim information on a
+// DirSummary holds nested file count, size, atime and mtime information on a
 // directory. It also holds which users and groups own files nested under the
-// directory, and what the file types are.
+// directory, and what the file types are. It also has a breakdown of size by
+// age buckets.
 type DirSummary struct {
-	Dir     string
-	Count   uint64
-	Size    uint64
-	Atime   time.Time
-	Mtime   time.Time
-	UIDs    []uint32
-	GIDs    []uint32
-	FTs     []summary.DirGUTFileType
-	Modtime time.Time
+	Dir             string
+	Count           uint64
+	Size            uint64
+	Atime           time.Time
+	Mtime           time.Time
+	UIDs            []uint32
+	GIDs            []uint32
+	FTs             []summary.DirGUTFileType
+	Modtime         time.Time
+	SizeByAccessAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to access time
+	SizeByModifyAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to modify time
 }
 
 // DCSs is a Size-sortable slice of DirSummary.
