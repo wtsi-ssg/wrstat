@@ -159,7 +159,7 @@ type GUTs []*GUT
 // DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored. (But
 // the FTs list will still indicate if you had temp files that passed other
 // filters.)
-func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, int64, []uint32, []uint32, []summary.DirGUTFileType) {
+func (g GUTs) Summary(filter *Filter) *DirSummary {
 	var count, size uint64
 
 	var atime, mtime int64
@@ -184,10 +184,15 @@ func (g GUTs) Summary(filter *Filter) (uint64, uint64, int64, int64, []uint32, [
 		addGUTToSummary(gut, &count, &size, &atime, &mtime, &updateTime, uniqueUIDs, uniqueGIDs)
 	}
 
-	return count, size, atime, mtime,
-		boolMapToSortedKeys(uniqueUIDs),
-		boolMapToSortedKeys(uniqueGIDs),
-		boolMapToSortedKeys(uniqueFTs)
+	return &DirSummary{
+		Count: count,
+		Size:  size,
+		Atime: time.Unix(atime, 0),
+		Mtime: time.Unix(mtime, 0),
+		UIDs:  boolMapToSortedKeys(uniqueUIDs),
+		GIDs:  boolMapToSortedKeys(uniqueGIDs),
+		FTs:   boolMapToSortedKeys(uniqueFTs),
+	}
 }
 
 // addGUTToSummary alters the incoming arg summary values based on the gut.

@@ -149,22 +149,10 @@ func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 // info for a given directory and filter, along with the UIDs and GIDs that own
 // those files, the file types of those files.
 func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
-	c, s, a, m, u, g, fts, lastUpdated, err := t.db.DirInfo(dir, filter)
-	if err != nil {
-		return nil, err
-	}
+	ds, err := t.db.DirInfo(dir, filter)
+	ds.Dir = dir
 
-	return &DirSummary{
-		Dir:     dir,
-		Count:   c,
-		Size:    s,
-		Atime:   time.Unix(a, 0),
-		Mtime:   time.Unix(m, 0),
-		UIDs:    u,
-		GIDs:    g,
-		FTs:     fts,
-		Modtime: lastUpdated,
-	}, nil
+	return ds, err
 }
 
 // addChildInfo adds DirSummary info of the given child paths to the di's

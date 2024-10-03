@@ -29,7 +29,6 @@ package dgut
 
 import (
 	"github.com/ugorji/go/codec"
-	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
 // DGUT handles all the *GUT information for a directory.
@@ -68,7 +67,7 @@ func decodeDGUTbytes(ch codec.Handle, dir, encoded []byte) *DGUT {
 // unique set of UIDs, GIDs abd FTs in all our GUTs.
 //
 // See GUTs.Summary for an explanation of the filter.
-func (d *DGUT) Summary(filter *Filter) (uint64, uint64, int64, int64, []uint32, []uint32, []summary.DirGUTFileType) {
+func (d *DGUT) Summary(filter *Filter) *DirSummary {
 	return d.GUTs.Summary(filter)
 }
 

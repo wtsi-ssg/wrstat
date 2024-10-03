@@ -1093,14 +1093,14 @@ func TestCombine(t *testing.T) {
 				FTs:       []summary.DirGUTFileType{},
 			},
 		} {
-			numFiles, totalSize, _, newestMTime, uids, gids, fts, _, err := db.DirInfo(test.Directory, test.Filter)
+			ds, err := db.DirInfo(test.Directory, test.Filter)
 			So(err, ShouldBeNil)
-			So(numFiles, ShouldEqual, test.NumFiles)
-			So(totalSize, ShouldEqual, test.TotalSize)
-			So(newestMTime, ShouldEqual, test.NewestMTime)
-			So(uids, ShouldResemble, test.UIDs)
-			So(gids, ShouldResemble, test.GIDs)
-			So(fts, ShouldResemble, test.FTs)
+			So(ds.Count, ShouldEqual, test.NumFiles)
+			So(ds.Size, ShouldEqual, test.TotalSize)
+			So(ds.Mtime, ShouldEqual, test.NewestMTime)
+			So(ds.UIDs, ShouldResemble, test.UIDs)
+			So(ds.GIDs, ShouldResemble, test.GIDs)
+			So(ds.FTs, ShouldResemble, test.FTs)
 		}
 	})
 }

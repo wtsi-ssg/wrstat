@@ -36,7 +36,6 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/ugorji/go/codec"
-	"github.com/wtsi-ssg/wrstat/v5/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -566,8 +565,7 @@ func (d *DB) Close() {
 // Returns an error if dir doesn't exist.
 //
 // You must call Open() before calling this.
-func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, int64, int64,
-	[]uint32, []uint32, []summary.DirGUTFileType, time.Time, error) {
+func (d *DB) DirInfo(dir string, filter *Filter) (*DirSummary, error) {
 	var (
 		notFound    int
 		lastUpdated time.Time
@@ -590,12 +588,13 @@ func (d *DB) DirInfo(dir string, filter *Filter) (uint64, uint64, int64, int64,
 	}
 
 	if notFound == len(d.readSets) {
-		return 0, 0, 0, 0, nil, nil, nil, lastUpdated, ErrDirNotFound
+		return &DirSummary{Modtime: lastUpdated}, ErrDirNotFound
 	}
 
-	c, s, a, m, u, g, t := dgut.Summary(filter)
+	ds := dgut.Summary(filter)
+	ds.Modtime = lastUpdated
 
-	return c, s, a, m, u, g, t, lastUpdated, nil
+	return ds, nil
 }
 
 // getDGUTFromDBAndAppend calls getDGUTFromDB() and appends the result
