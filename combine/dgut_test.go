@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/dgut"
@@ -65,11 +66,13 @@ func TestDGUTFiles(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(ds.Count, ShouldEqual, 3)
 				So(ds.Size, ShouldEqual, 25)
-				So(ds.Atime, ShouldEqual, 1668768807)
-				So(ds.Mtime, ShouldEqual, 1668768811)
-				So(ds.UIDs, ShouldResemble, []uint32{13912, 21574})
+				So(ds.Atime, ShouldEqual, time.Unix(1668768807, 0))
+				So(ds.Mtime, ShouldEqual, time.Unix(1668768811, 0))
+				So(ds.UIDs, ShouldResemble, []uint32{13912, 13913, 21574})
 				So(ds.GIDs, ShouldResemble, []uint32{1313})
 				So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{summary.DirGUTFileType(0)})
+				So(ds.SizeByAccessAge, ShouldEqual, [8]int64{25, 25, 25, 25, 25, 0, 0, 0})
+				So(ds.SizeByModifyAge, ShouldEqual, [8]int64{25, 25, 25, 25, 25, 0, 0, 0})
 			})
 		})
 	})
@@ -88,9 +91,12 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string, string) {
 	f3, err := os.Create(filepath.Join(dir, "file3"))
 	So(err, ShouldBeNil)
 
-	file1Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807, 1668768808)
-	file2Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 21, 1668768807, 1668768809)
-	file3Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, 1668768810, 1668768811)
+	file1Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807, 1668768808,
+		[8]int64{0, 0, 0, 0, 0, 0, 0, 0}, [8]int64{0, 0, 0, 0, 0, 0, 0, 0})
+	file2Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13913", 0, 1, 21, 1668768807, 1668768809,
+		[8]int64{21, 21, 21, 21, 21, 0, 0, 0}, [8]int64{21, 21, 21, 21, 21, 0, 0, 0})
+	file3Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, 1668768810, 1668768811,
+		[8]int64{4, 4, 4, 4, 4, 0, 0, 0}, [8]int64{4, 4, 4, 4, 4, 0, 0, 0})
 
 	_, err = f1.WriteString(file1Content)
 	So(err, ShouldBeNil)
@@ -116,14 +122,19 @@ func buildDGUTFiles(t *testing.T) ([]string, string, string, string) {
 // /lustre	1313	13912	0	1	0	1668768807
 // /lustre/scratch123	1313	13912	0	1	0	1668768807.
 func buildDGUTContent(directory, gid, uid string, filetype, nestedFiles,
-	fileSize, oldestAtime, newestAtime int) string {
+	fileSize, oldestAtime, newestAtime int, sizeByAccessAge, sizeByModifyAge [8]int64) string {
 	var DGUTContents string
 
 	splitDir := recursivePath(directory)
 
 	for _, split := range splitDir {
-		DGUTContents += encode.Base64Encode(split) + fmt.Sprintf("\t%s\t%s\t%d\t%d\t%d\t%d\t%d\n",
-			gid, uid, filetype, nestedFiles, fileSize, oldestAtime, newestAtime)
+		DGUTContents += encode.Base64Encode(split) +
+			fmt.Sprintf("\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+				gid, uid, filetype, nestedFiles, fileSize, oldestAtime, newestAtime,
+				sizeByAccessAge[0], sizeByAccessAge[1], sizeByAccessAge[2], sizeByAccessAge[3],
+				sizeByAccessAge[4], sizeByAccessAge[5], sizeByAccessAge[6], sizeByAccessAge[7],
+				sizeByModifyAge[0], sizeByModifyAge[1], sizeByModifyAge[2], sizeByModifyAge[3],
+				sizeByModifyAge[4], sizeByModifyAge[5], sizeByModifyAge[6], sizeByModifyAge[7])
 	}
 
 	return DGUTContents

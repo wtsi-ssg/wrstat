@@ -237,9 +237,9 @@ func summaryLinesMatch(matchColumns int, a, b []string) bool {
 func sumCountAndSizeAndKeepOldestAtime(cols int, a, b []string) {
 	sumCountAndSize(cols, a, b)
 
-	last := len(a) - 1
+	atimeIndex := 6
 
-	if atoi(b[last]) < atoi(a[last]) {
-		a[last] = b[last]
+	if atoi(b[atimeIndex]) < atoi(a[atimeIndex]) {
+		a[atimeIndex] = b[atimeIndex]
 	}
 }

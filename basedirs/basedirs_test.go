@@ -144,6 +144,12 @@ func TestBaseDirs(t *testing.T) {
 						UIDs:    []uint32{101},
 						FTs:     expectedFTsBam,
 						Modtime: dbModTime,
+						SizeByAccessAge: [8]int64{halfGig + twoGig, halfGig + twoGig,
+							halfGig + twoGig, halfGig + twoGig, halfGig + twoGig,
+							halfGig + twoGig, halfGig + twoGig, halfGig + twoGig},
+						SizeByModifyAge: [8]int64{halfGig + twoGig, halfGig + twoGig,
+							halfGig + twoGig, halfGig + twoGig, halfGig + twoGig,
+							halfGig + twoGig, halfGig + twoGig, halfGig + twoGig},
 					},
 				})
 
@@ -160,6 +166,12 @@ func TestBaseDirs(t *testing.T) {
 						UIDs:    []uint32{88888},
 						FTs:     expectedFTsBam,
 						Modtime: dbModTime,
+						SizeByAccessAge: [8]int64{40, 40,
+							40, 40, 40,
+							40, 40, 40},
+						SizeByModifyAge: [8]int64{40, 40,
+							40, 40, 40,
+							40, 40, 40},
 					},
 					{
 						Dir:     projectB123,
@@ -171,6 +183,12 @@ func TestBaseDirs(t *testing.T) {
 						UIDs:    []uint32{102},
 						FTs:     expectedFTsBam,
 						Modtime: dbModTime,
+						SizeByAccessAge: [8]int64{30, 30,
+							30, 30, 30,
+							30, 30, 30},
+						SizeByModifyAge: [8]int64{30, 30,
+							30, 30, 30,
+							30, 30, 30},
 					},
 					{
 						Dir:     projectB125,
@@ -182,6 +200,12 @@ func TestBaseDirs(t *testing.T) {
 						UIDs:    []uint32{102},
 						FTs:     expectedFTsBam,
 						Modtime: dbModTime,
+						SizeByAccessAge: [8]int64{20, 20,
+							20, 20, 20,
+							20, 20, 20},
+						SizeByModifyAge: [8]int64{20, 20,
+							20, 20, 20,
+							20, 20, 20},
 					},
 				})
 			})
@@ -200,6 +224,12 @@ func TestBaseDirs(t *testing.T) {
 						UIDs:    []uint32{101},
 						FTs:     expectedFTsBam,
 						Modtime: dbModTime,
+						SizeByAccessAge: [8]int64{halfGig + twoGig, halfGig + twoGig,
+							halfGig + twoGig, halfGig + twoGig, halfGig + twoGig,
+							halfGig + twoGig, halfGig + twoGig, halfGig + twoGig},
+						SizeByModifyAge: [8]int64{halfGig + twoGig, halfGig + twoGig,
+							halfGig + twoGig, halfGig + twoGig, halfGig + twoGig,
+							halfGig + twoGig, halfGig + twoGig, halfGig + twoGig},
 					},
 				})
 
@@ -216,6 +246,12 @@ func TestBaseDirs(t *testing.T) {
 						UIDs:    []uint32{102},
 						FTs:     expectedFTsBam,
 						Modtime: dbModTime,
+						SizeByAccessAge: [8]int64{30, 30,
+							30, 30, 30,
+							30, 30, 30},
+						SizeByModifyAge: [8]int64{30, 30,
+							30, 30, 30,
+							30, 30, 30},
 					},
 					{
 						Dir:     projectB125,
@@ -227,6 +263,12 @@ func TestBaseDirs(t *testing.T) {
 						UIDs:    []uint32{102},
 						FTs:     expectedFTsBam,
 						Modtime: dbModTime,
+						SizeByAccessAge: [8]int64{20, 20,
+							20, 20, 20,
+							20, 20, 20},
+						SizeByModifyAge: [8]int64{20, 20,
+							20, 20, 20,
+							20, 20, 20},
 					},
 					{
 						Dir:     user2,
@@ -238,6 +280,12 @@ func TestBaseDirs(t *testing.T) {
 						UIDs:    []uint32{102},
 						FTs:     expectedFTsBam,
 						Modtime: dbModTime,
+						SizeByAccessAge: [8]int64{60, 60,
+							60, 60, 60,
+							60, 60, 60},
+						SizeByModifyAge: [8]int64{60, 60,
+							60, 60, 60,
+							60, 60, 60},
 					},
 				})
 			})

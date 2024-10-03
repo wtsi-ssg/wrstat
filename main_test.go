@@ -945,27 +945,63 @@ func TestCombine(t *testing.T) {
 			"b.bygroup":     "e\tf\tg\th\n5\t6\t7\t8\n",
 			"c.bygroup":     "",
 			"a.dgut": "" +
-				encode.Base64Encode("/") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/") + "\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/") + "\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some") + "\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some") + "\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory") + "\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory") + "\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001") + "\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001") + "\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t2\t3\t8202\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t15\t2\t8192\t1721915848\t314159\n" +
+				encode.Base64Encode("/") +
+				"\t2000\t1000\t0\t1\t10\t1721915848\t7383773" +
+				"\t10\t10\t0\t0\t0\t0\t0\t0\t10\t10\t10\t10\t10\t10\t10\t10\n" +
+				encode.Base64Encode("/") +
+				"\t2000\t1000\t2\t5\t16394\t1721915848\t7383773" +
+				"\t16394\t16394\t0\t0\t0\t0\t0\t0\t16394\t16394\t16394\t16394\t16394\t16394\t16394\t16394\n" +
+				encode.Base64Encode("/") +
+				"\t2000\t1000\t15\t4\t16384\t1721915848\t314159" +
+				"\t16384\t16384\t0\t0\t0\t0\t0\t0\t16384\t16384\t16384\t16384\t16384\t16384\t16384\t16384\n" +
+				encode.Base64Encode("/some") +
+				"\t2000\t1000\t0\t1\t10\t1721915848\t7383773" +
+				"\t10\t10\t0\t0\t0\t0\t0\t0\t10\t10\t10\t10\t10\t10\t10\t10\n" +
+				encode.Base64Encode("/some") +
+				"\t2000\t1000\t2\t5\t16394\t1721915848\t7383773" +
+				"\t16394\t16394\t0\t0\t0\t0\t0\t0\t16394\t16394\t16394\t16394\t16394\t16394\t16394\t16394\n" +
+				encode.Base64Encode("/some") +
+				"\t2000\t1000\t15\t4\t16384\t1721915848\t314159" +
+				"\t16384\t16384\t0\t0\t0\t0\t0\t0\t16384\t16384\t16384\t16384\t16384\t16384\t16384\t16384\n" +
+				encode.Base64Encode("/some/directory") +
+				"\t2000\t1000\t0\t1\t10\t1721915848\t7383773" +
+				"\t10\t10\t0\t0\t0\t0\t0\t0\t10\t10\t10\t10\t10\t10\t10\t10\n" +
+				encode.Base64Encode("/some/directory") +
+				"\t2000\t1000\t2\t5\t16394\t1721915848\t7383773" +
+				"\t16394\t16394\t0\t0\t0\t0\t0\t0\t16394\t16394\t16394\t16394\t16394\t16394\t16394\t16394\n" +
+				encode.Base64Encode("/some/directory") +
+				"\t2000\t1000\t15\t4\t16384\t1721915848\t314159" +
+				"\t16384\t16384\t0\t0\t0\t0\t0\t0\t16384\t16384\t16384\t16384\t16384\t16384\t16384\t16384\n" +
+				encode.Base64Encode("/some/directory/001") +
+				"\t2000\t1000\t0\t1\t10\t1721915848\t7383773" +
+				"\t10\t10\t0\t0\t0\t0\t0\t0\t10\t10\t10\t10\t10\t10\t10\t10\n" +
+				encode.Base64Encode("/some/directory/001") +
+				"\t2000\t1000\t2\t5\t16394\t1721915848\t7383773" +
+				"\t16394\t16394\t0\t0\t0\t0\t0\t0\t16394\t16394\t16394\t16394\t16394\t16394\t16394\t16394\n" +
+				encode.Base64Encode("/some/directory/001") +
+				"\t2000\t1000\t15\t4\t16384\t1721915848\t314159" +
+				"\t16384\t16384\t0\t0\t0\t0\t0\t0\t16384\t16384\t16384\t16384\t16384\t16384\t16384\t16384\n" +
+				encode.Base64Encode("/some/directory/001/aDirectory") +
+				"\t2000\t1000\t0\t1\t10\t1721915848\t7383773" +
+				"\t10\t10\t0\t0\t0\t0\t0\t0\t10\t10\t10\t10\t10\t10\t10\t10\n" +
+				encode.Base64Encode("/some/directory/001/aDirectory") +
+				"\t2000\t1000\t2\t3\t8202\t1721915848\t7383773" +
+				"\t8202\t8202\t0\t0\t0\t0\t0\t0\t8202\t8202\t8202\t8202\t8202\t8202\t8202\t8202\n" +
+				encode.Base64Encode("/some/directory/001/aDirectory") +
+				"\t2000\t1000\t15\t2\t8192\t1721915848\t314159" +
+				"\t8192\t8192\t0\t0\t0\t0\t0\t0\t8192\t8192\t8192\t8192\t8192\t8192\t8192\t8192\n" +
 				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") +
-				"\t2000\t1000\t2\t1\t4096\t1721915848\t314159\n" +
+				"\t2000\t1000\t2\t1\t4096\t1721915848\t314159" +
+				"\t4096\t4096\t0\t0\t0\t0\t0\t0\t4096\t4096\t4096\t4096\t4096\t4096\t4096\t4096\n" +
 				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") +
-				"\t2000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/anotherDirectory") + "\t2000\t1000\t2\t1\t4096\t1721915848\t282820\n" +
-				encode.Base64Encode("/some/directory/001/anotherDirectory") + "\t2000\t1000\t15\t1\t4096\t1721915848\t282820\n",
+				"\t2000\t1000\t15\t1\t4096\t1721915848\t314159" +
+				"\t4096\t4096\t0\t0\t0\t0\t0\t0\t4096\t4096\t4096\t4096\t4096\t4096\t4096\t4096\n" +
+				encode.Base64Encode("/some/directory/001/anotherDirectory") +
+				"\t2000\t1000\t2\t1\t4096\t1721915848\t282820" +
+				"\t4096\t4096\t0\t0\t0\t0\t0\t0\t4096\t4096\t4096\t4096\t4096\t4096\t4096\t4096\n" +
+				encode.Base64Encode("/some/directory/001/anotherDirectory") +
+				"\t2000\t1000\t15\t1\t4096\t1721915848\t282820" +
+				"\t4096\t4096\t0\t0\t0\t0\t0\t0\t4096\t4096\t4096\t4096\t4096\t4096\t4096\t4096\n",
 			"a.log": "A log file\nwith 2 lines\n",
 			"b.log": "Another log file, with 1 line\n",
 			"c.log": "Lorem ipsum!!!!",
@@ -1097,7 +1133,7 @@ func TestCombine(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(ds.Count, ShouldEqual, test.NumFiles)
 			So(ds.Size, ShouldEqual, test.TotalSize)
-			So(ds.Mtime, ShouldEqual, test.NewestMTime)
+			So(ds.Mtime, ShouldEqual, time.Unix(test.NewestMTime, 0))
 			So(ds.UIDs, ShouldResemble, test.UIDs)
 			So(ds.GIDs, ShouldResemble, test.GIDs)
 			So(ds.FTs, ShouldResemble, test.FTs)
