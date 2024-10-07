@@ -28,9 +28,11 @@ package summary
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
 
@@ -448,7 +450,7 @@ func TestDirGUT(t *testing.T) {
 				dgut.store.refTime, 200, 200,
 				[8]int64{2, 2, 2, 2, 2, 2, 2, 2}, [8]int64{2, 2, 2, 2, 2, 2, 2, 2}})
 			So(dgut.store.gsMap["/a/b/c"].sumMap["10\t2\t7"], ShouldResemble, &summaryWithTimes{summary{1, 2},
-				dgut.store.refTime, 301, 0,
+				dgut.store.refTime, 300, 0,
 				[8]int64{2, 2, 2, 2, 2, 2, 2, 2}, [8]int64{}})
 
 			swa := dgut.store.gsMap["/a/b"].sumMap["2\t10\t15"]
@@ -554,6 +556,54 @@ func TestDirGUT(t *testing.T) {
 		Convey("You can't Add() on non-unix-like systems'", func() {
 			err := dgut.Add("/a/b/c/1.txt", &badInfo{})
 			So(err, ShouldNotBeNil)
+		})
+	})
+}
+
+func TestOldFile(t *testing.T) {
+	Convey("Given an real old file and a dgut", t, func() {
+		dgut := NewByDirGroupUserType()
+		So(dgut, ShouldNotBeNil)
+
+		tempDir := t.TempDir()
+		path := filepath.Join(tempDir, "oldFile.txt")
+		f, err := os.Create(path)
+		So(err, ShouldBeNil)
+
+		amtime := dgut.store.refTime - (secondsInAYear*5 + secondsInAMonth)
+
+		formattedTime := time.Unix(amtime, 0).Format("200601021504.05")
+
+		size, err := f.WriteString("test")
+		So(err, ShouldBeNil)
+
+		size64 := int64(size)
+
+		err = f.Close()
+		So(err, ShouldBeNil)
+
+		cmd := exec.Command("touch", "-t", formattedTime, path)
+		err = cmd.Run()
+		So(err, ShouldBeNil)
+
+		fileInfo, err := os.Stat(path)
+		So(err, ShouldBeNil)
+
+		statt, ok := fileInfo.Sys().(*syscall.Stat_t)
+		So(ok, ShouldBeTrue)
+
+		UID := statt.Uid
+		GID := statt.Gid
+
+		Convey("adding it results in correct a and m age sizes", func() {
+			err = dgut.Add(path, fileInfo)
+
+			So(dgut.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d", GID, UID, DGUTFileTypeText)],
+				ShouldResemble, &summaryWithTimes{summary{1, size64},
+					dgut.store.refTime,
+					amtime, amtime,
+					[8]int64{size64, size64, size64, size64, size64, size64, size64, 0},
+					[8]int64{size64, size64, size64, size64, size64, size64, size64, 0}})
 		})
 	})
 }

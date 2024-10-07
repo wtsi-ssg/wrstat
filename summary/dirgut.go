@@ -341,7 +341,7 @@ func isLog(path string) bool {
 // results.
 //
 // "Access" times are actually considered to be the greatest of atime, mtime and
-// ctime.
+// unix epoch.
 //
 // NB: the "temp" filetype is an extra filetype on top of the other normal
 // filetypes, so if you sum all the filetypes to get information about a a given
@@ -367,11 +367,11 @@ func (d *DirGroupUserType) Add(path string, info fs.FileInfo) error {
 
 		gutKeys = append(gutKeys, fmt.Sprintf("%d\t%d\t%d", stat.Gid, stat.Uid, DGUTFileTypeDir))
 	} else {
-		atime = maxInt(stat.Ctim.Sec, stat.Mtim.Sec, stat.Atim.Sec)
+		atime = maxInt(0, stat.Mtim.Sec, stat.Atim.Sec)
 		gutKeys = d.statToGUTKeys(stat, path)
 	}
 
-	d.addForEachDir(path, gutKeys, info.Size(), atime, stat.Mtim.Sec)
+	d.addForEachDir(path, gutKeys, info.Size(), atime, maxInt(0, stat.Mtim.Sec))
 
 	return nil
 }

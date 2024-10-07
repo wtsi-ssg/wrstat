@@ -159,16 +159,14 @@ type GUTs []*GUT
 // DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored. (But
 // the FTs list will still indicate if you had temp files that passed other
 // filters.)
-func (g GUTs) Summary(filter *Filter) *DirSummary {
-	var count, size uint64
-
-	var atime, mtime int64
-
-	var updateTime time.Time
-
-	var sizeByAccessAge [8]int64
-
-	var sizeByModifyAge [8]int64
+func (g GUTs) Summary(filter *Filter) *DirSummary { //nolint:funlen
+	var (
+		count, size     uint64
+		atime, mtime    int64
+		updateTime      time.Time
+		sizeByAccessAge [8]int64
+		sizeByModifyAge [8]int64
+	)
 
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
