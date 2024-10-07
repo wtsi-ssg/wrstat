@@ -28,13 +28,13 @@
 package summary
 
 const (
-	secondsInAMonth = 2628000
-	secondsInAYear  = secondsInAMonth * 12
+	SecondsInAMonth = 2628000
+	SecondsInAYear  = SecondsInAMonth * 12
 )
 
 var ageThresholds = [8]int64{ //nolint:gochecknoglobals
-	secondsInAMonth, secondsInAMonth * 2, secondsInAMonth * 6, secondsInAYear,
-	secondsInAYear * 2, secondsInAYear * 3, secondsInAYear * 5, secondsInAYear * 7,
+	SecondsInAMonth, SecondsInAMonth * 2, SecondsInAMonth * 6, SecondsInAYear,
+	SecondsInAYear * 2, SecondsInAYear * 3, SecondsInAYear * 5, SecondsInAYear * 7,
 }
 
 // summary holds count and size and lets you accumulate count and size as you

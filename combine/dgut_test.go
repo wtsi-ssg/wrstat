@@ -44,13 +44,13 @@ import (
 // TestDGUTFiles tests that the DGUT files merge properly to the output.
 func TestDGUTFiles(t *testing.T) {
 	Convey("Given dgut files and an output", t, func() {
-		inputs, output, outputPath, dir := buildDGUTFiles(t)
+		inputs, output, dir := buildDGUTFiles(t)
 
 		Convey("You can merge the DGUT files and store to a db", func() {
 			err := DgutFiles(inputs, output)
 			So(err, ShouldBeNil)
 
-			_, err = os.Stat(outputPath)
+			_, err = os.Stat(output)
 			So(err, ShouldBeNil)
 
 			Convey("and a query of the db data should be valid, and return the content of our DGUT testing files.", func() {
@@ -78,40 +78,115 @@ func TestDGUTFiles(t *testing.T) {
 	})
 }
 
+func TestOldFile(t *testing.T) {
+	Convey("Given a dgut file describing an old file", t, func() {
+		dir := t.TempDir()
+
+		now := time.Now().Unix()
+		amtime := now - (summary.SecondsInAYear*5 + summary.SecondsInAMonth)
+
+		output := filepath.Join(dir, "combine.dgut.db")
+
+		f1 := createDGUTFile(t, dir, "file1", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t0\t1\t1\t%d\t%d"+
+			"\t1\t1\t1\t1\t1\t1\t1\t0\t1\t1\t1\t1\t1\t1\t1\t0\n", amtime, amtime))
+
+		Convey("if the directory is new then the mtime will match the directory", func() {
+			f2 := createDGUTFile(t, dir, "file2", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t15\t1\t4096\t%d\t%d"+
+				"\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n", now, now))
+
+			err := fs.RemoveAndCreateDir(output)
+			So(err, ShouldBeNil)
+
+			err = DgutFiles([]string{f1, f2}, output)
+			So(err, ShouldBeNil)
+
+			db := dgut.NewDB(output)
+			So(db, ShouldNotBeNil)
+
+			db.Close()
+
+			err = db.Open()
+			So(err, ShouldBeNil)
+
+			ds, errd := db.DirInfo("/", nil)
+			So(errd, ShouldBeNil)
+			So(ds.Count, ShouldEqual, 2)
+			So(ds.Size, ShouldEqual, 1+4096)
+			So(ds.Atime, ShouldEqual, time.Unix(amtime, 0))
+			So(ds.Mtime, ShouldEqual, time.Unix(now, 0))
+			So(ds.SizeByAccessAge, ShouldEqual, [8]int64{1, 1, 1, 1, 1, 1, 1, 0})
+			So(ds.SizeByModifyAge, ShouldEqual, [8]int64{1, 1, 1, 1, 1, 1, 1, 0})
+
+			db.Close()
+		})
+
+		Convey("if the directory is older than the file, the mtime will match the file", func() {
+			f2 := createDGUTFile(t, dir, "file2", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t15\t1\t4096\t%d\t%d"+
+				"\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n", amtime-1, amtime-1))
+
+			err := fs.RemoveAndCreateDir(output)
+			So(err, ShouldBeNil)
+
+			err = DgutFiles([]string{f1, f2}, output)
+			So(err, ShouldBeNil)
+
+			db := dgut.NewDB(output)
+			So(db, ShouldNotBeNil)
+
+			db.Close()
+
+			err = db.Open()
+			So(err, ShouldBeNil)
+
+			ds, errd := db.DirInfo("/", nil)
+			So(errd, ShouldBeNil)
+			So(ds.Count, ShouldEqual, 2)
+			So(ds.Size, ShouldEqual, 1+4096)
+			So(ds.Atime, ShouldEqual, time.Unix(amtime-1, 0))
+			So(ds.Mtime, ShouldEqual, time.Unix(amtime, 0))
+			So(ds.SizeByAccessAge, ShouldEqual, [8]int64{1, 1, 1, 1, 1, 1, 1, 0})
+			So(ds.SizeByModifyAge, ShouldEqual, [8]int64{1, 1, 1, 1, 1, 1, 1, 0})
+		})
+	})
+}
+
 // buildDGUTFiles builds the DGUT files for testing.
-func buildDGUTFiles(t *testing.T) ([]string, string, string, string) {
+func buildDGUTFiles(t *testing.T) ([]string, string, string) {
 	t.Helper()
 
 	dir := t.TempDir()
 
-	f1, err := os.Create(filepath.Join(dir, "file1"))
-	So(err, ShouldBeNil)
-	f2, err := os.Create(filepath.Join(dir, "file2"))
-	So(err, ShouldBeNil)
-	f3, err := os.Create(filepath.Join(dir, "file3"))
-	So(err, ShouldBeNil)
+	f1 := createDGUTFile(t, dir, "file1",
+		buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807, 1668768808,
+			[8]int64{0, 0, 0, 0, 0, 0, 0, 0}, [8]int64{0, 0, 0, 0, 0, 0, 0, 0}))
+	f2 := createDGUTFile(t, dir, "file2",
+		buildDGUTContent("/long/file/path/used/for/testing", "1313", "13913", 0, 1, 21, 1668768807, 1668768809,
+			[8]int64{21, 21, 21, 21, 21, 0, 0, 0}, [8]int64{21, 21, 21, 21, 21, 0, 0, 0}))
+	f3 := createDGUTFile(t, dir, "file3",
+		buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, 1668768810, 1668768811,
+			[8]int64{4, 4, 4, 4, 4, 0, 0, 0}, [8]int64{4, 4, 4, 4, 4, 0, 0, 0}))
 
-	file1Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807, 1668768808,
-		[8]int64{0, 0, 0, 0, 0, 0, 0, 0}, [8]int64{0, 0, 0, 0, 0, 0, 0, 0})
-	file2Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "13913", 0, 1, 21, 1668768807, 1668768809,
-		[8]int64{21, 21, 21, 21, 21, 0, 0, 0}, [8]int64{21, 21, 21, 21, 21, 0, 0, 0})
-	file3Content := buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, 1668768810, 1668768811,
-		[8]int64{4, 4, 4, 4, 4, 0, 0, 0}, [8]int64{4, 4, 4, 4, 4, 0, 0, 0})
-
-	_, err = f1.WriteString(file1Content)
-	So(err, ShouldBeNil)
-	_, err = f2.WriteString(file2Content)
-	So(err, ShouldBeNil)
-	_, err = f3.WriteString(file3Content)
-	So(err, ShouldBeNil)
-
-	outputPath := filepath.Join(dir, "combine.dgut.db")
 	output := filepath.Join(dir, "combine.dgut.db")
 
-	err = fs.RemoveAndCreateDir(output)
+	err := fs.RemoveAndCreateDir(output)
 	So(err, ShouldBeNil)
 
-	return []string{f1.Name(), f2.Name(), f3.Name()}, output, outputPath, dir
+	return []string{f1, f2, f3}, output, dir
+}
+
+func createDGUTFile(t *testing.T, tempDir, fileName, content string) string {
+	t.Helper()
+
+	f, err := os.Create(filepath.Join(tempDir, fileName))
+	So(err, ShouldBeNil)
+
+	_, err = f.WriteString(content)
+	So(err, ShouldBeNil)
+
+	err = f.Close()
+	So(err, ShouldBeNil)
+
+	return f.Name()
 }
 
 // buildDGUTContent writes the top root from dir on line 1, and recursively

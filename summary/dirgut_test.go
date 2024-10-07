@@ -309,43 +309,43 @@ func TestDirGUT(t *testing.T) {
 		So(dgut, ShouldNotBeNil)
 
 		Convey("You can add file info with a range of Atimes to it", func() {
-			atime1 := dgut.store.refTime - (secondsInAMonth*2 + 100000)
-			mtime1 := dgut.store.refTime - (secondsInAMonth * 3)
+			atime1 := dgut.store.refTime - (SecondsInAMonth*2 + 100000)
+			mtime1 := dgut.store.refTime - (SecondsInAMonth * 3)
 			mi := newMockInfoWithAtime(10, 2, 2, false, atime1)
 			mi.mtime = mtime1
 			err = dgut.Add("/a/b/c/1.bam", mi)
 			So(err, ShouldBeNil)
 
-			atime2 := dgut.store.refTime - (secondsInAMonth * 7)
-			mtime2 := dgut.store.refTime - (secondsInAMonth * 8)
+			atime2 := dgut.store.refTime - (SecondsInAMonth * 7)
+			mtime2 := dgut.store.refTime - (SecondsInAMonth * 8)
 			mi = newMockInfoWithAtime(10, 2, 3, false, atime2)
 			mi.mtime = mtime2
 			err = dgut.Add("/a/b/c/2.bam", mi)
 			So(err, ShouldBeNil)
 
-			atime3 := dgut.store.refTime - (secondsInAYear + secondsInAMonth)
-			mtime3 := dgut.store.refTime - (secondsInAYear + secondsInAMonth*6)
+			atime3 := dgut.store.refTime - (SecondsInAYear + SecondsInAMonth)
+			mtime3 := dgut.store.refTime - (SecondsInAYear + SecondsInAMonth*6)
 			mi = newMockInfoWithAtime(10, 2, 4, false, atime3)
 			mi.mtime = mtime3
 			err = dgut.Add("/a/b/c/3.txt", mi)
 			So(err, ShouldBeNil)
 
-			atime4 := dgut.store.refTime - (secondsInAYear * 4)
-			mtime4 := dgut.store.refTime - (secondsInAYear * 6)
+			atime4 := dgut.store.refTime - (SecondsInAYear * 4)
+			mtime4 := dgut.store.refTime - (SecondsInAYear * 6)
 			mi = newMockInfoWithAtime(10, 2, 5, false, atime4)
 			mi.mtime = mtime4
 			err = dgut.Add("/a/b/c/4.bam", mi)
 			So(err, ShouldBeNil)
 
-			atime5 := dgut.store.refTime - (secondsInAYear*5 + secondsInAMonth)
-			mtime5 := dgut.store.refTime - (secondsInAYear*7 + secondsInAMonth)
+			atime5 := dgut.store.refTime - (SecondsInAYear*5 + SecondsInAMonth)
+			mtime5 := dgut.store.refTime - (SecondsInAYear*7 + SecondsInAMonth)
 			mi = newMockInfoWithAtime(10, 2, 6, false, atime5)
 			mi.mtime = mtime5
 			err = dgut.Add("/a/b/c/5.cram", mi)
 			So(err, ShouldBeNil)
 
-			atime6 := dgut.store.refTime - (secondsInAYear*7 + secondsInAMonth)
-			mtime6 := dgut.store.refTime - (secondsInAYear*7 + secondsInAMonth)
+			atime6 := dgut.store.refTime - (SecondsInAYear*7 + SecondsInAMonth)
+			mtime6 := dgut.store.refTime - (SecondsInAYear*7 + SecondsInAMonth)
 			mi = newMockInfoWithAtime(10, 2, 7, false, atime6)
 			mi.mtime = mtime6
 			err = dgut.Add("/a/b/c/6.cram", mi)
@@ -570,7 +570,7 @@ func TestOldFile(t *testing.T) {
 		f, err := os.Create(path)
 		So(err, ShouldBeNil)
 
-		amtime := dgut.store.refTime - (secondsInAYear*5 + secondsInAMonth)
+		amtime := dgut.store.refTime - (SecondsInAYear*5 + SecondsInAMonth)
 
 		formattedTime := time.Unix(amtime, 0).Format("200601021504.05")
 
