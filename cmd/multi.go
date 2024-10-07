@@ -56,7 +56,7 @@ var (
 	partialDirMerge     string
 	partialDirClean     bool
 	createPartial       bool
-	finishPartial       bool
+	finishPartial       string
 	multiInodes         int
 	multiStatJobs       int
 	multiCh             string
@@ -163,8 +163,8 @@ func init() {
 		"from specified directory after merging")
 	multiCmd.Flags().BoolVarP(&createPartial, "create_partial_dir", "p", false, "perform the walk, "+
 		"stat, and combine steps only")
-	multiCmd.Flags().BoolVarP(&finishPartial, "partial_dir_finish", "z", false, "perform the basedir "+
-		"and tidy step on a partial run")
+	multiCmd.Flags().StringVarP(&finishPartial, "partial_dir_finish", "z", "", "perform the basedir "+
+		"and tidy step on a partial run, requires the name of the unique subdirectory the partial run files are in")
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
@@ -189,7 +189,7 @@ func checkMultiArgs(args []string) {
 		checkStandardFlags()
 	}
 
-	if len(args) == 0 {
+	if len(args) == 0 && finishPartial == "" {
 		die("at least 1 directory of interest must be supplied")
 	}
 }
@@ -213,7 +213,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
-	unique := scheduler.UniqueString()
+	unique := uniqueOrPartial(finishPartial)
 	outputRoot := filepath.Join(workDir, unique)
 
 	err := os.MkdirAll(outputRoot, userGroupPerm)
@@ -221,7 +221,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 		return err
 	}
 
-	if !finishPartial { //nolint:nestif
+	if finishPartial == "" { //nolint:nestif
 		scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
 
 		if partialDirMerge != "" {
@@ -240,6 +240,14 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	scheduleTidyJob(outputRoot, finalDir, unique, s)
 
 	return nil
+}
+
+func uniqueOrPartial(partial string) string {
+	if partial == "" {
+		return scheduler.UniqueString()
+	}
+
+	return partial
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
