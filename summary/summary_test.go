@@ -45,4 +45,28 @@ func TestSummary(t *testing.T) {
 			So(s.size, ShouldEqual, 30)
 		})
 	})
+
+	Convey("Given a summaryWithAtime", t, func() {
+		s := &summaryWithAtime{}
+
+		Convey("You can add sizes and atime/mtimes to it", func() {
+			s.add(10, 12, 24)
+			So(s.count, ShouldEqual, 1)
+			So(s.size, ShouldEqual, 10)
+			So(s.atime, ShouldEqual, 12)
+			So(s.mtime, ShouldEqual, 24)
+
+			s.add(20, -5, -10)
+			So(s.count, ShouldEqual, 2)
+			So(s.size, ShouldEqual, 30)
+			So(s.atime, ShouldEqual, 12)
+			So(s.mtime, ShouldEqual, 24)
+
+			s.add(30, 1, 30)
+			So(s.count, ShouldEqual, 3)
+			So(s.size, ShouldEqual, 60)
+			So(s.atime, ShouldEqual, 1)
+			So(s.mtime, ShouldEqual, 30)
+		})
+	})
 }

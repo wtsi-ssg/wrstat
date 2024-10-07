@@ -54,11 +54,11 @@ type summaryWithAtime struct {
 func (s *summaryWithAtime) add(size int64, atime int64, mtime int64) {
 	s.summary.add(size)
 
-	if s.atime == 0 || atime < s.atime {
+	if atime > 0 && (s.atime == 0 || atime < s.atime) {
 		s.atime = atime
 	}
 
-	if s.mtime == 0 || mtime > s.mtime {
+	if mtime > 0 && (s.mtime == 0 || mtime > s.mtime) {
 		s.mtime = mtime
 	}
 }
