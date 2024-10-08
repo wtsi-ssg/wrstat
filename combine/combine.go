@@ -232,14 +232,30 @@ func summaryLinesMatch(matchColumns int, a, b []string) bool {
 	return true
 }
 
-// sumCountAndSizeAndKeepOldestAtime needs cols 3, and is like sumCountAndSize,
-// but keeps the oldest atime (smallest number) found in the last column.
-func sumCountAndSizeAndKeepOldestAtime(cols int, a, b []string) {
-	sumCountAndSize(cols, a, b)
+// sumCountAndSizesAndKeepTimes sums summable columns using sumCountAndSizes(),
+// and keeps the oldest atime (smallest number) and newest mtime (largest
+// number).
+func sumCountAndSizesAndKeepTimes(_ int, a, b []string) {
+	sumCountAndSizes(a, b)
 
-	atimeIndex := 6
+	if atoi(b[dgutAtimeColIndex]) < atoi(a[dgutAtimeColIndex]) {
+		a[dgutAtimeColIndex] = b[dgutAtimeColIndex]
+	}
 
-	if atoi(b[atimeIndex]) < atoi(a[atimeIndex]) {
-		a[atimeIndex] = b[atimeIndex]
+	if atoi(b[dgutMtimeColIndex]) > atoi(a[dgutMtimeColIndex]) {
+		a[dgutMtimeColIndex] = b[dgutMtimeColIndex]
+	}
+}
+
+// sumCountAndSizes is a matchingSummaryLineMerger that, given cols 20, will sum
+// the corresponding elements of a and b and store the result in a, except for
+// the atime and mtime columns.
+func sumCountAndSizes(a, b []string) {
+	for i := dgutSumCols; i < len(a); i++ {
+		if i == dgutAtimeColIndex || i == dgutMtimeColIndex {
+			continue
+		}
+
+		a[i] = addNumberStrings(a[i], b[i])
 	}
 }

@@ -6,9 +6,13 @@ import (
 	"github.com/wtsi-ssg/wrstat/v5/dgut"
 )
 
-const dgutStoreBatchSize = 10000
-const dgutSumCols = 4
-const numSummaryColumnsDGUT = 4
+const (
+	dgutStoreBatchSize    = 10000
+	dgutSumCols           = 4
+	numSummaryColumnsDGUT = 20
+	dgutAtimeColIndex     = 6
+	dgutMtimeColIndex     = 7
+)
 
 // DgutFiles merges the pre-sorted dgut files, summing consecutive lines with
 // the same first 4 columns, and outputs the results to an embedded database.
@@ -43,7 +47,7 @@ func processDgutFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup f
 		sortMergeOutput,
 		dgutSumCols,
 		numSummaryColumnsDGUT,
-		sumCountAndSizeAndKeepOldestAtime,
+		sumCountAndSizesAndKeepTimes,
 		writer,
 	); err != nil {
 		return err
