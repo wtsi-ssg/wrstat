@@ -97,9 +97,13 @@ func TestOldFile(t *testing.T) {
 			"\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n", amtime3, amtime3))
 		f4 := createDGUTFile(t, dir, "file4", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t0\t1\t3\t%d\t%d"+
 			"\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n", amtime3, amtime3))
+		f5 := createDGUTFile(t, dir, "file5", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t0\t1\t4\t%d\t%d"+
+			"\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t0\t0\n", amtime3, amtime2))
 
-		tfs := int64(1 + 2 + 3 + 3)
-		expectedSizeBy := [8]int64{tfs, tfs, tfs, tfs, tfs, tfs, tfs - 2, tfs - 3}
+		tfs := int64(1 + 2 + 3 + 3 + 4)
+		expectedSizeByA := [8]int64{tfs, tfs, tfs, tfs, tfs, tfs, tfs - 2, tfs - 3}
+
+		expectedSizeByM := [8]int64{tfs, tfs, tfs, tfs, tfs, tfs, tfs - 6, tfs - 7}
 
 		Convey("if the directory is new then the mtime will match the directory", func() {
 			d1 := createDGUTFile(t, dir, "dir", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t15\t1\t4096\t%d\t%d"+
@@ -108,7 +112,7 @@ func TestOldFile(t *testing.T) {
 			err := fs.RemoveAndCreateDir(output)
 			So(err, ShouldBeNil)
 
-			err = DgutFiles([]string{f1, f2, f3, f4, d1}, output)
+			err = DgutFiles([]string{f1, f2, f3, f4, f5, d1}, output)
 			So(err, ShouldBeNil)
 
 			db := dgut.NewDB(output)
@@ -121,12 +125,12 @@ func TestOldFile(t *testing.T) {
 
 			ds, errd := db.DirInfo("/", nil)
 			So(errd, ShouldBeNil)
-			So(ds.Count, ShouldEqual, 5)
+			So(ds.Count, ShouldEqual, 6)
 			So(ds.Size, ShouldEqual, tfs+4096)
 			So(ds.Atime, ShouldEqual, time.Unix(amtime3, 0))
 			So(ds.Mtime, ShouldEqual, time.Unix(now, 0))
-			So(ds.SizeByAccessAge, ShouldEqual, expectedSizeBy)
-			So(ds.SizeByModifyAge, ShouldEqual, expectedSizeBy)
+			So(ds.SizeByAccessAge, ShouldEqual, expectedSizeByA)
+			So(ds.SizeByModifyAge, ShouldEqual, expectedSizeByM)
 
 			db.Close()
 		})
@@ -138,7 +142,7 @@ func TestOldFile(t *testing.T) {
 			err := fs.RemoveAndCreateDir(output)
 			So(err, ShouldBeNil)
 
-			err = DgutFiles([]string{f1, f2, f3, f4, d1}, output)
+			err = DgutFiles([]string{f1, f2, f3, f4, f5, d1}, output)
 			So(err, ShouldBeNil)
 
 			db := dgut.NewDB(output)
@@ -151,12 +155,12 @@ func TestOldFile(t *testing.T) {
 
 			ds, errd := db.DirInfo("/", nil)
 			So(errd, ShouldBeNil)
-			So(ds.Count, ShouldEqual, 5)
+			So(ds.Count, ShouldEqual, 6)
 			So(ds.Size, ShouldEqual, tfs+4096)
 			So(ds.Atime, ShouldEqual, time.Unix(amtime3-1, 0))
 			So(ds.Mtime, ShouldEqual, time.Unix(amtime2, 0))
-			So(ds.SizeByAccessAge, ShouldEqual, expectedSizeBy)
-			So(ds.SizeByModifyAge, ShouldEqual, expectedSizeBy)
+			So(ds.SizeByAccessAge, ShouldEqual, expectedSizeByA)
+			So(ds.SizeByModifyAge, ShouldEqual, expectedSizeByM)
 		})
 	})
 }
