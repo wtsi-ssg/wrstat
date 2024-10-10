@@ -343,7 +343,7 @@ func addGroupSummaryOperation(input string, p *stat.Paths) (func() error, error)
 // function that you should call after calling p.Scan(), which outputs the
 // summary data to file.
 func addDGUTSummaryOperation(input string, p *stat.Paths) (func() error, error) {
-	d := summary.NewByDirGroupUserType()
+	d := summary.NewDirGroupUserTypeAge()
 
 	return addSummaryOperator(input, statDGUTSummaryOutputFileSuffix, "dgut", p, d)
 }

@@ -63,7 +63,7 @@ type DirSummary struct {
 	Mtime           time.Time
 	UIDs            []uint32
 	GIDs            []uint32
-	FTs             []summary.DirGUTFileType
+	FTs             []summary.DirGUTAFileType
 	Modtime         time.Time
 	SizeByAccessAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to access time
 	SizeByModifyAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to modify time

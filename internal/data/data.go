@@ -151,7 +151,7 @@ func CreateDefaultTestData(gidA, gidB, gidC, uidA, uidB int) []TestFile {
 func TestDGUTData(t *testing.T, files []TestFile) string {
 	t.Helper()
 
-	dgut := summary.NewByDirGroupUserType()
+	dgut := summary.NewDirGroupUserTypeAge()
 	doneDirs := make(map[string]bool)
 
 	for _, file := range files {
@@ -181,7 +181,7 @@ func (f *fakeFileInfo) ModTime() time.Time { return time.Time{} }
 func (f *fakeFileInfo) IsDir() bool        { return f.dir }
 func (f *fakeFileInfo) Sys() any           { return f.stat }
 
-func addTestFileInfo(t *testing.T, dgut *summary.DirGroupUserType, doneDirs map[string]bool,
+func addTestFileInfo(t *testing.T, dgut *summary.DirGroupUserTypeAge, doneDirs map[string]bool,
 	path string, numFiles, sizeOfEachFile, gid, uid, atime, mtime int) {
 	t.Helper()
 
@@ -209,7 +209,7 @@ func addTestFileInfo(t *testing.T, dgut *summary.DirGroupUserType, doneDirs map[
 	addTestDirInfo(t, dgut, doneDirs, filepath.Dir(path), gid, uid)
 }
 
-func addTestDirInfo(t *testing.T, dgut *summary.DirGroupUserType, doneDirs map[string]bool,
+func addTestDirInfo(t *testing.T, dgut *summary.DirGroupUserTypeAge, doneDirs map[string]bool,
 	dir string, gid, uid int) {
 	t.Helper()
 

@@ -39,7 +39,7 @@ import (
 )
 
 func TestTree(t *testing.T) {
-	expectedFTsBam := []summary.DirGUTFileType{summary.DGUTFileTypeBam}
+	expectedFTsBam := []summary.DirGUTAFileType{summary.DGUTAFileTypeBam}
 
 	Convey("You can make a Tree from a dgut database", t, func() {
 		paths, err := testMakeDBPaths(t)
@@ -60,12 +60,12 @@ func TestTree(t *testing.T) {
 
 		expectedUIDs := []uint32{101, 102}
 		expectedGIDs := []uint32{1, 2}
-		expectedFTs := []summary.DirGUTFileType{summary.DGUTFileTypeTemp,
-			summary.DGUTFileTypeBam, summary.DGUTFileTypeCram, summary.DGUTFileTypeDir}
+		expectedFTs := []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp,
+			summary.DGUTAFileTypeBam, summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir}
 		expectedUIDsOne := []uint32{101}
 		expectedGIDsOne := []uint32{1}
-		expectedFTsCram := []summary.DirGUTFileType{summary.DGUTFileTypeCram}
-		expectedFTsCramAndDir := []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir}
+		expectedFTsCram := []summary.DirGUTAFileType{summary.DGUTAFileTypeCram}
+		expectedFTsCramAndDir := []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir}
 		expectedAtime := time.Unix(50, 0)
 		expectedAtimeG := time.Unix(60, 0)
 		expectedMtime := time.Unix(90, 0)
@@ -120,17 +120,17 @@ func TestTree(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
 				Current: &DirSummary{"/a/b/e/h/tmp", 2, 5 + directorySize, time.Unix(80, 0), time.Unix(80, 0),
-					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTFileType{summary.DGUTFileTypeTemp,
-						summary.DGUTFileTypeBam, summary.DGUTFileTypeDir}, dbModTime,
+					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp,
+						summary.DGUTAFileTypeBam, summary.DGUTAFileTypeDir}, dbModTime,
 					[8]int64{5, 5, 5, 5, 5, 5, 5, 5}, [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
 				Children: nil,
 			})
 
-			di, err = tree.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeCompressed}})
+			di, err = tree.DirInfo("/", &Filter{FTs: []summary.DirGUTAFileType{summary.DGUTAFileTypeCompressed}})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
 				Current: &DirSummary{"/", 0, 0, time.Unix(0, 0), time.Unix(0, 0),
-					[]uint32{}, []uint32{}, []summary.DirGUTFileType{}, dbModTime,
+					[]uint32{}, []uint32{}, []summary.DirGUTAFileType{}, dbModTime,
 					[8]int64{}, [8]int64{}},
 				Children: nil,
 			})

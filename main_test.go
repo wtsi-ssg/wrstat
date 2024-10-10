@@ -1063,7 +1063,7 @@ func TestCombine(t *testing.T) {
 			NewestMTime int64
 			UIDs        []uint32
 			GIDs        []uint32
-			FTs         []summary.DirGUTFileType
+			FTs         []summary.DirGUTAFileType
 		}{
 			{
 				Directory:   "/",
@@ -1072,7 +1072,7 @@ func TestCombine(t *testing.T) {
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0, 2, 15},
+				FTs:         []summary.DirGUTAFileType{0, 2, 15},
 			},
 			{
 				Directory:   "/some/directory/001",
@@ -1081,27 +1081,27 @@ func TestCombine(t *testing.T) {
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0, 2, 15},
+				FTs:         []summary.DirGUTAFileType{0, 2, 15},
 			},
 			{
 				Directory:   "/some/directory/001",
-				Filter:      &dgut.Filter{FTs: []summary.DirGUTFileType{0, 2, 15}},
+				Filter:      &dgut.Filter{FTs: []summary.DirGUTAFileType{0, 2, 15}},
 				NumFiles:    10,
 				TotalSize:   32788,
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0, 2, 15},
+				FTs:         []summary.DirGUTAFileType{0, 2, 15},
 			},
 			{
 				Directory:   "/some/directory/001",
-				Filter:      &dgut.Filter{FTs: []summary.DirGUTFileType{0}},
+				Filter:      &dgut.Filter{FTs: []summary.DirGUTAFileType{0}},
 				NumFiles:    1,
 				TotalSize:   10,
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0},
+				FTs:         []summary.DirGUTAFileType{0},
 			},
 			{
 				Directory:   "/some/directory/001/aDirectory",
@@ -1110,7 +1110,7 @@ func TestCombine(t *testing.T) {
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0, 2, 15},
+				FTs:         []summary.DirGUTAFileType{0, 2, 15},
 			},
 			{
 				Directory:   "/some/directory/001/aDirectory/aSubDirectory",
@@ -1119,14 +1119,14 @@ func TestCombine(t *testing.T) {
 				NewestMTime: 314159,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{2, 15},
+				FTs:         []summary.DirGUTAFileType{2, 15},
 			},
 			{
 				Directory: "/some/directory/001/aDirectory/aSubDirectory",
 				Filter:    &dgut.Filter{UIDs: []uint32{0}},
 				UIDs:      []uint32{},
 				GIDs:      []uint32{},
-				FTs:       []summary.DirGUTFileType{},
+				FTs:       []summary.DirGUTAFileType{},
 			},
 		} {
 			ds, err := db.DirInfo(test.Directory, test.Filter)
@@ -1275,7 +1275,7 @@ func TestBasedirs(t *testing.T) {
 
 		pr, pw := io.Pipe()
 
-		o := summary.NewByDirGroupUserType()
+		o := summary.NewDirGroupUserTypeAge()
 
 		const dirSize = 4096
 

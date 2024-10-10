@@ -127,7 +127,7 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 	return path, &GUT{
 		GID:             uint32(ints[0]),
 		UID:             uint32(ints[1]),
-		FT:              summary.DirGUTFileType(ints[2]),
+		FT:              summary.DirGUTAFileType(ints[2]),
 		Count:           uint64(ints[3]),
 		Size:            uint64(ints[4]),
 		Atime:           ints[5],

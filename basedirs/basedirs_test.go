@@ -128,7 +128,7 @@ func TestBaseDirs(t *testing.T) {
 			expectedAtime := time.Unix(50, 0)
 			expectedMtime := time.Unix(50, 0)
 			expectedMtimeA := time.Unix(100, 0)
-			expectedFTsBam := []summary.DirGUTFileType{summary.DGUTFileTypeBam}
+			expectedFTsBam := []summary.DirGUTAFileType{summary.DGUTAFileTypeBam}
 
 			Convey("of each group", func() { //nolint:dupl
 				dcss, err := bd.CalculateForGroup(1)
@@ -630,8 +630,8 @@ func TestBaseDirs(t *testing.T) {
 						// actually expectedMtime, but we don't  have a way
 						// of getting correct answer for "."
 						LastModified: expectedMtimeA,
-						FileUsage: map[summary.DirGUTFileType]uint64{
-							summary.DGUTFileTypeBam: halfGig,
+						FileUsage: map[summary.DirGUTAFileType]uint64{
+							summary.DGUTAFileTypeBam: halfGig,
 						},
 					},
 					{
@@ -639,8 +639,8 @@ func TestBaseDirs(t *testing.T) {
 						NumFiles:     1,
 						SizeFiles:    twoGig,
 						LastModified: expectedMtimeA,
-						FileUsage: map[summary.DirGUTFileType]uint64{
-							summary.DGUTFileTypeBam: twoGig,
+						FileUsage: map[summary.DirGUTAFileType]uint64{
+							summary.DGUTAFileTypeBam: twoGig,
 						},
 					},
 				}
@@ -687,7 +687,7 @@ func TestBaseDirs(t *testing.T) {
 							SizeFiles:    20,
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
-								summary.DGUTFileTypeBam: 20,
+								summary.DGUTAFileTypeBam: 20,
 							},
 						},
 					})
@@ -703,7 +703,7 @@ func TestBaseDirs(t *testing.T) {
 							SizeFiles:    30,
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
-								summary.DGUTFileTypeBam: 30,
+								summary.DGUTAFileTypeBam: 30,
 							},
 						},
 					})
@@ -719,10 +719,10 @@ func TestBaseDirs(t *testing.T) {
 							SizeFiles:    6,
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
-								summary.DGUTFileTypeTemp: 1026,
-								summary.DGUTFileTypeBam:  1,
-								summary.DGUTFileTypeSam:  2,
-								summary.DGUTFileTypeCram: 3,
+								summary.DGUTAFileTypeTemp: 1026,
+								summary.DGUTAFileTypeBam:  1,
+								summary.DGUTAFileTypeSam:  2,
+								summary.DGUTAFileTypeCram: 3,
 							},
 						},
 						{
@@ -731,7 +731,7 @@ func TestBaseDirs(t *testing.T) {
 							SizeFiles:    9,
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
-								summary.DGUTFileTypePedBed: 9,
+								summary.DGUTAFileTypePedBed: 9,
 							},
 						},
 					})

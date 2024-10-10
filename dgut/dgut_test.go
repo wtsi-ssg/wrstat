@@ -125,7 +125,7 @@ func TestDGUT(t *testing.T) {
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
-		filter.FTs = []summary.DirGUTFileType{summary.DGUTFileTypeTemp}
+		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}
 		a, b = expectedRootGUTs[3].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
@@ -133,7 +133,7 @@ func TestDGUT(t *testing.T) {
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
-		filter.FTs = []summary.DirGUTFileType{summary.DGUTFileTypeTemp, summary.DGUTFileTypeCram}
+		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp, summary.DGUTAFileTypeCram}
 		a, b = expectedRootGUTs[3].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
@@ -151,7 +151,7 @@ func TestDGUT(t *testing.T) {
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
-		filter.FTs = []summary.DirGUTFileType{summary.DGUTFileTypeDir}
+		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeDir}
 		a, b = expectedRootGUTs[1].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
@@ -159,8 +159,8 @@ func TestDGUT(t *testing.T) {
 
 	expectedUIDs := []uint32{101, 102}
 	expectedGIDs := []uint32{1, 2}
-	expectedFTs := []summary.DirGUTFileType{summary.DGUTFileTypeTemp,
-		summary.DGUTFileTypeBam, summary.DGUTFileTypeCram, summary.DGUTFileTypeDir}
+	expectedFTs := []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp,
+		summary.DGUTAFileTypeBam, summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir}
 
 	const numDirectories = 10
 
@@ -286,7 +286,7 @@ func TestDGUT(t *testing.T) {
 						So(ds.Mtime, ShouldEqual, time.Unix(90, 0))
 						So(ds.UIDs, ShouldResemble, []uint32{102})
 						So(ds.GIDs, ShouldResemble, []uint32{2})
-						So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir})
+						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir})
 
 						ds, errd = db.DirInfo("/a/b/d/g", nil)
 						So(errd, ShouldBeNil)
@@ -296,7 +296,7 @@ func TestDGUT(t *testing.T) {
 						So(ds.Mtime, ShouldEqual, time.Unix(75, 0))
 						So(ds.UIDs, ShouldResemble, expectedUIDs)
 						So(ds.GIDs, ShouldResemble, []uint32{1})
-						So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir})
+						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir})
 						So(ds.SizeByAccessAge, ShouldEqual, [8]int64{60, 60, 60, 60, 60, 60, 60, 60})
 						So(ds.SizeByModifyAge, ShouldEqual, [8]int64{1084, 1084, 1084, 1084, 1084, 1084, 1084, 1084})
 
@@ -322,7 +322,7 @@ func TestDGUT(t *testing.T) {
 						So(ds.Mtime, ShouldEqual, time.Unix(90, 0))
 						So(ds.UIDs, ShouldResemble, []uint32{102})
 						So(ds.GIDs, ShouldResemble, expectedGIDs)
-						So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram, summary.DGUTFileTypeDir})
+						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir})
 
 						ds, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
 						So(errd, ShouldBeNil)
@@ -332,12 +332,12 @@ func TestDGUT(t *testing.T) {
 						So(ds.Mtime, ShouldEqual, time.Unix(75, 0))
 						So(ds.UIDs, ShouldResemble, []uint32{102})
 						So(ds.GIDs, ShouldResemble, []uint32{1})
-						So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeCram})
+						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DGUTAFileTypeCram})
 
 						ds, errd = db.DirInfo("/", &Filter{
 							GIDs: []uint32{1},
 							UIDs: []uint32{102},
-							FTs:  []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
+							FTs:  []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}})
 						So(errd, ShouldBeNil)
 						So(ds.Count, ShouldEqual, 0)
 						So(ds.Size, ShouldEqual, 0)
@@ -345,9 +345,9 @@ func TestDGUT(t *testing.T) {
 						So(ds.Mtime, ShouldEqual, time.Unix(0, 0))
 						So(ds.UIDs, ShouldResemble, []uint32{})
 						So(ds.GIDs, ShouldResemble, []uint32{})
-						So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{})
+						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{})
 
-						ds, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTFileType{summary.DGUTFileTypeTemp}})
+						ds, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}})
 						So(errd, ShouldBeNil)
 						So(ds.Count, ShouldEqual, 1+1)
 						So(ds.Size, ShouldEqual, 5+directorySize)
@@ -355,7 +355,7 @@ func TestDGUT(t *testing.T) {
 						So(ds.Mtime, ShouldEqual, time.Unix(80, 0))
 						So(ds.UIDs, ShouldResemble, []uint32{101})
 						So(ds.GIDs, ShouldResemble, []uint32{1})
-						So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{summary.DGUTFileTypeTemp})
+						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp})
 
 						children := db.Children("/a")
 						So(children, ShouldResemble, []string{"/a/b", "/a/c"})
@@ -544,23 +544,23 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 	dgutData = internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
 
 	expectedRootGUTs = GUTs{
-		{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
 			SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 			SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-		{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1,
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1,
 			SizeByModifyAge: [8]int64{8192, 8192, 8192, 8192, 8192, 8192, 8192, 8192}},
-		{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
 			SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
 			SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
-		{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
 			SizeByAccessAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30},
 			SizeByModifyAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-		{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
 			SizeByAccessAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40},
 			SizeByModifyAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
-		{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
 			SizeByModifyAge: [8]int64{2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048}},
-		{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
 			SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 			SizeByModifyAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
 	}
@@ -577,18 +577,18 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
 					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 					SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{7168, 7168, 7168, 7168, 7168, 7168, 7168, 7168}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
 					SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
 					SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
 					SizeByAccessAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30},
 					SizeByModifyAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
 					SizeByAccessAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40},
 					SizeByModifyAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
 			},
@@ -596,12 +596,12 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b/d",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{3072, 3072, 3072, 3072, 3072, 3072, 3072, 3072}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
 					SizeByAccessAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30},
 					SizeByModifyAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
 					SizeByAccessAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40},
 					SizeByModifyAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
 			},
@@ -609,9 +609,9 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b/d/f",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 1, Size: 10, Atime: 50, Mtime: 50,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 1, Size: 10, Atime: 50, Mtime: 50,
 					SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
 					SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
 			},
@@ -619,12 +619,12 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b/d/g",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeCram, Count: 2, Size: 20, Atime: 60, Mtime: 60,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 2, Size: 20, Atime: 60, Mtime: 60,
 					SizeByAccessAge: [8]int64{20, 20, 20, 20, 20, 20, 20, 20},
 					SizeByModifyAge: [8]int64{20, 20, 20, 20, 20, 20, 20, 20}},
-				{GID: 1, UID: 102, FT: summary.DGUTFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
 					SizeByAccessAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40},
 					SizeByModifyAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
 			},
@@ -632,12 +632,12 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b/e",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
 					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 					SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{3072, 3072, 3072, 3072, 3072, 3072, 3072, 3072}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
 					SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
 					SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
 			},
@@ -645,12 +645,12 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b/e/h",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
 					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 					SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
 					SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
 					SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
 			},
@@ -658,12 +658,12 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b/e/h/tmp",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
 					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 					SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-				{GID: 1, UID: 101, FT: summary.DGUTFileTypeBam, Count: 1, Size: 5, Atime: 80, Mtime: 80,
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 1, Size: 5, Atime: 80, Mtime: 80,
 					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 					SizeByModifyAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
 			},
@@ -671,9 +671,9 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/c",
 			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048}},
-				{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
 					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 					SizeByModifyAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
 			},
@@ -681,9 +681,9 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/c/d",
 			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: summary.DGUTFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
 					SizeByModifyAge: [8]int64{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-				{GID: 2, UID: 102, FT: summary.DGUTFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
 					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
 					SizeByModifyAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
 			},
@@ -742,7 +742,7 @@ func testGetDBKeys(path, bucket string) ([]string, error) {
 
 func alterDgutForTest(dgut *DGUT) *DGUT {
 	for _, gut := range dgut.GUTs {
-		if gut.FT == summary.DGUTFileTypeDir {
+		if gut.FT == summary.DGUTAFileTypeDir {
 			gut.Atime = math.MaxInt
 		}
 	}

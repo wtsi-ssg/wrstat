@@ -37,7 +37,7 @@ import (
 type GUT struct {
 	GID             uint32
 	UID             uint32
-	FT              summary.DirGUTFileType
+	FT              summary.DirGUTAFileType
 	Count           uint64
 	Size            uint64
 	Atime           int64    // seconds since Unix epoch
@@ -61,7 +61,7 @@ type GUT struct {
 type Filter struct {
 	GIDs []uint32
 	UIDs []uint32
-	FTs  []summary.DirGUTFileType
+	FTs  []summary.DirGUTAFileType
 }
 
 // PassesFilter checks to see if this GUT has a GID in the filter's GIDs
@@ -122,7 +122,7 @@ func (g *GUT) passesUIDFilter(filter *Filter) bool {
 // FTs only hold DGUTFileTypeTemp.
 func (g *GUT) passesFTFilter(filter *Filter) (bool, bool) {
 	if filter == nil || filter.FTs == nil {
-		return true, g.FT != summary.DGUTFileTypeTemp
+		return true, g.FT != summary.DGUTAFileTypeTemp
 	}
 
 	for _, ft := range filter.FTs {
@@ -137,7 +137,7 @@ func (g *GUT) passesFTFilter(filter *Filter) (bool, bool) {
 // amTempAndNotFilteredJustForTemp tells you if our FT is DGUTFileTypeTemp and
 // the filter has more than one type set.
 func (g *GUT) amTempAndNotFilteredJustForTemp(filter *Filter) bool {
-	return g.FT == summary.DGUTFileTypeTemp && len(filter.FTs) > 1
+	return g.FT == summary.DGUTAFileTypeTemp && len(filter.FTs) > 1
 }
 
 // GUTs is a slice of *GUT, offering ways to filter and summarise the
@@ -170,7 +170,7 @@ func (g GUTs) Summary(filter *Filter) *DirSummary { //nolint:funlen
 
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
-	uniqueFTs := make(map[summary.DirGUTFileType]bool)
+	uniqueFTs := make(map[summary.DirGUTAFileType]bool)
 
 	for _, gut := range g {
 		passes, passesDisallowingTemp := gut.PassesFilter(filter)

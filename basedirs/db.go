@@ -349,12 +349,12 @@ func (b *BaseDirs) decodeFromBytes(encoded []byte, data any) error {
 
 // UsageBreakdownByType is a map of file type to total size of files in bytes
 // with that type.
-type UsageBreakdownByType map[summary.DirGUTFileType]uint64
+type UsageBreakdownByType map[summary.DirGUTAFileType]uint64
 
 func (u UsageBreakdownByType) String() string {
 	var sb strings.Builder
 
-	types := make([]summary.DirGUTFileType, 0, len(u))
+	types := make([]summary.DirGUTAFileType, 0, len(u))
 
 	for ft := range u {
 		types = append(types, ft)
@@ -430,7 +430,7 @@ func (b *BaseDirs) dirAndSubDirTypes(info *dgut.DirInfo, filter dgut.Filter,
 	parentTypes := make(UsageBreakdownByType)
 
 	for _, ft := range info.Current.FTs {
-		filter.FTs = []summary.DirGUTFileType{ft}
+		filter.FTs = []summary.DirGUTAFileType{ft}
 
 		typedInfo, err := b.tree.DirInfo(dir, &filter)
 		if err != nil {
@@ -448,7 +448,7 @@ func (b *BaseDirs) dirAndSubDirTypes(info *dgut.DirInfo, filter dgut.Filter,
 }
 
 func collateSubDirFileTypeSizes(children []*dgut.DirSummary,
-	childToTypes map[string]UsageBreakdownByType, ft summary.DirGUTFileType) uint64 {
+	childToTypes map[string]UsageBreakdownByType, ft summary.DirGUTAFileType) uint64 {
 	var fileTypeSize uint64
 
 	for _, child := range children {

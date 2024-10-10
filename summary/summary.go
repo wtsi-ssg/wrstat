@@ -27,6 +27,11 @@
 
 package summary
 
+import (
+	"strconv"
+	"strings"
+)
+
 const (
 	SecondsInAMonth = 2628000
 	SecondsInAYear  = SecondsInAMonth * 12
@@ -50,31 +55,20 @@ func (s *summary) add(size int64) {
 	s.size += size
 }
 
-// summaryWithTimes is like summary, but also holds the oldest atime,
-// newest mtime add()ed, size by access age and size by modify age.
+// summaryWithTimes is like summary, but also holds the reference time, oldest
+// atime, newest mtime add()ed.
 type summaryWithTimes struct {
 	summary
-	refTime         int64
-	atime           int64    // seconds since Unix epoch
-	mtime           int64    // seconds since Unix epoch
-	sizeByAccessAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to access time
-	sizeByModifyAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to modify time
+	refTime int64
+	atime   int64 // seconds since Unix epoch
+	mtime   int64 // seconds since Unix epoch
 }
 
 // add will increment our count and add the given size to our size. It also
 // stores the given atime if it is older than our current one, and the given
-// mtime if it is newer than our current one. It also sets the various
-// filesize[AM][timeperiod] properties based on the age.
+// mtime if it is newer than our current one.
 func (s *summaryWithTimes) add(size int64, atime int64, mtime int64) {
 	s.summary.add(size)
-
-	if atime != 0 {
-		s.setAgeSizes(size, atime, &s.sizeByAccessAge)
-	}
-
-	if mtime != 0 {
-		s.setAgeSizes(size, mtime, &s.sizeByModifyAge)
-	}
 
 	if atime > 0 && (s.atime == 0 || atime < s.atime) {
 		s.atime = atime
@@ -85,12 +79,25 @@ func (s *summaryWithTimes) add(size int64, atime int64, mtime int64) {
 	}
 }
 
-func (s *summaryWithTimes) setAgeSizes(size int64, age int64, sizeByAge *[8]int64) {
-	for i := range sizeByAge {
-		if age > s.refTime-ageThresholds[i] {
-			return
-		}
-
-		sizeByAge[i] += size
+// fitsAgeInterval takes a dguta and the mtime and atime. It checks the value of
+// age inside the dguta, and then returns true if the mtime or atime
+// respectively fits inside the age interval. E.g. if a = 3, this corresponds to
+// DGUTAgeA6M, so atime is checked to see if it is older than 6 months.
+func (s *summaryWithTimes) fitsAgeInterval(dguta string, atime, mtime int64) bool {
+	age, err := strconv.Atoi(dguta[strings.LastIndex(dguta, "\t")+1:])
+	if err != nil {
+		return false
 	}
+
+	if age > len(ageThresholds) {
+		return s.checkTimeIsInInterval(mtime, age-(len(ageThresholds)+1))
+	} else if age > 0 {
+		return s.checkTimeIsInInterval(atime, age-1)
+	}
+
+	return true
+}
+
+func (s *summaryWithTimes) checkTimeIsInInterval(amtime int64, thresholdIndex int) bool {
+	return amtime <= s.refTime-ageThresholds[thresholdIndex]
 }

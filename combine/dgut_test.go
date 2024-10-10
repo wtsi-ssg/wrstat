@@ -70,7 +70,7 @@ func TestDGUTFiles(t *testing.T) {
 				So(ds.Mtime, ShouldEqual, time.Unix(1668768811, 0))
 				So(ds.UIDs, ShouldResemble, []uint32{13912, 21574})
 				So(ds.GIDs, ShouldResemble, []uint32{1313})
-				So(ds.FTs, ShouldResemble, []summary.DirGUTFileType{summary.DirGUTFileType(0)})
+				So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DirGUTAFileType(0)})
 				So(ds.SizeByAccessAge, ShouldEqual, [8]int64{25, 25, 25, 25, 25, 0, 0, 0})
 				So(ds.SizeByModifyAge, ShouldEqual, [8]int64{25, 25, 25, 25, 25, 0, 0, 0})
 			})
