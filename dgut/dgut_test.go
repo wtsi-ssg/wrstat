@@ -41,52 +41,55 @@ import (
 )
 
 func TestDGUT(t *testing.T) {
-	Convey("You can parse a single line of dgut data", t, func() {
-		line := encode.Base64Encode("/") + "\t1\t101\t0\t3\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n"
+	FocusConvey("You can parse a single line of dgut data", t, func() {
+		line := encode.Base64Encode("/") + "\t1\t101\t0\t0\t3\t30\t50\t50\n"
 		dir, gut, err := parseDGUTLine(line)
 		So(err, ShouldBeNil)
 		So(dir, ShouldEqual, "/")
-		So(gut, ShouldResemble, &GUT{GID: 1, UID: 101, FT: 0, Count: 3, Size: 30, Atime: 50, Mtime: 50,
-			SizeByAccessAge: [8]int64{0, 1, 1, 2, 3, 3, 3, 5},
-			SizeByModifyAge: [8]int64{0, 0, 0, 1, 2, 3, 3, 5}})
+		So(gut, ShouldResemble, &GUT{GID: 1, UID: 101, FT: summary.DGUTAFileTypeOther,
+			Age: summary.DGUTAgeAll, Count: 3, Size: 30, Atime: 50, Mtime: 50})
 
 		Convey("But invalid data won't parse", func() {
 			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
-				"\t1\t101\t0\t3\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
+				"\t1\t101\t0\t0\t3\t50\t50\n")
 
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
-				"\tfoo\t101\t0\t3\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
+				"\tfoo\t101\t0\t0\t3\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
-				"\t1\tfoo\t0\t3\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
+				"\t1\tfoo\t0\t0\t3\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
-				"\t1\t101\tfoo\t3\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
+				"\t1\t101\tfoo\t0\t3\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
-				"\t1\t101\t0\tfoo\t30\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
+				"\t1\t101\t0\tfoo\t3\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
-				"\t1\t101\t0\t3\tfoo\t50\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
+				"\t1\t101\t0\t0\tfoo\t30\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
-				"\t1\t101\t0\t3\t30\tfoo\t50\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
+				"\t1\t101\t0\t0\t3\tfoo\t50\t50\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
-				"\t1\t101\t0\t3\t30\t50\tfoo\t0\t1\t1\t2\t3\t3\t3\t5\t0\t0\t0\t1\t2\t3\t3\t5\n")
+				"\t1\t101\t0\t0\t3\t30\tfoo\t50\n")
+			So(err, ShouldEqual, ErrInvalidFormat)
+
+			_, _, err = parseDGUTLine(encode.Base64Encode("/") +
+				"\t1\t101\t0\t0\t3\t30\t50\tfoo\n")
 			So(err, ShouldEqual, ErrInvalidFormat)
 
 			So(err.Error(), ShouldEqual, "the provided data was not in dgut format")
 
-			_, _, err = parseDGUTLine("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n")
+			_, _, err = parseDGUTLine("\t\t\t\t\t\t\t\t\n")
 			So(err, ShouldEqual, ErrBlankLine)
 
 			So(err.Error(), ShouldEqual, "the provided line had no information")
@@ -97,7 +100,7 @@ func TestDGUT(t *testing.T) {
 
 	Convey("You can see if a GUT passes a filter", t, func() {
 		filter := &Filter{}
-		a, b := expectedRootGUTs[3].PassesFilter(filter)
+		a, b := expectedRootGUTs[3*17].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
@@ -106,27 +109,27 @@ func TestDGUT(t *testing.T) {
 		So(b, ShouldBeFalse)
 
 		filter.GIDs = []uint32{3, 4, 5}
-		a, b = expectedRootGUTs[3].PassesFilter(filter)
+		a, b = expectedRootGUTs[3*17].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
 
 		filter.GIDs = []uint32{3, 2, 1}
-		a, b = expectedRootGUTs[3].PassesFilter(filter)
+		a, b = expectedRootGUTs[3*17].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.UIDs = []uint32{103}
-		a, b = expectedRootGUTs[3].PassesFilter(filter)
+		a, b = expectedRootGUTs[3*17].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
 
 		filter.UIDs = []uint32{103, 102, 101}
-		a, b = expectedRootGUTs[2].PassesFilter(filter)
+		a, b = expectedRootGUTs[2*17].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}
-		a, b = expectedRootGUTs[3].PassesFilter(filter)
+		a, b = expectedRootGUTs[3*17].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
 		a, b = expectedRootGUTs[0].PassesFilter(filter)
@@ -134,7 +137,7 @@ func TestDGUT(t *testing.T) {
 		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp, summary.DGUTAFileTypeCram}
-		a, b = expectedRootGUTs[3].PassesFilter(filter)
+		a, b = expectedRootGUTs[3*17].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 		a, b = expectedRootGUTs[0].PassesFilter(filter)
@@ -142,23 +145,33 @@ func TestDGUT(t *testing.T) {
 		So(b, ShouldBeFalse)
 
 		filter.UIDs = nil
-		a, b = expectedRootGUTs[3].PassesFilter(filter)
+		a, b = expectedRootGUTs[3*17].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.GIDs = nil
-		a, b = expectedRootGUTs[3].PassesFilter(filter)
+		a, b = expectedRootGUTs[3*17].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeDir}
-		a, b = expectedRootGUTs[1].PassesFilter(filter)
+		a, b = expectedRootGUTs[1*17].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
+
+		filter = &Filter{Age: summary.DGUTAgeA1M}
+		a, b = expectedRootGUTs[7*17+summary.DGUTAgeA1M].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
+
+		filter.Age = summary.DGUTAgeA7Y
+		a, b = expectedRootGUTs[7*17+summary.DGUTAgeA7Y].PassesFilter(filter)
+		So(a, ShouldBeFalse)
+		So(b, ShouldBeFalse)
 	})
 
-	expectedUIDs := []uint32{101, 102}
-	expectedGIDs := []uint32{1, 2}
+	expectedUIDs := []uint32{101, 102, 103}
+	expectedGIDs := []uint32{1, 2, 3}
 	expectedFTs := []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp,
 		summary.DGUTAFileTypeBam, summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir}
 
@@ -166,12 +179,16 @@ func TestDGUT(t *testing.T) {
 
 	const directorySize = 1024
 
+	expectedMtime := time.Unix(time.Now().Unix()-(summary.SecondsInAYear*3), 0)
+
+	defaultFilter := &Filter{Age: summary.DGUTAgeAll}
+
 	Convey("GUTs can sum the count and size and provide UIDs, GIDs and FTs of their GUT elements", t, func() {
-		ds := expectedRootGUTs.Summary(nil)
-		So(ds.Count, ShouldEqual, numDirectories+14)
-		So(ds.Size, ShouldEqual, 85+numDirectories*directorySize)
+		ds := expectedRootGUTs.Summary(defaultFilter)
+		So(ds.Count, ShouldEqual, 21+numDirectories)
+		So(ds.Size, ShouldEqual, 92+numDirectories*directorySize)
 		So(ds.Atime, ShouldEqual, time.Unix(50, 0))
-		So(ds.Mtime, ShouldEqual, time.Unix(90, 0))
+		So(ds.Mtime, ShouldHappenBetween, expectedMtime.Add(-5*time.Second), expectedMtime.Add(5*time.Second))
 		So(ds.UIDs, ShouldResemble, expectedUIDs)
 		So(ds.GIDs, ShouldResemble, expectedGIDs)
 		So(ds.FTs, ShouldResemble, expectedFTs)
@@ -181,18 +198,18 @@ func TestDGUT(t *testing.T) {
 		ch := new(codec.BincHandle)
 		dirb, b := expected[0].encodeToBytes(ch)
 		So(len(dirb), ShouldEqual, 1)
-		So(len(b), ShouldEqual, 780)
+		So(len(b), ShouldEqual, 7020)
 
 		d := decodeDGUTbytes(ch, dirb, b)
 		So(d, ShouldResemble, expected[0])
 	})
 
 	Convey("A DGUT can sum the count and size and provide UIDs, GIDs and FTs of its GUTs", t, func() {
-		ds := expected[0].Summary(nil)
-		So(ds.Count, ShouldEqual, 14+numDirectories)
-		So(ds.Size, ShouldEqual, 85+numDirectories*directorySize)
+		ds := expected[0].Summary(defaultFilter)
+		So(ds.Count, ShouldEqual, 21+numDirectories)
+		So(ds.Size, ShouldEqual, 92+numDirectories*directorySize)
 		So(ds.Atime, ShouldEqual, time.Unix(50, 0))
-		So(ds.Mtime, ShouldEqual, time.Unix(90, 0))
+		So(ds.Mtime, ShouldHappenBetween, expectedMtime.Add(-5*time.Second), expectedMtime.Add(5*time.Second))
 		So(ds.UIDs, ShouldResemble, expectedUIDs)
 		So(ds.GIDs, ShouldResemble, expectedGIDs)
 		So(ds.FTs, ShouldResemble, expectedFTs)
@@ -266,62 +283,58 @@ func TestDGUT(t *testing.T) {
 						err = db.Open()
 						So(err, ShouldBeNil)
 
-						ds, errd := db.DirInfo("/", nil)
+						ds, errd := db.DirInfo("/", defaultFilter)
 						So(errd, ShouldBeNil)
-						So(ds.Count, ShouldEqual, 14+numDirectories)
-						So(ds.Size, ShouldEqual, 85+numDirectories*directorySize)
+						So(ds.Count, ShouldEqual, 21+numDirectories)
+						So(ds.Size, ShouldEqual, 92+numDirectories*directorySize)
 						So(ds.Atime, ShouldEqual, time.Unix(50, 0))
-						So(ds.Mtime, ShouldEqual, time.Unix(90, 0))
+						So(ds.Mtime, ShouldHappenBetween, expectedMtime.Add(-5*time.Second), expectedMtime.Add(5*time.Second))
 						So(ds.UIDs, ShouldResemble, expectedUIDs)
 						So(ds.GIDs, ShouldResemble, expectedGIDs)
 						So(ds.FTs, ShouldResemble, expectedFTs)
-						So(ds.SizeByAccessAge, ShouldEqual, [8]int64{85, 85, 85, 85, 85, 85, 85, 85})
-						So(ds.SizeByModifyAge, ShouldEqual, [8]int64{10325, 10325, 10325, 10325, 10325, 10325, 10325, 10325})
 
-						ds, errd = db.DirInfo("/a/c/d", nil)
+						ds, errd = db.DirInfo("/a/c/d", defaultFilter)
 						So(errd, ShouldBeNil)
-						So(ds.Count, ShouldEqual, 6)
-						So(ds.Size, ShouldEqual, 5+directorySize)
+						So(ds.Count, ShouldEqual, 13)
+						So(ds.Size, ShouldEqual, 12+directorySize)
 						So(ds.Atime, ShouldEqual, time.Unix(90, 0))
-						So(ds.Mtime, ShouldEqual, time.Unix(90, 0))
-						So(ds.UIDs, ShouldResemble, []uint32{102})
-						So(ds.GIDs, ShouldResemble, []uint32{2})
+						So(ds.Mtime, ShouldHappenBetween, expectedMtime.Add(-5*time.Second), expectedMtime.Add(5*time.Second))
+						So(ds.UIDs, ShouldResemble, []uint32{102, 103})
+						So(ds.GIDs, ShouldResemble, []uint32{2, 3})
 						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir})
 
-						ds, errd = db.DirInfo("/a/b/d/g", nil)
+						ds, errd = db.DirInfo("/a/b/d/g", defaultFilter)
 						So(errd, ShouldBeNil)
 						So(ds.Count, ShouldEqual, 7)
 						So(ds.Size, ShouldEqual, 60+directorySize)
 						So(ds.Atime, ShouldEqual, time.Unix(60, 0))
 						So(ds.Mtime, ShouldEqual, time.Unix(75, 0))
-						So(ds.UIDs, ShouldResemble, expectedUIDs)
+						So(ds.UIDs, ShouldResemble, []uint32{101, 102})
 						So(ds.GIDs, ShouldResemble, []uint32{1})
 						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir})
-						So(ds.SizeByAccessAge, ShouldEqual, [8]int64{60, 60, 60, 60, 60, 60, 60, 60})
-						So(ds.SizeByModifyAge, ShouldEqual, [8]int64{1084, 1084, 1084, 1084, 1084, 1084, 1084, 1084})
 
-						_, errd = db.DirInfo("/foo", nil)
+						_, errd = db.DirInfo("/foo", defaultFilter)
 						So(errd, ShouldNotBeNil)
 						So(errd, ShouldEqual, ErrDirNotFound)
 
 						ds, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}})
 						So(errd, ShouldBeNil)
-						So(ds.Count, ShouldEqual, 9+8)
-						So(ds.Size, ShouldEqual, 80+8*directorySize)
+						So(ds.Count, ShouldEqual, 17)
+						So(ds.Size, ShouldEqual, 8272)
 						So(ds.Atime, ShouldEqual, time.Unix(50, 0))
 						So(ds.Mtime, ShouldEqual, time.Unix(80, 0))
-						So(ds.UIDs, ShouldResemble, expectedUIDs)
+						So(ds.UIDs, ShouldResemble, []uint32{101, 102})
 						So(ds.GIDs, ShouldResemble, []uint32{1})
 						So(ds.FTs, ShouldResemble, expectedFTs)
 
 						ds, errd = db.DirInfo("/", &Filter{UIDs: []uint32{102}})
 						So(errd, ShouldBeNil)
-						So(ds.Count, ShouldEqual, 9+2)
-						So(ds.Size, ShouldEqual, 45+2*directorySize)
+						So(ds.Count, ShouldEqual, 11)
+						So(ds.Size, ShouldEqual, 2093)
 						So(ds.Atime, ShouldEqual, time.Unix(75, 0))
 						So(ds.Mtime, ShouldEqual, time.Unix(90, 0))
 						So(ds.UIDs, ShouldResemble, []uint32{102})
-						So(ds.GIDs, ShouldResemble, expectedGIDs)
+						So(ds.GIDs, ShouldResemble, []uint32{1, 2})
 						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir})
 
 						ds, errd = db.DirInfo("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{102}})
@@ -349,7 +362,7 @@ func TestDGUT(t *testing.T) {
 
 						ds, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}})
 						So(errd, ShouldBeNil)
-						So(ds.Count, ShouldEqual, 1+1)
+						So(ds.Count, ShouldEqual, 2)
 						So(ds.Size, ShouldEqual, 5+directorySize)
 						So(ds.Atime, ShouldEqual, time.Unix(80, 0))
 						So(ds.Mtime, ShouldEqual, time.Unix(80, 0))
@@ -398,9 +411,9 @@ func TestDGUT(t *testing.T) {
 
 					Convey("Store()ing multiple times", func() {
 						data = strings.NewReader(encode.Base64Encode("/") +
-							"\t3\t103\t7\t2\t2\t25\t25\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n" +
-							encode.Base64Encode("/a/i") + "\t3\t103\t7\t1\t1\t25\t25\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n" +
-							encode.Base64Encode("/i") + "\t3\t103\t7\t1\t1\t30\t30\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n")
+							"\t3\t103\t7\t0\t2\t2\t25\t25\n" +
+							encode.Base64Encode("/a/i") + "\t3\t103\t7\t0\t1\t1\t25\t25\n" +
+							encode.Base64Encode("/i") + "\t3\t103\t7\t0\t1\t1\t30\t30\n")
 
 						Convey("to the same db file doesn't work", func() {
 							err = db.Store(data, 4)
@@ -423,10 +436,10 @@ func TestDGUT(t *testing.T) {
 
 							ds, errd := db.DirInfo("/", nil)
 							So(errd, ShouldBeNil)
-							So(ds.Count, ShouldEqual, 16+numDirectories)
-							So(ds.Size, ShouldEqual, 87+numDirectories*directorySize)
+							So(ds.Count, ShouldEqual, 407)
+							So(ds.Size, ShouldEqual, 93684)
 							So(ds.Atime, ShouldEqual, time.Unix(25, 0))
-							So(ds.Mtime, ShouldEqual, time.Unix(90, 0))
+							So(ds.Mtime, ShouldHappenBetween, expectedMtime.Add(-5*time.Second), expectedMtime.Add(5*time.Second))
 							So(ds.UIDs, ShouldResemble, []uint32{101, 102, 103})
 							So(ds.GIDs, ShouldResemble, []uint32{1, 2, 3})
 							So(ds.FTs, ShouldResemble, expectedFTs)
@@ -445,7 +458,7 @@ func TestDGUT(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(info, ShouldResemble, &DBInfo{
 						NumDirs:     11,
-						NumDGUTs:    40,
+						NumDGUTs:    748,
 						NumParents:  7,
 						NumChildren: 10,
 					})
@@ -544,25 +557,149 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 	dgutData = internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
 
 	expectedRootGUTs = GUTs{
-		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
-			SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-			SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1,
-			SizeByModifyAge: [8]int64{8192, 8192, 8192, 8192, 8192, 8192, 8192, 8192}},
-		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
-			SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
-			SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
-		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
-			SizeByAccessAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30},
-			SizeByModifyAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
-			SizeByAccessAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40},
-			SizeByModifyAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
-		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
-			SizeByModifyAge: [8]int64{2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048}},
-		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
-			SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-			SizeByModifyAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeAll, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM6M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM3Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM5Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM7Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA6M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA3Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA5Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA7Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 8, Size: 8192, Atime: math.MaxInt, Mtime: 1},
+
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeAll, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM6M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM3Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM5Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM7Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA6M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA3Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA5Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA7Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+		{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+		{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
 	}
 
 	expected = []*DGUT{
@@ -577,115 +714,542 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTs, expected []
 		{
 			Dir: "/a/b",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
-					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-					SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{7168, 7168, 7168, 7168, 7168, 7168, 7168, 7168}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
-					SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
-					SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
-					SizeByAccessAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30},
-					SizeByModifyAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
-					SizeByAccessAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40},
-					SizeByModifyAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeAll, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM6M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM3Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM5Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM7Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA6M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA3Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA5Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA7Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 7, Size: 7168, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeAll, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM6M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM3Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM5Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM7Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA6M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA3Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA5Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA7Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
 			},
 		},
 		{
 			Dir: "/a/b/d",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{3072, 3072, 3072, 3072, 3072, 3072, 3072, 3072}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 3, Size: 30, Atime: 50, Mtime: 60,
-					SizeByAccessAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30},
-					SizeByModifyAge: [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
-					SizeByAccessAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40},
-					SizeByModifyAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 3, Size: 30, Atime: 50, Mtime: 60},
+
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
 			},
 		},
 		{
 			Dir: "/a/b/d/f",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 1, Size: 10, Atime: 50, Mtime: 50,
-					SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
-					SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 1, Size: 10, Atime: 50, Mtime: 50},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 1, Size: 10, Atime: 50, Mtime: 50},
 			},
 		},
 		{
 			Dir: "/a/b/d/g",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Count: 2, Size: 20, Atime: 60, Mtime: 60,
-					SizeByAccessAge: [8]int64{20, 20, 20, 20, 20, 20, 20, 20},
-					SizeByModifyAge: [8]int64{20, 20, 20, 20, 20, 20, 20, 20}},
-				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 4, Size: 40, Atime: 75, Mtime: 75,
-					SizeByAccessAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40},
-					SizeByModifyAge: [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 2, Size: 20, Atime: 60, Mtime: 60},
+
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 4, Size: 40, Atime: 75, Mtime: 75},
+				{GID: 1, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 4, Size: 40, Atime: 75, Mtime: 75},
 			},
 		},
 		{
 			Dir: "/a/b/e",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
-					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-					SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{3072, 3072, 3072, 3072, 3072, 3072, 3072, 3072}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
-					SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
-					SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeAll, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM6M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM3Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM5Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM7Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA6M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA3Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA5Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA7Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 3, Size: 3072, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeAll, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM6M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM3Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM5Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM7Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA6M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA3Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA5Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA7Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
 			},
 		},
 		{
 			Dir: "/a/b/e/h",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
-					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-					SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 2, Size: 10, Atime: 80, Mtime: 80,
-					SizeByAccessAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10},
-					SizeByModifyAge: [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeAll, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM6M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM3Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM5Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM7Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA6M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA3Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA5Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA7Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeAll, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM6M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM3Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM5Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM7Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA6M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA3Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA5Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA7Y, Count: 2, Size: 10, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1M, Count: 2, Size: 10, Atime: 80, Mtime: 80},
 			},
 		},
 		{
 			Dir: "/a/b/e/h/tmp",
 			GUTs: []*GUT{
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Count: 2, Size: 1029, Atime: 80, Mtime: 80,
-					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-					SizeByModifyAge: [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Count: 1, Size: 5, Atime: 80, Mtime: 80,
-					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-					SizeByModifyAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeAll, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM6M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM3Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM5Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM7Y, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA6M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA2Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA3Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA5Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA7Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM1M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeAll, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM6M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM2Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM3Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM5Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM7Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA6M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA1Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA2Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA3Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA5Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeA7Y, Count: 1, Size: 5, Atime: 80, Mtime: 80},
+				{GID: 1, UID: 101, FT: summary.DGUTAFileTypeBam, Age: summary.DGUTAgeM1M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
 			},
 		},
 		{
 			Dir: "/a/c",
 			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048}},
-				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
-					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-					SizeByModifyAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 2, Size: 2048, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
 			},
 		},
 		{
 			Dir: "/a/c/d",
 			GUTs: []*GUT{
-				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1,
-					SizeByModifyAge: [8]int64{1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024}},
-				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Count: 5, Size: 5, Atime: 90, Mtime: 90,
-					SizeByAccessAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5},
-					SizeByModifyAge: [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeAll, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM6M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM2Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM3Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM5Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM7Y, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA6M, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA1Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeDir, Age: summary.DGUTAgeM1M, Count: 1, Size: 1024, Atime: math.MaxInt, Mtime: 1},
+
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+				{GID: 2, UID: 102, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 5, Size: 5, Atime: 90, Mtime: 90},
+
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA3Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA5Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA7Y, Count: 0, Size: 0, Atime: 0, Mtime: 0},
+				{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
 			},
 		},
 	}
@@ -742,7 +1306,7 @@ func testGetDBKeys(path, bucket string) ([]string, error) {
 
 func alterDgutForTest(dgut *DGUT) *DGUT {
 	for _, gut := range dgut.GUTs {
-		if gut.FT == summary.DGUTAFileTypeDir {
+		if gut.FT == summary.DGUTAFileTypeDir && gut.Count > 0 {
 			gut.Atime = math.MaxInt
 		}
 	}

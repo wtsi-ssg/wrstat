@@ -58,8 +58,8 @@ func TestTree(t *testing.T) {
 
 		dbModTime := fs.ModTime(paths[0])
 
-		expectedUIDs := []uint32{101, 102}
-		expectedGIDs := []uint32{1, 2}
+		expectedUIDs := []uint32{101, 102, 103}
+		expectedGIDs := []uint32{1, 2, 3}
 		expectedFTs := []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp,
 			summary.DGUTAFileTypeBam, summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir}
 		expectedUIDsOne := []uint32{101}
@@ -68,39 +68,34 @@ func TestTree(t *testing.T) {
 		expectedFTsCramAndDir := []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir}
 		expectedAtime := time.Unix(50, 0)
 		expectedAtimeG := time.Unix(60, 0)
-		expectedMtime := time.Unix(90, 0)
+		expectedMtime := time.Unix(time.Now().Unix()-(summary.SecondsInAYear*3), 0)
 
 		const numDirectories = 10
 
 		const directorySize = 1024
 
 		Convey("You can query the Tree for DirInfo", func() {
-			di, err := tree.DirInfo("/", nil)
+			di, err := tree.DirInfo("/", &Filter{Age: summary.DGUTAgeAll})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/", 14 + numDirectories, 85 + numDirectories*directorySize,
-					expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs, dbModTime,
-					[8]int64{85, 85, 85, 85, 85, 85, 85, 85}, [8]int64{10325, 10325, 10325, 10325, 10325, 10325, 10325, 10325}},
+				Current: &DirSummary{"/", 21 + numDirectories, 92 + numDirectories*directorySize,
+					expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs, summary.DGUTAgeAll, dbModTime},
 				Children: []*DirSummary{
-					{"/a", 14 + numDirectories, 85 + numDirectories*directorySize,
-						expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs, dbModTime,
-						[8]int64{85, 85, 85, 85, 85, 85, 85, 85}, [8]int64{10325, 10325, 10325, 10325, 10325, 10325, 10325, 10325}},
+					{"/a", 21 + numDirectories, 92 + numDirectories*directorySize,
+						expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs, summary.DGUTAgeAll, dbModTime},
 				},
 			})
 
-			di, err = tree.DirInfo("/a", nil)
+			di, err = tree.DirInfo("/a", &Filter{Age: summary.DGUTAgeAll})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/a", 14 + numDirectories, 85 + numDirectories*directorySize,
-					expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs, dbModTime,
-					[8]int64{85, 85, 85, 85, 85, 85, 85, 85}, [8]int64{10325, 10325, 10325, 10325, 10325, 10325, 10325, 10325}},
+				Current: &DirSummary{"/a", 21 + numDirectories, 92 + numDirectories*directorySize,
+					expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs, summary.DGUTAgeAll, dbModTime},
 				Children: []*DirSummary{
 					{"/a/b", 9 + 7, 80 + 7*directorySize, expectedAtime, time.Unix(80, 0),
-						expectedUIDs, expectedGIDsOne, expectedFTs, dbModTime,
-						[8]int64{80, 80, 80, 80, 80, 80, 80, 80}, [8]int64{7248, 7248, 7248, 7248, 7248, 7248, 7248, 7248}},
-					{"/a/c", 5 + 2, 5 + 2*directorySize, time.Unix(90, 0), time.Unix(90, 0),
-						[]uint32{102}, []uint32{2}, expectedFTsCramAndDir, dbModTime,
-						[8]int64{5, 5, 5, 5, 5, 5, 5, 5}, [8]int64{2053, 2053, 2053, 2053, 2053, 2053, 2053, 2053}},
+						[]uint32{101, 102}, expectedGIDsOne, expectedFTs, summary.DGUTAgeAll, dbModTime},
+					{"/a/c", 5 + 2 + 7, 5 + 7 + 2*directorySize, time.Unix(90, 0), expectedMtime,
+						[]uint32{102, 103}, []uint32{2, 3}, expectedFTsCramAndDir, summary.DGUTAgeAll, dbModTime},
 				},
 			})
 
@@ -108,21 +103,19 @@ func TestTree(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
 				Current: &DirSummary{"/a", 2, 10, time.Unix(80, 0), time.Unix(80, 0),
-					expectedUIDsOne, expectedGIDsOne, expectedFTsBam, dbModTime,
-					[8]int64{10, 10, 10, 10, 10, 10, 10, 10}, [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
+					expectedUIDsOne, expectedGIDsOne, expectedFTsBam, summary.DGUTAgeAll, dbModTime},
 				Children: []*DirSummary{
-					{"/a/b", 2, 10, time.Unix(80, 0), time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsBam, dbModTime,
-						[8]int64{10, 10, 10, 10, 10, 10, 10, 10}, [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
+					{"/a/b", 2, 10, time.Unix(80, 0), time.Unix(80, 0),
+						expectedUIDsOne, expectedGIDsOne, expectedFTsBam, summary.DGUTAgeAll, dbModTime},
 				},
 			})
 
-			di, err = tree.DirInfo("/a/b/e/h/tmp", nil)
+			di, err = tree.DirInfo("/a/b/e/h/tmp", &Filter{Age: summary.DGUTAgeAll})
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
 				Current: &DirSummary{"/a/b/e/h/tmp", 2, 5 + directorySize, time.Unix(80, 0), time.Unix(80, 0),
 					expectedUIDsOne, expectedGIDsOne, []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp,
-						summary.DGUTAFileTypeBam, summary.DGUTAFileTypeDir}, dbModTime,
-					[8]int64{5, 5, 5, 5, 5, 5, 5, 5}, [8]int64{1029, 1029, 1029, 1029, 1029, 1029, 1029, 1029}},
+						summary.DGUTAFileTypeBam, summary.DGUTAFileTypeDir}, summary.DGUTAgeAll, dbModTime},
 				Children: nil,
 			})
 
@@ -130,8 +123,7 @@ func TestTree(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(di, ShouldResemble, &DirInfo{
 				Current: &DirSummary{"/", 0, 0, time.Unix(0, 0), time.Unix(0, 0),
-					[]uint32{}, []uint32{}, []summary.DirGUTAFileType{}, dbModTime,
-					[8]int64{}, [8]int64{}},
+					[]uint32{}, []uint32{}, []summary.DirGUTAFileType{}, summary.DGUTAgeAll, dbModTime},
 				Children: nil,
 			})
 		})
@@ -157,60 +149,46 @@ func TestTree(t *testing.T) {
 				split.SplitsToSplitFn(0))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{30, 30, 30, 30, 30, 30, 30, 30}, [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
+				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, split.SplitsToSplitFn(0))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs[:3], dbModTime,
-					[8]int64{40, 40, 40, 40, 40, 40, 40, 40}, [8]int64{40, 40, 40, 40, 40, 40, 40, 40}},
+				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram},
 				split.SplitsToSplitFn(1))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{30, 30, 30, 30, 30, 30, 30, 30}, [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{20, 20, 20, 20, 20, 20, 20, 20}, [8]int64{20, 20, 20, 20, 20, 20, 20, 20}},
-				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{10, 10, 10, 10, 10, 10, 10, 10}, [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
+				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss.SortByDir()
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{30, 30, 30, 30, 30, 30, 30, 30}, [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{10, 10, 10, 10, 10, 10, 10, 10}, [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{20, 20, 20, 20, 20, 20, 20, 20}, [8]int64{20, 20, 20, 20, 20, 20, 20, 20}},
+				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram},
 				split.SplitsToSplitFn(2))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{30, 30, 30, 30, 30, 30, 30, 30}, [8]int64{30, 30, 30, 30, 30, 30, 30, 30}},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{20, 20, 20, 20, 20, 20, 20, 20}, [8]int64{20, 20, 20, 20, 20, 20, 20, 20}},
-				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{10, 10, 10, 10, 10, 10, 10, 10}, [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
+				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss, err = tree.Where("/", nil, split.SplitsToSplitFn(1))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a", 14, 85, expectedAtime, time.Unix(90, 0), expectedUIDs, expectedGIDs, expectedFTs[:3], dbModTime,
-					[8]int64{85, 85, 85, 85, 85, 85, 85, 85}, [8]int64{85, 85, 85, 85, 85, 85, 85, 85}},
-				{"/a/b", 9, 80, expectedAtime, time.Unix(80, 0), expectedUIDs, expectedGIDsOne, expectedFTs[:3], dbModTime,
-					[8]int64{80, 80, 80, 80, 80, 80, 80, 80}, [8]int64{80, 80, 80, 80, 80, 80, 80, 80}},
-				{"/a/c/d", 5, 5, time.Unix(90, 0), time.Unix(90, 0), []uint32{102}, []uint32{2}, expectedFTsCram, dbModTime,
-					[8]int64{5, 5, 5, 5, 5, 5, 5, 5}, [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
+				{"/a", 21, 92, expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
+				{"/a/b", 9, 80, expectedAtime, time.Unix(80, 0), []uint32{101, 102}, expectedGIDsOne, expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
+				{"/a/c/d", 12, 12, time.Unix(90, 0), expectedMtime, []uint32{102, 103}, []uint32{2, 3}, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			_, err = tree.Where("/foo", nil, split.SplitsToSplitFn(1))
@@ -223,10 +201,8 @@ func TestTree(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{10, 10, 10, 10, 10, 10, 10, 10}, [8]int64{10, 10, 10, 10, 10, 10, 10, 10}},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, dbModTime,
-					[8]int64{20, 20, 20, 20, 20, 20, 20, 20}, [8]int64{20, 20, 20, 20, 20, 20, 20, 20}},
+				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			_, err = tree.FileLocations("/foo", nil)
@@ -238,7 +214,7 @@ func TestTree(t *testing.T) {
 			So(err, ShouldNotBeNil)
 
 			di := &DirInfo{Current: &DirSummary{"/", 14, 85, expectedAtime, expectedMtime,
-				expectedUIDs, expectedGIDs, expectedFTs, dbModTime, [8]int64{}, [8]int64{}}}
+				expectedUIDs, expectedGIDs, expectedFTs, summary.DGUTAgeAll, dbModTime}}
 			err = tree.addChildInfo(di, []string{"/foo"}, nil)
 			So(err, ShouldNotBeNil)
 		})
@@ -254,15 +230,15 @@ func TestTree(t *testing.T) {
 
 		db := NewDB(paths1[0])
 		data := strings.NewReader(encode.Base64Encode("/") +
-			"\t1\t11\t6\t1\t1\t20\t20\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n" +
+			"\t1\t11\t6\t0\t1\t1\t20\t20\n" +
 			encode.Base64Encode("/a") +
-			"\t1\t11\t6\t1\t1\t20\t20\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n" +
+			"\t1\t11\t6\t0\t1\t1\t20\t20\n" +
 			encode.Base64Encode("/a/b") +
-			"\t1\t11\t6\t1\t1\t20\t20\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n" +
+			"\t1\t11\t6\t0\t1\t1\t20\t20\n" +
 			encode.Base64Encode("/a/b/c") +
-			"\t1\t11\t6\t1\t1\t20\t20\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n" +
+			"\t1\t11\t6\t0\t1\t1\t20\t20\n" +
 			encode.Base64Encode("/a/b/c/d") +
-			"\t1\t11\t6\t1\t1\t20\t20\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n")
+			"\t1\t11\t6\t0\t1\t1\t20\t20\n")
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 
@@ -271,15 +247,15 @@ func TestTree(t *testing.T) {
 
 		db = NewDB(paths2[0])
 		data = strings.NewReader(encode.Base64Encode("/") +
-			"\t1\t11\t6\t1\t1\t15\t15\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n" +
+			"\t1\t11\t6\t0\t1\t1\t15\t15\n" +
 			encode.Base64Encode("/a") +
-			"\t1\t11\t6\t1\t1\t15\t15\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n" +
+			"\t1\t11\t6\t0\t1\t1\t15\t15\n" +
 			encode.Base64Encode("/a/b") +
-			"\t1\t11\t6\t1\t1\t15\t15\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n" +
+			"\t1\t11\t6\t0\t1\t1\t15\t15\n" +
 			encode.Base64Encode("/a/b/c") +
-			"\t1\t11\t6\t1\t1\t15\t15\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n" +
+			"\t1\t11\t6\t0\t1\t1\t15\t15\n" +
 			encode.Base64Encode("/a/b/c/e") +
-			"\t1\t11\t6\t1\t1\t15\t15\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\t5\n")
+			"\t1\t11\t6\t0\t1\t1\t15\t15\n")
 		err = db.Store(data, 20)
 		So(err, ShouldBeNil)
 
@@ -295,19 +271,15 @@ func TestTree(t *testing.T) {
 		dcss, err := tree.Where("/", nil, split.SplitsToSplitFn(0))
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, mtime2,
-				[8]int64{6, 6, 6, 6, 6, 6, 6, 6}, [8]int64{6, 6, 6, 6, 6, 6, 6, 6}},
+			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, summary.DGUTAgeAll, mtime2},
 		})
 
 		dcss, err = tree.Where("/", nil, split.SplitsToSplitFn(1))
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, mtime2,
-				[8]int64{6, 6, 6, 6, 6, 6, 6, 6}, [8]int64{6, 6, 6, 6, 6, 6, 6, 6}},
-			{"/a/b/c/d", 1, 1, time.Unix(20, 0), expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, mtime2,
-				[8]int64{5, 5, 5, 5, 5, 5, 5, 5}, [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
-			{"/a/b/c/e", 1, 1, expectedAtime, expectedAtime, []uint32{11}, []uint32{1}, expectedFTsBam, mtime2,
-				[8]int64{5, 5, 5, 5, 5, 5, 5, 5}, [8]int64{5, 5, 5, 5, 5, 5, 5, 5}},
+			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, summary.DGUTAgeAll, mtime2},
+			{"/a/b/c/d", 1, 1, time.Unix(20, 0), expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, summary.DGUTAgeAll, mtime2},
+			{"/a/b/c/e", 1, 1, expectedAtime, expectedAtime, []uint32{11}, []uint32{1}, expectedFTsBam, summary.DGUTAgeAll, mtime2},
 		})
 	})
 }

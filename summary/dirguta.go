@@ -382,7 +382,7 @@ func isLog(path string) bool {
 // unix epoch.
 //
 // NB: the "temp" filetype is an extra filetype on top of the other normal
-// filetypes, so if you sum all the filetypes to get information about a a given
+// filetypes, so if you sum all the filetypes to get information about a given
 // directory+group+user combination, you should ignore "temp". Only count "temp"
 // when it's the only type you're considering, or you'll count some files twice.
 func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {

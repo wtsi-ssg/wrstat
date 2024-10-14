@@ -81,8 +81,8 @@ func (s *summaryWithTimes) add(size int64, atime int64, mtime int64) {
 
 // fitsAgeInterval takes a dguta and the mtime and atime. It checks the value of
 // age inside the dguta, and then returns true if the mtime or atime
-// respectively fits inside the age interval. E.g. if a = 3, this corresponds to
-// DGUTAgeA6M, so atime is checked to see if it is older than 6 months.
+// respectively fits inside the age interval. E.g. if age = 3, this corresponds
+// to DGUTAgeA6M, so atime is checked to see if it is older than 6 months.
 func (s *summaryWithTimes) fitsAgeInterval(dguta string, atime, mtime int64) bool {
 	age, err := strconv.Atoi(dguta[strings.LastIndex(dguta, "\t")+1:])
 	if err != nil {

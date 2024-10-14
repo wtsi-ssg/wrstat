@@ -56,17 +56,16 @@ func NewTree(paths ...string) (*Tree, error) {
 // directory, and what the file types are. It also has a breakdown of size by
 // age buckets.
 type DirSummary struct {
-	Dir             string
-	Count           uint64
-	Size            uint64
-	Atime           time.Time
-	Mtime           time.Time
-	UIDs            []uint32
-	GIDs            []uint32
-	FTs             []summary.DirGUTAFileType
-	Modtime         time.Time
-	SizeByAccessAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to access time
-	SizeByModifyAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to modify time
+	Dir     string
+	Count   uint64
+	Size    uint64
+	Atime   time.Time
+	Mtime   time.Time
+	UIDs    []uint32
+	GIDs    []uint32
+	FTs     []summary.DirGUTAFileType
+	Age     summary.DirGUTAge
+	Modtime time.Time
 }
 
 // DCSs is a Size-sortable slice of DirSummary.

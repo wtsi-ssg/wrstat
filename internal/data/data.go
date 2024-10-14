@@ -121,6 +121,14 @@ func CreateDefaultTestData(gidA, gidB, gidC, uidA, uidB int) []TestFile {
 			ATime:          90,
 			MTime:          90,
 		},
+		{Path: filepath.Join(acd, "file.cram"),
+			NumFiles:       7,
+			SizeOfEachFile: 1,
+			GID:            3,
+			UID:            103,
+			ATime:          int(time.Now().Unix() - summary.SecondsInAYear),
+			MTime:          int(time.Now().Unix() - (summary.SecondsInAYear * 3)),
+		},
 	}
 
 	if gidC == 0 {

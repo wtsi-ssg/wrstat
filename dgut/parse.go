@@ -44,8 +44,8 @@ const ErrInvalidFormat = Error("the provided data was not in dgut format")
 const ErrBlankLine = Error("the provided line had no information")
 
 const (
-	gutDataCols    = 24
-	gutDataIntCols = 23
+	gutDataCols    = 9
+	gutDataIntCols = 8
 )
 
 type dgutParserCallBack func(*DGUT)
@@ -125,15 +125,14 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 	}
 
 	return path, &GUT{
-		GID:             uint32(ints[0]),
-		UID:             uint32(ints[1]),
-		FT:              summary.DirGUTAFileType(ints[2]),
-		Count:           uint64(ints[3]),
-		Size:            uint64(ints[4]),
-		Atime:           ints[5],
-		Mtime:           ints[6],
-		SizeByAccessAge: ([8]int64)(ints[7:15]),
-		SizeByModifyAge: ([8]int64)(ints[15:]),
+		GID:   uint32(ints[0]),
+		UID:   uint32(ints[1]),
+		FT:    summary.DirGUTAFileType(ints[2]),
+		Age:   summary.DirGUTAge(ints[3]),
+		Count: uint64(ints[4]),
+		Size:  uint64(ints[5]),
+		Atime: ints[6],
+		Mtime: ints[7],
 	}, nil
 }
 

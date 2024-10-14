@@ -35,16 +35,15 @@ import (
 
 // GUT handles group,user,type,count,size information.
 type GUT struct {
-	GID             uint32
-	UID             uint32
-	FT              summary.DirGUTAFileType
-	Count           uint64
-	Size            uint64
-	Atime           int64    // seconds since Unix epoch
-	Mtime           int64    // seconds since Unix epoch
-	SizeByAccessAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to access time
-	SizeByModifyAge [8]int64 // size of files of ages 1m, 2m, 6m, 1y, 2y, 3y, 5y, 7y, according to modify time
-	updateTime      time.Time
+	GID        uint32
+	UID        uint32
+	FT         summary.DirGUTAFileType
+	Age        summary.DirGUTAge
+	Count      uint64
+	Size       uint64
+	Atime      int64 // seconds since Unix epoch
+	Mtime      int64 // seconds since Unix epoch
+	updateTime time.Time
 }
 
 // Filter can be applied to a GUT to see if it has one of the specified GIDs,
@@ -62,6 +61,7 @@ type Filter struct {
 	GIDs []uint32
 	UIDs []uint32
 	FTs  []summary.DirGUTAFileType
+	Age  summary.DirGUTAge
 }
 
 // PassesFilter checks to see if this GUT has a GID in the filter's GIDs
@@ -71,11 +71,7 @@ type Filter struct {
 // first unless FT is DGUTFileTypeTemp, in which case it will be false, unless
 // the filter FTs == []{DGUTFileTypeTemp}).
 func (g *GUT) PassesFilter(filter *Filter) (bool, bool) {
-	if !g.passesGIDFilter(filter) {
-		return false, false
-	}
-
-	if !g.passesUIDFilter(filter) {
+	if !g.passesGIDFilter(filter) || !g.passesUIDFilter(filter) || !g.passesAgeFilter(filter) {
 		return false, false
 	}
 
@@ -140,6 +136,20 @@ func (g *GUT) amTempAndNotFilteredJustForTemp(filter *Filter) bool {
 	return g.FT == summary.DGUTAFileTypeTemp && len(filter.FTs) > 1
 }
 
+// passesFTFilter tells you if our FT is in the filter's FTs. Also returns true
+// if filter or filter.FTs in nil.
+//
+// The second return bool will match the first, unless our FT is
+// DGUTFileTypeTemp, in which case it will always be false, unless the filter's
+// FTs only hold DGUTFileTypeTemp.
+func (g *GUT) passesAgeFilter(filter *Filter) bool {
+	if filter == nil {
+		return true
+	}
+
+	return filter.Age == g.Age
+}
+
 // GUTs is a slice of *GUT, offering ways to filter and summarise the
 // information in our *GUTs.
 type GUTs []*GUT
@@ -161,11 +171,9 @@ type GUTs []*GUT
 // filters.)
 func (g GUTs) Summary(filter *Filter) *DirSummary { //nolint:funlen
 	var (
-		count, size     uint64
-		atime, mtime    int64
-		updateTime      time.Time
-		sizeByAccessAge [8]int64
-		sizeByModifyAge [8]int64
+		count, size  uint64
+		atime, mtime int64
+		updateTime   time.Time
 	)
 
 	uniqueUIDs := make(map[uint32]bool)
@@ -183,30 +191,27 @@ func (g GUTs) Summary(filter *Filter) *DirSummary { //nolint:funlen
 			continue
 		}
 
-		addGUTToSummary(gut, &count, &size, &atime, &mtime, &sizeByAccessAge,
-			&sizeByModifyAge, &updateTime, uniqueUIDs, uniqueGIDs)
+		addGUTToSummary(gut, &count, &size, &atime, &mtime, &updateTime, uniqueUIDs, uniqueGIDs)
 	}
 
 	return &DirSummary{
-		Count:           count,
-		Size:            size,
-		Atime:           time.Unix(atime, 0),
-		Mtime:           time.Unix(mtime, 0),
-		UIDs:            boolMapToSortedKeys(uniqueUIDs),
-		GIDs:            boolMapToSortedKeys(uniqueGIDs),
-		FTs:             boolMapToSortedKeys(uniqueFTs),
-		SizeByAccessAge: sizeByAccessAge,
-		SizeByModifyAge: sizeByModifyAge,
+		Count: count,
+		Size:  size,
+		Atime: time.Unix(atime, 0),
+		Mtime: time.Unix(mtime, 0),
+		UIDs:  boolMapToSortedKeys(uniqueUIDs),
+		GIDs:  boolMapToSortedKeys(uniqueGIDs),
+		FTs:   boolMapToSortedKeys(uniqueFTs),
 	}
 }
 
 // addGUTToSummary alters the incoming arg summary values based on the gut.
-func addGUTToSummary(gut *GUT, count, size *uint64, atime, mtime *int64, sizeByAccessAge, sizeByModifyAge *[8]int64,
+func addGUTToSummary(gut *GUT, count, size *uint64, atime, mtime *int64,
 	updateTime *time.Time, uniqueUIDs, uniqueGIDs map[uint32]bool) {
 	*count += gut.Count
 	*size += gut.Size
 
-	if *atime == 0 || gut.Atime < *atime {
+	if (*atime == 0 || gut.Atime < *atime) && gut.Atime != 0 {
 		*atime = gut.Atime
 	}
 
@@ -216,11 +221,6 @@ func addGUTToSummary(gut *GUT, count, size *uint64, atime, mtime *int64, sizeByA
 
 	if gut.updateTime.After(*updateTime) {
 		*updateTime = gut.updateTime
-	}
-
-	for i := range len(gut.SizeByAccessAge) {
-		sizeByAccessAge[i] += gut.SizeByAccessAge[i]
-		sizeByModifyAge[i] += gut.SizeByModifyAge[i]
 	}
 
 	uniqueUIDs[gut.UID] = true
