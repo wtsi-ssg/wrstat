@@ -36,8 +36,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/v4/dgut"
 	"github.com/wtsi-ssg/wrstat/v5/basedirs"
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
 	ifs "github.com/wtsi-ssg/wrstat/v5/internal/fs"
 )
 
