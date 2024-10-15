@@ -592,10 +592,6 @@ func (d *DB) DirInfo(dir string, filter *Filter) (*DirSummary, error) {
 	}
 
 	ds := dguta.Summary(filter)
-	if ds == nil {
-		return ds, nil
-	}
-
 	ds.Modtime = lastUpdated
 
 	return ds, nil

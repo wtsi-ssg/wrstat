@@ -90,7 +90,8 @@ func TestDGUTAFiles(t *testing.T) {
 
 				ds, err = db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeA7Y})
 				So(err, ShouldBeNil)
-				So(ds, ShouldBeNil)
+				So(ds.Count, ShouldBeZeroValue)
+				So(ds.Size, ShouldBeZeroValue)
 			})
 		})
 	})
@@ -210,11 +211,14 @@ func buildDGUTAFiles(t *testing.T, curUnixTime int64) ([]string, string, string)
 	f3AMTime := curUnixTime - (summary.SecondsInAYear*5 + summary.SecondsInAMonth)
 
 	f1 := createDGUTAFile(t, dir, "file1",
-		buildDGUTAContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, curUnixTime, curUnixTime, curUnixTime))
+		buildDGUTAContent("/long/file/path/used/for/testing", "1313", "13912",
+			0, 1, 0, curUnixTime, curUnixTime, curUnixTime))
 	f2 := createDGUTAFile(t, dir, "file2",
-		buildDGUTAContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 21, f2AMTime, f2AMTime, curUnixTime))
+		buildDGUTAContent("/long/file/path/used/for/testing", "1313", "13912",
+			0, 1, 21, f2AMTime, f2AMTime, curUnixTime))
 	f3 := createDGUTAFile(t, dir, "file3",
-		buildDGUTAContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, f3AMTime, f3AMTime, curUnixTime))
+		buildDGUTAContent("/long/file/path/used/for/testing", "1313", "21574",
+			0, 1, 4, f3AMTime, f3AMTime, curUnixTime))
 
 	output := filepath.Join(dir, "combine.dguta.db")
 
