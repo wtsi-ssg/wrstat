@@ -182,7 +182,7 @@ func mergeDGUTFilesToDB(sourceDir string) {
 		die("failed to remove or create the dgut directory: %s", err)
 	}
 
-	if err = combine.DgutFiles(paths, outputDir); err != nil {
+	if err = combine.DgutaFiles(paths, outputDir); err != nil {
 		die("failed to merge the dgut files: %s", err)
 	}
 }

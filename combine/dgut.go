@@ -7,16 +7,16 @@ import (
 )
 
 const (
-	dgutStoreBatchSize    = 10000
-	dgutSumCols           = 5
-	numSummaryColumnsDGUT = 4
-	dgutAtimeColIndex     = 7
-	dgutMtimeColIndex     = 8
+	dgutaStoreBatchSize    = 10000
+	dgutaSumCols           = 5
+	numSummaryColumnsDGUTA = 4
+	dgutAtimeColIndex      = 7
+	dgutMtimeColIndex      = 8
 )
 
-// DgutFiles merges the pre-sorted dgut files, summing consecutive lines with
-// the same first 4 columns, and outputs the results to an embedded database.
-func DgutFiles(inputs []string, outputDir string) (err error) {
+// DgutaFiles merges the pre-sorted dguta files, summing consecutive lines with
+// the same first 5 columns, and outputs the results to an embedded database.
+func DgutaFiles(inputs []string, outputDir string) (err error) {
 	sortMergeOutput, cleanup, err := MergeSortedFiles(inputs)
 	if err != nil {
 		return err
@@ -34,19 +34,19 @@ func DgutFiles(inputs []string, outputDir string) (err error) {
 		}
 	}()
 
-	return processDgutFiles(outputDir, sortMergeOutput, cleanup, errCh)
+	return processDgutaFiles(outputDir, sortMergeOutput, cleanup, errCh)
 }
 
-func processDgutFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup func() error, errCh chan error) error {
+func processDgutaFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup func() error, errCh chan error) error {
 	db := dgut.NewDB(outputDir)
 	reader, writer := io.Pipe()
 
-	go dgutStore(db, reader, errCh)
+	go dgutaStore(db, reader, errCh)
 
 	if err := MergeSummaryLines(
 		sortMergeOutput,
-		dgutSumCols,
-		numSummaryColumnsDGUT,
+		dgutaSumCols,
+		numSummaryColumnsDGUTA,
 		sumCountAndSizesAndKeepTimes,
 		writer,
 	); err != nil {
@@ -65,8 +65,8 @@ func processDgutFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup f
 	return cleanup()
 }
 
-func dgutStore(db *dgut.DB, reader io.ReadCloser, errCh chan error) {
-	errs := db.Store(reader, dgutStoreBatchSize)
+func dgutaStore(db *dgut.DB, reader io.ReadCloser, errCh chan error) {
+	errs := db.Store(reader, dgutaStoreBatchSize)
 
 	if errs != nil {
 		reader.Close()

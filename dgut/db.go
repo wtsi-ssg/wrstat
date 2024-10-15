@@ -367,11 +367,11 @@ func (d *DB) resetBatch() {
 	d.writeI = 0
 }
 
-// parserCB is a dgutaParserCallBack that is called during parsing of dgut file
+// parserCB is a dgutaParserCallBack that is called during parsing of dguta file
 // data. It batches up the DGUTs we receive, and writes them to the database
 // when a batch is full.
-func (d *DB) parserCB(dgut *DGUTA) {
-	d.writeBatch[d.writeI] = dgut
+func (d *DB) parserCB(dguta *DGUTA) {
+	d.writeBatch[d.writeI] = dguta
 	d.writeI++
 
 	if d.writeI == d.batchSize {

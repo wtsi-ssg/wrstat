@@ -96,9 +96,9 @@ func TestDGUTA(t *testing.T) {
 		})
 	})
 
-	dgutData, expectedRootGUTs, expected, expectedKeys := testData(t)
+	dgutaData, expectedRootGUTAs, expected, expectedKeys := testData(t)
 
-	Convey("You can see if a GUT passes a filter", t, func() {
+	Convey("You can see if a GUTA passes a filter", t, func() {
 		numGutas := 17
 		emptyGutas := 8
 		testIndex := func(index int) int {
@@ -112,72 +112,72 @@ func TestDGUTA(t *testing.T) {
 		}
 
 		filter := &Filter{}
-		a, b := expectedRootGUTs[testIndex(3)].PassesFilter(filter)
+		a, b := expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
-		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		a, b = expectedRootGUTAs[0].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeFalse)
 
 		filter.GIDs = []uint32{3, 4, 5}
-		a, b = expectedRootGUTs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
 
 		filter.GIDs = []uint32{3, 2, 1}
-		a, b = expectedRootGUTs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.UIDs = []uint32{103}
-		a, b = expectedRootGUTs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
 
 		filter.UIDs = []uint32{103, 102, 101}
-		a, b = expectedRootGUTs[testIndex(2)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}
-		a, b = expectedRootGUTs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
-		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		a, b = expectedRootGUTAs[0].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp, summary.DGUTAFileTypeCram}
-		a, b = expectedRootGUTs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
-		a, b = expectedRootGUTs[0].PassesFilter(filter)
+		a, b = expectedRootGUTAs[0].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeFalse)
 
 		filter.UIDs = nil
-		a, b = expectedRootGUTs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.GIDs = nil
-		a, b = expectedRootGUTs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeDir}
-		a, b = expectedRootGUTs[testIndex(1)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(1)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter = &Filter{Age: summary.DGUTAgeA1M}
-		a, b = expectedRootGUTs[testIndex(7)+1].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(7)+1].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.Age = summary.DGUTAgeA7Y
-		a, b = expectedRootGUTs[testIndex(7)+1].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(7)+1].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
 	})
@@ -195,8 +195,8 @@ func TestDGUTA(t *testing.T) {
 
 	defaultFilter := &Filter{Age: summary.DGUTAgeAll}
 
-	Convey("GUTs can sum the count and size and provide UIDs, GIDs and FTs of their GUT elements", t, func() {
-		ds := expectedRootGUTs.Summary(defaultFilter)
+	Convey("GUTAs can sum the count and size and provide UIDs, GIDs and FTs of their GUTA elements", t, func() {
+		ds := expectedRootGUTAs.Summary(defaultFilter)
 		So(ds.Count, ShouldEqual, 21+numDirectories)
 		So(ds.Size, ShouldEqual, 92+numDirectories*directorySize)
 		So(ds.Atime, ShouldEqual, time.Unix(50, 0))
@@ -228,7 +228,7 @@ func TestDGUTA(t *testing.T) {
 	})
 
 	Convey("Given multiline dguta data", t, func() {
-		data := strings.NewReader(dgutData)
+		data := strings.NewReader(dgutaData)
 
 		Convey("You can parse it", func() {
 			i := 0
@@ -563,12 +563,12 @@ func TestDGUTA(t *testing.T) {
 }
 
 // testData provides some test data and expected results.
-func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTAs, expected []*DGUTA, expectedKeys []string) {
+func testData(t *testing.T) (dgutaData string, expectedRootGUTAs GUTAs, expected []*DGUTA, expectedKeys []string) {
 	t.Helper()
 
-	dgutData = internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
+	dgutaData = internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
 
-	expectedRootGUTs = GUTAs{
+	expectedRootGUTAs = GUTAs{
 		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeAll, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
 		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeA1M, Count: 1, Size: 5, Atime: 80, Mtime: 80},
 		{GID: 1, UID: 101, FT: summary.DGUTAFileTypeTemp, Age: summary.DGUTAgeM2M, Count: 2, Size: 1029, Atime: 80, Mtime: 80},
@@ -695,11 +695,11 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTAs, expected [
 	expected = []*DGUTA{
 		{
 			Dir:   "/",
-			GUTAs: expectedRootGUTs,
+			GUTAs: expectedRootGUTAs,
 		},
 		{
 			Dir:   "/a",
-			GUTAs: expectedRootGUTs,
+			GUTAs: expectedRootGUTAs,
 		},
 		{
 			Dir: "/a/b",
@@ -1163,7 +1163,7 @@ func testData(t *testing.T) (dgutData string, expectedRootGUTs GUTAs, expected [
 	expectedKeys = []string{"/", "/a", "/a/b", "/a/b/d", "/a/b/d/f",
 		"/a/b/d/g", "/a/b/e", "/a/b/e/h", "/a/b/e/h/tmp", "/a/c", "/a/c/d"}
 
-	return dgutData, expectedRootGUTs, expected, expectedKeys
+	return dgutaData, expectedRootGUTAs, expected, expectedKeys
 }
 
 // testMakeDBPaths creates a temp dir that will be cleaned up automatically, and

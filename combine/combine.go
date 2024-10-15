@@ -251,7 +251,7 @@ func sumCountAndSizesAndKeepTimes(_ int, a, b []string) {
 // the corresponding elements of a and b and store the result in a, except for
 // the atime and mtime columns.
 func sumCountAndSizes(a, b []string) {
-	for i := dgutSumCols; i < len(a); i++ {
+	for i := dgutaSumCols; i < len(a); i++ {
 		if i == dgutAtimeColIndex || i == dgutMtimeColIndex {
 			continue
 		}

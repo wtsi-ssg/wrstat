@@ -40,7 +40,7 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
-const ErrInvalidFormat = Error("the provided data was not in dgut format")
+const ErrInvalidFormat = Error("the provided data was not in dguta format")
 const ErrBlankLine = Error("the provided line had no information")
 
 const (
@@ -102,7 +102,7 @@ func populateAndEmitDGUTA(dguta *DGUTA, gutas []*GUTA, cb dgutaParserCallBack) {
 }
 
 // parseDGUTALine parses a line of summary.DirGroupUserType.Output() into a
-// directory string and a *dgut for the other information.
+// directory string and a *dguta for the other information.
 //
 // Returns an error if line didn't have the expected format.
 func parseDGUTALine(line string) (string, *GUTA, error) {
