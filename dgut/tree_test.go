@@ -41,7 +41,7 @@ import (
 func TestTree(t *testing.T) {
 	expectedFTsBam := []summary.DirGUTAFileType{summary.DGUTAFileTypeBam}
 
-	Convey("You can make a Tree from a dgut database", t, func() {
+	Convey("You can make a Tree from a dguta database", t, func() {
 		paths, err := testMakeDBPaths(t)
 		So(err, ShouldBeNil)
 
@@ -224,7 +224,7 @@ func TestTree(t *testing.T) {
 		})
 	})
 
-	Convey("You can make a Tree from multiple dgut databases and query it", t, func() {
+	Convey("You can make a Tree from multiple dguta databases and query it", t, func() {
 		paths1, err := testMakeDBPaths(t)
 		So(err, ShouldBeNil)
 
@@ -287,7 +287,7 @@ func TestTree(t *testing.T) {
 func testCreateDB(t *testing.T, path string) error {
 	t.Helper()
 
-	dgutData := internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
+	dgutData := internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
 	data := strings.NewReader(dgutData)
 	db := NewDB(path)
 

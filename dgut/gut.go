@@ -33,8 +33,8 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
-// GUT handles group,user,type,count,size information.
-type GUT struct {
+// GUTA handles group,user,type,age,count,size information.
+type GUTA struct {
 	GID        uint32
 	UID        uint32
 	FT         summary.DirGUTAFileType
@@ -46,16 +46,16 @@ type GUT struct {
 	updateTime time.Time
 }
 
-// Filter can be applied to a GUT to see if it has one of the specified GIDs,
-// UIDs and FTs, in which case it passes the filter.
+// Filter can be applied to a GUTA to see if it has one of the specified GIDs,
+// UIDs and FTs or has the specified Age, in which case it passes the filter.
 //
 // If the Filter has one of those properties set to nil, or the whole Filter is
-// nil, a GUT will be considered to pass the filter.
+// nil, a GUTA will be considered to pass the filter.
 //
-// The exeception to this is when FTs != []{DGUTFileTypeTemp}, and the GUT has
-// an FT of DGUTFileTypeTemp. A GUT for a temporary file will always fail to
+// The exeception to this is when FTs != []{DGUTFileTypeTemp}, and the GUTA has
+// an FT of DGUTAFileTypeTemp. A GUTA for a temporary file will always fail to
 // pass the filter unless filtering specifically for temporary files, because
-// other GUT objects will represent the same file on disk but with another file
+// other GUTA objects will represent the same file on disk but with another file
 // type, and you won't want to double-count.
 type Filter struct {
 	GIDs []uint32
@@ -64,13 +64,13 @@ type Filter struct {
 	Age  summary.DirGUTAge
 }
 
-// PassesFilter checks to see if this GUT has a GID in the filter's GIDs
+// PassesFilter checks to see if this GUTA has a GID in the filter's GIDs
 // (considered true if GIDs is nil), and has a UID in the filter's UIDs
-// (considered true if UIDs is nil), and has an FT in the filter's FTs
-// (considered true if FTs is nil). The second bool returned will match the
-// first unless FT is DGUTFileTypeTemp, in which case it will be false, unless
-// the filter FTs == []{DGUTFileTypeTemp}).
-func (g *GUT) PassesFilter(filter *Filter) (bool, bool) {
+// (considered true if UIDs is nil), and an Age the same as the filter's Age,
+// and has an FT in the filter's FTs (considered true if FTs is nil). The second
+// bool returned will match the first unless FT is DGUTAFileTypeTemp, in which
+// case it will be false, unless the filter FTs == []{DGUTAFileTypeTemp}).
+func (g *GUTA) PassesFilter(filter *Filter) (bool, bool) {
 	if !g.passesGIDFilter(filter) || !g.passesUIDFilter(filter) || !g.passesAgeFilter(filter) {
 		return false, false
 	}
@@ -80,7 +80,7 @@ func (g *GUT) PassesFilter(filter *Filter) (bool, bool) {
 
 // passesGIDFilter tells you if our GID is in the filter's GIDs. Also returns
 // true if filter or filter.GIDs in nil.
-func (g *GUT) passesGIDFilter(filter *Filter) bool {
+func (g *GUTA) passesGIDFilter(filter *Filter) bool {
 	if filter == nil || filter.GIDs == nil {
 		return true
 	}
@@ -96,7 +96,7 @@ func (g *GUT) passesGIDFilter(filter *Filter) bool {
 
 // passesUIDFilter tells you if our UID is in the filter's UIDs. Also returns
 // true if filter or filter.UIDs in nil.
-func (g *GUT) passesUIDFilter(filter *Filter) bool {
+func (g *GUTA) passesUIDFilter(filter *Filter) bool {
 	if filter == nil || filter.UIDs == nil {
 		return true
 	}
@@ -114,9 +114,9 @@ func (g *GUT) passesUIDFilter(filter *Filter) bool {
 // if filter or filter.FTs in nil.
 //
 // The second return bool will match the first, unless our FT is
-// DGUTFileTypeTemp, in which case it will always be false, unless the filter's
-// FTs only hold DGUTFileTypeTemp.
-func (g *GUT) passesFTFilter(filter *Filter) (bool, bool) {
+// DGUTAFileTypeTemp, in which case it will always be false, unless the filter's
+// FTs only hold DGUTAFileTypeTemp.
+func (g *GUTA) passesFTFilter(filter *Filter) (bool, bool) {
 	if filter == nil || filter.FTs == nil {
 		return true, g.FT != summary.DGUTAFileTypeTemp
 	}
@@ -130,19 +130,15 @@ func (g *GUT) passesFTFilter(filter *Filter) (bool, bool) {
 	return false, false
 }
 
-// amTempAndNotFilteredJustForTemp tells you if our FT is DGUTFileTypeTemp and
+// amTempAndNotFilteredJustForTemp tells you if our FT is DGUTAFileTypeTemp and
 // the filter has more than one type set.
-func (g *GUT) amTempAndNotFilteredJustForTemp(filter *Filter) bool {
+func (g *GUTA) amTempAndNotFilteredJustForTemp(filter *Filter) bool {
 	return g.FT == summary.DGUTAFileTypeTemp && len(filter.FTs) > 1
 }
 
-// passesFTFilter tells you if our FT is in the filter's FTs. Also returns true
-// if filter or filter.FTs in nil.
-//
-// The second return bool will match the first, unless our FT is
-// DGUTFileTypeTemp, in which case it will always be false, unless the filter's
-// FTs only hold DGUTFileTypeTemp.
-func (g *GUT) passesAgeFilter(filter *Filter) bool {
+// passesAgeFilter tells you if our age is the same as the filter's Age. Also
+// returns true if filter is nil.
+func (g *GUTA) passesAgeFilter(filter *Filter) bool {
 	if filter == nil {
 		return true
 	}
@@ -150,48 +146,54 @@ func (g *GUT) passesAgeFilter(filter *Filter) bool {
 	return filter.Age == g.Age
 }
 
-// GUTs is a slice of *GUT, offering ways to filter and summarise the
-// information in our *GUTs.
-type GUTs []*GUT
+// GUTAs is a slice of *GUTA, offering ways to filter and summarise the
+// information in our *GUTAs.
+type GUTAs []*GUTA
 
-// Summary sums the count and size of all our GUT elements and returns the
+// Summary sums the count and size of all our GUTA elements and returns the
 // results, along with the oldest atime and newset mtime (in seconds since Unix
-// epoch) and lists of the unique UIDs, GIDs and FTs in our GUT elements.
+// epoch) and lists of the unique UIDs, GIDs and FTs in our GUTA elements.
 //
-// Provide a Filter to ignore GUT elements that do not match one of the
-// specified GIDs, one of the UIDs, and one of the FTs. If one of those
-// properties is nil, does not filter on that property.
+// Provide a Filter to ignore GUTA elements that do not match one of the
+// specified GIDs, one of the UIDs, one of the FTs, and the specified Age. If
+// one of those properties is nil, does not filter on that property.
 //
-// Provide nil to do no filtering.
+// Provide nil to do no filtering, but providing Age: summary.DGUTAgeAll is
+// recommended.
 //
 // Note that FT 1 is "temp" files, and because a file can be both temporary and
 // another type, if your Filter's FTs slice doesn't contain just
-// DGUTFileTypeTemp, any GUT with FT DGUTFileTypeTemp is always ignored. (But
+// DGUTAFileTypeTemp, any GUTA with FT DGUTAFileTypeTemp is always ignored. (But
 // the FTs list will still indicate if you had temp files that passed other
 // filters.)
-func (g GUTs) Summary(filter *Filter) *DirSummary { //nolint:funlen
+func (g GUTAs) Summary(filter *Filter) *DirSummary { //nolint:funlen
 	var (
 		count, size  uint64
 		atime, mtime int64
 		updateTime   time.Time
+		age          summary.DirGUTAge
 	)
 
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
 	uniqueFTs := make(map[summary.DirGUTAFileType]bool)
 
-	for _, gut := range g {
-		passes, passesDisallowingTemp := gut.PassesFilter(filter)
-
+	for _, guta := range g {
+		passes, passesDisallowingTemp := guta.PassesFilter(filter)
 		if passes {
-			uniqueFTs[gut.FT] = true
+			uniqueFTs[guta.FT] = true
+			age = guta.Age
 		}
 
 		if !passesDisallowingTemp {
 			continue
 		}
 
-		addGUTToSummary(gut, &count, &size, &atime, &mtime, &updateTime, uniqueUIDs, uniqueGIDs)
+		addGUTAToSummary(guta, &count, &size, &atime, &mtime, &updateTime, uniqueUIDs, uniqueGIDs)
+	}
+
+	if count == 0 {
+		return nil
 	}
 
 	return &DirSummary{
@@ -202,29 +204,30 @@ func (g GUTs) Summary(filter *Filter) *DirSummary { //nolint:funlen
 		UIDs:  boolMapToSortedKeys(uniqueUIDs),
 		GIDs:  boolMapToSortedKeys(uniqueGIDs),
 		FTs:   boolMapToSortedKeys(uniqueFTs),
+		Age:   age,
 	}
 }
 
-// addGUTToSummary alters the incoming arg summary values based on the gut.
-func addGUTToSummary(gut *GUT, count, size *uint64, atime, mtime *int64,
+// addGUTAToSummary alters the incoming arg summary values based on the gut.
+func addGUTAToSummary(guta *GUTA, count, size *uint64, atime, mtime *int64,
 	updateTime *time.Time, uniqueUIDs, uniqueGIDs map[uint32]bool) {
-	*count += gut.Count
-	*size += gut.Size
+	*count += guta.Count
+	*size += guta.Size
 
-	if (*atime == 0 || gut.Atime < *atime) && gut.Atime != 0 {
-		*atime = gut.Atime
+	if (*atime == 0 || guta.Atime < *atime) && guta.Atime != 0 {
+		*atime = guta.Atime
 	}
 
-	if *mtime == 0 || gut.Mtime > *mtime {
-		*mtime = gut.Mtime
+	if *mtime == 0 || guta.Mtime > *mtime {
+		*mtime = guta.Mtime
 	}
 
-	if gut.updateTime.After(*updateTime) {
-		*updateTime = gut.updateTime
+	if guta.updateTime.After(*updateTime) {
+		*updateTime = guta.updateTime
 	}
 
-	uniqueUIDs[gut.UID] = true
-	uniqueGIDs[gut.GID] = true
+	uniqueUIDs[guta.UID] = true
+	uniqueGIDs[guta.GID] = true
 }
 
 // boolMapToSortedKeys returns a sorted slice of the given keys.

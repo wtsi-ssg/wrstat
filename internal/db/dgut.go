@@ -121,14 +121,14 @@ func exampleDGUTData(t *testing.T, uidStr, gidAStr, gidBStr string) string {
 		t.Fatal(err)
 	}
 
-	return internaldata.TestDGUTData(t, internaldata.CreateDefaultTestData(int(gidA), int(gidB), 0, int(uid), 0))
+	return internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(int(gidA), int(gidB), 0, int(uid), 0))
 }
 
 func CreateDGUTDBFromFakeFiles(t *testing.T, files []internaldata.TestFile,
 	modtime ...time.Time) (*dgut.Tree, string, error) {
 	t.Helper()
 
-	dgutData := internaldata.TestDGUTData(t, files)
+	dgutData := internaldata.TestDGUTAData(t, files)
 
 	dbPath, err := CreateCustomDGUTDB(t, dgutData)
 	if err != nil {

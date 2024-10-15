@@ -59,7 +59,7 @@ func (s *summary) add(size int64) {
 // atime, newest mtime add()ed.
 type summaryWithTimes struct {
 	summary
-	refTime int64
+	refTime int64 // seconds since Unix epoch
 	atime   int64 // seconds since Unix epoch
 	mtime   int64 // seconds since Unix epoch
 }
@@ -79,25 +79,26 @@ func (s *summaryWithTimes) add(size int64, atime int64, mtime int64) {
 	}
 }
 
-// fitsAgeInterval takes a dguta and the mtime and atime. It checks the value of
-// age inside the dguta, and then returns true if the mtime or atime
-// respectively fits inside the age interval. E.g. if age = 3, this corresponds
-// to DGUTAgeA6M, so atime is checked to see if it is older than 6 months.
-func (s *summaryWithTimes) fitsAgeInterval(dguta string, atime, mtime int64) bool {
+// FitsAgeInterval takes a dguta and the mtime and atime and reference time. It
+// checks the value of age inside the dguta, and then returns true if the mtime
+// or atime respectively fits inside the age interval. E.g. if age = 3, this
+// corresponds to DGUTAgeA6M, so atime is checked to see if it is older than 6
+// months.
+func FitsAgeInterval(dguta string, atime, mtime, refTime int64) bool {
 	age, err := strconv.Atoi(dguta[strings.LastIndex(dguta, "\t")+1:])
 	if err != nil {
 		return false
 	}
 
 	if age > len(ageThresholds) {
-		return s.checkTimeIsInInterval(mtime, age-(len(ageThresholds)+1))
+		return checkTimeIsInInterval(mtime, refTime, age-(len(ageThresholds)+1))
 	} else if age > 0 {
-		return s.checkTimeIsInInterval(atime, age-1)
+		return checkTimeIsInInterval(atime, refTime, age-1)
 	}
 
 	return true
 }
 
-func (s *summaryWithTimes) checkTimeIsInInterval(amtime int64, thresholdIndex int) bool {
-	return amtime <= s.refTime-ageThresholds[thresholdIndex]
+func checkTimeIsInInterval(amtime, refTime int64, thresholdIndex int) bool {
+	return amtime <= refTime-ageThresholds[thresholdIndex]
 }

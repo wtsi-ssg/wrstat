@@ -31,50 +31,50 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-// DGUT handles all the *GUT information for a directory.
-type DGUT struct {
-	Dir  string
-	GUTs GUTs
+// DGUTA handles all the *GUTA information for a directory.
+type DGUTA struct {
+	Dir   string
+	GUTAs GUTAs
 }
 
-// encodeToBytes returns our Dir as a []byte and our GUTs encoded in another
+// encodeToBytes returns our Dir as a []byte and our GUTAs encoded in another
 // []byte suitable for storing on disk.
-func (d *DGUT) encodeToBytes(ch codec.Handle) ([]byte, []byte) {
+func (d *DGUTA) encodeToBytes(ch codec.Handle) ([]byte, []byte) {
 	var encoded []byte
 	enc := codec.NewEncoderBytes(&encoded, ch)
-	enc.MustEncode(d.GUTs)
+	enc.MustEncode(d.GUTAs)
 
 	return []byte(d.Dir), encoded
 }
 
-// decodeDGUTbytes converts the byte slices returned by DGUT.Encode() back in to
-// a *DGUT.
-func decodeDGUTbytes(ch codec.Handle, dir, encoded []byte) *DGUT {
+// decodeDGUTAbytes converts the byte slices returned by DGUTA.Encode() back in to
+// a *DGUTA.
+func decodeDGUTAbytes(ch codec.Handle, dir, encoded []byte) *DGUTA {
 	dec := codec.NewDecoderBytes(encoded, ch)
 
-	var g GUTs
+	var g GUTAs
 
 	dec.MustDecode(&g)
 
-	return &DGUT{
-		Dir:  string(dir),
-		GUTs: g,
+	return &DGUTA{
+		Dir:   string(dir),
+		GUTAs: g,
 	}
 }
 
-// Summary sums the count and size of all our GUTs and returns the results,
+// Summary sums the count and size of all our GUTAs and returns the results,
 // along with the oldest atime and newset mtime (seconds since Unix epoch) and
-// unique set of UIDs, GIDs abd FTs in all our GUTs.
+// unique set of UIDs, GIDs and FTs in all our GUTAs.
 //
-// See GUTs.Summary for an explanation of the filter.
-func (d *DGUT) Summary(filter *Filter) *DirSummary {
-	return d.GUTs.Summary(filter)
+// See GUTAs.Summary for an explanation of the filter.
+func (d *DGUTA) Summary(filter *Filter) *DirSummary {
+	return d.GUTAs.Summary(filter)
 }
 
-// Append appends the GUTs in the given DGUT to our own. Useful when you have
-// 2 DGUTs for the same Dir that were calculated on different subdirectories
-// independently, and now you're dealing with DGUTs for their common parent
+// Append appends the GUTAs in the given DGUTA to our own. Useful when you have
+// 2 DGUTAs for the same Dir that were calculated on different subdirectories
+// independently, and now you're dealing with DGUTAs for their common parent
 // directories.
-func (d *DGUT) Append(other *DGUT) {
-	d.GUTs = append(d.GUTs, other.GUTs...)
+func (d *DGUTA) Append(other *DGUTA) {
+	d.GUTAs = append(d.GUTAs, other.GUTAs...)
 }

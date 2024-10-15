@@ -247,7 +247,7 @@ func sumCountAndSizesAndKeepTimes(_ int, a, b []string) {
 	}
 }
 
-// sumCountAndSizes is a matchingSummaryLineMerger that, given cols 20, will sum
+// sumCountAndSizes is a matchingSummaryLineMerger that, given cols 4, will sum
 // the corresponding elements of a and b and store the result in a, except for
 // the atime and mtime columns.
 func sumCountAndSizes(a, b []string) {

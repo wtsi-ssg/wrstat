@@ -38,7 +38,7 @@ type Tree struct {
 	db *DB
 }
 
-// NewTree, given the paths to one or more dgut database files (as created by
+// NewTree, given the paths to one or more dguta database files (as created by
 // DB.Store()), returns a *Tree that can be used to do high-level queries on the
 // stats of a tree of disk folders. You should Close() the tree after use.
 func NewTree(paths ...string) (*Tree, error) {
@@ -53,8 +53,7 @@ func NewTree(paths ...string) (*Tree, error) {
 
 // DirSummary holds nested file count, size, atime and mtime information on a
 // directory. It also holds which users and groups own files nested under the
-// directory, and what the file types are. It also has a breakdown of size by
-// age buckets.
+// directory, what the file types are and the age group.
 type DirSummary struct {
 	Dir     string
 	Count   uint64
@@ -107,7 +106,7 @@ func (d *DirInfo) IsSameAsChild() bool {
 
 // DirInfo tells you the total number of files and their total size nested under
 // the given directory, along with the UIDs and GIDs that own those files.
-// See GUTs.Summary for an explanation of the filter.
+// See GUTAs.Summary for an explanation of the filter.
 //
 // It also tells you the same information about the immediate child directories
 // of the given directory (if the children have files in them that pass the
@@ -131,7 +130,7 @@ func (t *Tree) DirInfo(dir string, filter *Filter) (*DirInfo, error) {
 }
 
 // DirHasChildren tells you if the given directory has any child directories
-// with files in them that pass the filter. See GUTs.Summary for an explanation
+// with files in them that pass the filter. See GUTAs.Summary for an explanation
 // of the filter.
 func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 	children := t.db.Children(dir)
@@ -184,7 +183,9 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 // depth of 0 on each of the deepest directory's children would give. And so on
 // recursively for higher depths.
 //
-// See GUTs.Summary for an explanation of the filter.
+// See GUTAs.Summary for an explanation of the filter.
+//
+// It's recommended to set the Age filter to summary.DGUTAgeAll.
 //
 // For example, if all user 354's files are in the directories /a/b/c/d (2
 // files), /a/b/c/d/1 (1 files), /a/b/c/d/2 (2 files) and /a/b/e/f/g (2 files),
@@ -258,7 +259,7 @@ func (t *Tree) where0(dir string, filter *Filter) (*DirInfo, error) {
 // FileLocations, starting from the given dir, finds the first directory that
 // directly contains filter-passing files along every branch from dir.
 //
-// See GUTs.Summary for an explanation of the filter.
+// See GUTAs.Summary for an explanation of the filter.
 //
 // The results are returned sorted by directory.
 func (t *Tree) FileLocations(dir string, filter *Filter) (DCSs, error) {

@@ -156,7 +156,7 @@ func CreateDefaultTestData(gidA, gidB, gidC, uidA, uidB int) []TestFile {
 	return files
 }
 
-func TestDGUTData(t *testing.T, files []TestFile) string {
+func TestDGUTAData(t *testing.T, files []TestFile) string {
 	t.Helper()
 
 	dgut := summary.NewDirGroupUserTypeAge()

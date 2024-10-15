@@ -379,9 +379,17 @@ func TestDirGUTA(t *testing.T) {
 								encode.Base64Encode(dir), gid, uid, ft, age, count, size, atime, mtime)
 						}
 
+					buildExpectedEmptyOutputLine :=
+						func(dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge) string {
+							return fmt.Sprintf("%s\t%d\t%d\t%d\t%d",
+								encode.Base64Encode(dir), gid, uid, ft, age)
+						}
+
 					dir := "/a/b/c"
 					gid, uid, ft, count, size := 2, 10, DGUTAFileTypeBam, 3, 10
 					testAtime, testMtime := atime4, mtime1
+
+					So(output, ShouldNotContainSubstring, "0\t0\t0\t0\n")
 
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeAll, count, size, testAtime, testMtime))
@@ -397,10 +405,8 @@ func TestDirGUTA(t *testing.T) {
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA2Y, count-2, size-5, testAtime, mtime4))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA3Y, count-2, size-5, testAtime, mtime4))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA5Y, count-3, size-10, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA7Y, count-3, size-10, 0, 0))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA5Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA7Y))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM1M, count, size, testAtime, testMtime))
 					So(output, ShouldContainSubstring,
@@ -415,8 +421,7 @@ func TestDirGUTA(t *testing.T) {
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM3Y, count-2, size-5, testAtime, mtime4))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM5Y, count-2, size-5, testAtime, mtime4))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM7Y, count-3, size-10, 0, 0))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM7Y))
 
 					gid, uid, ft, count, size = 2, 10, DGUTAFileTypeCram, 2, 13
 					testAtime, testMtime = atime6, mtime5
@@ -469,14 +474,10 @@ func TestDirGUTA(t *testing.T) {
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA6M, count, size, testAtime, testMtime))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA1Y, count, size, testAtime, testMtime))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA2Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA3Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA5Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA7Y, 0, 0, 0, 0))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA2Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA3Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA5Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA7Y))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM1M, count, size, testAtime, testMtime))
 					So(output, ShouldContainSubstring,
@@ -485,14 +486,10 @@ func TestDirGUTA(t *testing.T) {
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM6M, count, size, testAtime, testMtime))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM1Y, count, size, testAtime, testMtime))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM2Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM3Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM5Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM7Y, 0, 0, 0, 0))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM2Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM3Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM5Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM7Y))
 
 					gid, uid, ft, count, size = 2, 10, DGUTAFileTypeTemp, 1, 8
 					testAtime, testMtime = mtime3, mtime3
@@ -507,14 +504,10 @@ func TestDirGUTA(t *testing.T) {
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA6M, count, size, testAtime, testMtime))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA1Y, count, size, testAtime, testMtime))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA2Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA3Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA5Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeA7Y, 0, 0, 0, 0))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA2Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA3Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA5Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeA7Y))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM1M, count, size, testAtime, testMtime))
 					So(output, ShouldContainSubstring,
@@ -523,14 +516,10 @@ func TestDirGUTA(t *testing.T) {
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM6M, count, size, testAtime, testMtime))
 					So(output, ShouldContainSubstring,
 						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM1Y, count, size, testAtime, testMtime))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM2Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM3Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM5Y, 0, 0, 0, 0))
-					So(output, ShouldContainSubstring,
-						buildExpectedOutputLine(dir, gid, uid, ft, DGUTAgeM7Y, 0, 0, 0, 0))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM2Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM3Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM5Y))
+					So(output, ShouldNotContainSubstring, buildExpectedEmptyOutputLine(dir, gid, uid, ft, DGUTAgeM7Y))
 				})
 			})
 		})
@@ -600,7 +589,7 @@ func TestDirGUTA(t *testing.T) {
 					So(errr, ShouldBeNil)
 					output := string(o)
 
-					for i := range len(dirGUTAges) - 1 {
+					for i := range len(DirGUTAges) - 1 {
 						So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c/d")+
 							fmt.Sprintf("\t2\t10\t7\t%d\t1\t2\t200\t200\n", i))
 					}
@@ -710,9 +699,7 @@ func TestOldFile(t *testing.T) {
 					dguta.store.refTime,
 					amtime, amtime})
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA7Y)],
-				ShouldResemble, &summaryWithTimes{summary{0, 0},
-					dguta.store.refTime,
-					0, 0})
+				ShouldBeNil)
 		})
 	})
 }

@@ -65,7 +65,7 @@ const (
 	DGUTAgeM7Y DirGUTAge = 16
 )
 
-var dirGUTAges = [17]DirGUTAge{ //nolint:gochecknoglobals
+var DirGUTAges = [17]DirGUTAge{ //nolint:gochecknoglobals
 	DGUTAgeAll, DGUTAgeA1M, DGUTAgeA2M, DGUTAgeA6M, DGUTAgeA1Y,
 	DGUTAgeA2Y, DGUTAgeA3Y, DGUTAgeA5Y, DGUTAgeA7Y, DGUTAgeM1M,
 	DGUTAgeM2M, DGUTAgeM6M, DGUTAgeM1Y, DGUTAgeM2Y, DGUTAgeM3Y,
@@ -164,14 +164,14 @@ type gutaStore struct {
 // add will auto-vivify a summary for the given key (which should have been
 // generated with statToGUTAKey()) and call add(size, atime, mtime) on it.
 func (store gutaStore) add(key string, size int64, atime int64, mtime int64) {
+	if !FitsAgeInterval(key, atime, mtime, store.refTime) {
+		return
+	}
+
 	s, ok := store.sumMap[key]
 	if !ok {
 		s = &summaryWithTimes{refTime: store.refTime}
 		store.sumMap[key] = s
-	}
-
-	if !s.fitsAgeInterval(key, atime, mtime) {
-		return
 	}
 
 	s.add(size, atime, mtime)
@@ -417,7 +417,7 @@ func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {
 // appendGUTAKeys appends gutaKeys with keys including the given gid, uid, file
 // type and age.
 func appendGUTAKeys(gutaKeys []string, gid, uid uint32, fileType DirGUTAFileType) []string {
-	for _, age := range dirGUTAges {
+	for _, age := range DirGUTAges {
 		gutaKeys = append(gutaKeys, fmt.Sprintf("%d\t%d\t%d\t%d", gid, uid, fileType, age))
 	}
 
@@ -443,7 +443,7 @@ func maxInt(ints ...int64) int64 {
 // filetype as well as more specific types, and path could be both.
 func (d *DirGroupUserTypeAge) statToGUTAKeys(stat *syscall.Stat_t, path string) []string {
 	types := d.pathToTypes(path)
-	gutaKeys := make([]string, 0, len(dirGUTAges)*len(types))
+	gutaKeys := make([]string, 0, len(DirGUTAges)*len(types))
 
 	for _, t := range types {
 		gutaKeys = appendGUTAKeys(gutaKeys, stat.Gid, stat.Uid, t)

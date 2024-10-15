@@ -1048,7 +1048,7 @@ func TestCombine(t *testing.T) {
 		info, err := db.Info()
 		So(err, ShouldBeNil)
 		So(info.NumDirs, ShouldEqual, 7)
-		So(info.NumDGUTs, ShouldEqual, 19)
+		So(info.NumDGUTAs, ShouldEqual, 19)
 		So(info.NumParents, ShouldEqual, 5)
 		So(info.NumChildren, ShouldEqual, 6)
 

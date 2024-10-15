@@ -8,10 +8,10 @@ import (
 
 const (
 	dgutStoreBatchSize    = 10000
-	dgutSumCols           = 4
-	numSummaryColumnsDGUT = 20
-	dgutAtimeColIndex     = 6
-	dgutMtimeColIndex     = 7
+	dgutSumCols           = 5
+	numSummaryColumnsDGUT = 4
+	dgutAtimeColIndex     = 7
+	dgutMtimeColIndex     = 8
 )
 
 // DgutFiles merges the pre-sorted dgut files, summing consecutive lines with

@@ -44,7 +44,8 @@ import (
 // TestDGUTFiles tests that the DGUT files merge properly to the output.
 func TestDGUTFiles(t *testing.T) {
 	Convey("Given dgut files and an output", t, func() {
-		inputs, output, dir := buildDGUTFiles(t)
+		curUnixTime := time.Now().Unix()
+		inputs, output, dir := buildDGUTFiles(t, curUnixTime)
 
 		Convey("You can merge the DGUT files and store to a db", func() {
 			err := DgutFiles(inputs, output)
@@ -62,36 +63,34 @@ func TestDGUTFiles(t *testing.T) {
 				err = db.Open()
 				So(err, ShouldBeNil)
 
-				ds, err := db.DirInfo("/", nil)
+				AMTime1 := curUnixTime - (summary.SecondsInAYear*5 + summary.SecondsInAMonth)
+
+				ds, err := db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeAll})
 				So(err, ShouldBeNil)
 				So(ds.Count, ShouldEqual, 3)
 				So(ds.Size, ShouldEqual, 25)
-				So(ds.Atime, ShouldEqual, time.Unix(1668768807, 0))
-				So(ds.Mtime, ShouldEqual, time.Unix(1668768811, 0))
+				So(ds.Atime, ShouldEqual, time.Unix(AMTime1, 0))
+				So(ds.Mtime, ShouldEqual, time.Unix(curUnixTime, 0))
 				So(ds.UIDs, ShouldResemble, []uint32{13912, 21574})
 				So(ds.GIDs, ShouldResemble, []uint32{1313})
 				So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DirGUTAFileType(0)})
 				So(ds.Age, ShouldEqual, summary.DGUTAgeAll)
-				// So(ds.SizeByAccessAge, ShouldEqual, [8]int64{25, 25, 25, 25, 25, 0, 0, 0})
-				// So(ds.SizeByModifyAge, ShouldEqual, [8]int64{25, 25, 25, 25, 25, 0, 0, 0})
 
 				ds, err = db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeA1M})
 				So(err, ShouldBeNil)
-				So(ds.Count, ShouldEqual, 3)
+				So(ds.Count, ShouldEqual, 2)
 				So(ds.Size, ShouldEqual, 25)
 				So(ds.Age, ShouldEqual, summary.DGUTAgeA1M)
 
 				ds, err = db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeA2Y})
 				So(err, ShouldBeNil)
-				So(ds.Count, ShouldEqual, 3)
-				So(ds.Size, ShouldEqual, 25)
+				So(ds.Count, ShouldEqual, 1)
+				So(ds.Size, ShouldEqual, 4)
 				So(ds.Age, ShouldEqual, summary.DGUTAgeA2Y)
 
-				ds, err = db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeA3Y})
+				ds, err = db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeA7Y})
 				So(err, ShouldBeNil)
-				So(ds.Count, ShouldEqual, 0)
-				So(ds.Size, ShouldEqual, 0)
-				So(ds.Age, ShouldEqual, summary.DGUTAgeA3Y)
+				So(ds, ShouldBeNil)
 			})
 		})
 	})
@@ -101,32 +100,30 @@ func TestOldFile(t *testing.T) {
 	Convey("Given a dgut file describing old files", t, func() {
 		dir := t.TempDir()
 
-		now := time.Now().Unix()
-		amtime1 := now - (summary.SecondsInAYear*5 + summary.SecondsInAMonth)
-		amtime2 := now - (summary.SecondsInAYear*3 + summary.SecondsInAMonth)
-		amtime3 := now - (summary.SecondsInAYear*7 + summary.SecondsInAMonth)
+		curUnixTime := time.Now().Unix()
+		amtime1 := curUnixTime - (summary.SecondsInAYear*5 + summary.SecondsInAMonth)
+		amtime2 := curUnixTime - (summary.SecondsInAYear*3 + summary.SecondsInAMonth)
+		amtime3 := curUnixTime - (summary.SecondsInAYear*7 + summary.SecondsInAMonth)
 
 		output := filepath.Join(dir, "combine.dgut.db")
 
-		f1 := createDGUTFile(t, dir, "file1", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t0\t1\t1\t%d\t%d"+
-			"\t1\t1\t1\t1\t1\t1\t1\t0\t1\t1\t1\t1\t1\t1\t1\t0\n", amtime1, amtime1))
-		f2 := createDGUTFile(t, dir, "file2", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t0\t1\t2\t%d\t%d"+
-			"\t2\t2\t2\t2\t2\t2\t0\t0\t2\t2\t2\t2\t2\t2\t0\t0\n", amtime2, amtime2))
-		f3 := createDGUTFile(t, dir, "file3", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t0\t1\t3\t%d\t%d"+
-			"\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n", amtime3, amtime3))
-		f4 := createDGUTFile(t, dir, "file4", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t0\t1\t3\t%d\t%d"+
-			"\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\t3\n", amtime3, amtime3))
-		f5 := createDGUTFile(t, dir, "file5", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t0\t1\t4\t%d\t%d"+
-			"\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t4\t0\t0\n", amtime3, amtime2))
+		f1 := createDGUTFile(t, dir, "file1",
+			buildDGUTContent("/", "1313", "22739", 0, 1, 1, amtime1, amtime1, curUnixTime))
+		f2 := createDGUTFile(t, dir, "file2",
+			buildDGUTContent("/", "1313", "22739", 0, 1, 2, amtime2, amtime2, curUnixTime))
+		f3 := createDGUTFile(t, dir, "file3",
+			buildDGUTContent("/", "1313", "22739", 0, 1, 3, amtime3, amtime3, curUnixTime))
+		f4 := createDGUTFile(t, dir, "file4",
+			buildDGUTContent("/", "1313", "22739", 0, 1, 3, amtime3, amtime3, curUnixTime))
+		f5 := createDGUTFile(t, dir, "file5",
+			buildDGUTContent("/", "1313", "22739", 0, 1, 4, amtime3, amtime2, curUnixTime))
 
 		tfs := int64(1 + 2 + 3 + 3 + 4)
-		expectedSizeByA := [8]int64{tfs, tfs, tfs, tfs, tfs, tfs, tfs - 2, tfs - 3}
-
-		expectedSizeByM := [8]int64{tfs, tfs, tfs, tfs, tfs, tfs, tfs - 6, tfs - 7}
+		expectedCount := 6
 
 		Convey("if the directory is new then the mtime will match the directory", func() {
-			d1 := createDGUTFile(t, dir, "dir", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t15\t1\t4096\t%d\t%d"+
-				"\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n", now, now))
+			d1 := createDGUTFile(t, dir, "dir",
+				buildDGUTContent("/", "1313", "22739", 15, 1, 4096, curUnixTime, curUnixTime, curUnixTime))
 
 			err := fs.RemoveAndCreateDir(output)
 			So(err, ShouldBeNil)
@@ -142,21 +139,19 @@ func TestOldFile(t *testing.T) {
 			err = db.Open()
 			So(err, ShouldBeNil)
 
-			ds, errd := db.DirInfo("/", nil)
+			ds, errd := db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeAll})
 			So(errd, ShouldBeNil)
-			So(ds.Count, ShouldEqual, 6)
+			So(ds.Count, ShouldEqual, expectedCount)
 			So(ds.Size, ShouldEqual, tfs+4096)
 			So(ds.Atime, ShouldEqual, time.Unix(amtime3, 0))
-			So(ds.Mtime, ShouldEqual, time.Unix(now, 0))
-			So(ds.SizeByAccessAge, ShouldEqual, expectedSizeByA)
-			So(ds.SizeByModifyAge, ShouldEqual, expectedSizeByM)
+			So(ds.Mtime, ShouldEqual, time.Unix(curUnixTime, 0))
 
 			db.Close()
 		})
 
 		Convey("if the directory is older than the file, the mtime will match the file", func() {
-			d1 := createDGUTFile(t, dir, "dir", encode.Base64Encode("/")+fmt.Sprintf("\t1313\t22739\t15\t1\t4096\t%d\t%d"+
-				"\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\t0\n", amtime3-1, amtime3-1))
+			d1 := createDGUTFile(t, dir, "dir",
+				buildDGUTContent("/", "1313", "22739", 15, 1, 4096, amtime3-1, amtime3-1, curUnixTime))
 
 			err := fs.RemoveAndCreateDir(output)
 			So(err, ShouldBeNil)
@@ -172,33 +167,48 @@ func TestOldFile(t *testing.T) {
 			err = db.Open()
 			So(err, ShouldBeNil)
 
-			ds, errd := db.DirInfo("/", nil)
-			So(errd, ShouldBeNil)
-			So(ds.Count, ShouldEqual, 6)
-			So(ds.Size, ShouldEqual, tfs+4096)
-			So(ds.Atime, ShouldEqual, time.Unix(amtime3-1, 0))
-			So(ds.Mtime, ShouldEqual, time.Unix(amtime2, 0))
-			So(ds.SizeByAccessAge, ShouldEqual, expectedSizeByA)
-			So(ds.SizeByModifyAge, ShouldEqual, expectedSizeByM)
+			expectedSizes := [17]int64{tfs, tfs, tfs, tfs, tfs, tfs, tfs, tfs - 2,
+				tfs - 3, tfs, tfs, tfs, tfs, tfs, tfs, tfs - 6, tfs - 7}
+
+			expectedCounts := [17]int{expectedCount, expectedCount, expectedCount,
+				expectedCount, expectedCount, expectedCount, expectedCount,
+				expectedCount - 1, expectedCount - 2, expectedCount, expectedCount,
+				expectedCount, expectedCount, expectedCount, expectedCount,
+				expectedCount - 2, expectedCount - 3}
+
+			expectedAtime := amtime3 - 1
+
+			expectedMtimes := [17]int64{amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2,
+				amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime1, amtime3,
+			}
+
+			for i, age := range summary.DirGUTAges {
+				ds, errd := db.DirInfo("/", &dgut.Filter{Age: age})
+				So(errd, ShouldBeNil)
+				So(ds.Count, ShouldEqual, expectedCounts[i])
+				So(ds.Size, ShouldEqual, expectedSizes[i]+4096)
+				So(ds.Atime, ShouldEqual, time.Unix(expectedAtime, 0))
+				So(ds.Mtime, ShouldEqual, time.Unix(expectedMtimes[i], 0))
+			}
 		})
 	})
 }
 
 // buildDGUTFiles builds the DGUT files for testing.
-func buildDGUTFiles(t *testing.T) ([]string, string, string) {
+func buildDGUTFiles(t *testing.T, curUnixTime int64) ([]string, string, string) {
 	t.Helper()
 
 	dir := t.TempDir()
 
+	f2AMTime := curUnixTime - (summary.SecondsInAYear + summary.SecondsInAMonth)
+	f3AMTime := curUnixTime - (summary.SecondsInAYear*5 + summary.SecondsInAMonth)
+
 	f1 := createDGUTFile(t, dir, "file1",
-		buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, 1668768807, 1668768808,
-			[8]int64{0, 0, 0, 0, 0, 0, 0, 0}, [8]int64{0, 0, 0, 0, 0, 0, 0, 0}))
+		buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 0, curUnixTime, curUnixTime, curUnixTime))
 	f2 := createDGUTFile(t, dir, "file2",
-		buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 21, 1668768807, 1668768809,
-			[8]int64{21, 21, 21, 21, 21, 0, 0, 0}, [8]int64{21, 21, 21, 21, 21, 0, 0, 0}))
+		buildDGUTContent("/long/file/path/used/for/testing", "1313", "13912", 0, 1, 21, f2AMTime, f2AMTime, curUnixTime))
 	f3 := createDGUTFile(t, dir, "file3",
-		buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, 1668768810, 1668768811,
-			[8]int64{4, 4, 4, 4, 4, 0, 0, 0}, [8]int64{4, 4, 4, 4, 4, 0, 0, 0}))
+		buildDGUTContent("/long/file/path/used/for/testing", "1313", "21574", 0, 1, 4, f3AMTime, f3AMTime, curUnixTime))
 
 	output := filepath.Join(dir, "combine.dgut.db")
 
@@ -231,22 +241,26 @@ func createDGUTFile(t *testing.T, tempDir, fileName, content string) string {
 // /lustre	1313	13912	0	1	0	1668768807
 // /lustre/scratch123	1313	13912	0	1	0	1668768807.
 func buildDGUTContent(directory, gid, uid string, filetype, nestedFiles,
-	fileSize, oldestAtime, newestAtime int, sizeByAccessAge, sizeByModifyAge [8]int64) string {
-	var DGUTContents string
+	fileSize, oldestAtime, newestAtime, refTime int64) string {
+	var dgutaContents string
 
 	splitDir := recursivePath(directory)
 
 	for _, split := range splitDir {
-		DGUTContents += encode.Base64Encode(split) +
-			fmt.Sprintf("\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
-				gid, uid, filetype, nestedFiles, fileSize, oldestAtime, newestAtime,
-				sizeByAccessAge[0], sizeByAccessAge[1], sizeByAccessAge[2], sizeByAccessAge[3],
-				sizeByAccessAge[4], sizeByAccessAge[5], sizeByAccessAge[6], sizeByAccessAge[7],
-				sizeByModifyAge[0], sizeByModifyAge[1], sizeByModifyAge[2], sizeByModifyAge[3],
-				sizeByModifyAge[4], sizeByModifyAge[5], sizeByModifyAge[6], sizeByModifyAge[7])
+		for _, age := range summary.DirGUTAges {
+			guta := fmt.Sprintf("\t%s\t%s\t%d\t%d", gid, uid, filetype, age)
+
+			if !summary.FitsAgeInterval(guta, oldestAtime, newestAtime, refTime) {
+				continue
+			}
+
+			dgutaContents += encode.Base64Encode(split) + guta +
+				fmt.Sprintf("\t%d\t%d\t%d\t%d\n",
+					nestedFiles, fileSize, oldestAtime, newestAtime)
+		}
 	}
 
-	return DGUTContents
+	return dgutaContents
 }
 
 // recursivePath takes a path, and into an array equal to the length of the
@@ -254,16 +268,20 @@ func buildDGUTContent(directory, gid, uid string, filetype, nestedFiles,
 // example: /lustre/scratch123 would give,
 // []string{"/", "/lustre", "/lustre/scratch123"}.
 func recursivePath(path string) []string {
+	if path == "/" {
+		return []string{"/"}
+	}
+
 	count := strings.Count(path, "/")
 	newPath := path
 
-	var DGUTContents = make([]string, count+1)
-	DGUTContents[count] = path
+	var dgutaContents = make([]string, count+1)
+	dgutaContents[count] = path
 
 	for i := count - 1; i >= 0; i-- {
-		DGUTContents[i] = filepath.Dir(newPath)
+		dgutaContents[i] = filepath.Dir(newPath)
 		newPath = filepath.Dir(newPath)
 	}
 
-	return DGUTContents
+	return dgutaContents
 }
