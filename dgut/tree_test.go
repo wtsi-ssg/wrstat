@@ -149,46 +149,60 @@ func TestTree(t *testing.T) {
 				split.SplitsToSplitFn(0))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}}, split.SplitsToSplitFn(0))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne, expectedGIDsOne, expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
+				{"/a/b", 5, 40, expectedAtime, time.Unix(80, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram},
 				split.SplitsToSplitFn(1))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
-				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss.SortByDir()
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
-				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss, err = tree.Where("/", &Filter{GIDs: []uint32{1}, UIDs: []uint32{101}, FTs: expectedFTsCram},
 				split.SplitsToSplitFn(2))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
-				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			dcss, err = tree.Where("/", nil, split.SplitsToSplitFn(1))
 			So(err, ShouldBeNil)
 			So(dcss, ShouldResemble, DCSs{
-				{"/a", 21, 92, expectedAtime, expectedMtime, expectedUIDs, expectedGIDs, expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
-				{"/a/b", 9, 80, expectedAtime, time.Unix(80, 0), []uint32{101, 102}, expectedGIDsOne, expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
-				{"/a/c/d", 12, 12, time.Unix(90, 0), expectedMtime, []uint32{102, 103}, []uint32{2, 3}, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a", 21, 92, expectedAtime, expectedMtime, expectedUIDs, expectedGIDs,
+					expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
+				{"/a/b", 9, 80, expectedAtime, time.Unix(80, 0), []uint32{101, 102},
+					expectedGIDsOne, expectedFTs[:3], summary.DGUTAgeAll, dbModTime},
+				{"/a/c/d", 12, 12, time.Unix(90, 0), expectedMtime, []uint32{102, 103},
+					[]uint32{2, 3}, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			_, err = tree.Where("/foo", nil, split.SplitsToSplitFn(1))
@@ -201,8 +215,10 @@ func TestTree(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			So(dcss, ShouldResemble, DCSs{
-				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
-				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne, expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/f", 1, 10, expectedAtime, time.Unix(50, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
+				{"/a/b/d/g", 2, 20, expectedAtimeG, time.Unix(60, 0), expectedUIDsOne,
+					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
 			_, err = tree.FileLocations("/foo", nil)
@@ -271,15 +287,19 @@ func TestTree(t *testing.T) {
 		dcss, err := tree.Where("/", nil, split.SplitsToSplitFn(0))
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, summary.DGUTAgeAll, mtime2},
+			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1},
+				expectedFTsBam, summary.DGUTAgeAll, mtime2},
 		})
 
 		dcss, err = tree.Where("/", nil, split.SplitsToSplitFn(1))
 		So(err, ShouldBeNil)
 		So(dcss, ShouldResemble, DCSs{
-			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, summary.DGUTAgeAll, mtime2},
-			{"/a/b/c/d", 1, 1, time.Unix(20, 0), expectedMtime, []uint32{11}, []uint32{1}, expectedFTsBam, summary.DGUTAgeAll, mtime2},
-			{"/a/b/c/e", 1, 1, expectedAtime, expectedAtime, []uint32{11}, []uint32{1}, expectedFTsBam, summary.DGUTAgeAll, mtime2},
+			{"/a/b/c", 2, 2, expectedAtime, expectedMtime, []uint32{11}, []uint32{1},
+				expectedFTsBam, summary.DGUTAgeAll, mtime2},
+			{"/a/b/c/d", 1, 1, time.Unix(20, 0), expectedMtime, []uint32{11}, []uint32{1},
+				expectedFTsBam, summary.DGUTAgeAll, mtime2},
+			{"/a/b/c/e", 1, 1, expectedAtime, expectedAtime, []uint32{11}, []uint32{1},
+				expectedFTsBam, summary.DGUTAgeAll, mtime2},
 		})
 	})
 }
