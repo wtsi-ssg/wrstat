@@ -49,7 +49,7 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/basedirs"
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dguta"
 	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
@@ -912,7 +912,7 @@ func TestStat(t *testing.T) {
 		for file, contents := range map[string]string{
 			"dir.walk.stats":       statsExpectation,
 			"dir.walk.bygroup":     groupExpectation,
-			"dir.walk.byusergroup": userGroupExpectation, "dir.walk.dgut": walkExpectations,
+			"dir.walk.byusergroup": userGroupExpectation, "dir.walk.dguta": walkExpectations,
 			"dir.walk.log": "",
 		} {
 			if file != "dir.walk.stats" {
@@ -944,7 +944,7 @@ func TestCombine(t *testing.T) {
 			"a.bygroup":     "a\tb\tc\td\n1\t2\t3\t4\n",
 			"b.bygroup":     "e\tf\tg\th\n5\t6\t7\t8\n",
 			"c.bygroup":     "",
-			"a.dgut": "" +
+			"a.dguta": "" +
 				encode.Base64Encode("/") +
 				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
 				encode.Base64Encode("/") +
@@ -1021,7 +1021,7 @@ func TestCombine(t *testing.T) {
 			So(string(buf), ShouldEqual, contents)
 		}
 
-		db := dgut.NewDB(filepath.Join(tmp, "combine.dgut.db"))
+		db := dguta.NewDB(filepath.Join(tmp, "combine.dguta.db"))
 
 		err = db.Open()
 		So(err, ShouldBeNil)
@@ -1038,7 +1038,7 @@ func TestCombine(t *testing.T) {
 
 		for _, test := range [...]struct {
 			Directory   string
-			Filter      *dgut.Filter
+			Filter      *dguta.Filter
 			NumFiles    uint64
 			TotalSize   uint64
 			NewestMTime int64
@@ -1066,7 +1066,7 @@ func TestCombine(t *testing.T) {
 			},
 			{
 				Directory:   "/some/directory/001",
-				Filter:      &dgut.Filter{FTs: []summary.DirGUTAFileType{0, 2, 15}},
+				Filter:      &dguta.Filter{FTs: []summary.DirGUTAFileType{0, 2, 15}},
 				NumFiles:    10,
 				TotalSize:   32788,
 				NewestMTime: 7383773,
@@ -1076,7 +1076,7 @@ func TestCombine(t *testing.T) {
 			},
 			{
 				Directory:   "/some/directory/001",
-				Filter:      &dgut.Filter{FTs: []summary.DirGUTAFileType{0}},
+				Filter:      &dguta.Filter{FTs: []summary.DirGUTAFileType{0}},
 				NumFiles:    1,
 				TotalSize:   10,
 				NewestMTime: 7383773,
@@ -1104,7 +1104,7 @@ func TestCombine(t *testing.T) {
 			},
 			{
 				Directory: "/some/directory/001/aDirectory/aSubDirectory",
-				Filter:    &dgut.Filter{UIDs: []uint32{0}},
+				Filter:    &dguta.Filter{UIDs: []uint32{0}},
 				UIDs:      []uint32{},
 				GIDs:      []uint32{},
 				FTs:       []summary.DirGUTAFileType{},
@@ -1249,10 +1249,10 @@ func TestBasedirs(t *testing.T) {
 			writeFileString(t, filepath.Join(configs, file), contents)
 		}
 
-		err := os.MkdirAll(filepath.Join(dbTmp, "a", "b", "combine.dgut.db"), 0755)
+		err := os.MkdirAll(filepath.Join(dbTmp, "a", "b", "combine.dguta.db"), 0755)
 		So(err, ShouldBeNil)
 
-		db := dgut.NewDB(filepath.Join(dbTmp, "a", "b", "combine.dgut.db"))
+		db := dguta.NewDB(filepath.Join(dbTmp, "a", "b", "combine.dguta.db"))
 
 		pr, pw := io.Pipe()
 
@@ -1564,11 +1564,11 @@ func TestTidy(t *testing.T) {
 			filepath.Join("a", "b", "combine.byusergroup.gz"),
 			filepath.Join("a", "b", "combine.bygroup"),
 			filepath.Join("a", "b", "combine.log.gz"),
-			filepath.Join("a", "b", "combine.dgut.db"),
-			filepath.Join("test.dgut.dbs", "0", "dgut.db"),
-			filepath.Join("test.dgut.dbs", "0", "dgut.db.children"),
-			filepath.Join("test.dgut.dbs", "1", "dgut.db"),
-			filepath.Join("test.dgut.dbs", "1", "dgut.db.children"),
+			filepath.Join("a", "b", "combine.dguta.db"),
+			filepath.Join("test.dguta.dbs", "0", "dguta.db"),
+			filepath.Join("test.dguta.dbs", "0", "dguta.db.children"),
+			filepath.Join("test.dguta.dbs", "1", "dguta.db"),
+			filepath.Join("test.dguta.dbs", "1", "dguta.db.children"),
 			"basedirs.db",
 			"basedirs.userusage.tsv",
 			"basedirs.groupusage.tsv",
@@ -1594,8 +1594,8 @@ func TestTidy(t *testing.T) {
 			"today_a.b.001.bygroup":             filepath.Join("a", "b", "combine.bygroup"),
 			"today_a.b.001.byusergroup.gz":      filepath.Join("a", "b", "combine.byusergroup.gz"),
 			"today_a.b.001.logs.gz":             filepath.Join("a", "b", "combine.log.gz"),
-			".dgut.dbs.updated":                 "",
-			"today_001.dgut.dbs/0":              filepath.Join("a", "b", "combine.dgut.db"),
+			".dguta.dbs.updated":                "",
+			"today_001.dguta.dbs/0":             filepath.Join("a", "b", "combine.dguta.db"),
 			"today_001.basedirs.userusage.tsv":  "basedirs.userusage.tsv",
 			"today_001.basedirs.db":             "basedirs.db",
 			"today_001.basedirs.groupusage.tsv": "basedirs.groupusage.tsv",

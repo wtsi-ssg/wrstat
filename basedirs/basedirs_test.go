@@ -38,7 +38,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dguta"
 	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
 	internaldb "github.com/wtsi-ssg/wrstat/v5/internal/db"
 	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
@@ -86,7 +86,7 @@ func TestBaseDirs(t *testing.T) {
 		gid, uid, groupName, username, err := internaldata.RealGIDAndUID()
 		So(err, ShouldBeNil)
 
-		locDirs, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
+		locDirs, files := internaldata.FakeFilesForDGUTADBForBasedirsTesting(gid, uid)
 
 		const (
 			halfGig = 1 << 29
@@ -97,7 +97,7 @@ func TestBaseDirs(t *testing.T) {
 		files[1].SizeOfEachFile = twoGig
 
 		yesterday := fixtimes.FixTime(time.Now().Add(-24 * time.Hour))
-		tree, treePath, err := internaldb.CreateDGUTDBFromFakeFiles(t, files, yesterday)
+		tree, treePath, err := internaldb.CreateDGUTADBFromFakeFiles(t, files, yesterday)
 		So(err, ShouldBeNil)
 
 		projectA := locDirs[0]
@@ -133,7 +133,7 @@ func TestBaseDirs(t *testing.T) {
 			Convey("of each group", func() { //nolint:dupl
 				dcss, err := bd.CalculateForGroup(1)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
+				So(dcss, ShouldResemble, dguta.DCSs{
 					{
 						Dir:     projectA,
 						Count:   2,
@@ -149,7 +149,7 @@ func TestBaseDirs(t *testing.T) {
 
 				dcss, err = bd.CalculateForGroup(2)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
+				So(dcss, ShouldResemble, dguta.DCSs{
 					{
 						Dir:     projectC1,
 						Count:   1,
@@ -189,7 +189,7 @@ func TestBaseDirs(t *testing.T) {
 			Convey("of each user", func() { //nolint:dupl
 				dcss, err := bd.CalculateForUser(101)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
+				So(dcss, ShouldResemble, dguta.DCSs{
 					{
 						Dir:     projectA,
 						Count:   2,
@@ -205,7 +205,7 @@ func TestBaseDirs(t *testing.T) {
 
 				dcss, err = bd.CalculateForUser(102)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
+				So(dcss, ShouldResemble, dguta.DCSs{
 					{
 						Dir:     projectB123,
 						Count:   1,
@@ -444,7 +444,7 @@ func TestBaseDirs(t *testing.T) {
 						err = fs.Touch(treePath, time.Now())
 						So(err, ShouldBeNil)
 
-						tree, err = dgut.NewTree(treePath)
+						tree, err = dguta.NewTree(treePath)
 						So(err, ShouldBeNil)
 
 						bd, err = NewCreator(dbPath, defaultConfig, tree, quotas)
@@ -468,14 +468,14 @@ func TestBaseDirs(t *testing.T) {
 					})
 
 					Convey("Then you can add and retrieve a new day's usage and quota", func() {
-						_, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
+						_, files := internaldata.FakeFilesForDGUTADBForBasedirsTesting(gid, uid)
 						files[0].NumFiles = 2
 						files[0].SizeOfEachFile = halfGig
 						files[1].SizeOfEachFile = twoGig
 
 						files = files[:len(files)-1]
 						today := fixtimes.FixTime(time.Now())
-						tree, _, err = internaldb.CreateDGUTDBFromFakeFiles(t, files, today)
+						tree, _, err = internaldb.CreateDGUTADBFromFakeFiles(t, files, today)
 						So(err, ShouldBeNil)
 
 						const fiveGig = 5 * (1 << 30)
@@ -919,12 +919,12 @@ func TestBaseDirs(t *testing.T) {
 			})
 
 			Convey("and merge with another database", func() {
-				_, newFiles := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
+				_, newFiles := internaldata.FakeFilesForDGUTADBForBasedirsTesting(gid, uid)
 				for i := range newFiles {
 					newFiles[i].Path = "/nfs" + newFiles[i].Path[7:]
 				}
 
-				newTree, _, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles, yesterday)
+				newTree, _, err := internaldb.CreateDGUTADBFromFakeFiles(t, newFiles, yesterday)
 				So(err, ShouldBeNil)
 
 				newDBPath := filepath.Join(dir, "newdir.db")

@@ -35,7 +35,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dguta"
 	"github.com/wtsi-ssg/wrstat/v5/fs"
 	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
@@ -55,7 +55,7 @@ func TestDGUTAFiles(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("and a query of the db data should be valid, and return the content of our DGUTA testing files.", func() {
-				db := dgut.NewDB(filepath.Join(dir, "combine.dguta.db"))
+				db := dguta.NewDB(filepath.Join(dir, "combine.dguta.db"))
 				So(db, ShouldNotBeNil)
 
 				db.Close()
@@ -65,7 +65,7 @@ func TestDGUTAFiles(t *testing.T) {
 
 				AMTime1 := curUnixTime - (summary.SecondsInAYear*5 + summary.SecondsInAMonth)
 
-				ds, err := db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeAll})
+				ds, err := db.DirInfo("/", &dguta.Filter{Age: summary.DGUTAgeAll})
 				So(err, ShouldBeNil)
 				So(ds.Count, ShouldEqual, 3)
 				So(ds.Size, ShouldEqual, 25)
@@ -76,19 +76,19 @@ func TestDGUTAFiles(t *testing.T) {
 				So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{summary.DirGUTAFileType(0)})
 				So(ds.Age, ShouldEqual, summary.DGUTAgeAll)
 
-				ds, err = db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeA1M})
+				ds, err = db.DirInfo("/", &dguta.Filter{Age: summary.DGUTAgeA1M})
 				So(err, ShouldBeNil)
 				So(ds.Count, ShouldEqual, 2)
 				So(ds.Size, ShouldEqual, 25)
 				So(ds.Age, ShouldEqual, summary.DGUTAgeA1M)
 
-				ds, err = db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeA2Y})
+				ds, err = db.DirInfo("/", &dguta.Filter{Age: summary.DGUTAgeA2Y})
 				So(err, ShouldBeNil)
 				So(ds.Count, ShouldEqual, 1)
 				So(ds.Size, ShouldEqual, 4)
 				So(ds.Age, ShouldEqual, summary.DGUTAgeA2Y)
 
-				ds, err = db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeA7Y})
+				ds, err = db.DirInfo("/", &dguta.Filter{Age: summary.DGUTAgeA7Y})
 				So(err, ShouldBeNil)
 				So(ds.Count, ShouldBeZeroValue)
 				So(ds.Size, ShouldBeZeroValue)
@@ -132,7 +132,7 @@ func TestOldFile(t *testing.T) {
 			err = DgutaFiles([]string{f1, f2, f3, f4, f5, d1}, output)
 			So(err, ShouldBeNil)
 
-			db := dgut.NewDB(output)
+			db := dguta.NewDB(output)
 			So(db, ShouldNotBeNil)
 
 			db.Close()
@@ -140,7 +140,7 @@ func TestOldFile(t *testing.T) {
 			err = db.Open()
 			So(err, ShouldBeNil)
 
-			ds, errd := db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeAll})
+			ds, errd := db.DirInfo("/", &dguta.Filter{Age: summary.DGUTAgeAll})
 			So(errd, ShouldBeNil)
 			So(ds.Count, ShouldEqual, expectedCount)
 			So(ds.Size, ShouldEqual, tfs+4096)
@@ -160,7 +160,7 @@ func TestOldFile(t *testing.T) {
 			err = DgutaFiles([]string{f1, f2, f3, f4, f5, d1}, output)
 			So(err, ShouldBeNil)
 
-			db := dgut.NewDB(output)
+			db := dguta.NewDB(output)
 			So(db, ShouldNotBeNil)
 
 			db.Close()
@@ -168,7 +168,7 @@ func TestOldFile(t *testing.T) {
 			err = db.Open()
 			So(err, ShouldBeNil)
 
-			ds, errd := db.DirInfo("/", &dgut.Filter{Age: summary.DGUTAgeAll})
+			ds, errd := db.DirInfo("/", &dguta.Filter{Age: summary.DGUTAgeAll})
 			So(errd, ShouldBeNil)
 			So(ds.Mtime, ShouldEqual, time.Unix(amtime2, 0))
 
@@ -189,7 +189,7 @@ func TestOldFile(t *testing.T) {
 				}
 
 				for i, age := range summary.DirGUTAges {
-					ds, errd := db.DirInfo("/", &dgut.Filter{Age: age})
+					ds, errd := db.DirInfo("/", &dguta.Filter{Age: age})
 					So(errd, ShouldBeNil)
 					So(ds.Count, ShouldEqual, expectedCounts[i])
 					So(ds.Size, ShouldEqual, expectedSizes[i]+4096)

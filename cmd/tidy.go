@@ -71,11 +71,11 @@ The basedirs.* files directly inside the given "multi unique" directory is
 named:
 [date]_[multi unique].basedirs.*
 
-It also moves the combine.dgut.db directories to inside a directory named:
-[date]_[multi unique].dgut.dbs
+It also moves the combine.dguta.db directories to inside a directory named:
+[date]_[multi unique].dguta.dbs
 (making them sequentially numbered sub-directories)
 
-Finally, it creates or touches a file named '.dgut.dbs.updated' in the
+Finally, it creates or touches a file named '.dguta.dbs.updated' in the
 --final_output directory, giving it an mtime matching the oldest mtime of the
 walk log files. 'wrstat server' will use this file to reload its database and
 update its knowledge of when the data was captured.
@@ -123,7 +123,7 @@ through; it won't clobber final outputs already moved.`,
 			},
 
 			DBFileSuffixes: map[string]string{
-				combineDGUTOutputFileBasename: "dgut.dbs",
+				combineDGUTAOutputFileBasename: "dguta.dbs",
 			},
 
 			BaseFileSuffixes: map[string]string{

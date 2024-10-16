@@ -238,12 +238,12 @@ func summaryLinesMatch(matchColumns int, a, b []string) bool {
 func sumCountAndSizesAndKeepTimes(_ int, a, b []string) {
 	sumCountAndSizes(a, b)
 
-	if atoi(b[dgutAtimeColIndex]) < atoi(a[dgutAtimeColIndex]) {
-		a[dgutAtimeColIndex] = b[dgutAtimeColIndex]
+	if atoi(b[dgutaAtimeColIndex]) < atoi(a[dgutaAtimeColIndex]) {
+		a[dgutaAtimeColIndex] = b[dgutaAtimeColIndex]
 	}
 
-	if atoi(b[dgutMtimeColIndex]) > atoi(a[dgutMtimeColIndex]) {
-		a[dgutMtimeColIndex] = b[dgutMtimeColIndex]
+	if atoi(b[dgutaMtimeColIndex]) > atoi(a[dgutaMtimeColIndex]) {
+		a[dgutaMtimeColIndex] = b[dgutaMtimeColIndex]
 	}
 }
 
@@ -252,7 +252,7 @@ func sumCountAndSizesAndKeepTimes(_ int, a, b []string) {
 // the atime and mtime columns.
 func sumCountAndSizes(a, b []string) {
 	for i := dgutaSumCols; i < len(a); i++ {
-		if i == dgutAtimeColIndex || i == dgutMtimeColIndex {
+		if i == dgutaAtimeColIndex || i == dgutaMtimeColIndex {
 			continue
 		}
 

@@ -91,14 +91,14 @@ func TestTidy(t *testing.T) {
 			}
 		})
 
-		Convey("And the contents of the .basedirs and .dgut.dbs dir exist", func() {
+		Convey("And the contents of the .basedirs and .dguta.dbs dir exist", func() {
 			dbsPath := filepath.Join(destDir, date+"_"+srcUniversal)
 			dbsSuffixes := [5]string{
 				".basedirs",
-				".dgut.dbs/0/dgut.db",
-				".dgut.dbs/0/dgut.db.children",
-				".dgut.dbs/1/dgut.db",
-				".dgut.dbs/1/dgut.db.children"}
+				".dguta.dbs/0/dguta.db",
+				".dguta.dbs/0/dguta.db.children",
+				".dguta.dbs/1/dguta.db",
+				".dguta.dbs/1/dguta.db.children"}
 
 			for _, suffix := range dbsSuffixes {
 				_, err = os.Stat(dbsPath + suffix)
@@ -106,14 +106,14 @@ func TestTidy(t *testing.T) {
 			}
 		})
 
-		Convey("And the .dgut.dbs.updated file exists in the dest dir", func() {
-			expectedFileName := filepath.Join(destDir, ".dgut.dbs.updated")
+		Convey("And the .dguta.dbs.updated file exists in the dest dir", func() {
+			expectedFileName := filepath.Join(destDir, ".dguta.dbs.updated")
 
 			_, err = os.Stat(expectedFileName)
 			So(err, ShouldBeNil)
 		})
 
-		Convey("And the mtime of the .dgut.dbs file matches the oldest mtime of the walk log files", func() {
+		Convey("And the mtime of the .dguta.dbs file matches the oldest mtime of the walk log files", func() {
 			err = os.RemoveAll(tmpDir)
 			So(err, ShouldBeNil)
 
@@ -131,7 +131,7 @@ func TestTidy(t *testing.T) {
 			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
 
-			dbsFileMTime := getMTime(filepath.Join(destDir, ".dgut.dbs.updated"))
+			dbsFileMTime := getMTime(filepath.Join(destDir, ".dguta.dbs.updated"))
 
 			So(dbsFileMTime, ShouldEqual, expectedMTime)
 		})
@@ -257,9 +257,9 @@ func buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interes
 		createTestPath([]string{interestUniqueDir2}, combineFileSuffixes[i])
 	}
 
-	goDBDir := []string{srcDir, "go", srcUniqueGo, "combine.dgut.db"}
-	perlDBDir := []string{srcDir, "perl", srcUniquePerl, "combine.dgut.db"}
-	combineDirSuffixes := [2]string{"dgut.db", "dgut.db.children"}
+	goDBDir := []string{srcDir, "go", srcUniqueGo, "combine.dguta.db"}
+	perlDBDir := []string{srcDir, "perl", srcUniquePerl, "combine.dguta.db"}
+	combineDirSuffixes := [2]string{"dguta.db", "dguta.db.children"}
 
 	for i := range combineDirSuffixes {
 		createTestPath(goDBDir, combineDirSuffixes[i])
@@ -276,7 +276,7 @@ func buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interes
 	}
 
 	inputOutputDBSuffixes := map[string]string{
-		"combine.dgut.db": "dgut.dbs"}
+		"combine.dguta.db": "dguta.dbs"}
 
 	inputOutputBaseSuffixes := map[string]string{
 		"base.dirs": "basedirs"}

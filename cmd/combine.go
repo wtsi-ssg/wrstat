@@ -37,7 +37,7 @@ import (
 const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
 const combineGroupOutputFileBasename = "combine.bygroup"
-const combineDGUTOutputFileBasename = "combine.dgut.db"
+const combineDGUTAOutputFileBasename = "combine.dguta.db"
 const combineLogOutputFileBasename = "combine.log.gz"
 
 // combineCmd represents the combine command.
@@ -57,7 +57,7 @@ compressed and placed at the root of the output directory in a file called
 The same applies to the *.log files, being called 'combine.log.gz'.
 
 The *.dugt files will be turned in to databases in a directory
-'combine.dgut.db'.
+'combine.dguta.db'.
 
 The *.bygroup files are merged but not compressed and called 'combine.bygroup'.
 
@@ -96,7 +96,7 @@ you supplied 'wrstat walk'.`,
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mergeDGUTFilesToDB(sourceDir)
+			mergeDGUTAFilesToDB(sourceDir)
 		}()
 
 		wg.Add(1)
@@ -168,21 +168,21 @@ func concatenateAndCompressLogFiles(sourceDir string) {
 	}
 }
 
-// mergeDGUTFilesToDB finds and merges the dgut files and then stores the
+// mergeDGUTAFilesToDB finds and merges the dguta files and then stores the
 // information in a database.
-func mergeDGUTFilesToDB(sourceDir string) {
-	paths, err := fs.FindFilePathsInDir(sourceDir, statDGUTSummaryOutputFileSuffix)
+func mergeDGUTAFilesToDB(sourceDir string) {
+	paths, err := fs.FindFilePathsInDir(sourceDir, statDGUTASummaryOutputFileSuffix)
 	if err != nil {
-		die("failed to find the dgut files: %s", err)
+		die("failed to find the dguta files: %s", err)
 	}
 
-	outputDir := filepath.Join(sourceDir, combineDGUTOutputFileBasename)
+	outputDir := filepath.Join(sourceDir, combineDGUTAOutputFileBasename)
 
 	if err = fs.RemoveAndCreateDir(outputDir); err != nil {
-		die("failed to remove or create the dgut directory: %s", err)
+		die("failed to remove or create the dguta directory: %s", err)
 	}
 
 	if err = combine.DgutaFiles(paths, outputDir); err != nil {
-		die("failed to merge the dgut files: %s", err)
+		die("failed to merge the dguta files: %s", err)
 	}
 }

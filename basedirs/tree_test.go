@@ -38,7 +38,7 @@ import (
 
 func TestTree(t *testing.T) {
 	Convey("Given a Tree", t, func() {
-		tree, _, err := internaldb.CreateExampleDGUTDBForBasedirs(t)
+		tree, _, err := internaldb.CreateExampleDGUTADBForBasedirs(t)
 		So(err, ShouldBeNil)
 
 		Convey("You can get all the gids and uids in it", func() {

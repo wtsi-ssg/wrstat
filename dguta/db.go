@@ -23,7 +23,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-package dgut
+package dguta
 
 import (
 	"io"
@@ -42,7 +42,7 @@ import (
 const (
 	gutaBucket         = "gut"
 	childBucket        = "children"
-	dbBasenameDGUTA    = "dgut.db"
+	dbBasenameDGUTA    = "dguta.db"
 	dbBasenameChildren = dbBasenameDGUTA + ".children"
 	dbOpenMode         = 0600
 )

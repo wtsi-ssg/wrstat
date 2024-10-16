@@ -23,7 +23,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-package dgut
+package dguta
 
 import (
 	"math"
@@ -550,7 +550,7 @@ func TestDGUTA(t *testing.T) {
 		})
 
 		Convey("You can't Store to or Open an unwritable location", func() {
-			db := NewDB("/dgut.db")
+			db := NewDB("/dguta.db")
 			So(db, ShouldNotBeNil)
 
 			err := db.Store(data, 4)

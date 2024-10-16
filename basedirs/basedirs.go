@@ -34,7 +34,7 @@ import (
 	"strings"
 
 	"github.com/ugorji/go/codec"
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dguta"
 )
 
 // BaseDirs is used to summarise disk usage information by base directory and
@@ -42,7 +42,7 @@ import (
 type BaseDirs struct {
 	dbPath      string
 	config      Config
-	tree        *dgut.Tree
+	tree        *dguta.Tree
 	quotas      *Quotas
 	ch          codec.Handle
 	mountPoints mountPoints
@@ -56,7 +56,7 @@ type BaseDirs struct {
 // `/mounts/[group name]`, that's 2 directories deep and splits 1, minDirs 2
 // might work well. If it's 5 directories deep, splits 4, minDirs 4 might work
 // well.
-func NewCreator(dbPath string, c Config, tree *dgut.Tree, quotas *Quotas) (*BaseDirs, error) {
+func NewCreator(dbPath string, c Config, tree *dguta.Tree, quotas *Quotas) (*BaseDirs, error) {
 	mp, err := getMountPoints()
 	if err != nil {
 		return nil, err
@@ -79,10 +79,10 @@ func (b *BaseDirs) SetMountPoints(mountpoints []string) {
 }
 
 // CalculateForGroup calculates all the base directories for the given group.
-func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
-	var dcss dgut.DCSs
+func (b *BaseDirs) CalculateForGroup(gid uint32) (dguta.DCSs, error) {
+	var dcss dguta.DCSs
 
-	if err := b.filterWhereResults(&dgut.Filter{GIDs: []uint32{gid}}, func(ds *dgut.DirSummary) {
+	if err := b.filterWhereResults(&dguta.Filter{GIDs: []uint32{gid}}, func(ds *dguta.DirSummary) {
 		dcss = append(dcss, ds)
 	}); err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (b *BaseDirs) CalculateForGroup(gid uint32) (dgut.DCSs, error) {
 	return dcss, nil
 }
 
-func (b *BaseDirs) filterWhereResults(filter *dgut.Filter, cb func(ds *dgut.DirSummary)) error {
+func (b *BaseDirs) filterWhereResults(filter *dguta.Filter, cb func(ds *dguta.DirSummary)) error {
 	dcss, err := b.tree.Where("/", filter, b.config.splitFn())
 	if err != nil {
 		return err
@@ -133,10 +133,10 @@ func childOfPreviousResult(dir, previous string) bool {
 }
 
 // CalculateForUser calculates all the base directories for the given user.
-func (b *BaseDirs) CalculateForUser(uid uint32) (dgut.DCSs, error) {
-	var dcss dgut.DCSs
+func (b *BaseDirs) CalculateForUser(uid uint32) (dguta.DCSs, error) {
+	var dcss dguta.DCSs
 
-	if err := b.filterWhereResults(&dgut.Filter{UIDs: []uint32{uid}}, func(ds *dgut.DirSummary) {
+	if err := b.filterWhereResults(&dguta.Filter{UIDs: []uint32{uid}}, func(ds *dguta.DirSummary) {
 		dcss = append(dcss, ds)
 	}); err != nil {
 		return nil, err

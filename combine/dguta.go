@@ -3,15 +3,15 @@ package combine
 import (
 	"io"
 
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dguta"
 )
 
 const (
 	dgutaStoreBatchSize    = 10000
 	dgutaSumCols           = 5
 	numSummaryColumnsDGUTA = 4
-	dgutAtimeColIndex      = 7
-	dgutMtimeColIndex      = 8
+	dgutaAtimeColIndex     = 7
+	dgutaMtimeColIndex     = 8
 )
 
 // DgutaFiles merges the pre-sorted dguta files, summing consecutive lines with
@@ -38,7 +38,7 @@ func DgutaFiles(inputs []string, outputDir string) (err error) {
 }
 
 func processDgutaFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup func() error, errCh chan error) error {
-	db := dgut.NewDB(outputDir)
+	db := dguta.NewDB(outputDir)
 	reader, writer := io.Pipe()
 
 	go dgutaStore(db, reader, errCh)
@@ -65,7 +65,7 @@ func processDgutaFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup 
 	return cleanup()
 }
 
-func dgutaStore(db *dgut.DB, reader io.ReadCloser, errCh chan error) {
+func dgutaStore(db *dguta.DB, reader io.ReadCloser, errCh chan error) {
 	errs := db.Store(reader, dgutaStoreBatchSize)
 
 	if errs != nil {

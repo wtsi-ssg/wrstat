@@ -25,7 +25,7 @@
 
 // package dguta lets you create and query a database made from dguta files.
 
-package dgut
+package dguta
 
 import (
 	"github.com/ugorji/go/codec"
