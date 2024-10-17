@@ -114,6 +114,7 @@ var AllTypesExceptDirectories = []DirGUTAFileType{ //nolint:gochecknoglobals
 }
 
 const ErrInvalidType = Error("not a valid file type")
+const ErrInvalidAge = Error("not a valid age")
 
 // String lets you convert a DirGUTAFileType to a meaningful string.
 func (d DirGUTAFileType) String() string {
@@ -152,6 +153,38 @@ func FileTypeStringToDirGUTAFileType(ft string) (DirGUTAFileType, error) {
 	}
 
 	return dgft, nil
+}
+
+// AgeStringToDirGUTAge converts the String() representation of a DirGUTAge
+// back in to a DirGUTAge. Errors if an invalid string supplied.
+func AgeStringToDirGUTAge(age string) (DirGUTAge, error) {
+	convert := map[string]DirGUTAge{
+		"0":  DGUTAgeAll,
+		"1":  DGUTAgeA1M,
+		"2":  DGUTAgeA2M,
+		"3":  DGUTAgeA6M,
+		"4":  DGUTAgeA1Y,
+		"5":  DGUTAgeA2Y,
+		"6":  DGUTAgeA3Y,
+		"7":  DGUTAgeA5Y,
+		"8":  DGUTAgeA7Y,
+		"9":  DGUTAgeM1M,
+		"10": DGUTAgeM2M,
+		"11": DGUTAgeM6M,
+		"12": DGUTAgeM1Y,
+		"13": DGUTAgeM2Y,
+		"14": DGUTAgeM3Y,
+		"15": DGUTAgeM5Y,
+		"16": DGUTAgeM7Y,
+	}
+
+	dgage, ok := convert[age]
+
+	if !ok {
+		return DGUTAgeAll, ErrInvalidAge
+	}
+
+	return dgage, nil
 }
 
 // gutaStore is a sortable map with gid,uid,filetype,age as keys and
