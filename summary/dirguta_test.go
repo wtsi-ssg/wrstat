@@ -529,6 +529,7 @@ func TestDirGUTA(t *testing.T) {
 
 			err = dguta.Add("/a/b/c/3.bam", newMockInfoWithAtime(2, 2, 3, false, 100))
 			So(err, ShouldBeNil)
+
 			mi := newMockInfoWithAtime(10, 2, 2, false, 250)
 			mi.mtime = 250
 			err = dguta.Add("/a/b/c/7.cram", mi)
@@ -587,6 +588,7 @@ func TestDirGUTA(t *testing.T) {
 
 					o, errr := os.ReadFile(outPath)
 					So(errr, ShouldBeNil)
+
 					output := string(o)
 
 					for i := range len(DirGUTAges) - 1 {

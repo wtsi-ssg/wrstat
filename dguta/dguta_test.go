@@ -573,118 +573,114 @@ func TestDGUTA(t *testing.T) {
 	})
 }
 
+type gutaInfo struct {
+	GID         uint32
+	UID         uint32
+	FT          summary.DirGUTAFileType
+	aCount      uint64
+	mCount      uint64
+	aSize       uint64
+	mSize       uint64
+	aTime       int64
+	mTime       int64
+	orderOfAges []summary.DirGUTAge
+}
+
 // testData provides some test data and expected results.
 func testData(t *testing.T) (dgutaData string, expectedRootGUTAs GUTAs, expected []*DGUTA, expectedKeys []string) {
 	t.Helper()
 
 	dgutaData = internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
 
-	recentAMtimesGUTA := []*GUTA{
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeAll, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM6M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM2Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM3Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA2M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA6M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeA1Y, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
-		{GID: 3, UID: 103, FT: summary.DGUTAFileTypeCram, Age: summary.DGUTAgeM1M, Count: 7, Size: 7, Atime: time.Now().Unix() - summary.SecondsInAYear, Mtime: time.Now().Unix() - (summary.SecondsInAYear * 3)},
+	orderOfOldAges := []summary.DirGUTAge{summary.DGUTAgeAll, summary.DGUTAgeA1M, summary.DGUTAgeM2M,
+		summary.DGUTAgeM6M, summary.DGUTAgeM1Y, summary.DGUTAgeM2Y, summary.DGUTAgeM3Y,
+		summary.DGUTAgeM5Y, summary.DGUTAgeM7Y, summary.DGUTAgeA2M, summary.DGUTAgeA6M,
+		summary.DGUTAgeA1Y, summary.DGUTAgeA2Y, summary.DGUTAgeA3Y, summary.DGUTAgeA5Y,
+		summary.DGUTAgeA7Y, summary.DGUTAgeM1M,
 	}
 
-	expectedRootGUTAs = addGUTAs(t, []*GUTA{}, 1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80)
-	expectedRootGUTAs = addGUTAs(t, expectedRootGUTAs, 1, 101, summary.DGUTAFileTypeDir, 0, 8, 0, 8192, math.MaxInt, 1)
-	expectedRootGUTAs = addGUTAs(t, expectedRootGUTAs, 1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80)
-	expectedRootGUTAs = addGUTAs(t, expectedRootGUTAs, 1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60)
-	expectedRootGUTAs = addGUTAs(t, expectedRootGUTAs, 1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75)
-	expectedRootGUTAs = addGUTAs(t, expectedRootGUTAs, 2, 102, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1)
-	expectedRootGUTAs = addGUTAs(t, expectedRootGUTAs, 2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90)
-	expectedRootGUTAs = append(expectedRootGUTAs, recentAMtimesGUTA...)
+	orderOfDiffAMtimesAges := []summary.DirGUTAge{summary.DGUTAgeAll, summary.DGUTAgeA1M,
+		summary.DGUTAgeM2M, summary.DGUTAgeM6M, summary.DGUTAgeM1Y, summary.DGUTAgeM2Y,
+		summary.DGUTAgeM3Y, summary.DGUTAgeA2M, summary.DGUTAgeA6M, summary.DGUTAgeA1Y,
+		summary.DGUTAgeM1M,
+	}
 
-	expectedGUTAsAB := addGUTAs(t, []*GUTA{}, 1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80)
-	expectedGUTAsAB = addGUTAs(t, expectedGUTAsAB, 1, 101, summary.DGUTAFileTypeDir, 0, 7, 0, 7168, math.MaxInt, 1)
-	expectedGUTAsAB = addGUTAs(t, expectedGUTAsAB, 1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80)
-	expectedGUTAsAB = addGUTAs(t, expectedGUTAsAB, 1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60)
-	expectedGUTAsAB = addGUTAs(t, expectedGUTAsAB, 1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75)
-
-	expectedGUTAsABD := addGUTAs(t, []*GUTA{}, 1, 101, summary.DGUTAFileTypeDir, 0, 3, 0, 3072, math.MaxInt, 1)
-	expectedGUTAsABD = addGUTAs(t, expectedGUTAsABD, 1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60)
-	expectedGUTAsABD = addGUTAs(t, expectedGUTAsABD, 1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75)
-
-	expectedGUTAsABDF := addGUTAs(t, []*GUTA{}, 1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1)
-	expectedGUTAsABDF = addGUTAs(t, expectedGUTAsABDF, 1, 101, summary.DGUTAFileTypeCram, 1, 1, 10, 10, 50, 50)
-
-	expectedGUTAsABDG := addGUTAs(t, []*GUTA{}, 1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1)
-	expectedGUTAsABDG = addGUTAs(t, expectedGUTAsABDG, 1, 101, summary.DGUTAFileTypeCram, 2, 2, 20, 20, 60, 60)
-	expectedGUTAsABDG = addGUTAs(t, expectedGUTAsABDG, 1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75)
-
-	expectedGUTAsABE := addGUTAs(t, []*GUTA{}, 1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80)
-	expectedGUTAsABE = addGUTAs(t, expectedGUTAsABE, 1, 101, summary.DGUTAFileTypeDir, 0, 3, 0, 3072, math.MaxInt, 1)
-	expectedGUTAsABE = addGUTAs(t, expectedGUTAsABE, 1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80)
-
-	expectedGUTAsABEH := addGUTAs(t, []*GUTA{}, 1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80)
-	expectedGUTAsABEH = addGUTAs(t, expectedGUTAsABEH, 1, 101, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1)
-	expectedGUTAsABEH = addGUTAs(t, expectedGUTAsABEH, 1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80)
-
-	expectedGUTAsABEHtemp := addGUTAs(t, []*GUTA{}, 1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80)
-	expectedGUTAsABEHtemp = addGUTAs(t, expectedGUTAsABEHtemp, 1, 101, summary.DGUTAFileTypeDir,
-		0, 1, 0, 1024, math.MaxInt, 1)
-	expectedGUTAsABEHtemp = addGUTAs(t, expectedGUTAsABEHtemp, 1, 101, summary.DGUTAFileTypeBam, 1, 1, 5, 5, 80, 80)
-
-	expectedGUTAsAC := addGUTAs(t, []*GUTA{}, 2, 102, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1)
-	expectedGUTAsAC = addGUTAs(t, expectedGUTAsAC, 2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90)
-	expectedGUTAsAC = append(expectedGUTAsAC, recentAMtimesGUTA...)
-
-	expectedGUTAsACD := addGUTAs(t, []*GUTA{}, 2, 102, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1)
-	expectedGUTAsACD = addGUTAs(t, expectedGUTAsACD, 2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90)
-	expectedGUTAsACD = append(expectedGUTAsACD, recentAMtimesGUTA...)
+	expectedRootGUTAs = addGUTAs(t, []gutaInfo{
+		{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
+		{1, 101, summary.DGUTAFileTypeDir, 0, 8, 0, 8192, math.MaxInt, 1, orderOfOldAges},
+		{1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80, orderOfOldAges},
+		{1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60, orderOfOldAges},
+		{1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75, orderOfOldAges},
+		{2, 102, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
+		{2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90, orderOfOldAges},
+		{3, 103, summary.DGUTAFileTypeCram, 7, 7, 7, 7, time.Now().Unix() - summary.SecondsInAYear,
+			time.Now().Unix() - (summary.SecondsInAYear * 3), orderOfDiffAMtimesAges},
+	})
 
 	expected = []*DGUTA{
 		{
-			Dir:   "/",
-			GUTAs: expectedRootGUTAs,
+			Dir: "/", GUTAs: expectedRootGUTAs,
 		},
 		{
-			Dir:   "/a",
-			GUTAs: expectedRootGUTAs,
+			Dir: "/a", GUTAs: expectedRootGUTAs,
 		},
 		{
-			Dir:   "/a/b",
-			GUTAs: expectedGUTAsAB,
-		},
+			Dir: "/a/b", GUTAs: addGUTAs(t, []gutaInfo{
+				{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 7, 0, 7168, math.MaxInt, 1, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60, orderOfOldAges},
+				{1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75, orderOfOldAges},
+			})},
 		{
-			Dir:   "/a/b/d",
-			GUTAs: expectedGUTAsABD,
-		},
+			Dir: "/a/b/d", GUTAs: addGUTAs(t, []gutaInfo{
+				{1, 101, summary.DGUTAFileTypeDir, 0, 3, 0, 3072, math.MaxInt, 1, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60, orderOfOldAges},
+				{1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75, orderOfOldAges},
+			})},
 		{
-			Dir:   "/a/b/d/f",
-			GUTAs: expectedGUTAsABDF,
-		},
+			Dir: "/a/b/d/f", GUTAs: addGUTAs(t, []gutaInfo{
+				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeCram, 1, 1, 10, 10, 50, 50, orderOfOldAges},
+			})},
 		{
-			Dir:   "/a/b/d/g",
-			GUTAs: expectedGUTAsABDG,
-		},
+			Dir: "/a/b/d/g", GUTAs: addGUTAs(t, []gutaInfo{
+				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeCram, 2, 2, 20, 20, 60, 60, orderOfOldAges},
+				{1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75, orderOfOldAges},
+			})},
 		{
-			Dir:   "/a/b/e",
-			GUTAs: expectedGUTAsABE,
-		},
+			Dir: "/a/b/e", GUTAs: addGUTAs(t, []gutaInfo{
+				{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 3, 0, 3072, math.MaxInt, 1, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80, orderOfOldAges},
+			})},
 		{
-			Dir:   "/a/b/e/h",
-			GUTAs: expectedGUTAsABEH,
-		},
+			Dir: "/a/b/e/h", GUTAs: addGUTAs(t, []gutaInfo{
+				{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80, orderOfOldAges},
+			})},
 		{
-			Dir:   "/a/b/e/h/tmp",
-			GUTAs: expectedGUTAsABEHtemp,
-		},
+			Dir: "/a/b/e/h/tmp", GUTAs: addGUTAs(t, []gutaInfo{
+				{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeBam, 1, 1, 5, 5, 80, 80, orderOfOldAges},
+			})},
 		{
-			Dir:   "/a/c",
-			GUTAs: expectedGUTAsAC,
-		},
+			Dir: "/a/c", GUTAs: addGUTAs(t, []gutaInfo{
+				{2, 102, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
+				{2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90, orderOfOldAges},
+				{3, 103, summary.DGUTAFileTypeCram, 7, 7, 7, 7, time.Now().Unix() - summary.SecondsInAYear,
+					time.Now().Unix() - (summary.SecondsInAYear * 3), orderOfDiffAMtimesAges},
+			})},
 		{
-			Dir:   "/a/c/d",
-			GUTAs: expectedGUTAsACD,
-		},
+			Dir: "/a/c/d", GUTAs: addGUTAs(t, []gutaInfo{
+				{2, 102, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
+				{2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90, orderOfOldAges},
+				{3, 103, summary.DGUTAFileTypeCram, 7, 7, 7, 7, time.Now().Unix() - summary.SecondsInAYear,
+					time.Now().Unix() - (summary.SecondsInAYear * 3), orderOfDiffAMtimesAges},
+			})},
 	}
 
 	expectedKeys = []string{"/", "/a", "/a/b", "/a/b/d", "/a/b/d/f",
@@ -693,42 +689,36 @@ func testData(t *testing.T) (dgutaData string, expectedRootGUTAs GUTAs, expected
 	return dgutaData, expectedRootGUTAs, expected, expectedKeys
 }
 
-func addGUTAs(t *testing.T, givenGUTAs []*GUTA, gid, uid uint32, ft summary.DirGUTAFileType,
-	aCount, mCount, aSize, mSize uint64, atime, mtime int64) []*GUTA {
+func addGUTAs(t *testing.T, gutaInfo []gutaInfo) []*GUTA {
 	t.Helper()
 
-	var (
-		count uint64
-		size  uint64
-		GUTAs []*GUTA
-	)
+	GUTAs := []*GUTA{}
 
-	orderOfAges := [17]summary.DirGUTAge{summary.DGUTAgeAll, summary.DGUTAgeA1M, summary.DGUTAgeM2M,
-		summary.DGUTAgeM6M, summary.DGUTAgeM1Y, summary.DGUTAgeM2Y, summary.DGUTAgeM3Y,
-		summary.DGUTAgeM5Y, summary.DGUTAgeM7Y, summary.DGUTAgeA2M, summary.DGUTAgeA6M,
-		summary.DGUTAgeA1Y, summary.DGUTAgeA2Y, summary.DGUTAgeA3Y, summary.DGUTAgeA5Y,
-		summary.DGUTAgeA7Y, summary.DGUTAgeM1M,
-	}
-	for _, age := range orderOfAges {
-		if ageIsForAtime(age) {
-			if aCount == 0 {
+	for _, info := range gutaInfo {
+		for _, age := range info.orderOfAges {
+			count, size, exists := determineCountSize(age, info.aCount, info.mCount, info.aSize, info.mSize)
+			if !exists {
 				continue
 			}
 
-			count = aCount
-			size = aSize
-		} else {
-			count = mCount
-			size = mSize
+			GUTAs = append(GUTAs, &GUTA{GID: info.GID, UID: info.UID, FT: info.FT,
+				Age: age, Count: count, Size: size, Atime: info.aTime, Mtime: info.mTime})
 		}
-
-		GUTAs = append(GUTAs, &GUTA{GID: gid, UID: uid, FT: ft,
-			Age: age, Count: count, Size: size, Atime: atime, Mtime: mtime})
 	}
 
-	givenGUTAs = append(givenGUTAs, GUTAs...)
+	return GUTAs
+}
 
-	return givenGUTAs
+func determineCountSize(age summary.DirGUTAge, aCount, mCount, aSize, mSize uint64) (count, size uint64, exists bool) {
+	if ageIsForAtime(age) {
+		if aCount == 0 {
+			return 0, 0, false
+		}
+
+		return aCount, aSize, true
+	}
+
+	return mCount, mSize, true
 }
 
 func ageIsForAtime(age summary.DirGUTAge) bool {

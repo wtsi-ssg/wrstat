@@ -56,7 +56,7 @@ compressed and placed at the root of the output directory in a file called
 
 The same applies to the *.log files, being called 'combine.log.gz'.
 
-The *.dugt files will be turned in to databases in a directory
+The *.dugta files will be turned in to databases in a directory
 'combine.dguta.db'.
 
 The *.bygroup files are merged but not compressed and called 'combine.bygroup'.

@@ -602,7 +602,6 @@ func (d *DB) DirInfo(dir string, filter *Filter) (*DirSummary, error) {
 // content of the result instead.
 func getDGUTAFromDBAndAppend(b *bolt.Bucket, dir string, ch codec.Handle, dguta *DGUTA) error {
 	thisDGUTA, err := getDGUTAFromDB(b, dir, ch)
-
 	if err != nil {
 		return err
 	}

@@ -126,12 +126,12 @@ func parseDGUTALine(line string) (string, *GUTA, error) {
 	}
 
 	return path, &GUTA{
-		GID:   uint32(ints[0]),
-		UID:   uint32(ints[1]),
+		GID:   uint32(ints[0]), //nolint:gosec
+		UID:   uint32(ints[1]), //nolint:gosec
 		FT:    summary.DirGUTAFileType(ints[2]),
 		Age:   summary.DirGUTAge(ints[3]),
-		Count: uint64(ints[4]),
-		Size:  uint64(ints[5]),
+		Count: uint64(ints[4]), //nolint:gosec
+		Size:  uint64(ints[5]), //nolint:gosec
 		Atime: ints[6],
 		Mtime: ints[7],
 	}, nil
