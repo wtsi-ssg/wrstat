@@ -1112,6 +1112,13 @@ func TestCombine(t *testing.T) {
 		} {
 			ds, err := db.DirInfo(test.Directory, test.Filter)
 			So(err, ShouldBeNil)
+
+			if test.NumFiles == 0 {
+				So(ds, ShouldBeNil)
+
+				continue
+			}
+
 			So(ds.Count, ShouldEqual, test.NumFiles)
 			So(ds.Size, ShouldEqual, test.TotalSize)
 			So(ds.Mtime, ShouldEqual, time.Unix(test.NewestMTime, 0))

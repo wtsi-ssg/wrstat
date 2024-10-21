@@ -375,13 +375,7 @@ func TestDGUTA(t *testing.T) {
 							UIDs: []uint32{102},
 							FTs:  []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}})
 						So(errd, ShouldBeNil)
-						So(ds.Count, ShouldEqual, 0)
-						So(ds.Size, ShouldEqual, 0)
-						So(ds.Atime, ShouldEqual, time.Unix(0, 0))
-						So(ds.Mtime, ShouldEqual, time.Unix(0, 0))
-						So(ds.UIDs, ShouldResemble, []uint32{})
-						So(ds.GIDs, ShouldResemble, []uint32{})
-						So(ds.FTs, ShouldResemble, []summary.DirGUTAFileType{})
+						So(ds, ShouldBeNil)
 
 						ds, errd = db.DirInfo("/", &Filter{FTs: []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}})
 						So(errd, ShouldBeNil)

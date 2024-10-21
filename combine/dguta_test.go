@@ -90,8 +90,7 @@ func TestDGUTAFiles(t *testing.T) {
 
 				ds, err = db.DirInfo("/", &dguta.Filter{Age: summary.DGUTAgeA7Y})
 				So(err, ShouldBeNil)
-				So(ds.Count, ShouldBeZeroValue)
-				So(ds.Size, ShouldBeZeroValue)
+				So(ds, ShouldBeNil)
 			})
 		})
 	})

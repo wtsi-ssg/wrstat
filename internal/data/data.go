@@ -281,7 +281,7 @@ func RealGIDAndUID() (int, int, string, string, error) {
 	return int(gid64), int(uid64), group.Name, u.Username, nil
 }
 
-func FakeFilesForDGUTADBForBasedirsTesting(gid, uid int) ([]string, []TestFile) {
+func FakeFilesForDGUTADBForBasedirsTesting(gid, uid int, refTime int64) ([]string, []TestFile) {
 	projectA := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "A")
 	projectB125 := filepath.Join("/", "lustre", "scratch125", "humgen", "projects", "B")
 	projectB123 := filepath.Join("/", "lustre", "scratch123", "hgi", "mdt1", "projects", "B")
@@ -355,6 +355,15 @@ func FakeFilesForDGUTADBForBasedirsTesting(gid, uid int) ([]string, []TestFile) 
 			UID:            102,
 			ATime:          50,
 			MTime:          50,
+		},
+		{
+			Path:           filepath.Join(projectA, "age.bam"),
+			NumFiles:       1,
+			SizeOfEachFile: 60,
+			GID:            3,
+			UID:            103,
+			ATime:          int(refTime - summary.SecondsInAYear*2),
+			MTime:          int(refTime - summary.SecondsInAYear*3),
 		},
 	}
 

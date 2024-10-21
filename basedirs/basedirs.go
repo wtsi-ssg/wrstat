@@ -35,6 +35,7 @@ import (
 
 	"github.com/ugorji/go/codec"
 	"github.com/wtsi-ssg/wrstat/v5/dguta"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
 // BaseDirs is used to summarise disk usage information by base directory and
@@ -79,10 +80,10 @@ func (b *BaseDirs) SetMountPoints(mountpoints []string) {
 }
 
 // CalculateForGroup calculates all the base directories for the given group.
-func (b *BaseDirs) CalculateForGroup(gid uint32) (dguta.DCSs, error) {
+func (b *BaseDirs) CalculateForGroup(gid uint32, age summary.DirGUTAge) (dguta.DCSs, error) {
 	var dcss dguta.DCSs
 
-	if err := b.filterWhereResults(&dguta.Filter{GIDs: []uint32{gid}}, func(ds *dguta.DirSummary) {
+	if err := b.filterWhereResults(&dguta.Filter{GIDs: []uint32{gid}, Age: age}, func(ds *dguta.DirSummary) {
 		dcss = append(dcss, ds)
 	}); err != nil {
 		return nil, err
@@ -133,10 +134,10 @@ func childOfPreviousResult(dir, previous string) bool {
 }
 
 // CalculateForUser calculates all the base directories for the given user.
-func (b *BaseDirs) CalculateForUser(uid uint32) (dguta.DCSs, error) {
+func (b *BaseDirs) CalculateForUser(uid uint32, age summary.DirGUTAge) (dguta.DCSs, error) {
 	var dcss dguta.DCSs
 
-	if err := b.filterWhereResults(&dguta.Filter{UIDs: []uint32{uid}}, func(ds *dguta.DirSummary) {
+	if err := b.filterWhereResults(&dguta.Filter{UIDs: []uint32{uid}, Age: age}, func(ds *dguta.DirSummary) {
 		dcss = append(dcss, ds)
 	}); err != nil {
 		return nil, err

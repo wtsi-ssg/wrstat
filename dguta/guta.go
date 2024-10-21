@@ -192,6 +192,10 @@ func (g GUTAs) Summary(filter *Filter) *DirSummary { //nolint:funlen
 		addGUTAToSummary(guta, &count, &size, &atime, &mtime, &updateTime, uniqueUIDs, uniqueGIDs)
 	}
 
+	if count == 0 {
+		return nil
+	}
+
 	return &DirSummary{
 		Count: count,
 		Size:  size,

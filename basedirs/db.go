@@ -167,7 +167,7 @@ func (b *BaseDirs) gidsToBaseDirs(gids []uint32) (map[uint32]dguta.DCSs, error) 
 	gidBase := make(map[uint32]dguta.DCSs, len(gids))
 
 	for _, gid := range gids {
-		dcss, err := b.CalculateForGroup(gid)
+		dcss, err := b.CalculateForGroup(gid, summary.DGUTAgeAll)
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +228,7 @@ func (b *BaseDirs) storeUIDBaseDirs(tx *bolt.Tx, uids []uint32) error {
 	uub := tx.Bucket([]byte(userUsageBucket))
 
 	for _, uid := range uids {
-		dcss, err := b.CalculateForUser(uid)
+		dcss, err := b.CalculateForUser(uid, summary.DGUTAgeAll)
 		if err != nil {
 			return err
 		}
@@ -506,7 +506,7 @@ func (b *BaseDirs) storeUIDSubDirs(tx *bolt.Tx, uids []uint32) error {
 	bucket := tx.Bucket([]byte(userSubDirsBucket))
 
 	for _, uid := range uids {
-		dcss, err := b.CalculateForUser(uid)
+		dcss, err := b.CalculateForUser(uid, summary.DGUTAgeAll)
 		if err != nil {
 			return err
 		}

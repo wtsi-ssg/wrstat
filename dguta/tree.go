@@ -119,6 +119,10 @@ func (t *Tree) DirInfo(dir string, filter *Filter) (*DirInfo, error) {
 		return nil, err
 	}
 
+	if dcs == nil {
+		return nil, nil
+	}
+
 	di := &DirInfo{
 		Current: dcs,
 	}
@@ -137,6 +141,9 @@ func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 
 	for _, child := range children {
 		ds, _ := t.getSummaryInfo(child, filter) //nolint:errcheck
+		if ds == nil {
+			continue
+		}
 
 		if ds.Count > 0 {
 			return true
@@ -151,7 +158,9 @@ func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 // those files, the file types of those files.
 func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
 	ds, err := t.db.DirInfo(dir, filter)
-	ds.Dir = dir
+	if ds != nil {
+		ds.Dir = dir
+	}
 
 	return ds, err
 }
@@ -163,6 +172,10 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 		dcs, errc := t.getSummaryInfo(child, filter)
 		if errc != nil {
 			return errc
+		}
+
+		if dcs == nil {
+			continue
 		}
 
 		if dcs.Count > 0 {
@@ -223,6 +236,10 @@ func (t *Tree) recurseWhere(dir string, filter *Filter, recurseCount func(string
 		return nil, err
 	}
 
+	if di == nil {
+		return nil, nil
+	}
+
 	dcss := DCSs{di.Current}
 
 	if recurseCount(dir) > step {
@@ -232,7 +249,9 @@ func (t *Tree) recurseWhere(dir string, filter *Filter, recurseCount func(string
 				return nil, err
 			}
 
-			dcss = append(dcss, d...)
+			if d != nil {
+				dcss = append(dcss, d...)
+			}
 		}
 	}
 
@@ -244,6 +263,10 @@ func (t *Tree) where0(dir string, filter *Filter) (*DirInfo, error) {
 	di, err := t.DirInfo(dir, filter)
 	if err != nil {
 		return nil, err
+	}
+
+	if di == nil {
+		return nil, nil
 	}
 
 	for di.IsSameAsChild() {

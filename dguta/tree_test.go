@@ -121,11 +121,7 @@ func TestTree(t *testing.T) {
 
 			di, err = tree.DirInfo("/", &Filter{FTs: []summary.DirGUTAFileType{summary.DGUTAFileTypeCompressed}})
 			So(err, ShouldBeNil)
-			So(di, ShouldResemble, &DirInfo{
-				Current: &DirSummary{"/", 0, 0, time.Unix(0, 0), time.Unix(0, 0),
-					[]uint32{}, []uint32{}, []summary.DirGUTAFileType{}, summary.DGUTAgeAll, dbModTime},
-				Children: nil,
-			})
+			So(di, ShouldBeNil)
 		})
 
 		Convey("You can ask the Tree if a dir has children", func() {
