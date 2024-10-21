@@ -23,7 +23,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-package dgut
+package dguta
 
 import (
 	"bufio"
@@ -40,33 +40,34 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
-const ErrInvalidFormat = Error("the provided data was not in dgut format")
+const ErrInvalidFormat = Error("the provided data was not in dguta format")
 const ErrBlankLine = Error("the provided line had no information")
 
 const (
-	gutDataCols    = 8
-	gutDataIntCols = 7
+	gutaDataCols    = 9
+	gutaDataIntCols = 8
 )
 
-type dgutParserCallBack func(*DGUT)
+type dgutaParserCallBack func(*DGUTA)
 
-// parseDGUTLines will parse the given dgut file data (as output by
-// summary.DirGroupUserType.Output()) and send *DGUT structs to your callback.
+// parseDGUTALines will parse the given dguta file data (as output by
+// summary.DirGroupUserTypeAge.Output()) and send *DGUTA structs to your
+// callback.
 //
-// Each *DGUT will correspond to one of the directories in your dgut file data,
-// and contain all the *GUT information for that directory. Your callback will
-// receive exactly 1 *DGUT per unique directory. (This relies on the dgut file
-// data being sorted, as it normally would be.)
+// Each *DGUTA will correspond to one of the directories in your dguta file
+// data, and contain all the *GUTA information for that directory. Your callback
+// will receive exactly 1 *DGUTA per unique directory. (This relies on the dguta
+// file data being sorted, as it normally would be.)
 //
-// Any issues with parsing the dgut file data will result in this method
+// Any issues with parsing the dguta file data will result in this method
 // returning an error.
-func parseDGUTLines(data io.Reader, cb dgutParserCallBack) error {
-	dgut, guts := &DGUT{}, []*GUT{}
+func parseDGUTALines(data io.Reader, cb dgutaParserCallBack) error {
+	dguta, gutas := &DGUTA{}, []*GUTA{}
 
 	scanner := bufio.NewScanner(data)
 
 	for scanner.Scan() {
-		thisDir, g, err := parseDGUTLine(scanner.Text())
+		thisDir, g, err := parseDGUTALine(scanner.Text())
 		if err != nil {
 			if errors.Is(err, ErrBlankLine) {
 				continue
@@ -75,36 +76,36 @@ func parseDGUTLines(data io.Reader, cb dgutParserCallBack) error {
 			return err
 		}
 
-		if thisDir != dgut.Dir {
-			populateAndEmitDGUT(dgut, guts, cb)
-			dgut, guts = &DGUT{Dir: thisDir}, []*GUT{}
+		if thisDir != dguta.Dir {
+			populateAndEmitDGUTA(dguta, gutas, cb)
+			dguta, gutas = &DGUTA{Dir: thisDir}, []*GUTA{}
 		}
 
-		guts = append(guts, g)
+		gutas = append(gutas, g)
 	}
 
-	if dgut.Dir != "" {
-		dgut.GUTs = guts
-		cb(dgut)
+	if dguta.Dir != "" {
+		dguta.GUTAs = gutas
+		cb(dguta)
 	}
 
 	return scanner.Err()
 }
 
-// populateAndEmitDGUT adds guts to dguts and sends dgut to cb, but only if
-// the dgut has a Dir.
-func populateAndEmitDGUT(dgut *DGUT, guts []*GUT, cb dgutParserCallBack) {
-	if dgut.Dir != "" {
-		dgut.GUTs = guts
-		cb(dgut)
+// populateAndEmitDGUTA adds gutas to dgutas and sends dguta to cb, but only if
+// the dguta has a Dir.
+func populateAndEmitDGUTA(dguta *DGUTA, gutas []*GUTA, cb dgutaParserCallBack) {
+	if dguta.Dir != "" {
+		dguta.GUTAs = gutas
+		cb(dguta)
 	}
 }
 
-// parseDGUTLine parses a line of summary.DirGroupUserType.Output() into a
-// directory string and a *dgut for the other information.
+// parseDGUTALine parses a line of summary.DirGroupUserType.Output() into a
+// directory string and a *dguta for the other information.
 //
 // Returns an error if line didn't have the expected format.
-func parseDGUTLine(line string) (string, *GUT, error) {
+func parseDGUTALine(line string) (string, *GUTA, error) {
 	parts, err := splitDGUTLine(line)
 	if err != nil {
 		return "", nil, err
@@ -124,14 +125,15 @@ func parseDGUTLine(line string) (string, *GUT, error) {
 		return "", nil, err
 	}
 
-	return path, &GUT{
+	return path, &GUTA{
 		GID:   uint32(ints[0]),
 		UID:   uint32(ints[1]),
-		FT:    summary.DirGUTFileType(ints[2]),
-		Count: ints[3],
-		Size:  ints[4],
-		Atime: int64(ints[5]),
-		Mtime: int64(ints[6]),
+		FT:    summary.DirGUTAFileType(ints[2]),
+		Age:   summary.DirGUTAge(ints[3]),
+		Count: uint64(ints[4]),
+		Size:  uint64(ints[5]),
+		Atime: ints[6],
+		Mtime: ints[7],
 	}, nil
 }
 
@@ -140,7 +142,7 @@ func splitDGUTLine(line string) ([]string, error) {
 	line = strings.TrimSuffix(line, "\n")
 
 	parts := strings.Split(line, "\t")
-	if len(parts) != gutDataCols {
+	if len(parts) != gutaDataCols {
 		return nil, ErrInvalidFormat
 	}
 
@@ -149,25 +151,25 @@ func splitDGUTLine(line string) ([]string, error) {
 
 // gutLinePartsToInts takes the output of splitDGUTLine() and returns the last
 // 7 columns as ints.
-func gutLinePartsToInts(parts []string) ([]uint64, error) {
-	ints := make([]uint64, gutDataIntCols)
+func gutLinePartsToInts(parts []string) ([]int64, error) {
+	ints := make([]int64, gutaDataIntCols)
 
 	var err error
 
-	if ints[0], err = strconv.ParseUint(parts[1], 10, 32); err != nil {
+	if ints[0], err = strconv.ParseInt(parts[1], 10, 32); err != nil {
 		return nil, ErrInvalidFormat
 	}
 
-	if ints[1], err = strconv.ParseUint(parts[2], 10, 32); err != nil {
+	if ints[1], err = strconv.ParseInt(parts[2], 10, 32); err != nil {
 		return nil, ErrInvalidFormat
 	}
 
-	if ints[2], err = strconv.ParseUint(parts[3], 10, 8); err != nil {
+	if ints[2], err = strconv.ParseInt(parts[3], 10, 8); err != nil {
 		return nil, ErrInvalidFormat
 	}
 
-	for i := 3; i < 7; i++ {
-		if ints[i], err = strconv.ParseUint(parts[i+1], 10, 64); err != nil {
+	for i := 3; i < gutaDataIntCols; i++ {
+		if ints[i], err = strconv.ParseInt(parts[i+1], 10, 64); err != nil {
 			return nil, ErrInvalidFormat
 		}
 	}

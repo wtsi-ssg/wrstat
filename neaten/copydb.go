@@ -34,10 +34,10 @@ import (
 	"github.com/otiai10/copy"
 )
 
-// MergeDGUTDBDirectories copies the dgut.db numbered subdirectories from inside
-// sourceDir to inside destDir, renaming them so they don't conflict with
+// MergeDGUTADBDirectories copies the dguta.db numbered subdirectories from
+// inside sourceDir to inside destDir, renaming them so they don't conflict with
 // existing destDir subdirectories.
-func MergeDGUTDBDirectories(sourceDir, destDir string) error {
+func MergeDGUTADBDirectories(sourceDir, destDir string) error {
 	highestSubdirNum, err := getHighestNumberSubdir(destDir)
 	if err != nil {
 		return err

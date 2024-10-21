@@ -62,9 +62,12 @@ issues:
         - gocyclo
         - cyclop
         - revive
+    - path: dgut/dguta_test\.go
+      linters:
+        - lll
     - path: internal
       linters:
-        - gomnd
+        - mnd
         - funlen
     - path: cmd
       linters:

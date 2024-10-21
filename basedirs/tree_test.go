@@ -30,6 +30,7 @@ package basedirs
 import (
 	"sort"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
@@ -38,15 +39,17 @@ import (
 
 func TestTree(t *testing.T) {
 	Convey("Given a Tree", t, func() {
-		tree, _, err := internaldb.CreateExampleDGUTDBForBasedirs(t)
+		refTime := time.Now().Unix()
+
+		tree, _, err := internaldb.CreateExampleDGUTADBForBasedirs(t, refTime)
 		So(err, ShouldBeNil)
 
 		Convey("You can get all the gids and uids in it", func() {
 			gids, uids, err := getAllGIDsandUIDsInTree(tree)
 			So(err, ShouldBeNil)
 
-			expectedGIDs := []uint32{1, 2, 77777}
-			expectedUIDs := []uint32{101, 102, 88888}
+			expectedGIDs := []uint32{1, 2, 3, 77777}
+			expectedUIDs := []uint32{101, 102, 103, 88888}
 
 			gid, uid, _, _, err := internaldata.RealGIDAndUID()
 			So(err, ShouldBeNil)

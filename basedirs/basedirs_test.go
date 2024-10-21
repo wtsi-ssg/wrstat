@@ -29,6 +29,7 @@ package basedirs
 
 import (
 	"os"
+	"os/user"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -38,7 +39,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dguta"
 	internaldata "github.com/wtsi-ssg/wrstat/v5/internal/data"
 	internaldb "github.com/wtsi-ssg/wrstat/v5/internal/db"
 	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
@@ -61,6 +62,7 @@ func TestBaseDirs(t *testing.T) {
 2,/nfs/scratch125,300,30
 2,/nfs/scratch123,400,40
 77777,/nfs/scratch125,500,50
+3,/lustre/scratch125,300,30
 `)
 
 	defaultConfig := Config{
@@ -82,11 +84,30 @@ func TestBaseDirs(t *testing.T) {
 		},
 	}
 
+	ageGroupName := "3"
+
+	ageGroup, err := user.LookupGroupId("3")
+	if err == nil {
+		ageGroupName = ageGroup.Name
+	}
+
+	ageUserName := "103"
+
+	ageUser, err := user.LookupId("103")
+	if err == nil {
+		ageUserName = ageUser.Username
+	}
+
+	refTime := time.Now().Unix()
+	expectedAgeAtime := time.Unix(refTime-summary.SecondsInAYear*2, 0)
+	expectedAgeMtime := time.Unix(refTime-summary.SecondsInAYear*3, 0)
+	expectedFixedAgeMtime := fixtimes.FixTime(expectedAgeMtime)
+
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
 		gid, uid, groupName, username, err := internaldata.RealGIDAndUID()
 		So(err, ShouldBeNil)
 
-		locDirs, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
+		locDirs, files := internaldata.FakeFilesForDGUTADBForBasedirsTesting(gid, uid, refTime)
 
 		const (
 			halfGig = 1 << 29
@@ -97,7 +118,7 @@ func TestBaseDirs(t *testing.T) {
 		files[1].SizeOfEachFile = twoGig
 
 		yesterday := fixtimes.FixTime(time.Now().Add(-24 * time.Hour))
-		tree, treePath, err := internaldb.CreateDGUTDBFromFakeFiles(t, files, yesterday)
+		tree, treePath, err := internaldb.CreateDGUTADBFromFakeFiles(t, files, yesterday)
 		So(err, ShouldBeNil)
 
 		projectA := locDirs[0]
@@ -128,12 +149,12 @@ func TestBaseDirs(t *testing.T) {
 			expectedAtime := time.Unix(50, 0)
 			expectedMtime := time.Unix(50, 0)
 			expectedMtimeA := time.Unix(100, 0)
-			expectedFTsBam := []summary.DirGUTFileType{summary.DGUTFileTypeBam}
+			expectedFTsBam := []summary.DirGUTAFileType{summary.DGUTAFileTypeBam}
 
 			Convey("of each group", func() { //nolint:dupl
-				dcss, err := bd.CalculateForGroup(1)
+				dcss, err := bd.CalculateForGroup(1, summary.DGUTAgeAll)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
+				So(dcss, ShouldResemble, dguta.DCSs{
 					{
 						Dir:     projectA,
 						Count:   2,
@@ -147,9 +168,9 @@ func TestBaseDirs(t *testing.T) {
 					},
 				})
 
-				dcss, err = bd.CalculateForGroup(2)
+				dcss, err = bd.CalculateForGroup(2, summary.DGUTAgeAll)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
+				So(dcss, ShouldResemble, dguta.DCSs{
 					{
 						Dir:     projectC1,
 						Count:   1,
@@ -187,9 +208,9 @@ func TestBaseDirs(t *testing.T) {
 			})
 
 			Convey("of each user", func() { //nolint:dupl
-				dcss, err := bd.CalculateForUser(101)
+				dcss, err := bd.CalculateForUser(101, summary.DGUTAgeAll)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
+				So(dcss, ShouldResemble, dguta.DCSs{
 					{
 						Dir:     projectA,
 						Count:   2,
@@ -203,9 +224,9 @@ func TestBaseDirs(t *testing.T) {
 					},
 				})
 
-				dcss, err = bd.CalculateForUser(102)
+				dcss, err = bd.CalculateForUser(102, summary.DGUTAgeAll)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dgut.DCSs{
+				So(dcss, ShouldResemble, dguta.DCSs{
 					{
 						Dir:     projectB123,
 						Count:   1,
@@ -240,6 +261,28 @@ func TestBaseDirs(t *testing.T) {
 						Modtime: dbModTime,
 					},
 				})
+
+				dcss, err = bd.CalculateForUser(103, summary.DGUTAgeA1Y)
+
+				So(err, ShouldBeNil)
+				So(dcss, ShouldResemble, dguta.DCSs{
+					{
+						Dir:     projectA,
+						Count:   1,
+						Size:    60,
+						Atime:   expectedAgeAtime,
+						Mtime:   expectedAgeMtime,
+						GIDs:    []uint32{3},
+						UIDs:    []uint32{103},
+						FTs:     expectedFTsBam,
+						Modtime: dbModTime,
+						Age:     summary.DGUTAgeA1Y,
+					},
+				})
+
+				dcss, err = bd.CalculateForUser(103, summary.DGUTAgeA7Y)
+				So(err, ShouldBeNil)
+				So(dcss, ShouldBeNil)
 			})
 		})
 
@@ -282,7 +325,7 @@ func TestBaseDirs(t *testing.T) {
 					fixUsageTimes(mainTable)
 
 					So(err, ShouldBeNil)
-					So(len(mainTable), ShouldEqual, 6)
+					So(len(mainTable), ShouldEqual, 7)
 					So(mainTable, ShouldResemble, []*Usage{
 						{
 							Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
@@ -305,6 +348,10 @@ func TestBaseDirs(t *testing.T) {
 						{
 							Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB125,
 							UsageSize: 20, QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime,
+						},
+						{
+							Name: ageGroupName, GID: 3, UIDs: []uint32{103}, Owner: "", BaseDir: projectA,
+							UsageSize: 60, QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedFixedAgeMtime,
 						},
 						{
 							Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2, UsageSize: 60,
@@ -340,6 +387,10 @@ func TestBaseDirs(t *testing.T) {
 							Name: username, UID: uint32(uid), GIDs: []uint32{uint32(gid)}, BaseDir: projectD,
 							UsageSize: 15, UsageInodes: 5, Mtime: expectedMtime,
 						},
+						{
+							Name: ageUserName, UID: 103, GIDs: []uint32{3}, BaseDir: projectA, UsageSize: 60,
+							UsageInodes: 1, Mtime: expectedFixedAgeMtime,
+						},
 					}
 
 					sort.Slice(expectedMainTable, func(i, j int) bool {
@@ -350,7 +401,7 @@ func TestBaseDirs(t *testing.T) {
 					})
 
 					So(err, ShouldBeNil)
-					So(len(mainTable), ShouldEqual, 6)
+					So(len(mainTable), ShouldEqual, 7)
 					So(mainTable, ShouldResemble, expectedMainTable)
 				})
 
@@ -444,7 +495,7 @@ func TestBaseDirs(t *testing.T) {
 						err = fs.Touch(treePath, time.Now())
 						So(err, ShouldBeNil)
 
-						tree, err = dgut.NewTree(treePath)
+						tree, err = dguta.NewTree(treePath)
 						So(err, ShouldBeNil)
 
 						bd, err = NewCreator(dbPath, defaultConfig, tree, quotas)
@@ -468,14 +519,14 @@ func TestBaseDirs(t *testing.T) {
 					})
 
 					Convey("Then you can add and retrieve a new day's usage and quota", func() {
-						_, files := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
+						_, files := internaldata.FakeFilesForDGUTADBForBasedirsTesting(gid, uid, refTime)
 						files[0].NumFiles = 2
 						files[0].SizeOfEachFile = halfGig
 						files[1].SizeOfEachFile = twoGig
 
 						files = files[:len(files)-1]
 						today := fixtimes.FixTime(time.Now())
-						tree, _, err = internaldb.CreateDGUTDBFromFakeFiles(t, files, today)
+						tree, _, err = internaldb.CreateDGUTADBFromFakeFiles(t, files, today)
 						So(err, ShouldBeNil)
 
 						const fiveGig = 5 * (1 << 30)
@@ -503,19 +554,20 @@ func TestBaseDirs(t *testing.T) {
 						mainTable, err := bdr.GroupUsage()
 						fixUsageTimes(mainTable)
 
+						leeway := 3 * time.Second
+
 						dateNoSpace := today.Add(4 * 24 * time.Hour)
 						So(mainTable[0].DateNoSpace, ShouldHappenOnOrBetween,
-							dateNoSpace.Add(-2*time.Second), dateNoSpace.Add(2*time.Second))
+							dateNoSpace.Add(-leeway), dateNoSpace.Add(leeway))
 
 						dateNoTime := today.Add(18 * 24 * time.Hour)
 						So(mainTable[0].DateNoFiles, ShouldHappenOnOrBetween,
-							dateNoTime.Add(-2*time.Second), dateNoTime.Add(2*time.Second))
+							dateNoTime.Add(-leeway), dateNoTime.Add(leeway))
 
 						mainTable[0].DateNoSpace = time.Time{}
 						mainTable[0].DateNoFiles = time.Time{}
 
-						So(err, ShouldBeNil)
-						So(len(mainTable), ShouldEqual, 6)
+						So(len(mainTable), ShouldEqual, 7)
 						So(mainTable, ShouldResemble, []*Usage{
 							{
 								Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
@@ -541,6 +593,11 @@ func TestBaseDirs(t *testing.T) {
 								Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB125,
 								UsageSize: 20, QuotaSize: 300, UsageInodes: 1,
 								QuotaInodes: 30, Mtime: expectedMtime,
+							},
+							{
+								Name: ageGroupName, GID: 3, UIDs: []uint32{103}, Owner: "", BaseDir: projectA,
+								UsageSize: 60, QuotaSize: 300, UsageInodes: 1,
+								QuotaInodes: 30, Mtime: expectedFixedAgeMtime,
 							},
 							{
 								Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2,
@@ -582,8 +639,8 @@ func TestBaseDirs(t *testing.T) {
 						// actually expectedMtime, but we don't  have a way
 						// of getting correct answer for "."
 						LastModified: expectedMtimeA,
-						FileUsage: map[summary.DirGUTFileType]uint64{
-							summary.DGUTFileTypeBam: halfGig,
+						FileUsage: map[summary.DirGUTAFileType]uint64{
+							summary.DGUTAFileTypeBam: halfGig,
 						},
 					},
 					{
@@ -591,8 +648,8 @@ func TestBaseDirs(t *testing.T) {
 						NumFiles:     1,
 						SizeFiles:    twoGig,
 						LastModified: expectedMtimeA,
-						FileUsage: map[summary.DirGUTFileType]uint64{
-							summary.DGUTFileTypeBam: twoGig,
+						FileUsage: map[summary.DirGUTAFileType]uint64{
+							summary.DGUTAFileTypeBam: twoGig,
 						},
 					},
 				}
@@ -639,7 +696,7 @@ func TestBaseDirs(t *testing.T) {
 							SizeFiles:    20,
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
-								summary.DGUTFileTypeBam: 20,
+								summary.DGUTAFileTypeBam: 20,
 							},
 						},
 					})
@@ -655,7 +712,7 @@ func TestBaseDirs(t *testing.T) {
 							SizeFiles:    30,
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
-								summary.DGUTFileTypeBam: 30,
+								summary.DGUTAFileTypeBam: 30,
 							},
 						},
 					})
@@ -671,10 +728,10 @@ func TestBaseDirs(t *testing.T) {
 							SizeFiles:    6,
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
-								summary.DGUTFileTypeTemp: 1026,
-								summary.DGUTFileTypeBam:  1,
-								summary.DGUTFileTypeSam:  2,
-								summary.DGUTFileTypeCram: 3,
+								summary.DGUTAFileTypeTemp: 1026,
+								summary.DGUTAFileTypeBam:  1,
+								summary.DGUTAFileTypeSam:  2,
+								summary.DGUTAFileTypeCram: 3,
 							},
 						},
 						{
@@ -683,7 +740,7 @@ func TestBaseDirs(t *testing.T) {
 							SizeFiles:    9,
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
-								summary.DGUTFileTypePedBed: 9,
+								summary.DGUTAFileTypePedBed: 9,
 							},
 						},
 					})
@@ -702,6 +759,7 @@ func TestBaseDirs(t *testing.T) {
 				}
 
 				expectedDaysSince := daysSinceString(expectedMtime)
+				expectedAgeDaysSince := daysSinceString(expectedFixedAgeMtime)
 
 				Convey("getting weaver-like output for group base-dirs", func() {
 					wbo, err := bdr.GroupUsageTable()
@@ -763,6 +821,17 @@ func TestBaseDirs(t *testing.T) {
 							quotaStatusOK,
 						),
 						joinWithTabs(
+							ageGroupName,
+							"",
+							projectA,
+							expectedAgeDaysSince,
+							"60",
+							"300",
+							"1",
+							"30",
+							quotaStatusOK,
+						),
+						joinWithTabs(
 							"77777",
 							"",
 							user2,
@@ -787,6 +856,17 @@ func TestBaseDirs(t *testing.T) {
 					}
 
 					rowsData := [][]string{
+						{
+							ageUserName,
+							"",
+							projectA,
+							expectedAgeDaysSince,
+							"60",
+							"0",
+							"1",
+							"0",
+							quotaStatusOK,
+						},
 						{
 							"user101",
 							"",
@@ -919,12 +999,12 @@ func TestBaseDirs(t *testing.T) {
 			})
 
 			Convey("and merge with another database", func() {
-				_, newFiles := internaldata.FakeFilesForDGUTDBForBasedirsTesting(gid, uid)
+				_, newFiles := internaldata.FakeFilesForDGUTADBForBasedirsTesting(gid, uid, refTime)
 				for i := range newFiles {
 					newFiles[i].Path = "/nfs" + newFiles[i].Path[7:]
 				}
 
-				newTree, _, err := internaldb.CreateDGUTDBFromFakeFiles(t, newFiles, yesterday)
+				newTree, _, err := internaldb.CreateDGUTADBFromFakeFiles(t, newFiles, yesterday)
 				So(err, ShouldBeNil)
 
 				newDBPath := filepath.Join(dir, "newdir.db")
@@ -972,15 +1052,15 @@ func TestBaseDirs(t *testing.T) {
 					return lustreKeys, nfsKeys
 				}
 
-				expectedKeys := 6
+				expectedKeys := 7
 
 				lustreKeys, nfsKeys := countKeys(groupUsageBucket)
 				So(lustreKeys, ShouldEqual, expectedKeys)
 				So(nfsKeys, ShouldEqual, expectedKeys)
 
 				lustreKeys, nfsKeys = countKeys(groupHistoricalBucket)
-				So(lustreKeys, ShouldEqual, 5)
-				So(nfsKeys, ShouldEqual, 5)
+				So(lustreKeys, ShouldEqual, 6)
+				So(nfsKeys, ShouldEqual, 6)
 
 				lustreKeys, nfsKeys = countKeys(groupSubDirsBucket)
 				So(lustreKeys, ShouldEqual, expectedKeys)
@@ -999,14 +1079,14 @@ func TestBaseDirs(t *testing.T) {
 				info, err := Info(dbPath)
 				So(err, ShouldBeNil)
 				So(info, ShouldResemble, &DBInfo{
-					GroupDirCombos:    6,
-					GroupMountCombos:  5,
-					GroupHistories:    5,
-					GroupSubDirCombos: 6,
-					GroupSubDirs:      8,
-					UserDirCombos:     6,
-					UserSubDirCombos:  6,
-					UserSubDirs:       8,
+					GroupDirCombos:    7,
+					GroupMountCombos:  6,
+					GroupHistories:    6,
+					GroupSubDirCombos: 7,
+					GroupSubDirs:      9,
+					UserDirCombos:     7,
+					UserSubDirCombos:  7,
+					UserSubDirs:       9,
 				})
 			})
 		})

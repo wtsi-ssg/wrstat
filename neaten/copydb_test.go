@@ -91,7 +91,7 @@ func makeFakeDgutDB(t *testing.T, dir string, subFolderNum int) {
 		t.Fatalf("failed to make subdir: %s", err)
 	}
 
-	for _, basename := range []string{"dgut.db", "dgut.db.children"} {
+	for _, basename := range []string{"dguta.db", "dguta.db.children"} {
 		err = CreateFile(filepath.Join(subDir, basename))
 		if err != nil {
 			t.Fatalf("failed to make subdir: %s", err)
@@ -108,7 +108,7 @@ func checkDgutDBDir(t *testing.T, dir string, subFolderNum int) error {
 
 	subDir := subDir(dir, subFolderNum)
 
-	dgutdbPath := filepath.Join(subDir, "dgut.db")
+	dgutdbPath := filepath.Join(subDir, "dguta.db")
 
 	_, err := os.Stat(dgutdbPath)
 	if err != nil {
@@ -125,7 +125,7 @@ func checkDgutDBDir(t *testing.T, dir string, subFolderNum int) error {
 func checkMergeWorks(t *testing.T, sourceDir, destDir string, expectedDirs int) error {
 	t.Helper()
 
-	err := MergeDGUTDBDirectories(sourceDir, destDir)
+	err := MergeDGUTADBDirectories(sourceDir, destDir)
 	if err != nil {
 		return err
 	}
