@@ -432,11 +432,7 @@ func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {
 		atime = time.Now().Unix()
 		path = filepath.Join(path, "leaf")
 
-		if isTemp(path) {
-			gutaKeys = appendGUTAKeys(gutaKeys, stat.Gid, stat.Uid, DGUTAFileTypeTemp)
-		}
-
-		gutaKeys = appendGUTAKeys(gutaKeys, stat.Gid, stat.Uid, DGUTAFileTypeDir)
+		gutaKeys = appendGUTAKeysForDir(path, gutaKeys, stat.Gid, stat.Uid)
 	} else {
 		atime = maxInt(0, stat.Mtim.Sec, stat.Atim.Sec)
 		gutaKeys = d.statToGUTAKeys(stat, path)
@@ -445,6 +441,18 @@ func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {
 	d.addForEachDir(path, gutaKeys, info.Size(), atime, maxInt(0, stat.Mtim.Sec))
 
 	return nil
+}
+
+// appendGUTAKeysForDir checks if the path is temp and calls appendGUTAKeys for the
+// relevant file types.
+func appendGUTAKeysForDir(path string, gutaKeys []string, gid, uid uint32) []string {
+	if isTemp(path) {
+		gutaKeys = appendGUTAKeys(gutaKeys, gid, uid, DGUTAFileTypeTemp)
+	}
+
+	gutaKeys = appendGUTAKeys(gutaKeys, gid, uid, DGUTAFileTypeDir)
+
+	return gutaKeys
 }
 
 // appendGUTAKeys appends gutaKeys with keys including the given gid, uid, file

@@ -120,7 +120,7 @@ func (t *Tree) DirInfo(dir string, filter *Filter) (*DirInfo, error) {
 	}
 
 	if dcs == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	}
 
 	di := &DirInfo{
@@ -266,7 +266,7 @@ func (t *Tree) where0(dir string, filter *Filter) (*DirInfo, error) {
 	}
 
 	if di == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	}
 
 	for di.IsSameAsChild() {

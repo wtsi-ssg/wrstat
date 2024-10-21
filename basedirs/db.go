@@ -272,28 +272,34 @@ func (b *BaseDirs) gidsToMountpoints(gidBase map[uint32]dguta.DCSs) gidMountsMap
 	gidMounts := make(gidMountsMap, len(gidBase))
 
 	for gid, dcss := range gidBase {
-		mounts := make(map[string]dguta.DirSummary)
-
-		for _, dcs := range dcss {
-			mp := b.mountPoints.prefixOf(dcs.Dir)
-			if mp != "" {
-				ds := mounts[mp]
-
-				ds.Count += dcs.Count
-				ds.Size += dcs.Size
-
-				if dcs.Modtime.After(ds.Modtime) {
-					ds.Modtime = dcs.Modtime
-				}
-
-				mounts[mp] = ds
-			}
-		}
-
-		gidMounts[gid] = mounts
+		gidMounts[gid] = b.dcssToMountPoints(dcss)
 	}
 
 	return gidMounts
+}
+
+func (b *BaseDirs) dcssToMountPoints(dcss dguta.DCSs) map[string]dguta.DirSummary {
+	mounts := make(map[string]dguta.DirSummary)
+
+	for _, dcs := range dcss {
+		mp := b.mountPoints.prefixOf(dcs.Dir)
+		if mp == "" {
+			continue
+		}
+
+		ds := mounts[mp]
+
+		ds.Count += dcs.Count
+		ds.Size += dcs.Size
+
+		if dcs.Modtime.After(ds.Modtime) {
+			ds.Modtime = dcs.Modtime
+		}
+
+		mounts[mp] = ds
+	}
+
+	return mounts
 }
 
 func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,

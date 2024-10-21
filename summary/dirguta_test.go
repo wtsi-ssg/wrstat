@@ -361,10 +361,10 @@ func TestDirGUTAge(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(age, ShouldEqual, DGUTAgeM7Y)
 
-		age, err = AgeStringToDirGUTAge("17")
+		_, err = AgeStringToDirGUTAge("17")
 		So(err, ShouldNotBeNil)
 
-		age, err = AgeStringToDirGUTAge("incorrect")
+		_, err = AgeStringToDirGUTAge("incorrect")
 		So(err, ShouldNotBeNil)
 	})
 }

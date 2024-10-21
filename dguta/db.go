@@ -566,6 +566,21 @@ func (d *DB) Close() {
 //
 // You must call Open() before calling this.
 func (d *DB) DirInfo(dir string, filter *Filter) (*DirSummary, error) {
+	dguta, notFound, lastUpdated := d.combineDGUTAsFromReadSets(dir)
+
+	if notFound == len(d.readSets) {
+		return &DirSummary{Modtime: lastUpdated}, ErrDirNotFound
+	}
+
+	ds := dguta.Summary(filter)
+	if ds != nil {
+		ds.Modtime = lastUpdated
+	}
+
+	return ds, nil
+}
+
+func (d *DB) combineDGUTAsFromReadSets(dir string) (*DGUTA, int, time.Time) {
 	var (
 		notFound    int
 		lastUpdated time.Time
@@ -587,16 +602,7 @@ func (d *DB) DirInfo(dir string, filter *Filter) (*DirSummary, error) {
 		}
 	}
 
-	if notFound == len(d.readSets) {
-		return &DirSummary{Modtime: lastUpdated}, ErrDirNotFound
-	}
-
-	ds := dguta.Summary(filter)
-	if ds != nil {
-		ds.Modtime = lastUpdated
-	}
-
-	return ds, nil
+	return dguta, notFound, lastUpdated
 }
 
 // getDGUTAFromDBAndAppend calls getDGUTAFromDB() and appends the result

@@ -67,7 +67,7 @@ issues:
         - lll
     - path: internal
       linters:
-        - gomnd
+        - mnd
         - funlen
     - path: cmd
       linters:

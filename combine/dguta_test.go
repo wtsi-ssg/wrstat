@@ -249,7 +249,7 @@ func createDGUTAFile(t *testing.T, tempDir, fileName, content string) string {
 // nestedFiles, fileSize, atime. For example, /    1313    13912   0   0   1   0
 // 1668768807 /lustre  1313    13912   0   0   1   0   1668768807
 // /lustre/scratch123   1313    13912   0   0   1   0   1668768807.
-func buildDGUTAContent(directory, gid, uid string, filetype, nestedFiles,
+func buildDGUTAContent(directory, gid, uid string, filetype, nestedFiles, //nolint:unparam
 	fileSize, oldestAtime, newestAtime, refTime int64) string {
 	var dgutaContents string
 
