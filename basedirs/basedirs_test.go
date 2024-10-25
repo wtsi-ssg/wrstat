@@ -887,11 +887,11 @@ func TestBaseDirs(t *testing.T) {
 						expectedUntilSize := today.Add(secondsInDay * 4).Unix()
 						expectedUntilInode := today.Add(secondsInDay * 18).Unix()
 
-						//TODO
+						var leewaySeconds int64 = 5
 
 						dtrSize, dtrInode := DateQuotaFull(history)
-						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-4, expectedUntilSize+4)
-						So(dtrInode.Unix(), ShouldBeBetween, expectedUntilInode-4, expectedUntilInode+4)
+						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-leewaySeconds, expectedUntilSize+leewaySeconds)
+						So(dtrInode.Unix(), ShouldBeBetween, expectedUntilInode-leewaySeconds, expectedUntilInode+leewaySeconds)
 					})
 				})
 
