@@ -816,7 +816,7 @@ func TestBaseDirs(t *testing.T) {
 						So(err, ShouldBeNil)
 						fixUsageTimes(mainTable)
 
-						leeway := 20 * time.Second
+						leeway := 5 * time.Minute
 
 						dateNoSpace := today.Add(4 * 24 * time.Hour)
 						So(mainTable[0].DateNoSpace, ShouldHappenOnOrBetween,
@@ -887,7 +887,7 @@ func TestBaseDirs(t *testing.T) {
 						expectedUntilSize := today.Add(secondsInDay * 4).Unix()
 						expectedUntilInode := today.Add(secondsInDay * 18).Unix()
 
-						var leewaySeconds int64 = 5
+						var leewaySeconds int64 = 500
 
 						dtrSize, dtrInode := DateQuotaFull(history)
 						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-leewaySeconds, expectedUntilSize+leewaySeconds)

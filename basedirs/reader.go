@@ -117,11 +117,7 @@ func (b *BaseDirReader) usage(bucketName string, age summary.DirGUTAge) ([]*Usag
 
 			uwm.Owner = b.owners[uwm.GID]
 
-			if bucketName == groupUsageBucket {
-				uwm.Name = b.groupCache.GroupName(uwm.GID)
-			} else {
-				uwm.Name = b.userCache.UserName(uwm.UID)
-			}
+			uwm.Name = b.getNameBasedOnBucket(bucketName, uwm)
 
 			uwms = append(uwms, uwm)
 
@@ -136,6 +132,14 @@ func (b *BaseDirReader) usage(bucketName string, age summary.DirGUTAge) ([]*Usag
 
 func (b *BaseDirReader) decodeFromBytes(encoded []byte, data any) error {
 	return codec.NewDecoderBytes(encoded, b.ch).Decode(data)
+}
+
+func (b *BaseDirReader) getNameBasedOnBucket(bucketName string, uwm *Usage) string {
+	if bucketName == groupUsageBucket {
+		return b.groupCache.GroupName(uwm.GID)
+	}
+
+	return b.userCache.UserName(uwm.UID)
 }
 
 // UserUsage returns the usage for every UID-BaseDir combination in the
