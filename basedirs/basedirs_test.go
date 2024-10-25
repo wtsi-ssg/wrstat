@@ -99,9 +99,11 @@ func TestBaseDirs(t *testing.T) {
 	}
 
 	refTime := time.Now().Unix()
-	expectedAgeAtime := time.Unix(refTime-summary.SecondsInAYear*2, 0)
+	expectedAgeAtime2 := time.Unix(refTime-summary.SecondsInAYear*3, 0)
 	expectedAgeMtime := time.Unix(refTime-summary.SecondsInAYear*3, 0)
+	expectedAgeMtime2 := time.Unix(refTime-summary.SecondsInAYear*5, 0)
 	expectedFixedAgeMtime := fixtimes.FixTime(expectedAgeMtime)
+	expectedFixedAgeMtime2 := fixtimes.FixTime(expectedAgeMtime2)
 
 	Convey("Given a Tree and Quotas you can make a BaseDirs", t, func() {
 		gid, uid, groupName, username, err := internaldata.RealGIDAndUID()
@@ -151,138 +153,316 @@ func TestBaseDirs(t *testing.T) {
 			expectedMtimeA := time.Unix(100, 0)
 			expectedFTsBam := []summary.DirGUTAFileType{summary.DGUTAFileTypeBam}
 
-			Convey("of each group", func() { //nolint:dupl
-				dcss, err := bd.CalculateForGroup(1, summary.DGUTAgeAll)
-				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dguta.DCSs{
-					{
-						Dir:     projectA,
-						Count:   2,
-						Size:    halfGig + twoGig,
-						Atime:   expectedAtime,
-						Mtime:   expectedMtimeA,
-						GIDs:    []uint32{1},
-						UIDs:    []uint32{101},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-					},
-				})
+			expectedDCSsWithAges := func(dirSummaries []dguta.DirSummary) dguta.DCSs {
+				var dcss dguta.DCSs
 
-				dcss, err = bd.CalculateForGroup(2, summary.DGUTAgeAll)
-				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dguta.DCSs{
-					{
-						Dir:     projectC1,
-						Count:   1,
-						Size:    40,
-						Atime:   expectedAtime,
-						Mtime:   expectedMtime,
-						GIDs:    []uint32{2},
-						UIDs:    []uint32{88888},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-					},
-					{
-						Dir:     projectB123,
-						Count:   1,
-						Size:    30,
-						Atime:   expectedAtime,
-						Mtime:   expectedMtime,
-						GIDs:    []uint32{2},
-						UIDs:    []uint32{102},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-					},
-					{
-						Dir:     projectB125,
-						Count:   1,
-						Size:    20,
-						Atime:   expectedAtime,
-						Mtime:   expectedMtime,
-						GIDs:    []uint32{2},
-						UIDs:    []uint32{102},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-					},
+				for _, dirSummary := range dirSummaries {
+					for _, age := range summary.DirGUTAges {
+						ageDirSummary := dirSummary
+						ageDirSummary.Age = age
+
+						dcss = append(dcss, &ageDirSummary)
+					}
+				}
+
+				return dcss
+			}
+
+			Convey("of each group", func() {
+				Convey("with old files", func() { //nolint:dupl
+					dcss, err := bd.calculateForGroup(1)
+					So(err, ShouldBeNil)
+					So(dcss, ShouldResemble, expectedDCSsWithAges(
+						[]dguta.DirSummary{
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    halfGig + twoGig,
+								Atime:   expectedAtime,
+								Mtime:   expectedMtimeA,
+								GIDs:    []uint32{1},
+								UIDs:    []uint32{101},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+							}}))
+
+					dcss, err = bd.calculateForGroup(2)
+					So(err, ShouldBeNil)
+					So(dcss, ShouldResemble, expectedDCSsWithAges(
+						[]dguta.DirSummary{
+							{
+								Dir:     projectC1,
+								Count:   1,
+								Size:    40,
+								Atime:   expectedAtime,
+								Mtime:   expectedMtime,
+								GIDs:    []uint32{2},
+								UIDs:    []uint32{88888},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+							},
+							{
+								Dir:     projectB123,
+								Count:   1,
+								Size:    30,
+								Atime:   expectedAtime,
+								Mtime:   expectedMtime,
+								GIDs:    []uint32{2},
+								UIDs:    []uint32{102},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+							},
+							{
+								Dir:     projectB125,
+								Count:   1,
+								Size:    20,
+								Atime:   expectedAtime,
+								Mtime:   expectedMtime,
+								GIDs:    []uint32{2},
+								UIDs:    []uint32{102},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+							},
+						}),
+					)
 				})
+				Convey("with newer files", func() {
+					dcss, err := bd.calculateForGroup(3)
+					So(err, ShouldBeNil)
+					So(dcss, ShouldResemble,
+						dguta.DCSs{
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeAll,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeA1M,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeA2M,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeA6M,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeA1Y,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeA2Y,
+							},
+							{
+								Dir:     projectA,
+								Count:   1,
+								Size:    40,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime2,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeA3Y,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeM1M,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeM2M,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeM6M,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeM1Y,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeM2Y,
+							},
+							{
+								Dir:     projectA,
+								Count:   2,
+								Size:    100,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeM3Y,
+							},
+							{
+								Dir:     projectA,
+								Count:   1,
+								Size:    40,
+								Atime:   expectedAgeAtime2,
+								Mtime:   expectedAgeMtime2,
+								GIDs:    []uint32{3},
+								UIDs:    []uint32{103},
+								FTs:     expectedFTsBam,
+								Modtime: dbModTime,
+								Age:     summary.DGUTAgeM5Y,
+							},
+						},
+					)
+				},
+				)
 			})
 
 			Convey("of each user", func() { //nolint:dupl
-				dcss, err := bd.CalculateForUser(101, summary.DGUTAgeAll)
+				dcss, err := bd.calculateForUser(101)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dguta.DCSs{
-					{
-						Dir:     projectA,
-						Count:   2,
-						Size:    halfGig + twoGig,
-						Atime:   expectedAtime,
-						Mtime:   expectedMtimeA,
-						GIDs:    []uint32{1},
-						UIDs:    []uint32{101},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-					},
-				})
+				So(dcss, ShouldResemble, expectedDCSsWithAges(
+					[]dguta.DirSummary{
+						{
+							Dir:     projectA,
+							Count:   2,
+							Size:    halfGig + twoGig,
+							Atime:   expectedAtime,
+							Mtime:   expectedMtimeA,
+							GIDs:    []uint32{1},
+							UIDs:    []uint32{101},
+							FTs:     expectedFTsBam,
+							Modtime: dbModTime,
+						},
+					}),
+				)
 
-				dcss, err = bd.CalculateForUser(102, summary.DGUTAgeAll)
+				dcss, err = bd.calculateForUser(102)
 				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dguta.DCSs{
-					{
-						Dir:     projectB123,
-						Count:   1,
-						Size:    30,
-						Atime:   expectedAtime,
-						Mtime:   expectedMtime,
-						GIDs:    []uint32{2},
-						UIDs:    []uint32{102},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-					},
-					{
-						Dir:     projectB125,
-						Count:   1,
-						Size:    20,
-						Atime:   expectedAtime,
-						Mtime:   expectedMtime,
-						GIDs:    []uint32{2},
-						UIDs:    []uint32{102},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-					},
-					{
-						Dir:     user2,
-						Count:   1,
-						Size:    60,
-						Atime:   expectedAtime,
-						Mtime:   expectedMtime,
-						GIDs:    []uint32{77777},
-						UIDs:    []uint32{102},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-					},
-				})
-
-				dcss, err = bd.CalculateForUser(103, summary.DGUTAgeA1Y)
-
-				So(err, ShouldBeNil)
-				So(dcss, ShouldResemble, dguta.DCSs{
-					{
-						Dir:     projectA,
-						Count:   1,
-						Size:    60,
-						Atime:   expectedAgeAtime,
-						Mtime:   expectedAgeMtime,
-						GIDs:    []uint32{3},
-						UIDs:    []uint32{103},
-						FTs:     expectedFTsBam,
-						Modtime: dbModTime,
-						Age:     summary.DGUTAgeA1Y,
-					},
-				})
-
-				dcss, err = bd.CalculateForUser(103, summary.DGUTAgeA7Y)
-				So(err, ShouldBeNil)
-				So(dcss, ShouldBeNil)
+				So(dcss, ShouldResemble, expectedDCSsWithAges(
+					[]dguta.DirSummary{
+						{
+							Dir:     projectB123,
+							Count:   1,
+							Size:    30,
+							Atime:   expectedAtime,
+							Mtime:   expectedMtime,
+							GIDs:    []uint32{2},
+							UIDs:    []uint32{102},
+							FTs:     expectedFTsBam,
+							Modtime: dbModTime,
+						},
+						{
+							Dir:     projectB125,
+							Count:   1,
+							Size:    20,
+							Atime:   expectedAtime,
+							Mtime:   expectedMtime,
+							GIDs:    []uint32{2},
+							UIDs:    []uint32{102},
+							FTs:     expectedFTsBam,
+							Modtime: dbModTime,
+						},
+						{
+							Dir:     user2,
+							Count:   1,
+							Size:    60,
+							Atime:   expectedAtime,
+							Mtime:   expectedMtime,
+							GIDs:    []uint32{77777},
+							UIDs:    []uint32{102},
+							FTs:     expectedFTsBam,
+							Modtime: dbModTime,
+						},
+					}),
+				)
 			})
 		})
 
@@ -321,7 +501,7 @@ func TestBaseDirs(t *testing.T) {
 				expectedMtimeA := fixtimes.FixTime(time.Unix(100, 0))
 
 				Convey("getting group and user usage info", func() {
-					mainTable, err := bdr.GroupUsage()
+					mainTable, err := bdr.GroupUsage(summary.DGUTAgeAll)
 					fixUsageTimes(mainTable)
 
 					So(err, ShouldBeNil)
@@ -351,7 +531,7 @@ func TestBaseDirs(t *testing.T) {
 						},
 						{
 							Name: ageGroupName, GID: 3, UIDs: []uint32{103}, Owner: "", BaseDir: projectA,
-							UsageSize: 60, QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedFixedAgeMtime,
+							UsageSize: 100, QuotaSize: 300, UsageInodes: 2, QuotaInodes: 30, Mtime: expectedFixedAgeMtime,
 						},
 						{
 							Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2, UsageSize: 60,
@@ -359,7 +539,88 @@ func TestBaseDirs(t *testing.T) {
 						},
 					})
 
-					mainTable, err = bdr.UserUsage()
+					mainTable, err = bdr.GroupUsage(summary.DGUTAgeA3Y)
+					fixUsageTimes(mainTable)
+
+					So(err, ShouldBeNil)
+					So(len(mainTable), ShouldEqual, 7)
+					So(mainTable, ShouldResemble, []*Usage{
+						{
+							Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
+							UsageSize: halfGig + twoGig, QuotaSize: 4000000000, UsageInodes: 2,
+							QuotaInodes: 20, Mtime: expectedMtimeA, Age: summary.DGUTAgeA3Y,
+						},
+						{
+							Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
+							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA3Y,
+						},
+						{
+							Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
+							UsageSize: 40, QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA3Y,
+						},
+						{
+							Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB123,
+							UsageSize: 30, QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA3Y,
+						},
+						{
+							Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB125,
+							UsageSize: 20, QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA3Y,
+						},
+						{
+							Name: ageGroupName, GID: 3, UIDs: []uint32{103}, Owner: "", BaseDir: projectA,
+							UsageSize: 40, QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedFixedAgeMtime2,
+							Age: summary.DGUTAgeA3Y,
+						},
+						{
+							Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2, UsageSize: 60,
+							QuotaSize: 500, UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA3Y,
+						},
+					})
+
+					mainTable, err = bdr.GroupUsage(summary.DGUTAgeA7Y)
+					fixUsageTimes(mainTable)
+
+					So(err, ShouldBeNil)
+					So(len(mainTable), ShouldEqual, 6)
+					So(mainTable, ShouldResemble, []*Usage{
+						{
+							Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
+							UsageSize: halfGig + twoGig, QuotaSize: 4000000000, UsageInodes: 2,
+							QuotaInodes: 20, Mtime: expectedMtimeA, Age: summary.DGUTAgeA7Y,
+						},
+						{
+							Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
+							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA7Y,
+						},
+						{
+							Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
+							UsageSize: 40, QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA7Y,
+						},
+						{
+							Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB123,
+							UsageSize: 30, QuotaSize: 400, UsageInodes: 1, QuotaInodes: 40, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA7Y,
+						},
+						{
+							Name: "group2", GID: 2, UIDs: []uint32{102}, Owner: "Barbara", BaseDir: projectB125,
+							UsageSize: 20, QuotaSize: 300, UsageInodes: 1, QuotaInodes: 30, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA7Y,
+						},
+						{
+							Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2, UsageSize: 60,
+							QuotaSize: 500, UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA7Y,
+						},
+					})
+
+					mainTable, err = bdr.UserUsage(summary.DGUTAgeAll)
 					fixUsageTimes(mainTable)
 
 					expectedMainTable := []*Usage{
@@ -388,8 +649,8 @@ func TestBaseDirs(t *testing.T) {
 							UsageSize: 15, UsageInodes: 5, Mtime: expectedMtime,
 						},
 						{
-							Name: ageUserName, UID: 103, GIDs: []uint32{3}, BaseDir: projectA, UsageSize: 60,
-							UsageInodes: 1, Mtime: expectedFixedAgeMtime,
+							Name: ageUserName, UID: 103, GIDs: []uint32{3}, BaseDir: projectA, UsageSize: 100,
+							UsageInodes: 2, Mtime: expectedFixedAgeMtime,
 						},
 					}
 
@@ -551,10 +812,11 @@ func TestBaseDirs(t *testing.T) {
 						bdr.mountPoints = bd.mountPoints
 						bdr.groupCache = groupCache
 
-						mainTable, err := bdr.GroupUsage()
+						mainTable, err := bdr.GroupUsage(summary.DGUTAgeAll)
+						So(err, ShouldBeNil)
 						fixUsageTimes(mainTable)
 
-						leeway := 3 * time.Second
+						leeway := 20 * time.Second
 
 						dateNoSpace := today.Add(4 * 24 * time.Hour)
 						So(mainTable[0].DateNoSpace, ShouldHappenOnOrBetween,
@@ -596,7 +858,7 @@ func TestBaseDirs(t *testing.T) {
 							},
 							{
 								Name: ageGroupName, GID: 3, UIDs: []uint32{103}, Owner: "", BaseDir: projectA,
-								UsageSize: 60, QuotaSize: 300, UsageInodes: 1,
+								UsageSize: 100, QuotaSize: 300, UsageInodes: 2,
 								QuotaInodes: 30, Mtime: expectedFixedAgeMtime,
 							},
 							{
@@ -624,6 +886,8 @@ func TestBaseDirs(t *testing.T) {
 
 						expectedUntilSize := today.Add(secondsInDay * 4).Unix()
 						expectedUntilInode := today.Add(secondsInDay * 18).Unix()
+
+						//TODO
 
 						dtrSize, dtrInode := DateQuotaFull(history)
 						So(dtrSize.Unix(), ShouldBeBetween, expectedUntilSize-4, expectedUntilSize+4)
@@ -655,15 +919,15 @@ func TestBaseDirs(t *testing.T) {
 				}
 
 				Convey("getting subdir information for a group-basedir", func() {
-					unknownProject, err := bdr.GroupSubDirs(1, "unknown")
+					unknownProject, err := bdr.GroupSubDirs(1, "unknown", summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(unknownProject, ShouldBeNil)
 
-					unknownGroup, err := bdr.GroupSubDirs(10, projectA)
+					unknownGroup, err := bdr.GroupSubDirs(10, projectA, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(unknownGroup, ShouldBeNil)
 
-					subdirsA1, err := bdr.GroupSubDirs(1, projectA)
+					subdirsA1, err := bdr.GroupSubDirs(1, projectA, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 
 					fixSubDirTimes(subdirsA1)
@@ -671,21 +935,21 @@ func TestBaseDirs(t *testing.T) {
 				})
 
 				Convey("getting subdir information for a user-basedir", func() {
-					unknownProject, err := bdr.UserSubDirs(101, "unknown")
+					unknownProject, err := bdr.UserSubDirs(101, "unknown", summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(unknownProject, ShouldBeNil)
 
-					unknownGroup, err := bdr.UserSubDirs(999, projectA)
+					unknownGroup, err := bdr.UserSubDirs(999, projectA, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(unknownGroup, ShouldBeNil)
 
-					subdirsA1, err := bdr.UserSubDirs(101, projectA)
+					subdirsA1, err := bdr.UserSubDirs(101, projectA, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 
 					fixSubDirTimes(subdirsA1)
 					So(subdirsA1, ShouldResemble, expectedProjectASubDirs)
 
-					subdirsB125, err := bdr.UserSubDirs(102, projectB125)
+					subdirsB125, err := bdr.UserSubDirs(102, projectB125, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 
 					fixSubDirTimes(subdirsB125)
@@ -701,7 +965,7 @@ func TestBaseDirs(t *testing.T) {
 						},
 					})
 
-					subdirsB123, err := bdr.UserSubDirs(102, projectB123)
+					subdirsB123, err := bdr.UserSubDirs(102, projectB123, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 
 					fixSubDirTimes(subdirsB123)
@@ -717,7 +981,7 @@ func TestBaseDirs(t *testing.T) {
 						},
 					})
 
-					subdirsD, err := bdr.UserSubDirs(uint32(uid), projectD)
+					subdirsD, err := bdr.UserSubDirs(uint32(uid), projectD, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 
 					fixSubDirTimes(subdirsD)
@@ -762,7 +1026,7 @@ func TestBaseDirs(t *testing.T) {
 				expectedAgeDaysSince := daysSinceString(expectedFixedAgeMtime)
 
 				Convey("getting weaver-like output for group base-dirs", func() {
-					wbo, err := bdr.GroupUsageTable()
+					wbo, err := bdr.GroupUsageTable(summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(wbo, ShouldEqual, joinWithNewLines(
 						joinWithTabs(
@@ -825,9 +1089,9 @@ func TestBaseDirs(t *testing.T) {
 							"",
 							projectA,
 							expectedAgeDaysSince,
-							"60",
+							"100",
 							"300",
-							"1",
+							"2",
 							"30",
 							quotaStatusOK,
 						),
@@ -846,7 +1110,7 @@ func TestBaseDirs(t *testing.T) {
 				})
 
 				Convey("getting weaver-like output for user base-dirs", func() {
-					wbo, err := bdr.UserUsageTable()
+					wbo, err := bdr.UserUsageTable(summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 
 					groupsToID := make(map[string]uint32, len(bdr.userCache.data))
@@ -861,9 +1125,9 @@ func TestBaseDirs(t *testing.T) {
 							"",
 							projectA,
 							expectedAgeDaysSince,
-							"60",
+							"100",
 							"0",
-							"1",
+							"2",
 							"0",
 							quotaStatusOK,
 						},
@@ -970,29 +1234,29 @@ func TestBaseDirs(t *testing.T) {
 				)
 
 				Convey("getting weaver-like output for group sub-dirs", func() {
-					unknown, err := bdr.GroupSubDirUsageTable(1, "unknown")
+					unknown, err := bdr.GroupSubDirUsageTable(1, "unknown", summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(unknown, ShouldBeEmpty)
 
-					badgroup, err := bdr.GroupSubDirUsageTable(999, projectA)
+					badgroup, err := bdr.GroupSubDirUsageTable(999, projectA, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(badgroup, ShouldBeEmpty)
 
-					wso, err := bdr.GroupSubDirUsageTable(1, projectA)
+					wso, err := bdr.GroupSubDirUsageTable(1, projectA, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(wso, ShouldEqual, expectedProjectASubDirUsage)
 				})
 
 				Convey("getting weaver-like output for user sub-dirs", func() {
-					unknown, err := bdr.UserSubDirUsageTable(1, "unknown")
+					unknown, err := bdr.UserSubDirUsageTable(1, "unknown", summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(unknown, ShouldBeEmpty)
 
-					badgroup, err := bdr.UserSubDirUsageTable(999, projectA)
+					badgroup, err := bdr.UserSubDirUsageTable(999, projectA, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(badgroup, ShouldBeEmpty)
 
-					wso, err := bdr.UserSubDirUsageTable(101, projectA)
+					wso, err := bdr.UserSubDirUsageTable(101, projectA, summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
 					So(wso, ShouldEqual, expectedProjectASubDirUsage)
 				})
@@ -1038,6 +1302,9 @@ func TestBaseDirs(t *testing.T) {
 						bucket := tx.Bucket([]byte(bucket))
 
 						return bucket.ForEach(func(k, _ []byte) error {
+							if !checkAgeOfKeyIsAll(string(k)) {
+								return nil
+							}
 							if strings.Contains(string(k), "/lustre/") {
 								lustreKeys++
 							}

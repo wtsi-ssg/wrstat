@@ -365,6 +365,15 @@ func FakeFilesForDGUTADBForBasedirsTesting(gid, uid int, refTime int64) ([]strin
 			ATime:          int(refTime - summary.SecondsInAYear*2),
 			MTime:          int(refTime - summary.SecondsInAYear*3),
 		},
+		{
+			Path:           filepath.Join(projectA, "ageTwo.bam"),
+			NumFiles:       1,
+			SizeOfEachFile: 40,
+			GID:            3,
+			UID:            103,
+			ATime:          int(refTime - summary.SecondsInAYear*3),
+			MTime:          int(refTime - summary.SecondsInAYear*5),
+		},
 	}
 
 	files = append(files,

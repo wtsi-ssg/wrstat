@@ -39,6 +39,7 @@ import (
 	"github.com/wtsi-ssg/wrstat/v5/basedirs"
 	"github.com/wtsi-ssg/wrstat/v5/dguta"
 	ifs "github.com/wtsi-ssg/wrstat/v5/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
 const (
@@ -181,7 +182,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to create base directories database: %s", err)
 		}
 
-		gut, err := bdr.GroupUsageTable()
+		gut, err := bdr.GroupUsageTable(summary.DGUTAgeAll)
 		if err != nil {
 			die("failed to get group usage table: %s", err)
 		}
@@ -190,7 +191,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to write group usage table: %s", err)
 		}
 
-		uut, err := bdr.UserUsageTable()
+		uut, err := bdr.UserUsageTable(summary.DGUTAgeAll)
 		if err != nil {
 			die("failed to get group usage table: %s", err)
 		}

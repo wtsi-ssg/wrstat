@@ -944,7 +944,7 @@ func TestCombine(t *testing.T) {
 			"a.bygroup":     "a\tb\tc\td\n1\t2\t3\t4\n",
 			"b.bygroup":     "e\tf\tg\th\n5\t6\t7\t8\n",
 			"c.bygroup":     "",
-			"a.dguta": "" +
+			"a.dguta": "" + //nolint:dupl
 				encode.Base64Encode("/") +
 				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
 				encode.Base64Encode("/") +
@@ -1486,7 +1486,7 @@ func TestBasedirs(t *testing.T) {
 		bdr, err := basedirs.NewReader(filepath.Join(dbTmp, "basedirs.db"), filepath.Join(configs, "owners"))
 		So(err, ShouldBeNil)
 
-		gu, err := bdr.GroupUsage()
+		gu, err := bdr.GroupUsage(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
 
 		removeHistory(gu)
@@ -1512,7 +1512,7 @@ func TestBasedirs(t *testing.T) {
 
 		So(gu, ShouldResemble, groupExpectation)
 
-		uu, err := bdr.UserUsage()
+		uu, err := bdr.UserUsage(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
 
 		removeHistory(uu)
@@ -2056,11 +2056,11 @@ stop;`)
 			GroupA, GroupB, GroupD, GroupE,
 			time.Now().Unix()/86400)
 
-		uut, err := bdb.UserUsageTable()
+		uut, err := bdb.UserUsageTable(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
 		So(uut, ShouldEqual, userUsage)
 
-		gut, err := bdb.GroupUsageTable()
+		gut, err := bdb.GroupUsageTable(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
 		So(gut, ShouldEqual, groupUsage)
 	})

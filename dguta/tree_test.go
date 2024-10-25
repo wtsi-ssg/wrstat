@@ -168,7 +168,7 @@ func TestTree(t *testing.T) {
 					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},
 			})
 
-			dcss.SortByDir()
+			dcss.SortByDirAndAge()
 			So(dcss, ShouldResemble, DCSs{
 				{"/a/b/d", 3, 30, expectedAtime, time.Unix(60, 0), expectedUIDsOne,
 					expectedGIDsOne, expectedFTsCram, summary.DGUTAgeAll, dbModTime},

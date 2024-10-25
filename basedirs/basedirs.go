@@ -79,15 +79,24 @@ func (b *BaseDirs) SetMountPoints(mountpoints []string) {
 	b.mountPoints = mountpoints
 }
 
-// CalculateForGroup calculates all the base directories for the given group.
-func (b *BaseDirs) CalculateForGroup(gid uint32, age summary.DirGUTAge) (dguta.DCSs, error) {
+// calculateForGroup calculates all the base directories for the given group.
+func (b *BaseDirs) calculateForGroup(gid uint32) (dguta.DCSs, error) {
+	return b.calculateDCSs(&dguta.Filter{GIDs: []uint32{gid}})
+}
+
+func (b *BaseDirs) calculateDCSs(filter *dguta.Filter) (dguta.DCSs, error) {
 	var dcss dguta.DCSs
 
-	if err := b.filterWhereResults(&dguta.Filter{GIDs: []uint32{gid}, Age: age}, func(ds *dguta.DirSummary) {
-		dcss = append(dcss, ds)
-	}); err != nil {
-		return nil, err
+	for _, age := range summary.DirGUTAges {
+		filter.Age = age
+		if err := b.filterWhereResults(filter, func(ds *dguta.DirSummary) {
+			dcss = append(dcss, ds)
+		}); err != nil {
+			return nil, err
+		}
 	}
+
+	dcss.SortByDirAndAge()
 
 	return dcss, nil
 }
@@ -98,7 +107,7 @@ func (b *BaseDirs) filterWhereResults(filter *dguta.Filter, cb func(ds *dguta.Di
 		return err
 	}
 
-	dcss.SortByDir()
+	dcss.SortByDirAndAge()
 
 	var previous string
 
@@ -133,15 +142,7 @@ func childOfPreviousResult(dir, previous string) bool {
 	return previous != "" && strings.HasPrefix(dir, previous)
 }
 
-// CalculateForUser calculates all the base directories for the given user.
-func (b *BaseDirs) CalculateForUser(uid uint32, age summary.DirGUTAge) (dguta.DCSs, error) {
-	var dcss dguta.DCSs
-
-	if err := b.filterWhereResults(&dguta.Filter{UIDs: []uint32{uid}, Age: age}, func(ds *dguta.DirSummary) {
-		dcss = append(dcss, ds)
-	}); err != nil {
-		return nil, err
-	}
-
-	return dcss, nil
+// calculateForUser calculates all the base directories for the given user.
+func (b *BaseDirs) calculateForUser(uid uint32) (dguta.DCSs, error) {
+	return b.calculateDCSs(&dguta.Filter{UIDs: []uint32{uid}})
 }

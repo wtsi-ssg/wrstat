@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -77,6 +76,7 @@ type Usage struct {
 	DateNoSpace time.Time
 	// DateNoFiles is an estimate of when there will be no inode quota left.
 	DateNoFiles time.Time
+	Age         summary.DirGUTAge
 }
 
 // CreateDatabase creates a database containing usage information for each of
@@ -167,7 +167,7 @@ func (b *BaseDirs) gidsToBaseDirs(gids []uint32) (map[uint32]dguta.DCSs, error) 
 	gidBase := make(map[uint32]dguta.DCSs, len(gids))
 
 	for _, gid := range gids {
-		dcss, err := b.CalculateForGroup(gid, summary.DGUTAgeAll)
+		dcss, err := b.calculateForGroup(gid)
 		if err != nil {
 			return nil, err
 		}
@@ -192,6 +192,7 @@ func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dguta.DCSs) 
 	for gid, dcss := range gidBase {
 		for _, dcs := range dcss {
 			quotaSize, quotaInode := b.quotas.Get(gid, dcs.Dir)
+
 			uwm := &Usage{
 				GID:         gid,
 				UIDs:        dcs.UIDs,
@@ -201,9 +202,10 @@ func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dguta.DCSs) 
 				UsageInodes: dcs.Count,
 				QuotaInodes: quotaInode,
 				Mtime:       dcs.Mtime,
+				Age:         dcs.Age,
 			}
 
-			if err := gub.Put(keyName(gid, dcs.Dir), b.encodeToBytes(uwm)); err != nil {
+			if err := gub.Put(keyName(gid, dcs.Dir, uwm.Age), b.encodeToBytes(uwm)); err != nil {
 				return err
 			}
 		}
@@ -212,8 +214,8 @@ func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dguta.DCSs) 
 	return nil
 }
 
-func keyName(id uint32, path string) []byte {
-	return []byte(strconv.FormatUint(uint64(id), 10) + bucketKeySeparator + path)
+func keyName(id uint32, path string, age summary.DirGUTAge) []byte {
+	return []byte(fmt.Sprintf("%d%s%s%s%d", id, bucketKeySeparator, path, bucketKeySeparator, age))
 }
 
 func (b *BaseDirs) encodeToBytes(data any) []byte {
@@ -228,7 +230,7 @@ func (b *BaseDirs) storeUIDBaseDirs(tx *bolt.Tx, uids []uint32) error {
 	uub := tx.Bucket([]byte(userUsageBucket))
 
 	for _, uid := range uids {
-		dcss, err := b.CalculateForUser(uid, summary.DGUTAgeAll)
+		dcss, err := b.calculateForUser(uid)
 		if err != nil {
 			return err
 		}
@@ -241,9 +243,10 @@ func (b *BaseDirs) storeUIDBaseDirs(tx *bolt.Tx, uids []uint32) error {
 				UsageSize:   dcs.Size,
 				UsageInodes: dcs.Count,
 				Mtime:       dcs.Mtime,
+				Age:         dcs.Age,
 			}
 
-			if err := uub.Put(keyName(uid, dcs.Dir), b.encodeToBytes(uwm)); err != nil {
+			if err := uub.Put(keyName(uid, dcs.Dir, uwm.Age), b.encodeToBytes(uwm)); err != nil {
 				return err
 			}
 		}
@@ -282,6 +285,10 @@ func (b *BaseDirs) dcssToMountPoints(dcss dguta.DCSs) map[string]dguta.DirSummar
 	mounts := make(map[string]dguta.DirSummary)
 
 	for _, dcs := range dcss {
+		if dcs.Age != summary.DGUTAgeAll {
+			continue
+		}
+
 		mp := b.mountPoints.prefixOf(dcs.Dir)
 		if mp == "" {
 			continue
@@ -307,7 +314,7 @@ func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,
 	for mount, ds := range mounts {
 		quotaSize, quotaInode := b.quotas.Get(gid, mount)
 
-		key := keyName(gid, mount)
+		key := keyName(gid, mount, ds.Age)
 
 		existing := ghb.Get(key)
 
@@ -427,7 +434,7 @@ func (b *BaseDirs) storeSubDirs(bucket *bolt.Bucket, dcs *dguta.DirSummary, id u
 
 	subDirs := makeSubDirs(info, parentTypes, childToTypes)
 
-	return bucket.Put(keyName(id, dcs.Dir), b.encodeToBytes(subDirs))
+	return bucket.Put(keyName(id, dcs.Dir, dcs.Age), b.encodeToBytes(subDirs))
 }
 
 func (b *BaseDirs) dirAndSubDirTypes(info *dguta.DirInfo, filter dguta.Filter,
@@ -512,7 +519,7 @@ func (b *BaseDirs) storeUIDSubDirs(tx *bolt.Tx, uids []uint32) error {
 	bucket := tx.Bucket([]byte(userSubDirsBucket))
 
 	for _, uid := range uids {
-		dcss, err := b.CalculateForUser(uid, summary.DGUTAgeAll)
+		dcss, err := b.calculateForUser(uid)
 		if err != nil {
 			return err
 		}
@@ -547,6 +554,10 @@ func (b *BaseDirs) storeDateQuotasFill() func(*bolt.Tx) error {
 				return err
 			}
 
+			if gu.Age != summary.DGUTAgeAll {
+				return nil
+			}
+
 			h, err := b.history(hbucket, gu.GID, gu.BaseDir)
 			if err != nil {
 				return err
@@ -556,7 +567,7 @@ func (b *BaseDirs) storeDateQuotasFill() func(*bolt.Tx) error {
 			gu.DateNoSpace = sizeExceedDate
 			gu.DateNoFiles = inodeExceedDate
 
-			return bucket.Put(keyName(gu.GID, gu.BaseDir), b.encodeToBytes(gu))
+			return bucket.Put(keyName(gu.GID, gu.BaseDir, summary.DGUTAgeAll), b.encodeToBytes(gu))
 		})
 	}
 }

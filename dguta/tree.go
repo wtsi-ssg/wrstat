@@ -84,10 +84,15 @@ func (d DCSs) Less(i, j int) bool {
 	return d[i].Size > d[j].Size
 }
 
-// SortByDir sorts by Dir instead of Size.
-func (d DCSs) SortByDir() {
+// SortByDirAndAge sorts by Dir first then Age instead of Size.
+func (d DCSs) SortByDirAndAge() {
 	sort.Slice(d, func(i, j int) bool {
-		return d[i].Dir < d[j].Dir
+		switch {
+		case d[i].Dir != d[j].Dir:
+			return d[i].Dir < d[j].Dir
+		default:
+			return d[i].Age < d[j].Age
+		}
 	})
 }
 
@@ -313,7 +318,7 @@ func (t *Tree) FileLocations(dir string, filter *Filter) (DCSs, error) {
 		dcss = append(dcss, childDCSs...)
 	}
 
-	dcss.SortByDir()
+	dcss.SortByDirAndAge()
 
 	return dcss, nil
 }

@@ -29,12 +29,13 @@ package basedirs
 
 import (
 	"errors"
+	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/moby/sys/mountinfo"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -83,7 +84,7 @@ func (b *BaseDirReader) History(gid uint32, path string) ([]History, error) {
 }
 
 func historyKey(gid uint32, mountPoint string) []byte {
-	return []byte(strconv.FormatUint(uint64(gid), 10) + bucketKeySeparator + mountPoint)
+	return []byte(fmt.Sprintf("%d%s%s%s%d", gid, bucketKeySeparator, mountPoint, bucketKeySeparator, summary.DGUTAgeAll))
 }
 
 type mountPoints []string
