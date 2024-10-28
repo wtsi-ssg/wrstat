@@ -144,6 +144,90 @@ func TestVersion(t *testing.T) {
 	})
 }
 
+func TestDecode(t *testing.T) {
+	Convey("For the decode subcommand", t, func() {
+		tmp := t.TempDir()
+
+		Convey("it can decode the paths in byusergroup files", func() {
+			bug := filepath.Join(tmp, "test.byusergroup")
+			writeFileStringAndCompress(t, bug, ""+
+				"user1\tgroup1\t"+encode.Base64Encode("/some/path")+"\t30\t1024\n"+
+				"user2\tgroup2\t"+encode.Base64Encode("/some/other/path")+"\t31\t1025\n"+
+				"user2\tgroup2\t"+encode.Base64Encode("/some/path/again")+"\t32\t1026\n",
+			)
+
+			expected := "" +
+				"user1\tgroup1\t/some/path\t30\t1024\n" +
+				"user2\tgroup2\t/some/other/path\t31\t1025\n" +
+				"user2\tgroup2\t/some/path/again\t32\t1026\n"
+
+			stdout, _, _, err := runWRStat("decode", bug)
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected)
+
+			stdout, _, _, err = runWRStat("decode", bug+".gz")
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected)
+
+			stdout, _, _, err = runWRStat("decode", bug, bug+".gz")
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected+expected)
+		})
+
+		Convey("it can decode the paths in stat files", func() {
+			stats := filepath.Join(tmp, "test.stats")
+			writeFileStringAndCompress(t, stats, ""+
+				encode.Base64Encode("/some/path")+"\t4096\t1\t2\t3\t4\t5\td\t7\t8\t9\n"+
+				encode.Base64Encode("/some/other/path")+"\t4097\t2\t4\t5\t6\t7\t8\t9\t10\t11\n"+
+				encode.Base64Encode("/some/path/again")+"\t4098\t3\t5\t6\t7\t8\t9\t10\t11\t12\n",
+			)
+
+			expected := "" +
+				"/some/path\t4096\t1\t2\t3\t4\t5\td\t7\t8\t9\n" +
+				"/some/other/path\t4097\t2\t4\t5\t6\t7\t8\t9\t10\t11\n" +
+				"/some/path/again\t4098\t3\t5\t6\t7\t8\t9\t10\t11\t12\n"
+
+			stdout, _, _, err := runWRStat("decode", stats)
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected)
+
+			stdout, _, _, err = runWRStat("decode", stats+".gz")
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected)
+
+			stdout, _, _, err = runWRStat("decode", stats, stats+".gz")
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected+expected)
+		})
+
+		Convey("it just prints other files", func() {
+			other := filepath.Join(tmp, "test.other")
+
+			expected := "" +
+				"user1\tgroup1\t" + encode.Base64Encode("/some/path") + "\t30\t1024\n" +
+				"user2\tgroup2\t" + encode.Base64Encode("/some/other/path") + "\t31\t1025\n" +
+				"user2\tgroup2\t" + encode.Base64Encode("/some/path/again") + "\t32\t1026\n" +
+				encode.Base64Encode("/some/path") + "\t4096\t1\t2\t3\t4\t5\td\t7\t8\t9\n" +
+				encode.Base64Encode("/some/other/path") + "\t4097\t2\t4\t5\t6\t7\t8\t9\t10\t11\n" +
+				encode.Base64Encode("/some/path/again") + "\t4098\t3\t5\t6\t7\t8\t9\t10\t11\t12\n"
+
+			writeFileStringAndCompress(t, other, expected)
+
+			stdout, _, _, err := runWRStat("decode", other)
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected)
+
+			stdout, _, _, err = runWRStat("decode", other+".gz")
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected)
+
+			stdout, _, _, err = runWRStat("decode", other, other+".gz")
+			So(err, ShouldBeNil)
+			So(stdout, ShouldEqual, expected+expected)
+		})
+	})
+}
+
 func TestCron(t *testing.T) {
 	Convey("For the cron subcommand", t, func() {
 		multiTests(t, "cron", "-c", "* * * * * *")
@@ -686,6 +770,21 @@ func TestWalk(t *testing.T) {
 
 		So(jobs, ShouldResemble, jobsExpectation)
 	})
+}
+
+func writeFileStringAndCompress(t *testing.T, path, contents string) {
+	writeFileString(t, path, contents)
+
+	f, err := os.Create(path + ".gz")
+	So(err, ShouldBeNil)
+
+	gw := gzip.NewWriter(f)
+
+	_, err = gw.Write([]byte(contents))
+	So(err, ShouldBeNil)
+
+	So(gw.Close(), ShouldBeNil)
+	So(f.Close(), ShouldBeNil)
 }
 
 func writeFileString(t *testing.T, path, contents string) {
