@@ -27,7 +27,7 @@
 package basedirs
 
 import (
-	"strings"
+	"bytes"
 
 	"github.com/ugorji/go/codec"
 	bolt "go.etcd.io/bbolt"
@@ -82,7 +82,7 @@ func countFromFullBucketScan(tx *bolt.Tx, bucketName string,
 	sliceLen := 0
 
 	b.ForEach(func(k, v []byte) error { //nolint:errcheck
-		if !checkAgeOfKeyIsAll(string(k)) {
+		if !checkAgeOfKeyIsAll(k) {
 			return nil
 		}
 
@@ -95,8 +95,8 @@ func countFromFullBucketScan(tx *bolt.Tx, bucketName string,
 	return count, sliceLen
 }
 
-func checkAgeOfKeyIsAll(key string) bool {
-	return strings.Split(key, bucketKeySeparator)[2] == "0"
+func checkAgeOfKeyIsAll(key []byte) bool {
+	return bytes.Split(key, []byte{bucketKeySeparatorByte})[2][0] == '0'
 }
 
 func countOnly(_ []byte, _ codec.Handle) int {

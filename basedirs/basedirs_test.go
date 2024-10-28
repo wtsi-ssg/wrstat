@@ -1302,7 +1302,7 @@ func TestBaseDirs(t *testing.T) {
 						bucket := tx.Bucket([]byte(bucket))
 
 						return bucket.ForEach(func(k, _ []byte) error {
-							if !checkAgeOfKeyIsAll(string(k)) {
+							if !checkAgeOfKeyIsAll(k) {
 								return nil
 							}
 							if strings.Contains(string(k), "/lustre/") {
