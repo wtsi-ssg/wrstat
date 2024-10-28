@@ -28,6 +28,7 @@
 package basedirs
 
 import (
+	"bytes"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -504,18 +505,11 @@ func TestBaseDirs(t *testing.T) {
 					mainTable, err := bdr.GroupUsage(summary.DGUTAgeAll)
 					fixUsageTimes(mainTable)
 
-					So(err, ShouldBeNil)
-					So(len(mainTable), ShouldEqual, 7)
-					So(mainTable, ShouldResemble, []*Usage{
+					expectedUsageTable := []*Usage{
 						{
 							Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
 							UsageSize: halfGig + twoGig, QuotaSize: 4000000000, UsageInodes: 2,
 							QuotaInodes: 20, Mtime: expectedMtimeA,
-						},
-						{
-							Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
-							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
-							DateNoSpace: yesterday, DateNoFiles: yesterday,
 						},
 						{
 							Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
@@ -534,26 +528,30 @@ func TestBaseDirs(t *testing.T) {
 							UsageSize: 100, QuotaSize: 300, UsageInodes: 2, QuotaInodes: 30, Mtime: expectedFixedAgeMtime,
 						},
 						{
+							Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
+							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
+							DateNoSpace: yesterday, DateNoFiles: yesterday,
+						},
+						{
 							Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2, UsageSize: 60,
 							QuotaSize: 500, UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime,
 						},
-					})
+					}
+
+					sortByDatabaseKeyOrder(expectedUsageTable)
+
+					So(err, ShouldBeNil)
+					So(len(mainTable), ShouldEqual, 7)
+					So(mainTable, ShouldResemble, expectedUsageTable)
 
 					mainTable, err = bdr.GroupUsage(summary.DGUTAgeA3Y)
 					fixUsageTimes(mainTable)
 
-					So(err, ShouldBeNil)
-					So(len(mainTable), ShouldEqual, 7)
-					So(mainTable, ShouldResemble, []*Usage{
+					expectedUsageTable = []*Usage{
 						{
 							Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
 							UsageSize: halfGig + twoGig, QuotaSize: 4000000000, UsageInodes: 2,
 							QuotaInodes: 20, Mtime: expectedMtimeA, Age: summary.DGUTAgeA3Y,
-						},
-						{
-							Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
-							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
-							Age: summary.DGUTAgeA3Y,
 						},
 						{
 							Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
@@ -576,27 +574,30 @@ func TestBaseDirs(t *testing.T) {
 							Age: summary.DGUTAgeA3Y,
 						},
 						{
+							Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
+							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA3Y,
+						},
+						{
 							Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2, UsageSize: 60,
 							QuotaSize: 500, UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime,
 							Age: summary.DGUTAgeA3Y,
 						},
-					})
+					}
+					sortByDatabaseKeyOrder(expectedUsageTable)
+
+					So(err, ShouldBeNil)
+					So(len(mainTable), ShouldEqual, 7)
+					So(mainTable, ShouldResemble, expectedUsageTable)
 
 					mainTable, err = bdr.GroupUsage(summary.DGUTAgeA7Y)
 					fixUsageTimes(mainTable)
 
-					So(err, ShouldBeNil)
-					So(len(mainTable), ShouldEqual, 6)
-					So(mainTable, ShouldResemble, []*Usage{
+					expectedUsageTable = []*Usage{
 						{
 							Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
 							UsageSize: halfGig + twoGig, QuotaSize: 4000000000, UsageInodes: 2,
 							QuotaInodes: 20, Mtime: expectedMtimeA, Age: summary.DGUTAgeA7Y,
-						},
-						{
-							Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
-							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
-							Age: summary.DGUTAgeA7Y,
 						},
 						{
 							Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
@@ -614,16 +615,30 @@ func TestBaseDirs(t *testing.T) {
 							Age: summary.DGUTAgeA7Y,
 						},
 						{
+							Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
+							UsageSize: 15, QuotaSize: 0, UsageInodes: 5, QuotaInodes: 0, Mtime: expectedMtime,
+							Age: summary.DGUTAgeA7Y,
+						},
+						{
 							Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2, UsageSize: 60,
 							QuotaSize: 500, UsageInodes: 1, QuotaInodes: 50, Mtime: expectedMtime,
 							Age: summary.DGUTAgeA7Y,
 						},
-					})
+					}
+					sortByDatabaseKeyOrder(expectedUsageTable)
+
+					So(err, ShouldBeNil)
+					So(len(mainTable), ShouldEqual, 6)
+					So(mainTable, ShouldResemble, expectedUsageTable)
 
 					mainTable, err = bdr.UserUsage(summary.DGUTAgeAll)
 					fixUsageTimes(mainTable)
 
 					expectedMainTable := []*Usage{
+						{
+							Name: "88888", UID: 88888, GIDs: []uint32{2}, BaseDir: projectC1, UsageSize: 40,
+							UsageInodes: 1, Mtime: expectedMtime,
+						},
 						{
 							Name: "user101", UID: 101, GIDs: []uint32{1}, BaseDir: projectA,
 							UsageSize: halfGig + twoGig, UsageInodes: 2, Mtime: expectedMtimeA,
@@ -641,10 +656,6 @@ func TestBaseDirs(t *testing.T) {
 							UsageInodes: 1, Mtime: expectedMtime,
 						},
 						{
-							Name: "88888", UID: 88888, GIDs: []uint32{2}, BaseDir: projectC1, UsageSize: 40,
-							UsageInodes: 1, Mtime: expectedMtime,
-						},
-						{
 							Name: username, UID: uint32(uid), GIDs: []uint32{uint32(gid)}, BaseDir: projectD,
 							UsageSize: 15, UsageInodes: 5, Mtime: expectedMtime,
 						},
@@ -654,12 +665,7 @@ func TestBaseDirs(t *testing.T) {
 						},
 					}
 
-					sort.Slice(expectedMainTable, func(i, j int) bool {
-						iID := strconv.FormatUint(uint64(expectedMainTable[i].UID), 10)
-						jID := strconv.FormatUint(uint64(expectedMainTable[j].UID), 10)
-
-						return iID < jID
-					})
+					sortByDatabaseKeyOrder(expectedMainTable)
 
 					So(err, ShouldBeNil)
 					So(len(mainTable), ShouldEqual, 7)
@@ -837,11 +843,6 @@ func TestBaseDirs(t *testing.T) {
 								UsageInodes: 3, QuotaInodes: 21, Mtime: expectedMtimeA,
 							},
 							{
-								Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
-								UsageSize: 10, QuotaSize: 0, UsageInodes: 4, QuotaInodes: 0, Mtime: expectedMtime,
-								DateNoSpace: today, DateNoFiles: today,
-							},
-							{
 								Name: "group2", GID: 2, UIDs: []uint32{88888}, Owner: "Barbara", BaseDir: projectC1,
 								UsageSize: 40, QuotaSize: 400, UsageInodes: 1,
 								QuotaInodes: 40, Mtime: expectedMtime,
@@ -860,6 +861,11 @@ func TestBaseDirs(t *testing.T) {
 								Name: ageGroupName, GID: 3, UIDs: []uint32{103}, Owner: "", BaseDir: projectA,
 								UsageSize: 100, QuotaSize: 300, UsageInodes: 2,
 								QuotaInodes: 30, Mtime: expectedFixedAgeMtime,
+							},
+							{
+								Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
+								UsageSize: 10, QuotaSize: 0, UsageInodes: 4, QuotaInodes: 0, Mtime: expectedMtime,
+								DateNoSpace: today, DateNoFiles: today,
 							},
 							{
 								Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2,
@@ -1028,8 +1034,15 @@ func TestBaseDirs(t *testing.T) {
 				Convey("getting weaver-like output for group base-dirs", func() {
 					wbo, err := bdr.GroupUsageTable(summary.DGUTAgeAll)
 					So(err, ShouldBeNil)
-					So(wbo, ShouldEqual, joinWithNewLines(
-						joinWithTabs(
+
+					groupsToID := make(map[string]uint32, len(bdr.groupCache.data))
+
+					for gid, name := range bdr.groupCache.data {
+						groupsToID[name] = gid
+					}
+
+					rowsData := [][]string{
+						{
 							"group1",
 							"Alan",
 							projectA,
@@ -1039,8 +1052,8 @@ func TestBaseDirs(t *testing.T) {
 							"2",
 							"20",
 							quotaStatusOK,
-						),
-						joinWithTabs(
+						},
+						{
 							groupName,
 							"",
 							projectD,
@@ -1050,8 +1063,8 @@ func TestBaseDirs(t *testing.T) {
 							"5",
 							"0",
 							quotaStatusNotOK,
-						),
-						joinWithTabs(
+						},
+						{
 							"group2",
 							"Barbara",
 							projectC1,
@@ -1061,8 +1074,8 @@ func TestBaseDirs(t *testing.T) {
 							"1",
 							"40",
 							quotaStatusOK,
-						),
-						joinWithTabs(
+						},
+						{
 							"group2",
 							"Barbara",
 							projectB123,
@@ -1072,8 +1085,8 @@ func TestBaseDirs(t *testing.T) {
 							"1",
 							"40",
 							quotaStatusOK,
-						),
-						joinWithTabs(
+						},
+						{
 							"group2",
 							"Barbara",
 							projectB125,
@@ -1083,8 +1096,8 @@ func TestBaseDirs(t *testing.T) {
 							"1",
 							"30",
 							quotaStatusOK,
-						),
-						joinWithTabs(
+						},
+						{
 							ageGroupName,
 							"",
 							projectA,
@@ -1094,8 +1107,8 @@ func TestBaseDirs(t *testing.T) {
 							"2",
 							"30",
 							quotaStatusOK,
-						),
-						joinWithTabs(
+						},
+						{
 							"77777",
 							"",
 							user2,
@@ -1105,8 +1118,23 @@ func TestBaseDirs(t *testing.T) {
 							"1",
 							"50",
 							quotaStatusOK,
-						),
-					))
+						},
+					}
+
+					sort.Slice(rowsData, func(i, j int) bool {
+						iIDbs := idToByteSlice(groupsToID[rowsData[i][0]])
+						jIDbs := idToByteSlice(groupsToID[rowsData[j][0]])
+						comparison := bytes.Compare(iIDbs, jIDbs)
+
+						return comparison == -1
+					})
+
+					rows := make([]string, len(rowsData))
+					for n, r := range rowsData {
+						rows[n] = joinWithTabs(r...)
+					}
+
+					So(wbo, ShouldEqual, joinWithNewLines(rows...))
 				})
 
 				Convey("getting weaver-like output for user base-dirs", func() {
@@ -1200,10 +1228,11 @@ func TestBaseDirs(t *testing.T) {
 					}
 
 					sort.Slice(rowsData, func(i, j int) bool {
-						iID := strconv.FormatUint(uint64(groupsToID[rowsData[i][0]]), 10)
-						jID := strconv.FormatUint(uint64(groupsToID[rowsData[j][0]]), 10)
+						iIDbs := idToByteSlice(groupsToID[rowsData[i][0]])
+						jIDbs := idToByteSlice(groupsToID[rowsData[j][0]])
+						comparison := bytes.Compare(iIDbs, jIDbs)
 
-						return iID < jID
+						return comparison == -1
 					})
 
 					rows := make([]string, len(rowsData))
@@ -1438,4 +1467,34 @@ func fixSubDirTimes(sds []*SubDir) {
 	for n := range sds {
 		sds[n].LastModified = fixtimes.FixTime(sds[n].LastModified)
 	}
+}
+
+func sortByDatabaseKeyOrder(usageTable []*Usage) {
+	if usageTable[0].UID != 0 {
+		sortByUID(usageTable)
+
+		return
+	}
+
+	sortByGID(usageTable)
+}
+
+func sortByGID(usageTable []*Usage) {
+	sort.Slice(usageTable, func(i, j int) bool {
+		iID := idToByteSlice(usageTable[i].GID)
+		jID := idToByteSlice(usageTable[j].GID)
+		comparison := bytes.Compare(iID, jID)
+
+		return comparison == -1
+	})
+}
+
+func sortByUID(usageTable []*Usage) {
+	sort.Slice(usageTable, func(i, j int) bool {
+		iID := idToByteSlice(usageTable[i].UID)
+		jID := idToByteSlice(usageTable[j].UID)
+		comparison := bytes.Compare(iID, jID)
+
+		return comparison == -1
+	})
 }

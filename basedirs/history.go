@@ -29,7 +29,6 @@ package basedirs
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -84,7 +83,7 @@ func (b *BaseDirReader) History(gid uint32, path string) ([]History, error) {
 }
 
 func historyKey(gid uint32, mountPoint string) []byte {
-	return []byte(fmt.Sprintf("%d%s%s%s%d", gid, bucketKeySeparator, mountPoint, bucketKeySeparator, summary.DGUTAgeAll))
+	return keyName(gid, mountPoint, summary.DGUTAgeAll)
 }
 
 type mountPoints []string

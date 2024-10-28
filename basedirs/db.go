@@ -28,6 +28,8 @@
 package basedirs
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -216,7 +218,34 @@ func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dguta.DCSs) 
 }
 
 func keyName(id uint32, path string, age summary.DirGUTAge) []byte {
-	return []byte(fmt.Sprintf("%d%s%s%s%d", id, bucketKeySeparator, path, bucketKeySeparator, age))
+	idBs := idToByteSlice(id)
+
+	ageBs := ageToByteSlice(age)
+
+	length := 6 + len(path)
+	b := bytes.NewBuffer(make([]byte, 0, length))
+
+	b.Write(idBs)
+	b.Write([]byte{bucketKeySeparatorByte})
+	b.WriteString(path)
+	b.Write([]byte{bucketKeySeparatorByte})
+	b.Write(ageBs)
+
+	return b.Bytes()
+}
+
+func idToByteSlice(id uint32) []byte {
+	bs := make([]byte, 4)
+	binary.LittleEndian.PutUint32(bs, id)
+
+	return bs
+}
+
+func ageToByteSlice(age summary.DirGUTAge) []byte {
+	bs := make([]byte, 2)
+	binary.LittleEndian.PutUint16(bs, uint16(age))
+
+	return bs
 }
 
 func (b *BaseDirs) encodeToBytes(data any) []byte {
