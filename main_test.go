@@ -773,6 +773,8 @@ func TestWalk(t *testing.T) {
 }
 
 func writeFileStringAndCompress(t *testing.T, path, contents string) {
+	t.Helper()
+
 	writeFileString(t, path, contents)
 
 	f, err := os.Create(path + ".gz")

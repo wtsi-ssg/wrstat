@@ -38,6 +38,11 @@ import (
 	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
+const (
+	statsColumn       = 0
+	byUserGroupColumn = 2
+)
+
 // chtsvCmd represents the chtsv command.
 var decodeCmd = &cobra.Command{
 	Use:   "decode",
@@ -52,7 +57,7 @@ Files with names ending in '.gz' will be decompressed before printing.
 
 Other files are simply copied to stdout.
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		for _, file := range args {
 			if err := decodeFile(file); err != nil {
 				die("%s", err)
@@ -85,10 +90,10 @@ func decodeFile(file string) error {
 		r = gr
 	}
 
-	var col int
+	col := statsColumn
 
 	if strings.HasSuffix(file, ".byusergroup") {
-		col = 2
+		col = byUserGroupColumn
 	} else if !strings.HasSuffix(file, ".stats") {
 		_, err = io.Copy(os.Stdout, r)
 
@@ -98,7 +103,7 @@ func decodeFile(file string) error {
 	return decodeColumn(r, col)
 }
 
-func decodeColumn(r io.Reader, col int) error {
+func decodeColumn(r io.Reader, col int) error { //nolint:gocognit
 	br := bufio.NewReader(r)
 
 	w := bufio.NewWriter(os.Stdout)
@@ -115,30 +120,41 @@ func decodeColumn(r io.Reader, col int) error {
 		}
 
 		if line == "\n" {
-			w.WriteString(line)
+			if _, err = w.WriteString(line); err != nil {
+				return err
+			}
 
 			continue
 		}
 
-		parts := strings.SplitN(line, "\t", col+2)
-
-		parts[col], err = encode.Base64Decode(parts[col])
-		if err != nil {
+		if err = decodeColAndPrintLine(w, line, col); err != nil {
 			return err
-		}
-
-		if _, err = w.WriteString(parts[0]); err != nil {
-			return err
-		}
-
-		for _, p := range parts[1:] {
-			if err = w.WriteByte('\t'); err != nil {
-				return err
-			}
-
-			if _, err = w.WriteString(p); err != nil {
-				return err
-			}
 		}
 	}
+}
+
+func decodeColAndPrintLine(w *bufio.Writer, line string, col int) error {
+	var err error
+
+	parts := strings.SplitN(line, "\t", col+2) //nolint:mnd
+
+	if parts[col], err = encode.Base64Decode(parts[col]); err != nil {
+		return err
+	}
+
+	if _, err := w.WriteString(parts[0]); err != nil {
+		return err
+	}
+
+	for _, p := range parts[1:] {
+		if err := w.WriteByte('\t'); err != nil {
+			return err
+		}
+
+		if _, err := w.WriteString(p); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
