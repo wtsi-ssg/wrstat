@@ -864,14 +864,14 @@ func TestBaseDirs(t *testing.T) {
 								QuotaInodes: 30, Mtime: expectedFixedAgeMtime,
 							},
 							{
-								Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2,
-								UsageSize: 60, QuotaSize: 500, UsageInodes: 1,
-								QuotaInodes: 50, Mtime: expectedMtime,
-							},
-							{
 								Name: groupName, GID: uint32(gid), UIDs: []uint32{uint32(uid)}, BaseDir: projectD,
 								UsageSize: 10, QuotaSize: 0, UsageInodes: 4, QuotaInodes: 0, Mtime: expectedMtime,
 								DateNoSpace: today, DateNoFiles: today,
+							},
+							{
+								Name: "77777", GID: 77777, UIDs: []uint32{102}, Owner: "", BaseDir: user2,
+								UsageSize: 60, QuotaSize: 500, UsageInodes: 1,
+								QuotaInodes: 50, Mtime: expectedMtime,
 							},
 						})
 

@@ -452,7 +452,10 @@ func TestDirGUTA(t *testing.T) {
 
 					output := string(o)
 
-					buildExpectedOutputLine := func(dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge, count, size int, atime, mtime int64) string {
+					buildExpectedOutputLine := func(
+						dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge,
+						count, size int, atime, mtime int64,
+					) string {
 						return fmt.Sprintf("%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
 							strconv.Quote(dir), gid, uid, ft, age, count, size, atime, mtime)
 					}
