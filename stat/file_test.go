@@ -30,11 +30,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 func TestStatFile(t *testing.T) {
@@ -68,11 +68,6 @@ func TestStatFile(t *testing.T) {
 		So(modeToType(fs.ModeCharDevice), ShouldEqual, "c")
 		So(modeToType(fs.ModeNamedPipe), ShouldEqual, "F")
 		So(modeToType(fs.ModeIrregular), ShouldEqual, "X")
-	})
-
-	Convey("base64Encode() works correctly", t, func() {
-		So(encode.Base64Encode("/a/path/reg"), ShouldEqual, "9q2jQ43oO0xmNKQ=")
-		So(encode.Base64Encode("/a/path/link"), ShouldEqual, "9q2jQ43oO0xgOKtf")
 	})
 
 	Convey("File() returns the correct interpretation of FileInfo", t, func() {
@@ -111,7 +106,7 @@ func testFileStats(path string, size int64, filetype string) {
 
 	stats := File("/abs/path/to/file", info)
 	So(stats, ShouldNotBeNil)
-	So(len(stats.Base64Path), ShouldBeGreaterThan, 0)
+	So(len(stats.QuotedPath), ShouldBeGreaterThan, 0)
 	So(stats.Size, ShouldEqual, size)
 
 	stat, ok := info.Sys().(*syscall.Stat_t)
@@ -128,7 +123,7 @@ func testFileStats(path string, size int64, filetype string) {
 
 	So(stats.ToString(), ShouldEqual, fmt.Sprintf(
 		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
-		encode.Base64Encode("/abs/path/to/file"), size, stat.Uid, stat.Gid,
+		strconv.Quote("/abs/path/to/file"), size, stat.Uid, stat.Gid,
 		stat.Atim.Sec, stat.Mtim.Sec, stat.Ctim.Sec,
 		filetype, stat.Ino, stat.Nlink, stat.Dev))
 }

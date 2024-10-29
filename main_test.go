@@ -40,6 +40,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -50,7 +51,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/basedirs"
 	"github.com/wtsi-ssg/wrstat/v5/dguta"
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
@@ -637,7 +637,7 @@ func TestWalk(t *testing.T) {
 			"", "/a", "/a/b", "/a/b/c", "/a/b/c/d", "/a/b/c/d/e",
 			"/a/b/c/test.txt", "/a/b/f", "/a/b/f/tes\nt2.csv", "/a/g", "/a/g/h", "/a/test3",
 		} {
-			expected += encode.Base64Encode(tmp+subPath) + "\n"
+			expected += strconv.Quote(tmp+subPath) + "\n"
 		}
 
 		compareFileContents(t, walk1, expected)
@@ -818,7 +818,7 @@ func TestStat(t *testing.T) {
 				return err
 			}
 
-			_, err = io.WriteString(walkFile, encode.Base64Encode(filepath.Join(tmp, path))+"\n")
+			_, err = io.WriteString(walkFile, strconv.Quote(filepath.Join(tmp, path))+"\n")
 			So(err, ShouldBeNil)
 
 			return nil
@@ -847,11 +847,11 @@ func TestStat(t *testing.T) {
 			"%[7]s\t4096\t%[1]s\t%[2]s\t%[18]d\t282820\t%[23]d\td\t%[12]d\t2\t%[13]d\n",
 			u.Uid,
 			u.Gid,
-			encode.Base64Encode(tmp),
-			encode.Base64Encode(filepath.Join(tmp, "aDirectory")),
-			encode.Base64Encode(filepath.Join(tmp, "aDirectory", "aFile\nfile")),
-			encode.Base64Encode(filepath.Join(tmp, "aDirectory", "aSubDirectory")),
-			encode.Base64Encode(filepath.Join(tmp, "anotherDirectory")),
+			strconv.Quote(tmp),
+			strconv.Quote(filepath.Join(tmp, "aDirectory")),
+			strconv.Quote(filepath.Join(tmp, "aDirectory", "aFile\nfile")),
+			strconv.Quote(filepath.Join(tmp, "aDirectory", "aSubDirectory")),
+			strconv.Quote(filepath.Join(tmp, "anotherDirectory")),
 			inodes[4],
 			inodes[2],
 			inodes[0],
@@ -885,7 +885,7 @@ func TestStat(t *testing.T) {
 			parent = filepath.Dir(parent)
 
 			userGroupExpectation = fmt.Sprintf("%s\t%s\t%s\t1\t10\n",
-				u.Username, g.Name, encode.Base64Encode(parent)) + userGroupExpectation
+				u.Username, g.Name, strconv.Quote(parent)) + userGroupExpectation
 			walkExpectations = fmt.Sprintf(""+
 				"%[1]s\t%[2]s\t%[3]s\t0\t1\t10\t%[4]d\t7383773\n"+
 				"%[1]s\t%[2]s\t%[3]s\t1\t5\t16394\t%[4]d\t7383773\n"+
@@ -895,7 +895,7 @@ func TestStat(t *testing.T) {
 		userGroupExpectation += fmt.Sprintf(""+
 			"%[1]s\t%[2]s\t%[3]s\t1\t10\n"+
 			"%[1]s\t%[2]s\t%[4]s\t1\t10\n", u.Username, g.Name,
-			encode.Base64Encode(tmp), encode.Base64Encode(filepath.Join(tmp, "aDirectory")))
+			strconv.Quote(tmp), strconv.Quote(filepath.Join(tmp, "aDirectory")))
 
 		walkExpectations += fmt.Sprintf(""+
 			"%[1]s\t%[2]s\t%[3]s\t0\t1\t10\t%[4]d\t7383773\n"+
@@ -945,43 +945,43 @@ func TestCombine(t *testing.T) {
 			"b.bygroup":     "e\tf\tg\th\n5\t6\t7\t8\n",
 			"c.bygroup":     "",
 			"a.dguta": "" + //nolint:dupl
-				encode.Base64Encode("/") +
+				strconv.Quote("/") +
 				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/") +
+				strconv.Quote("/") +
 				"\t2000\t1000\t2\t0\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/") +
+				strconv.Quote("/") +
 				"\t2000\t1000\t15\t0\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some") +
+				strconv.Quote("/some") +
 				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some") +
+				strconv.Quote("/some") +
 				"\t2000\t1000\t2\t0\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some") +
+				strconv.Quote("/some") +
 				"\t2000\t1000\t15\t0\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory") +
+				strconv.Quote("/some/directory") +
 				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory") +
+				strconv.Quote("/some/directory") +
 				"\t2000\t1000\t2\t0\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory") +
+				strconv.Quote("/some/directory") +
 				"\t2000\t1000\t15\t0\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001") +
+				strconv.Quote("/some/directory/001") +
 				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001") +
+				strconv.Quote("/some/directory/001") +
 				"\t2000\t1000\t2\t0\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001") +
+				strconv.Quote("/some/directory/001") +
 				"\t2000\t1000\t15\t0\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") +
+				strconv.Quote("/some/directory/001/aDirectory") +
 				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") +
+				strconv.Quote("/some/directory/001/aDirectory") +
 				"\t2000\t1000\t2\t0\t3\t8202\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") +
+				strconv.Quote("/some/directory/001/aDirectory") +
 				"\t2000\t1000\t15\t0\t2\t8192\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") +
+				strconv.Quote("/some/directory/001/aDirectory/aSubDirectory") +
 				"\t2000\t1000\t2\t0\t1\t4096\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") +
+				strconv.Quote("/some/directory/001/aDirectory/aSubDirectory") +
 				"\t2000\t1000\t15\t0\t1\t4096\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/anotherDirectory") +
+				strconv.Quote("/some/directory/001/anotherDirectory") +
 				"\t2000\t1000\t2\t0\t1\t4096\t1721915848\t282820\n" +
-				encode.Base64Encode("/some/directory/001/anotherDirectory") +
+				strconv.Quote("/some/directory/001/anotherDirectory") +
 				"\t2000\t1000\t15\t0\t1\t4096\t1721915848\t282820\n",
 			"a.log": "A log file\nwith 2 lines\n",
 			"b.log": "Another log file, with 1 line\n",
@@ -1848,79 +1848,79 @@ stop;`)
 				GroupA, GroupB, GroupD, UserD, UserA, UserB, UserE),
 			"????????_store3.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t1024", GroupA, UserA),
 			"????????_A.*.byusergroup.gz": fmt.Sprintf(``+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/")+"\t1\t1\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple")+"\t1\t1\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple/A")+"\t1\t1\n", UserA, GroupA),
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/")+"\t1\t1\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/simple")+"\t1\t1\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/simple/A")+"\t1\t1\n", UserA, GroupA),
 			"????????_E.*.byusergroup.gz": fmt.Sprintf(``+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/")+"\t1\t2\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple")+"\t1\t2\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple/E")+"\t1\t2\n", UserE, GroupE),
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/")+"\t1\t2\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/simple")+"\t1\t2\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/simple/E")+"\t1\t2\n", UserE, GroupE),
 			"????????_store1.*.byusergroup.gz": fmt.Sprintf(``+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/")+"\t2\t10240\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects")+"\t2\t10240\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1")+"\t2\t10240\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data")+"\t2\t10240\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data/sheets")+"\t2\t10240\n"+
-				"U%[2]d\tG%[4]d\t"+encode.Base64Encode("/")+"\t2\t66666\n"+
-				"U%[2]d\tG%[4]d\t"+encode.Base64Encode("/objects")+"\t2\t66666\n"+
-				"U%[2]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1")+"\t2\t66666\n"+
-				"U%[2]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data")+"\t2\t66666\n"+
-				"U%[2]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data/dbs")+"\t2\t66666\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/")+"\t3\t6000\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects")+"\t3\t6000\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1")+"\t3\t6000\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data")+"\t3\t6000\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data/temp")+"\t3\t6000\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data/temp/a")+"\t1\t1000\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data/temp/b")+"\t1\t2000\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store1/data/temp/c")+"\t1\t3000",
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/")+"\t2\t10240\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects")+"\t2\t10240\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects/store1")+"\t2\t10240\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data")+"\t2\t10240\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data/sheets")+"\t2\t10240\n"+
+				"U%[2]d\tG%[4]d\t"+strconv.Quote("/")+"\t2\t66666\n"+
+				"U%[2]d\tG%[4]d\t"+strconv.Quote("/objects")+"\t2\t66666\n"+
+				"U%[2]d\tG%[4]d\t"+strconv.Quote("/objects/store1")+"\t2\t66666\n"+
+				"U%[2]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data")+"\t2\t66666\n"+
+				"U%[2]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data/dbs")+"\t2\t66666\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/")+"\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects")+"\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store1")+"\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data")+"\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data/temp")+"\t3\t6000\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data/temp/a")+"\t1\t1000\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data/temp/b")+"\t1\t2000\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store1/data/temp/c")+"\t1\t3000",
 				UserA, UserB, UserC, GroupA),
 			"????????_store2.*.byusergroup.gz": fmt.Sprintf(``+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/")+"\t1\t100\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects")+"\t1\t100\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects/store2")+"\t1\t100\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects/store2/part0")+"\t1\t100\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects/store2/part0/teams")+"\t1\t100\n"+
-				"U%[1]d\tG%[4]d\t"+encode.Base64Encode("/objects/store2/part0/teams/team1")+"\t1\t100\n"+
-				"U%[1]d\tG%[5]d\t"+encode.Base64Encode("/")+"\t1\t200\n"+
-				"U%[1]d\tG%[5]d\t"+encode.Base64Encode("/objects")+"\t1\t200\n"+
-				"U%[1]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2")+"\t1\t200\n"+
-				"U%[1]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part0")+"\t1\t200\n"+
-				"U%[1]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part0/teams")+"\t1\t200\n"+
-				"U%[1]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part0/teams/team1")+"\t1\t200\n"+
-				"U%[2]d\tG%[5]d\t"+encode.Base64Encode("/")+"\t1\t1000\n"+
-				"U%[2]d\tG%[5]d\t"+encode.Base64Encode("/objects")+"\t1\t1000\n"+
-				"U%[2]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2")+"\t1\t1000\n"+
-				"U%[2]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part0")+"\t1\t1000\n"+
-				"U%[2]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part0/teams")+"\t1\t1000\n"+
-				"U%[2]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part0/teams/team2")+"\t1\t1000\n"+
-				"U%[2]d\tG%[6]d\t"+encode.Base64Encode("/")+"\t1\t1200\n"+
-				"U%[2]d\tG%[6]d\t"+encode.Base64Encode("/objects")+"\t1\t1200\n"+
-				"U%[2]d\tG%[6]d\t"+encode.Base64Encode("/objects/store2")+"\t1\t1200\n"+
-				"U%[2]d\tG%[6]d\t"+encode.Base64Encode("/objects/store2/important")+"\t1\t1200\n"+
-				"U%[2]d\tG%[6]d\t"+encode.Base64Encode("/objects/store2/important/docs\t")+"\t1\t1200\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/")+"\t2\t3047\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects")+"\t2\t3047\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store2")+"\t2\t3047\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store2/part1")+"\t2\t3047\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store2/part1/other")+"\t1\t2048\n"+
-				"U%[3]d\tG%[4]d\t"+encode.Base64Encode("/objects/store2/part1/other/my\nDir")+"\t1\t2048\n"+
-				"U%[3]d\tG%[6]d\t"+encode.Base64Encode("/")+"\t1\t1024\n"+
-				"U%[3]d\tG%[6]d\t"+encode.Base64Encode("/objects")+"\t1\t1024\n"+
-				"U%[3]d\tG%[6]d\t"+encode.Base64Encode("/objects/store2")+"\t1\t1024\n"+
-				"U%[3]d\tG%[6]d\t"+encode.Base64Encode("/objects/store2/part1")+"\t1\t1024\n"+
-				"U%[3]d\tG%[6]d\t"+encode.Base64Encode("/objects/store2/part1/other")+"\t1\t1024\n"+
-				"U%[7]d\tG%[5]d\t"+encode.Base64Encode("/")+"\t1\t2048\n"+
-				"U%[7]d\tG%[5]d\t"+encode.Base64Encode("/objects")+"\t1\t2048\n"+
-				"U%[7]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2")+"\t1\t2048\n"+
-				"U%[7]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part1")+"\t1\t2048\n"+
-				"U%[7]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part1/other")+"\t1\t2048\n"+
-				"U%[7]d\tG%[5]d\t"+encode.Base64Encode("/objects/store2/part1/other/my\nDir")+"\t1\t2048\n",
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/")+"\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects")+"\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects/store2")+"\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects/store2/part0")+"\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects/store2/part0/teams")+"\t1\t100\n"+
+				"U%[1]d\tG%[4]d\t"+strconv.Quote("/objects/store2/part0/teams/team1")+"\t1\t100\n"+
+				"U%[1]d\tG%[5]d\t"+strconv.Quote("/")+"\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t"+strconv.Quote("/objects")+"\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t"+strconv.Quote("/objects/store2")+"\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part0")+"\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part0/teams")+"\t1\t200\n"+
+				"U%[1]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part0/teams/team1")+"\t1\t200\n"+
+				"U%[2]d\tG%[5]d\t"+strconv.Quote("/")+"\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t"+strconv.Quote("/objects")+"\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t"+strconv.Quote("/objects/store2")+"\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part0")+"\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part0/teams")+"\t1\t1000\n"+
+				"U%[2]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part0/teams/team2")+"\t1\t1000\n"+
+				"U%[2]d\tG%[6]d\t"+strconv.Quote("/")+"\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t"+strconv.Quote("/objects")+"\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t"+strconv.Quote("/objects/store2")+"\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t"+strconv.Quote("/objects/store2/important")+"\t1\t1200\n"+
+				"U%[2]d\tG%[6]d\t"+strconv.Quote("/objects/store2/important/docs\t")+"\t1\t1200\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/")+"\t2\t3047\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects")+"\t2\t3047\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store2")+"\t2\t3047\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store2/part1")+"\t2\t3047\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store2/part1/other")+"\t1\t2048\n"+
+				"U%[3]d\tG%[4]d\t"+strconv.Quote("/objects/store2/part1/other/my\nDir")+"\t1\t2048\n"+
+				"U%[3]d\tG%[6]d\t"+strconv.Quote("/")+"\t1\t1024\n"+
+				"U%[3]d\tG%[6]d\t"+strconv.Quote("/objects")+"\t1\t1024\n"+
+				"U%[3]d\tG%[6]d\t"+strconv.Quote("/objects/store2")+"\t1\t1024\n"+
+				"U%[3]d\tG%[6]d\t"+strconv.Quote("/objects/store2/part1")+"\t1\t1024\n"+
+				"U%[3]d\tG%[6]d\t"+strconv.Quote("/objects/store2/part1/other")+"\t1\t1024\n"+
+				"U%[7]d\tG%[5]d\t"+strconv.Quote("/")+"\t1\t2048\n"+
+				"U%[7]d\tG%[5]d\t"+strconv.Quote("/objects")+"\t1\t2048\n"+
+				"U%[7]d\tG%[5]d\t"+strconv.Quote("/objects/store2")+"\t1\t2048\n"+
+				"U%[7]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part1")+"\t1\t2048\n"+
+				"U%[7]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part1/other")+"\t1\t2048\n"+
+				"U%[7]d\tG%[5]d\t"+strconv.Quote("/objects/store2/part1/other/my\nDir")+"\t1\t2048\n",
 				UserA, UserB, UserD, GroupA, GroupB, GroupD, UserE),
 			"????????_store3.*.byusergroup.gz": fmt.Sprintf(``+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/")+"\t1\t1024\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/objects")+"\t1\t1024\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/objects/store3")+"\t1\t1024",
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/")+"\t1\t1024\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/objects")+"\t1\t1024\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/objects/store3")+"\t1\t1024",
 				UserA, GroupA),
 			"????????_A.*.logs.gz":      "",
 			"????????_E.*.logs.gz":      "",
@@ -1928,58 +1928,58 @@ stop;`)
 			"????????_store2.*.logs.gz": "",
 			"????????_store3.*.logs.gz": "",
 			"????????_A.*.stats.gz": fmt.Sprintf(""+
-				encode.Base64Encode("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t166\t166\t166\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/simple/A")+"\t0\t%[1]d\t%[2]d\t166\t166\t166\td\t\x00\t2\t32",
+				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t166\t166\t166\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/simple/A")+"\t0\t%[1]d\t%[2]d\t166\t166\t166\td\t\x00\t2\t32",
 				UserA, GroupA),
 			"????????_E.*.stats.gz": fmt.Sprintf(""+
-				encode.Base64Encode("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t171\t171\t171\tf\t\x00\t2\t34\n"+
-				encode.Base64Encode("/simple/E")+"\t0\t%[1]d\t%[2]d\t171\t171\t171\td\t\x00\t3\t32",
+				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t171\t171\t171\tf\t\x00\t2\t34\n"+
+				strconv.Quote("/simple/E")+"\t0\t%[1]d\t%[2]d\t171\t171\t171\td\t\x00\t3\t32",
 				UserE, GroupE),
 			"????????_store1.*.stats.gz": fmt.Sprintf(""+
-				encode.Base64Encode("/objects/store1")+"\t0\t0\t0\t10\t10\t10\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store1/data")+"\t0\t0\t0\t42\t42\t42\td\t\x00\t5\t32\n"+
-				encode.Base64Encode("/objects/store1/data/temp")+"\t0\t%[1]d\t%[2]d\t69\t69\t69\td\t\x00\t5\t32\n"+
-				encode.Base64Encode("/objects/store1/data/temp/c/c.bed")+"\t512\t%[1]d\t%[2]d\t75\t75\t75\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store1/data/temp/c")+"\t0\t%[1]d\t%[2]d\t75\t75\t75\td\t\x00\t2\t32\n"+
-				encode.Base64Encode("/objects/store1/data/dbs/dbA.db")+"\t512\t%[3]d\t%[2]d\t33\t33\t33\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store1/data/dbs/dbB.db")+"\t512\t%[3]d\t%[2]d\t38\t38\t38\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store1/data/dbs")+"\t0\t%[3]d\t%[2]d\t38\t38\t38\td\t\x00\t2\t32\n"+
-				encode.Base64Encode("/objects/store1/data/sheets/doc1.txt")+"\t512\t%[4]d\t%[2]d\t19\t19\t19\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store1/data/sheets/doc2.txt")+"\t512\t%[4]d\t%[2]d\t24\t24\t24\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store1/data/sheets")+"\t0\t%[4]d\t%[2]d\t24\t24\t24\td\t\x00\t2\t32\n"+
-				encode.Base64Encode("/objects/store1/data/temp/a/a.bed")+"\t512\t%[1]d\t%[2]d\t53\t53\t53\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store1/data/temp/a")+"\t0\t%[1]d\t%[2]d\t53\t53\t53\td\t\x00\t2\t32\n"+
-				encode.Base64Encode("/objects/store1/data/temp/b/b.bed")+"\t512\t%[1]d\t%[2]d\t64\t64\t64\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store1/data/temp/b")+"\t0\t%[1]d\t%[2]d\t64\t64\t64\td\t\x00\t2\t32",
+				strconv.Quote("/objects/store1")+"\t0\t0\t0\t10\t10\t10\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store1/data")+"\t0\t0\t0\t42\t42\t42\td\t\x00\t5\t32\n"+
+				strconv.Quote("/objects/store1/data/temp")+"\t0\t%[1]d\t%[2]d\t69\t69\t69\td\t\x00\t5\t32\n"+
+				strconv.Quote("/objects/store1/data/temp/c/c.bed")+"\t512\t%[1]d\t%[2]d\t75\t75\t75\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/temp/c")+"\t0\t%[1]d\t%[2]d\t75\t75\t75\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store1/data/dbs/dbA.db")+"\t512\t%[3]d\t%[2]d\t33\t33\t33\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/dbs/dbB.db")+"\t512\t%[3]d\t%[2]d\t38\t38\t38\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/dbs")+"\t0\t%[3]d\t%[2]d\t38\t38\t38\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store1/data/sheets/doc1.txt")+"\t512\t%[4]d\t%[2]d\t19\t19\t19\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/sheets/doc2.txt")+"\t512\t%[4]d\t%[2]d\t24\t24\t24\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/sheets")+"\t0\t%[4]d\t%[2]d\t24\t24\t24\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store1/data/temp/a/a.bed")+"\t512\t%[1]d\t%[2]d\t53\t53\t53\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/temp/a")+"\t0\t%[1]d\t%[2]d\t53\t53\t53\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store1/data/temp/b/b.bed")+"\t512\t%[1]d\t%[2]d\t64\t64\t64\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/temp/b")+"\t0\t%[1]d\t%[2]d\t64\t64\t64\td\t\x00\t2\t32",
 				UserC, GroupA, UserB, UserA),
 			"????????_store2.*.stats.gz": fmt.Sprintf(""+
-				encode.Base64Encode("/objects/store2")+"\t0\t0\t0\t148\t148\t148\td\t\x00\t5\t32\n"+
-				encode.Base64Encode("/objects/store2/part1/other.bed")+"\t512\t%[1]d\t%[2]d\t119\t119\t119\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part1")+"\t0\t0\t0\t123\t123\t123\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store2/part1/other/my.tmp.gz")+"\t512\t%[1]d\t%[3]d\t128\t128\t128\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part1/other")+"\t0\t%[1]d\t%[2]d\t133\t133\t133\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store2/part1/other/my\nDir/my.tmp.old")+
+				strconv.Quote("/objects/store2")+"\t0\t0\t0\t148\t148\t148\td\t\x00\t5\t32\n"+
+				strconv.Quote("/objects/store2/part1/other.bed")+"\t512\t%[1]d\t%[2]d\t119\t119\t119\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part1")+"\t0\t0\t0\t123\t123\t123\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store2/part1/other/my.tmp.gz")+"\t512\t%[1]d\t%[3]d\t128\t128\t128\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part1/other")+"\t0\t%[1]d\t%[2]d\t133\t133\t133\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store2/part1/other/my\nDir/my.tmp.old")+
 				"\t512\t%[1]d\t%[2]d\t139\t139\t139\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part1/other/my\nDir/another.file")+
+				strconv.Quote("/objects/store2/part1/other/my\nDir/another.file")+
 				"\t512\t%[7]d\t%[5]d\t145\t145\t145\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part1/other/my\nDir")+"\t0\t%[1]d\t%[2]d\t145\t145\t145\td\t\x00\t2\t32\n"+
-				encode.Base64Encode("/objects/store2/important")+"\t0\t0\t0\t152\t152\t152\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store2/important/docs\t/my.doc")+
+				strconv.Quote("/objects/store2/part1/other/my\nDir")+"\t0\t%[1]d\t%[2]d\t145\t145\t145\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store2/important")+"\t0\t0\t0\t152\t152\t152\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store2/important/docs\t/my.doc")+
 				"\t512\t%[4]d\t%[3]d\t157\t157\t157\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/important/docs\t")+"\t0\t%[4]d\t%[3]d\t157\t157\t157\td\t\x00\t2\t32\n"+
-				encode.Base64Encode("/objects/store2/part0")+"\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n"+
-				encode.Base64Encode("/objects/store2/part0/teams")+"\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n"+
-				encode.Base64Encode("/objects/store2/part0/teams/team2/c.txt")+
+				strconv.Quote("/objects/store2/important/docs\t")+"\t0\t%[4]d\t%[3]d\t157\t157\t157\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store2/part0")+"\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store2/part0/teams")+"\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n"+
+				strconv.Quote("/objects/store2/part0/teams/team2/c.txt")+
 				"\t512\t%[4]d\t%[5]d\t115\t115\t115\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part0/teams/team2")+"\t0\t%[4]d\t%[5]d\t115\t115\t115\td\t\x00\t2\t32\n"+
-				encode.Base64Encode("/objects/store2/part0/teams/team1/a.txt")+"\t100\t%[6]d\t%[2]d\t98\t98\t98\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part0/teams/team1/b.txt")+
+				strconv.Quote("/objects/store2/part0/teams/team2")+"\t0\t%[4]d\t%[5]d\t115\t115\t115\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store2/part0/teams/team1/a.txt")+"\t100\t%[6]d\t%[2]d\t98\t98\t98\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part0/teams/team1/b.txt")+
 				"\t200\t%[6]d\t%[5]d\t104\t104\t104\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store2/part0/teams/team1")+"\t0\t%[6]d\t%[2]d\t104\t104\t104\td\t\x00\t2\t32",
+				strconv.Quote("/objects/store2/part0/teams/team1")+"\t0\t%[6]d\t%[2]d\t104\t104\t104\td\t\x00\t2\t32",
 				UserD, GroupA, GroupD, UserB, GroupB, UserA, UserE),
 			"????????_store3.*.stats.gz": fmt.Sprintf(""+
-				encode.Base64Encode("/objects/store3/aFile")+"\t512\t%d\t%d\t160\t160\t160\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/objects/store3")+"\t0\t0\t0\t160\t160\t160\td\t\x00\t2\t32",
+				strconv.Quote("/objects/store3/aFile")+"\t512\t%d\t%d\t160\t160\t160\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store3")+"\t0\t0\t0\t160\t160\t160\td\t\x00\t2\t32",
 				UserA, GroupA),
 
 			"simple/*basedirs.userusage.tsv": fmt.Sprintf(``+
@@ -1995,22 +1995,22 @@ stop;`)
 			"simple/????????_A.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t1", GroupA, UserA),
 			"simple/????????_E.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t2", GroupE, UserE),
 			"simple/????????_A.*.byusergroup.gz": fmt.Sprintf(``+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/")+"\t1\t1\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple")+"\t1\t1\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple/A")+"\t1\t1\n", UserA, GroupA),
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/")+"\t1\t1\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/simple")+"\t1\t1\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/simple/A")+"\t1\t1\n", UserA, GroupA),
 			"simple/????????_E.*.byusergroup.gz": fmt.Sprintf(``+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/")+"\t1\t2\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple")+"\t1\t2\n"+
-				"U%[1]d\tG%[2]d\t"+encode.Base64Encode("/simple/E")+"\t1\t2\n", UserE, GroupE),
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/")+"\t1\t2\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/simple")+"\t1\t2\n"+
+				"U%[1]d\tG%[2]d\t"+strconv.Quote("/simple/E")+"\t1\t2\n", UserE, GroupE),
 			"simple/????????_A.*.logs.gz": "",
 			"simple/????????_E.*.logs.gz": "",
 			"simple/????????_A.*.stats.gz": fmt.Sprintf(""+
-				encode.Base64Encode("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t166\t166\t166\tf\t\x00\t1\t34\n"+
-				encode.Base64Encode("/simple/A")+"\t0\t%[1]d\t%[2]d\t166\t166\t166\td\t\x00\t2\t32",
+				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t166\t166\t166\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/simple/A")+"\t0\t%[1]d\t%[2]d\t166\t166\t166\td\t\x00\t2\t32",
 				UserA, GroupA),
 			"simple/????????_E.*.stats.gz": fmt.Sprintf(""+
-				encode.Base64Encode("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t171\t171\t171\tf\t\x00\t2\t34\n"+
-				encode.Base64Encode("/simple/E")+"\t0\t%[1]d\t%[2]d\t171\t171\t171\td\t\x00\t3\t32",
+				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t171\t171\t171\tf\t\x00\t2\t34\n"+
+				strconv.Quote("/simple/E")+"\t0\t%[1]d\t%[2]d\t171\t171\t171\td\t\x00\t3\t32",
 				UserE, GroupE),
 		} {
 			files, errr := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))

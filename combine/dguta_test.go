@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -37,7 +38,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/dguta"
 	"github.com/wtsi-ssg/wrstat/v5/fs"
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
@@ -172,18 +172,23 @@ func TestOldFile(t *testing.T) {
 			So(ds.Mtime, ShouldEqual, time.Unix(amtime2, 0))
 
 			Convey("and the DirGUTAges are set as expected", func() {
-				expectedSizes := [17]int64{tfs, tfs, tfs, tfs, tfs, tfs, tfs, tfs - 2,
-					tfs - 3, tfs, tfs, tfs, tfs, tfs, tfs, tfs - 6, tfs - 7}
+				expectedSizes := [17]int64{
+					tfs, tfs, tfs, tfs, tfs, tfs, tfs, tfs - 2,
+					tfs - 3, tfs, tfs, tfs, tfs, tfs, tfs, tfs - 6, tfs - 7,
+				}
 
-				expectedCounts := [17]int{expectedCount, expectedCount, expectedCount,
+				expectedCounts := [17]int{
+					expectedCount, expectedCount, expectedCount,
 					expectedCount, expectedCount, expectedCount, expectedCount,
 					expectedCount - 1, expectedCount - 2, expectedCount, expectedCount,
 					expectedCount, expectedCount, expectedCount, expectedCount,
-					expectedCount - 2, expectedCount - 3}
+					expectedCount - 2, expectedCount - 3,
+				}
 
 				expectedAtime := amtime3 - 1
 
-				expectedMtimes := [17]int64{amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2,
+				expectedMtimes := [17]int64{
+					amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime2,
 					amtime2, amtime2, amtime2, amtime2, amtime2, amtime2, amtime1, amtime3,
 				}
 
@@ -250,7 +255,8 @@ func createDGUTAFile(t *testing.T, tempDir, fileName, content string) string {
 // 1668768807 /lustre  1313    13912   0   0   1   0   1668768807
 // /lustre/scratch123   1313    13912   0   0   1   0   1668768807.
 func buildDGUTAContent(directory, gid, uid string, filetype, nestedFiles, //nolint:unparam
-	fileSize, oldestAtime, newestAtime, refTime int64) string {
+	fileSize, oldestAtime, newestAtime, refTime int64,
+) string {
 	var dgutaContents string
 
 	splitDir := recursivePath(directory)
@@ -263,7 +269,7 @@ func buildDGUTAContent(directory, gid, uid string, filetype, nestedFiles, //noli
 				continue
 			}
 
-			dgutaContents += encode.Base64Encode(split) + guta +
+			dgutaContents += strconv.Quote(split) + guta +
 				fmt.Sprintf("\t%d\t%d\t%d\t%d\n",
 					nestedFiles, fileSize, oldestAtime, newestAtime)
 		}
@@ -285,7 +291,7 @@ func recursivePath(path string) []string {
 	count := strings.Count(path, "/")
 	newPath := path
 
-	var dgutaContents = make([]string, count+1)
+	dgutaContents := make([]string, count+1)
 	dgutaContents[count] = path
 
 	for i := count - 1; i >= 0; i-- {

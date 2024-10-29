@@ -185,7 +185,8 @@ func TestBaseDirs(t *testing.T) {
 								UIDs:    []uint32{101},
 								FTs:     expectedFTsBam,
 								Modtime: dbModTime,
-							}}))
+							},
+						}))
 
 					dcss, err = bd.calculateForGroup(2)
 					So(err, ShouldBeNil)

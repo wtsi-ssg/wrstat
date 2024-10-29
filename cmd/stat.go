@@ -37,17 +37,21 @@ import (
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
-const reportFrequency = 10 * time.Minute
-const statOutputFileSuffix = ".stats"
-const statUserGroupSummaryOutputFileSuffix = ".byusergroup"
-const statGroupSummaryOutputFileSuffix = ".bygroup"
-const statDGUTASummaryOutputFileSuffix = ".dguta"
-const statLogOutputFileSuffix = ".log"
-const lstatTimeout = 10 * time.Second
-const lstatAttempts = 3
+const (
+	reportFrequency                      = 10 * time.Minute
+	statOutputFileSuffix                 = ".stats"
+	statUserGroupSummaryOutputFileSuffix = ".byusergroup"
+	statGroupSummaryOutputFileSuffix     = ".bygroup"
+	statDGUTASummaryOutputFileSuffix     = ".dguta"
+	statLogOutputFileSuffix              = ".log"
+	lstatTimeout                         = 10 * time.Second
+	lstatAttempts                        = 3
+)
 
-var statDebug bool
-var statCh string
+var (
+	statDebug bool
+	statCh    string
+)
 
 // statCmd represents the stat command.
 var statCmd = &cobra.Command{
@@ -55,12 +59,12 @@ var statCmd = &cobra.Command{
 	Short: "Stat paths",
 	Long: `Stat paths in a given file.
 
-Given a file containing a base64 encoded absolute file path per line (eg. as
-produced by 'wrstat walk'), this creates a new file with stats for each of those
-file paths. The new file is named after the input file with a ".stats" suffix.
+Given a file containing a quoted absolute file path per line (eg. as produced
+by 'wrstat walk'), this creates a new file with stats for each of those file
+paths. The new file is named after the input file with a ".stats" suffix.
 
 The output file format is 11 tab separated columns with the following contents:
-1. Base64 encoded path to the file.
+1. Quoted path to the file.
 2. File size in bytes. If this is greater than the number of bytes in blocks
    allocated, this will be the number of bytes in allocated blocks. (This is to
    account for files with holes in them; as a byproduct, symbolic links will

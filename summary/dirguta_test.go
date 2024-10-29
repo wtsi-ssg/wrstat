@@ -37,7 +37,6 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 func TestDirGUTAFileType(t *testing.T) {
@@ -257,7 +256,8 @@ func TestDirGUTAFileType(t *testing.T) {
 
 		So(d.pathToTypes("/foo/bar.asd"), ShouldResemble, []DirGUTAFileType{DGUTAFileTypeOther})
 		So(pathToTypesMap(d, "/foo/.tmp.asd"), ShouldResemble, map[DirGUTAFileType]bool{
-			DGUTAFileTypeOther: true, DGUTAFileTypeTemp: true})
+			DGUTAFileTypeOther: true, DGUTAFileTypeTemp: true,
+		})
 
 		So(d.pathToTypes("/foo/bar.vcf"), ShouldResemble, []DirGUTAFileType{DGUTAFileTypeVCF})
 		So(d.pathToTypes("/foo/bar.vcf.gz"), ShouldResemble, []DirGUTAFileType{DGUTAFileTypeVCFGz})
@@ -266,7 +266,8 @@ func TestDirGUTAFileType(t *testing.T) {
 		So(d.pathToTypes("/foo/bar.sam"), ShouldResemble, []DirGUTAFileType{DGUTAFileTypeSam})
 		So(d.pathToTypes("/foo/bar.bam"), ShouldResemble, []DirGUTAFileType{DGUTAFileTypeBam})
 		So(pathToTypesMap(d, "/foo/.tmp.cram"), ShouldResemble, map[DirGUTAFileType]bool{
-			DGUTAFileTypeCram: true, DGUTAFileTypeTemp: true})
+			DGUTAFileTypeCram: true, DGUTAFileTypeTemp: true,
+		})
 
 		So(d.pathToTypes("/foo/bar.fa"), ShouldResemble, []DirGUTAFileType{DGUTAFileTypeFasta})
 		So(d.pathToTypes("/foo/bar.fq"), ShouldResemble, []DirGUTAFileType{DGUTAFileTypeFastq})
@@ -451,17 +452,18 @@ func TestDirGUTA(t *testing.T) {
 
 					output := string(o)
 
-					buildExpectedOutputLine :=
-						func(dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge, count, size int, atime, mtime int64) string {
-							return fmt.Sprintf("%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
-								encode.Base64Encode(dir), gid, uid, ft, age, count, size, atime, mtime)
-						}
+					buildExpectedOutputLine := func(
+						dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge,
+						count, size int, atime, mtime int64,
+					) string {
+						return fmt.Sprintf("%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+							strconv.Quote(dir), gid, uid, ft, age, count, size, atime, mtime)
+					}
 
-					buildExpectedEmptyOutputLine :=
-						func(dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge) string {
-							return fmt.Sprintf("%s\t%d\t%d\t%d\t%d",
-								encode.Base64Encode(dir), gid, uid, ft, age)
-						}
+					buildExpectedEmptyOutputLine := func(dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge) string {
+						return fmt.Sprintf("%s\t%d\t%d\t%d\t%d",
+							strconv.Quote(dir), gid, uid, ft, age)
+					}
 
 					dir := "/a/b/c"
 					gid, uid, ft, count, size := 2, 10, DGUTAFileTypeBam, 3, 10
@@ -640,16 +642,20 @@ func TestDirGUTA(t *testing.T) {
 				swa.atime = 18
 			}
 
-			So(swa, ShouldResemble, &summaryWithTimes{summary{1, 4096},
-				dguta.store.refTime, 18, 0})
+			So(swa, ShouldResemble, &summaryWithTimes{
+				summary{1, 4096},
+				dguta.store.refTime, 18, 0,
+			})
 
 			swa = dguta.store.gsMap["/a/b/c"].sumMap["2\t10\t15\t0"]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
 
-			So(swa, ShouldResemble, &summaryWithTimes{summary{1, 4096},
-				dguta.store.refTime, 18, 0})
+			So(swa, ShouldResemble, &summaryWithTimes{
+				summary{1, 4096},
+				dguta.store.refTime, 18, 0,
+			})
 			So(dguta.store.gsMap["/a/b/c/d"].sumMap["2\t10\t15\t0"], ShouldNotBeNil)
 
 			Convey("And then given an output file", func() {
@@ -670,26 +676,26 @@ func TestDirGUTA(t *testing.T) {
 					output := string(o)
 
 					for i := range len(DirGUTAges) - 1 {
-						So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c/d")+
+						So(output, ShouldContainSubstring, strconv.Quote("/a/b/c/d")+
 							fmt.Sprintf("\t2\t10\t7\t%d\t1\t2\t200\t200\n", i))
 					}
 
 					// these are based on files added with newMockInfo and
 					// don't have a/mtime set, so show up as 0 a/mtime and are
 					// treated as ancient
-					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c")+
+					So(output, ShouldContainSubstring, strconv.Quote("/a/b/c")+
 						"\t"+cuidKey+"\t2\t30\t0\t0\n")
-					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c")+
+					So(output, ShouldContainSubstring, strconv.Quote("/a/b/c")+
 						"\t"+fmt.Sprintf("2\t%d\t13\t1", cuid)+"\t2\t30\t0\t0\n")
-					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b/c")+
+					So(output, ShouldContainSubstring, strconv.Quote("/a/b/c")+
 						"\t"+fmt.Sprintf("2\t%d\t13\t16", cuid)+"\t2\t30\t0\t0\n")
-					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+
+					So(output, ShouldContainSubstring, strconv.Quote("/a/b")+
 						"\t"+cuidKey+"\t3\t60\t0\t0\n")
-					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+
+					So(output, ShouldContainSubstring, strconv.Quote("/a/b")+
 						"\t2\t2\t13\t0\t1\t5\t0\t0\n")
-					So(output, ShouldContainSubstring, encode.Base64Encode("/a/b")+
+					So(output, ShouldContainSubstring, strconv.Quote("/a/b")+
 						"\t2\t2\t6\t0\t1\t3\t100\t0\n")
-					So(output, ShouldContainSubstring, encode.Base64Encode("/")+
+					So(output, ShouldContainSubstring, strconv.Quote("/")+
 						"\t3\t2\t13\t0\t1\t6\t0\t0\n")
 
 					So(checkFileIsSorted(outPath), ShouldBeTrue)
@@ -751,33 +757,47 @@ func TestOldFile(t *testing.T) {
 			err = dguta.Add(path, fileInfo)
 
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA1M)],
-				ShouldResemble, &summaryWithTimes{summary{1, size64},
+				ShouldResemble, &summaryWithTimes{
+					summary{1, size64},
 					dguta.store.refTime,
-					amtime, amtime})
+					amtime, amtime,
+				})
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA2M)],
-				ShouldResemble, &summaryWithTimes{summary{1, size64},
+				ShouldResemble, &summaryWithTimes{
+					summary{1, size64},
 					dguta.store.refTime,
-					amtime, amtime})
+					amtime, amtime,
+				})
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA6M)],
-				ShouldResemble, &summaryWithTimes{summary{1, size64},
+				ShouldResemble, &summaryWithTimes{
+					summary{1, size64},
 					dguta.store.refTime,
-					amtime, amtime})
+					amtime, amtime,
+				})
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA1Y)],
-				ShouldResemble, &summaryWithTimes{summary{1, size64},
+				ShouldResemble, &summaryWithTimes{
+					summary{1, size64},
 					dguta.store.refTime,
-					amtime, amtime})
+					amtime, amtime,
+				})
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA2Y)],
-				ShouldResemble, &summaryWithTimes{summary{1, size64},
+				ShouldResemble, &summaryWithTimes{
+					summary{1, size64},
 					dguta.store.refTime,
-					amtime, amtime})
+					amtime, amtime,
+				})
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA3Y)],
-				ShouldResemble, &summaryWithTimes{summary{1, size64},
+				ShouldResemble, &summaryWithTimes{
+					summary{1, size64},
 					dguta.store.refTime,
-					amtime, amtime})
+					amtime, amtime,
+				})
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA5Y)],
-				ShouldResemble, &summaryWithTimes{summary{1, size64},
+				ShouldResemble, &summaryWithTimes{
+					summary{1, size64},
 					dguta.store.refTime,
-					amtime, amtime})
+					amtime, amtime,
+				})
 			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA7Y)],
 				ShouldBeNil)
 		})

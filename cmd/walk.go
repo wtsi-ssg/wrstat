@@ -45,12 +45,14 @@ const (
 )
 
 // options for this cmd.
-var outputDir string
-var depGroup string
-var walkInodesPerJob int
-var walkNumOfJobs int
-var walkID string
-var walkCh string
+var (
+	outputDir        string
+	depGroup         string
+	walkInodesPerJob int
+	walkNumOfJobs    int
+	walkID           string
+	walkCh           string
+)
 
 // walkCmd represents the walk command.
 var walkCmd = &cobra.Command{
@@ -68,11 +70,10 @@ user that can sudo without a password when running wrstat, and supply the --sudo
 option to this command.
 
 For each entry recursively within the directory of interest, their paths are
-quickly retrieved (without doing any expensive stat calls) and written (base64
-encoded) to output files in the given output directory. The number of files is
-such that they will each contain about --inodes_per_stat entries (or if
---num_stats was supplied greater than zero, then there will be that number of
-output files).
+quickly retrieved (without doing any expensive stat calls) and written (quoted)
+to output files in the given output directory. The number of files is such that
+they will each contain about --inodes_per_stat entries (or if --num_stats was
+supplied greater than zero, then there will be that number of output files).
 
 For each output file, a 'wrstat stat' job is then added to wr's queue with the
 given dependency group. For the meaning of the --ch option which is passed
@@ -149,7 +150,8 @@ func statRepGrp(dir, unique string) string {
 
 // walkDirAndScheduleStats does the main work.
 func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int, depGroup, repGroup,
-	yamlPath string, s *scheduler.Scheduler) {
+	yamlPath string, s *scheduler.Scheduler,
+) {
 	n := statJobs
 	if n == 0 {
 		n = calculateSplitBasedOnInodes(inodes, desiredDir)
