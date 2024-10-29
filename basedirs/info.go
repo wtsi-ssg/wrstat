@@ -97,7 +97,7 @@ func countFromFullBucketScan(tx *bolt.Tx, bucketName string,
 }
 
 func checkAgeOfKeyIsAll(key []byte) bool {
-	return bytes.Split(key, []byte{bucketKeySeparatorByte})[2][0] == ageToByteSlice(summary.DGUTAgeAll)[0]
+	return bytes.Split(key, bucketKeySeparatorByteSlice)[2][0] == ageToByteSlice(summary.DGUTAgeAll)[0]
 }
 
 func countOnly(_ []byte, _ codec.Handle) int {

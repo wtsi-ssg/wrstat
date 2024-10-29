@@ -28,7 +28,6 @@
 package basedirs
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -58,6 +57,8 @@ const (
 	sizeOfUint32 = 4
 	sizeOfUint16 = 2
 )
+
+var bucketKeySeparatorByteSlice = []byte{bucketKeySeparatorByte} //nolint:gochecknoglobals
 
 // Usage holds information summarising usage by a particular GID/UID-BaseDir.
 //
@@ -226,15 +227,14 @@ func keyName(id uint32, path string, age summary.DirGUTAge) []byte {
 	ageBs := ageToByteSlice(age)
 
 	length := sizeOfUint32 + sizeOfUint16 + len(path)
-	b := bytes.NewBuffer(make([]byte, 0, length))
+	b := make([]byte, 0, length)
+	b = append(b, idBs...)
+	b = append(b, bucketKeySeparatorByte)
+	b = append(b, path...)
+	b = append(b, bucketKeySeparatorByte)
+	b = append(b, ageBs...)
 
-	b.Write(idBs)
-	b.Write([]byte{bucketKeySeparatorByte})
-	b.WriteString(path)
-	b.Write([]byte{bucketKeySeparatorByte})
-	b.Write(ageBs)
-
-	return b.Bytes()
+	return b
 }
 
 func idToByteSlice(id uint32) []byte {

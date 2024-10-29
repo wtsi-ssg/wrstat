@@ -53,7 +53,7 @@ func NewTree(paths ...string) (*Tree, error) {
 
 // DirSummary holds nested file count, size, atime and mtime information on a
 // directory. It also holds which users and groups own files nested under the
-// directory, what the file types are and the age group.
+// directory, what the file types are, and the age group.
 type DirSummary struct {
 	Dir     string
 	Count   uint64
