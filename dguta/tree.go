@@ -253,9 +253,7 @@ func (t *Tree) recurseWhere(dir string, filter *Filter, recurseCount func(string
 				return nil, err
 			}
 
-			if d != nil {
-				dcss = append(dcss, d...)
-			}
+			dcss = append(dcss, d...)
 		}
 	}
 
