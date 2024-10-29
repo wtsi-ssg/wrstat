@@ -32,7 +32,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
@@ -40,8 +39,10 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
-const ErrInvalidFormat = Error("the provided data was not in dguta format")
-const ErrBlankLine = Error("the provided line had no information")
+const (
+	ErrInvalidFormat = Error("the provided data was not in dguta format")
+	ErrBlankLine     = Error("the provided line had no information")
+)
 
 const (
 	gutaDataCols    = 9
@@ -115,7 +116,7 @@ func parseDGUTALine(line string) (string, *GUTA, error) {
 		return "", nil, ErrBlankLine
 	}
 
-	path, err := encode.Base64Decode(parts[0])
+	path, err := strconv.Unquote(parts[0])
 	if err != nil {
 		return "", nil, err
 	}

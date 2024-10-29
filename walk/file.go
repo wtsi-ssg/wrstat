@@ -30,9 +30,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
-
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 const userOnlyPerm = 0700
@@ -97,13 +96,12 @@ func NewFiles(outDir string, n int) (*Files, error) {
 
 // WritePaths returns a PathCallback function suitable for passing to New().
 //
-// Paths are written base64 encoded 1 per line to our output files in a
-// round-robin.
+// Paths are written quoted 1 per line to our output files in a round-robin.
 //
 // It will terminate the walk if writes to our output files fail.
 func (f *Files) WritePaths() PathCallback {
 	return func(entry *Dirent) error {
-		return f.writePath(encode.Base64Encode(entry.Path))
+		return f.writePath(strconv.Quote(entry.Path))
 	}
 }
 

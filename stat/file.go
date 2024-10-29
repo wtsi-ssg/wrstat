@@ -31,9 +31,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strconv"
 	"syscall"
-
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 type FileType string
@@ -57,7 +56,7 @@ const (
 // FileStats contains all the file stats needed by wrstat, interpreted in our
 // custom way.
 type FileStats struct {
-	Base64Path string
+	QuotedPath string
 	Size       int64
 	UID        uint32
 	GID        uint32
@@ -75,7 +74,7 @@ type FileStats struct {
 func (fs *FileStats) ToString() string {
 	return fmt.Sprintf(
 		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
-		fs.Base64Path, fs.Size, fs.UID, fs.GID,
+		fs.QuotedPath, fs.Size, fs.UID, fs.GID,
 		fs.Atim, fs.Mtim, fs.Ctim,
 		fs.Type, fs.Ino, fs.Nlink, fs.Dev)
 }
@@ -90,11 +89,11 @@ func (fs *FileStats) correctSize(stat *syscall.Stat_t) {
 
 // File interprets the given file info to produce a FileStats.
 //
-// You provide the absolute path to the file so that Base64Path can be
+// You provide the absolute path to the file so that QuotedPath can be
 // calculated correctly (the info only contains the basename).
 func File(absPath string, info os.FileInfo) *FileStats {
 	fs := &FileStats{
-		Base64Path: encode.Base64Encode(absPath),
+		QuotedPath: strconv.Quote(absPath),
 		Size:       info.Size(),
 		Type:       modeToType(info.Mode()),
 	}

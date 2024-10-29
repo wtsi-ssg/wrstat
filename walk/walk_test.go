@@ -38,7 +38,6 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 const permNoWrite = 0500
@@ -237,7 +236,7 @@ func prepareTestDirs(t *testing.T) (string, string, map[string]int) {
 
 	pathsEncoded := make(map[string]int, len(paths))
 	for k, v := range paths {
-		pathsEncoded[encode.Base64Encode(k)] = v
+		pathsEncoded[strconv.Quote(k)] = v
 	}
 
 	return walkDir, outDir, pathsEncoded
@@ -314,7 +313,8 @@ func removeAndSymlink(t *testing.T, path, dest string) {
 }
 
 func testOutputToFiles(ignoreSymlinks bool, walkDir, outDir string, cb ErrorCallback,
-	expectedPaths map[string]int) (int, int, int) {
+	expectedPaths map[string]int,
+) (int, int, int) {
 	files, err := NewFiles(outDir, 1)
 	So(err, ShouldBeNil)
 

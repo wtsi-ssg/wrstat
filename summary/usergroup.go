@@ -33,8 +33,6 @@ import (
 	"sort"
 	"strconv"
 	"syscall"
-
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 type Error string
@@ -330,7 +328,7 @@ func outputDirectorySummariesForGroup(output StringCloser, username, groupname s
 
 	for i, s := range summaries {
 		_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%s\t%d\t%d\n",
-			username, groupname, encode.Base64Encode(dirs[i]), s.count, s.size))
+			username, groupname, strconv.Quote(dirs[i]), s.count, s.size))
 		if errw != nil {
 			return errw
 		}

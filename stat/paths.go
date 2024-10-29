@@ -29,11 +29,11 @@ import (
 	"bufio"
 	"io"
 	"io/fs"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/inconshreveable/log15"
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/reporter"
 )
 
@@ -86,9 +86,9 @@ func (p *Paths) AddOperation(name string, op Operation) error {
 	return nil
 }
 
-// Scan scans through the given reader which should consist of a base64 encoded
-// absolute file path per line. It calls our Statter.Lstat() on each, and passes
-// the absolute path and FileInfo to any Operation callbacks you've added.
+// Scan scans through the given reader which should consist of quoted absolute
+// file path per line. It calls our Statter.Lstat() on each, and passes the
+// absolute path and FileInfo to any Operation callbacks you've added.
 //
 // Operations are run concurrently (so should not do something like write to the
 // same file) and their errors logged, but otherwise ignored.
@@ -105,7 +105,7 @@ func (p *Paths) Scan(paths io.Reader) error {
 	var wg sync.WaitGroup
 
 	for scanner.Scan() {
-		path, err := encode.Base64Decode(scanner.Text())
+		path, err := strconv.Unquote(scanner.Text())
 		if err != nil {
 			return err
 		}

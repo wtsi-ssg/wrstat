@@ -30,17 +30,19 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
-const errTestFail = Error("test fail")
-const errTestFileDetails = Error("file details wrong")
+const (
+	errTestFail        = Error("test fail")
+	errTestFileDetails = Error("file details wrong")
+)
 
 func TestPaths(t *testing.T) {
 	statterTimeout := 1 * time.Second
@@ -196,8 +198,8 @@ func createScanInput(t *testing.T) io.Reader {
 	t.Helper()
 
 	pathEmpty, pathContent := createTestFiles(t)
-	r := strings.NewReader(encode.Base64Encode(pathEmpty) + "\n" +
-		encode.Base64Encode("/foo/bar") + "\n" + encode.Base64Encode(pathContent))
+	r := strings.NewReader(strconv.Quote(pathEmpty) + "\n" +
+		strconv.Quote("/foo/bar") + "\n" + strconv.Quote(pathContent))
 
 	return r
 }

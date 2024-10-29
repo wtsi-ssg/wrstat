@@ -31,11 +31,10 @@ import (
 	"io/fs"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 )
 
 // DirGUTAge is one of the age types that the
@@ -113,14 +112,18 @@ var AllTypesExceptDirectories = []DirGUTAFileType{ //nolint:gochecknoglobals
 	DGUTAFileTypeLog,
 }
 
-const ErrInvalidType = Error("not a valid file type")
-const ErrInvalidAge = Error("not a valid age")
+const (
+	ErrInvalidType = Error("not a valid file type")
+	ErrInvalidAge  = Error("not a valid age")
+)
 
 // String lets you convert a DirGUTAFileType to a meaningful string.
 func (d DirGUTAFileType) String() string {
-	return [...]string{"other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
+	return [...]string{
+		"other", "temp", "vcf", "vcf.gz", "bcf", "sam", "bam",
 		"cram", "fasta", "fastq", "fastq.gz", "ped/bed", "compressed", "text",
-		"log", "dir"}[d]
+		"log", "dir",
+	}[d]
 }
 
 // FileTypeStringToDirGUTAFileType converts the String() representation of a
@@ -591,7 +594,7 @@ func (d *DirGroupUserTypeAge) Output(output StringCloser) error {
 		for j, dguta := range dgutas {
 			s := summaries[j]
 			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\n",
-				encode.Base64Encode(dir),
+				strconv.Quote(dir),
 				dguta,
 				s.count, s.size,
 				s.atime, s.mtime))
