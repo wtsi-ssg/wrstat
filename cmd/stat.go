@@ -41,7 +41,7 @@ const reportFrequency = 10 * time.Minute
 const statOutputFileSuffix = ".stats"
 const statUserGroupSummaryOutputFileSuffix = ".byusergroup"
 const statGroupSummaryOutputFileSuffix = ".bygroup"
-const statDGUTSummaryOutputFileSuffix = ".dgut"
+const statDGUTASummaryOutputFileSuffix = ".dguta"
 const statLogOutputFileSuffix = ".log"
 const lstatTimeout = 10 * time.Second
 const lstatAttempts = 3
@@ -105,7 +105,7 @@ joe	lemur	/disk1/dir1/dir1a	3	30
 joe	lemur	/disk1/dir2	1	10
 
 Likewise, it produces a similar file that also shows nested numbers, with these
-8 tab separated columns, with a ".dgut" suffix:
+8 tab separated columns, with a ".dguta" suffix:
 
 1. directory
 2. gid
@@ -282,7 +282,7 @@ func addSummaryOperations(input string, p *stat.Paths) (func() error, error) {
 		return nil, err
 	}
 
-	outputDGUTSummaryData, err := addDGUTSummaryOperation(input, p)
+	outputDGUTASummaryData, err := addDGUTASummaryOperation(input, p)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func addSummaryOperations(input string, p *stat.Paths) (func() error, error) {
 			return err
 		}
 
-		return outputDGUTSummaryData()
+		return outputDGUTASummaryData()
 	}, nil
 }
 
@@ -338,14 +338,14 @@ func addGroupSummaryOperation(input string, p *stat.Paths) (func() error, error)
 	return addSummaryOperator(input, statGroupSummaryOutputFileSuffix, "group", p, g)
 }
 
-// addDGUTSummaryOperation adds an operation to Paths that collects [directory,
+// addDGUTASummaryOperation adds an operation to Paths that collects [directory,
 // group, user, filetype, count, size] summary information. It returns a
 // function that you should call after calling p.Scan(), which outputs the
 // summary data to file.
-func addDGUTSummaryOperation(input string, p *stat.Paths) (func() error, error) {
-	d := summary.NewByDirGroupUserType()
+func addDGUTASummaryOperation(input string, p *stat.Paths) (func() error, error) {
+	d := summary.NewDirGroupUserTypeAge()
 
-	return addSummaryOperator(input, statDGUTSummaryOutputFileSuffix, "dgut", p, d)
+	return addSummaryOperator(input, statDGUTASummaryOutputFileSuffix, "dguta", p, d)
 }
 
 // addChOperation adds the chmod&chown operation to the Paths if the tsv file

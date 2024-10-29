@@ -90,11 +90,11 @@ type Tidy struct {
 // relocates them to our dest directory, using our date. Also ensures that the
 // permissions of wrstat output files match those of dest directory. If our dest
 // dir doesn't exist, it will be created. And it touches a file called
-// .dgut.db.updated, setting its mTime equal to the oldest of all those from our
-// srcDir. Finally, deletes the source directory.
+// .dguta.db.updated, setting its mTime equal to the oldest of all those from
+// our srcDir. Finally, deletes the source directory.
 //
-// For debugging purposes, set disableDeletion to true to disable deletion of the
-// source directory after a successful move.
+// For debugging purposes, set disableDeletion to true to disable deletion of
+// the source directory after a successful move.
 func (t *Tidy) Up(disableDeletion bool) error {
 	if err := fileCheck.DirValid(t.SrcDir); err != nil {
 		return err
@@ -280,7 +280,7 @@ func (t *Tidy) moveBaseDirsFile(inSuffix, outSuffix string) error {
 	return t.renameAndCorrectPerms(source, dest)
 }
 
-// findAndMoveDBs finds the combine.dgut.db directories in our sourceDir and
+// findAndMoveDBs finds the combine.dguta.db directories in our sourceDir and
 // moves them to a uniquely named dir in destDir that includes our date, and
 // adjusts ownership and permissions to match our destDir.
 //

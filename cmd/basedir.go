@@ -37,8 +37,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/v5/basedirs"
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dguta"
 	ifs "github.com/wtsi-ssg/wrstat/v5/internal/fs"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
 const (
@@ -150,9 +151,9 @@ be blank), and the first column will be user_name instead of group_name.
 		basedirsConfig := config()
 
 		t := time.Now()
-		tree, err := dgut.NewTree(dgutDBCombinePaths(args[0])...)
+		tree, err := dguta.NewTree(dgutaDBCombinePaths(args[0])...)
 		if err != nil {
-			die("failed to load dgut databases: %s", err)
+			die("failed to load dguta databases: %s", err)
 		}
 		info("opening databases took %s", time.Since(t))
 
@@ -181,7 +182,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to create base directories database: %s", err)
 		}
 
-		gut, err := bdr.GroupUsageTable()
+		gut, err := bdr.GroupUsageTable(summary.DGUTAgeAll)
 		if err != nil {
 			die("failed to get group usage table: %s", err)
 		}
@@ -190,7 +191,7 @@ be blank), and the first column will be user_name instead of group_name.
 			die("failed to write group usage table: %s", err)
 		}
 
-		uut, err := bdr.UserUsageTable()
+		uut, err := bdr.UserUsageTable(summary.DGUTAgeAll)
 		if err != nil {
 			die("failed to get group usage table: %s", err)
 		}
@@ -242,13 +243,13 @@ func config() basedirs.Config {
 	return basedirsConfig
 }
 
-// dgutDBCombinePaths returns the dgut db directories that 'wrstat combine'
+// dgutaDBCombinePaths returns the dguta db directories that 'wrstat combine'
 // creates in the given output directory.
-func dgutDBCombinePaths(dir string) []string {
-	paths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", dir, combineDGUTOutputFileBasename))
+func dgutaDBCombinePaths(dir string) []string {
+	paths, err := filepath.Glob(fmt.Sprintf("%s/*/*/%s", dir, combineDGUTAOutputFileBasename))
 	if err != nil || len(paths) == 0 {
-		die("failed to find dgut database directories based on [%s/*/*/%s] (err: %s)",
-			dir, combineDGUTOutputFileBasename, err)
+		die("failed to find dguta database directories based on [%s/*/*/%s] (err: %s)",
+			dir, combineDGUTAOutputFileBasename, err)
 	}
 
 	info("%+v", paths)

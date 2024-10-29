@@ -23,7 +23,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 
-package dgut
+package dguta
 
 import (
 	"sort"
@@ -38,7 +38,7 @@ type Tree struct {
 	db *DB
 }
 
-// NewTree, given the paths to one or more dgut database files (as created by
+// NewTree, given the paths to one or more dguta database files (as created by
 // DB.Store()), returns a *Tree that can be used to do high-level queries on the
 // stats of a tree of disk folders. You should Close() the tree after use.
 func NewTree(paths ...string) (*Tree, error) {
@@ -51,9 +51,9 @@ func NewTree(paths ...string) (*Tree, error) {
 	return &Tree{db: db}, nil
 }
 
-// DirSummary holds nested file count, size, atime and mtim information on a
+// DirSummary holds nested file count, size, atime and mtime information on a
 // directory. It also holds which users and groups own files nested under the
-// directory, and what the file types are.
+// directory, what the file types are, and the age group.
 type DirSummary struct {
 	Dir     string
 	Count   uint64
@@ -62,7 +62,8 @@ type DirSummary struct {
 	Mtime   time.Time
 	UIDs    []uint32
 	GIDs    []uint32
-	FTs     []summary.DirGUTFileType
+	FTs     []summary.DirGUTAFileType
+	Age     summary.DirGUTAge
 	Modtime time.Time
 }
 
@@ -83,10 +84,14 @@ func (d DCSs) Less(i, j int) bool {
 	return d[i].Size > d[j].Size
 }
 
-// SortByDir sorts by Dir instead of Size.
-func (d DCSs) SortByDir() {
+// SortByDirAndAge sorts by Dir first then Age instead of Size.
+func (d DCSs) SortByDirAndAge() {
 	sort.Slice(d, func(i, j int) bool {
-		return d[i].Dir < d[j].Dir
+		if d[i].Dir != d[j].Dir {
+			return d[i].Dir < d[j].Dir
+		}
+
+		return d[i].Age < d[j].Age
 	})
 }
 
@@ -105,7 +110,7 @@ func (d *DirInfo) IsSameAsChild() bool {
 
 // DirInfo tells you the total number of files and their total size nested under
 // the given directory, along with the UIDs and GIDs that own those files.
-// See GUTs.Summary for an explanation of the filter.
+// See GUTAs.Summary for an explanation of the filter.
 //
 // It also tells you the same information about the immediate child directories
 // of the given directory (if the children have files in them that pass the
@@ -116,6 +121,10 @@ func (t *Tree) DirInfo(dir string, filter *Filter) (*DirInfo, error) {
 	dcs, err := t.getSummaryInfo(dir, filter)
 	if err != nil {
 		return nil, err
+	}
+
+	if dcs == nil {
+		return nil, nil //nolint:nilnil
 	}
 
 	di := &DirInfo{
@@ -129,13 +138,16 @@ func (t *Tree) DirInfo(dir string, filter *Filter) (*DirInfo, error) {
 }
 
 // DirHasChildren tells you if the given directory has any child directories
-// with files in them that pass the filter. See GUTs.Summary for an explanation
+// with files in them that pass the filter. See GUTAs.Summary for an explanation
 // of the filter.
 func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 	children := t.db.Children(dir)
 
 	for _, child := range children {
 		ds, _ := t.getSummaryInfo(child, filter) //nolint:errcheck
+		if ds == nil {
+			continue
+		}
 
 		if ds.Count > 0 {
 			return true
@@ -149,22 +161,12 @@ func (t *Tree) DirHasChildren(dir string, filter *Filter) bool {
 // info for a given directory and filter, along with the UIDs and GIDs that own
 // those files, the file types of those files.
 func (t *Tree) getSummaryInfo(dir string, filter *Filter) (*DirSummary, error) {
-	c, s, a, m, u, g, fts, lastUpdated, err := t.db.DirInfo(dir, filter)
-	if err != nil {
-		return nil, err
+	ds, err := t.db.DirInfo(dir, filter)
+	if ds != nil {
+		ds.Dir = dir
 	}
 
-	return &DirSummary{
-		Dir:     dir,
-		Count:   c,
-		Size:    s,
-		Atime:   time.Unix(a, 0),
-		Mtime:   time.Unix(m, 0),
-		UIDs:    u,
-		GIDs:    g,
-		FTs:     fts,
-		Modtime: lastUpdated,
-	}, nil
+	return ds, err
 }
 
 // addChildInfo adds DirSummary info of the given child paths to the di's
@@ -174,6 +176,10 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 		dcs, errc := t.getSummaryInfo(child, filter)
 		if errc != nil {
 			return errc
+		}
+
+		if dcs == nil {
+			continue
 		}
 
 		if dcs.Count > 0 {
@@ -194,7 +200,9 @@ func (t *Tree) addChildInfo(di *DirInfo, children []string, filter *Filter) erro
 // depth of 0 on each of the deepest directory's children would give. And so on
 // recursively for higher depths.
 //
-// See GUTs.Summary for an explanation of the filter.
+// See GUTAs.Summary for an explanation of the filter.
+//
+// It's recommended to set the Age filter to summary.DGUTAgeAll.
 //
 // For example, if all user 354's files are in the directories /a/b/c/d (2
 // files), /a/b/c/d/1 (1 files), /a/b/c/d/2 (2 files) and /a/b/e/f/g (2 files),
@@ -232,6 +240,10 @@ func (t *Tree) recurseWhere(dir string, filter *Filter, recurseCount func(string
 		return nil, err
 	}
 
+	if di == nil {
+		return nil, nil
+	}
+
 	dcss := DCSs{di.Current}
 
 	if recurseCount(dir) > step {
@@ -255,6 +267,10 @@ func (t *Tree) where0(dir string, filter *Filter) (*DirInfo, error) {
 		return nil, err
 	}
 
+	if di == nil {
+		return nil, nil //nolint:nilnil
+	}
+
 	for di.IsSameAsChild() {
 		// DirInfo can't return an error here, because we're supplying it a
 		// directory name that came from the database.
@@ -268,7 +284,7 @@ func (t *Tree) where0(dir string, filter *Filter) (*DirInfo, error) {
 // FileLocations, starting from the given dir, finds the first directory that
 // directly contains filter-passing files along every branch from dir.
 //
-// See GUTs.Summary for an explanation of the filter.
+// See GUTAs.Summary for an explanation of the filter.
 //
 // The results are returned sorted by directory.
 func (t *Tree) FileLocations(dir string, filter *Filter) (DCSs, error) {
@@ -299,7 +315,7 @@ func (t *Tree) FileLocations(dir string, filter *Filter) (DCSs, error) {
 		dcss = append(dcss, childDCSs...)
 	}
 
-	dcss.SortByDir()
+	dcss.SortByDirAndAge()
 
 	return dcss, nil
 }

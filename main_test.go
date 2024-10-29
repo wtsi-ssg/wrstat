@@ -49,7 +49,7 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wtsi-ssg/wrstat/v5/basedirs"
-	"github.com/wtsi-ssg/wrstat/v5/dgut"
+	"github.com/wtsi-ssg/wrstat/v5/dguta"
 	"github.com/wtsi-ssg/wrstat/v5/internal/encode"
 	"github.com/wtsi-ssg/wrstat/v5/internal/fixtimes"
 	"github.com/wtsi-ssg/wrstat/v5/summary"
@@ -912,7 +912,7 @@ func TestStat(t *testing.T) {
 		for file, contents := range map[string]string{
 			"dir.walk.stats":       statsExpectation,
 			"dir.walk.bygroup":     groupExpectation,
-			"dir.walk.byusergroup": userGroupExpectation, "dir.walk.dgut": walkExpectations,
+			"dir.walk.byusergroup": userGroupExpectation, "dir.walk.dguta": walkExpectations,
 			"dir.walk.log": "",
 		} {
 			if file != "dir.walk.stats" {
@@ -944,28 +944,45 @@ func TestCombine(t *testing.T) {
 			"a.bygroup":     "a\tb\tc\td\n1\t2\t3\t4\n",
 			"b.bygroup":     "e\tf\tg\th\n5\t6\t7\t8\n",
 			"c.bygroup":     "",
-			"a.dgut": "" +
-				encode.Base64Encode("/") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/") + "\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/") + "\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some") + "\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some") + "\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory") + "\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory") + "\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001") + "\t2000\t1000\t2\t5\t16394\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001") + "\t2000\t1000\t15\t4\t16384\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t0\t1\t10\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t2\t3\t8202\t1721915848\t7383773\n" +
-				encode.Base64Encode("/some/directory/001/aDirectory") + "\t2000\t1000\t15\t2\t8192\t1721915848\t314159\n" +
+			"a.dguta": "" + //nolint:dupl
+				encode.Base64Encode("/") +
+				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
+				encode.Base64Encode("/") +
+				"\t2000\t1000\t2\t0\t5\t16394\t1721915848\t7383773\n" +
+				encode.Base64Encode("/") +
+				"\t2000\t1000\t15\t0\t4\t16384\t1721915848\t314159\n" +
+				encode.Base64Encode("/some") +
+				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
+				encode.Base64Encode("/some") +
+				"\t2000\t1000\t2\t0\t5\t16394\t1721915848\t7383773\n" +
+				encode.Base64Encode("/some") +
+				"\t2000\t1000\t15\t0\t4\t16384\t1721915848\t314159\n" +
+				encode.Base64Encode("/some/directory") +
+				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
+				encode.Base64Encode("/some/directory") +
+				"\t2000\t1000\t2\t0\t5\t16394\t1721915848\t7383773\n" +
+				encode.Base64Encode("/some/directory") +
+				"\t2000\t1000\t15\t0\t4\t16384\t1721915848\t314159\n" +
+				encode.Base64Encode("/some/directory/001") +
+				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
+				encode.Base64Encode("/some/directory/001") +
+				"\t2000\t1000\t2\t0\t5\t16394\t1721915848\t7383773\n" +
+				encode.Base64Encode("/some/directory/001") +
+				"\t2000\t1000\t15\t0\t4\t16384\t1721915848\t314159\n" +
+				encode.Base64Encode("/some/directory/001/aDirectory") +
+				"\t2000\t1000\t0\t0\t1\t10\t1721915848\t7383773\n" +
+				encode.Base64Encode("/some/directory/001/aDirectory") +
+				"\t2000\t1000\t2\t0\t3\t8202\t1721915848\t7383773\n" +
+				encode.Base64Encode("/some/directory/001/aDirectory") +
+				"\t2000\t1000\t15\t0\t2\t8192\t1721915848\t314159\n" +
 				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") +
-				"\t2000\t1000\t2\t1\t4096\t1721915848\t314159\n" +
+				"\t2000\t1000\t2\t0\t1\t4096\t1721915848\t314159\n" +
 				encode.Base64Encode("/some/directory/001/aDirectory/aSubDirectory") +
-				"\t2000\t1000\t15\t1\t4096\t1721915848\t314159\n" +
-				encode.Base64Encode("/some/directory/001/anotherDirectory") + "\t2000\t1000\t2\t1\t4096\t1721915848\t282820\n" +
-				encode.Base64Encode("/some/directory/001/anotherDirectory") + "\t2000\t1000\t15\t1\t4096\t1721915848\t282820\n",
+				"\t2000\t1000\t15\t0\t1\t4096\t1721915848\t314159\n" +
+				encode.Base64Encode("/some/directory/001/anotherDirectory") +
+				"\t2000\t1000\t2\t0\t1\t4096\t1721915848\t282820\n" +
+				encode.Base64Encode("/some/directory/001/anotherDirectory") +
+				"\t2000\t1000\t15\t0\t1\t4096\t1721915848\t282820\n",
 			"a.log": "A log file\nwith 2 lines\n",
 			"b.log": "Another log file, with 1 line\n",
 			"c.log": "Lorem ipsum!!!!",
@@ -1004,7 +1021,7 @@ func TestCombine(t *testing.T) {
 			So(string(buf), ShouldEqual, contents)
 		}
 
-		db := dgut.NewDB(filepath.Join(tmp, "combine.dgut.db"))
+		db := dguta.NewDB(filepath.Join(tmp, "combine.dguta.db"))
 
 		err = db.Open()
 		So(err, ShouldBeNil)
@@ -1012,7 +1029,7 @@ func TestCombine(t *testing.T) {
 		info, err := db.Info()
 		So(err, ShouldBeNil)
 		So(info.NumDirs, ShouldEqual, 7)
-		So(info.NumDGUTs, ShouldEqual, 19)
+		So(info.NumDGUTAs, ShouldEqual, 19)
 		So(info.NumParents, ShouldEqual, 5)
 		So(info.NumChildren, ShouldEqual, 6)
 
@@ -1021,13 +1038,13 @@ func TestCombine(t *testing.T) {
 
 		for _, test := range [...]struct {
 			Directory   string
-			Filter      *dgut.Filter
+			Filter      *dguta.Filter
 			NumFiles    uint64
 			TotalSize   uint64
 			NewestMTime int64
 			UIDs        []uint32
 			GIDs        []uint32
-			FTs         []summary.DirGUTFileType
+			FTs         []summary.DirGUTAFileType
 		}{
 			{
 				Directory:   "/",
@@ -1036,7 +1053,7 @@ func TestCombine(t *testing.T) {
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0, 2, 15},
+				FTs:         []summary.DirGUTAFileType{0, 2, 15},
 			},
 			{
 				Directory:   "/some/directory/001",
@@ -1045,27 +1062,27 @@ func TestCombine(t *testing.T) {
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0, 2, 15},
+				FTs:         []summary.DirGUTAFileType{0, 2, 15},
 			},
 			{
 				Directory:   "/some/directory/001",
-				Filter:      &dgut.Filter{FTs: []summary.DirGUTFileType{0, 2, 15}},
+				Filter:      &dguta.Filter{FTs: []summary.DirGUTAFileType{0, 2, 15}},
 				NumFiles:    10,
 				TotalSize:   32788,
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0, 2, 15},
+				FTs:         []summary.DirGUTAFileType{0, 2, 15},
 			},
 			{
 				Directory:   "/some/directory/001",
-				Filter:      &dgut.Filter{FTs: []summary.DirGUTFileType{0}},
+				Filter:      &dguta.Filter{FTs: []summary.DirGUTAFileType{0}},
 				NumFiles:    1,
 				TotalSize:   10,
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0},
+				FTs:         []summary.DirGUTAFileType{0},
 			},
 			{
 				Directory:   "/some/directory/001/aDirectory",
@@ -1074,7 +1091,7 @@ func TestCombine(t *testing.T) {
 				NewestMTime: 7383773,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{0, 2, 15},
+				FTs:         []summary.DirGUTAFileType{0, 2, 15},
 			},
 			{
 				Directory:   "/some/directory/001/aDirectory/aSubDirectory",
@@ -1083,24 +1100,31 @@ func TestCombine(t *testing.T) {
 				NewestMTime: 314159,
 				UIDs:        uids,
 				GIDs:        gids,
-				FTs:         []summary.DirGUTFileType{2, 15},
+				FTs:         []summary.DirGUTAFileType{2, 15},
 			},
 			{
 				Directory: "/some/directory/001/aDirectory/aSubDirectory",
-				Filter:    &dgut.Filter{UIDs: []uint32{0}},
+				Filter:    &dguta.Filter{UIDs: []uint32{0}},
 				UIDs:      []uint32{},
 				GIDs:      []uint32{},
-				FTs:       []summary.DirGUTFileType{},
+				FTs:       []summary.DirGUTAFileType{},
 			},
 		} {
-			numFiles, totalSize, _, newestMTime, uids, gids, fts, _, err := db.DirInfo(test.Directory, test.Filter)
+			ds, err := db.DirInfo(test.Directory, test.Filter)
 			So(err, ShouldBeNil)
-			So(numFiles, ShouldEqual, test.NumFiles)
-			So(totalSize, ShouldEqual, test.TotalSize)
-			So(newestMTime, ShouldEqual, test.NewestMTime)
-			So(uids, ShouldResemble, test.UIDs)
-			So(gids, ShouldResemble, test.GIDs)
-			So(fts, ShouldResemble, test.FTs)
+
+			if test.NumFiles == 0 {
+				So(ds, ShouldBeNil)
+
+				continue
+			}
+
+			So(ds.Count, ShouldEqual, test.NumFiles)
+			So(ds.Size, ShouldEqual, test.TotalSize)
+			So(ds.Mtime, ShouldEqual, time.Unix(test.NewestMTime, 0))
+			So(ds.UIDs, ShouldResemble, test.UIDs)
+			So(ds.GIDs, ShouldResemble, test.GIDs)
+			So(ds.FTs, ShouldResemble, test.FTs)
 		}
 	})
 }
@@ -1232,14 +1256,14 @@ func TestBasedirs(t *testing.T) {
 			writeFileString(t, filepath.Join(configs, file), contents)
 		}
 
-		err := os.MkdirAll(filepath.Join(dbTmp, "a", "b", "combine.dgut.db"), 0755)
+		err := os.MkdirAll(filepath.Join(dbTmp, "a", "b", "combine.dguta.db"), 0755)
 		So(err, ShouldBeNil)
 
-		db := dgut.NewDB(filepath.Join(dbTmp, "a", "b", "combine.dgut.db"))
+		db := dguta.NewDB(filepath.Join(dbTmp, "a", "b", "combine.dguta.db"))
 
 		pr, pw := io.Pipe()
 
-		o := summary.NewByDirGroupUserType()
+		o := summary.NewDirGroupUserTypeAge()
 
 		const dirSize = 4096
 
@@ -1462,7 +1486,7 @@ func TestBasedirs(t *testing.T) {
 		bdr, err := basedirs.NewReader(filepath.Join(dbTmp, "basedirs.db"), filepath.Join(configs, "owners"))
 		So(err, ShouldBeNil)
 
-		gu, err := bdr.GroupUsage()
+		gu, err := bdr.GroupUsage(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
 
 		removeHistory(gu)
@@ -1488,7 +1512,7 @@ func TestBasedirs(t *testing.T) {
 
 		So(gu, ShouldResemble, groupExpectation)
 
-		uu, err := bdr.UserUsage()
+		uu, err := bdr.UserUsage(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
 
 		removeHistory(uu)
@@ -1547,11 +1571,11 @@ func TestTidy(t *testing.T) {
 			filepath.Join("a", "b", "combine.byusergroup.gz"),
 			filepath.Join("a", "b", "combine.bygroup"),
 			filepath.Join("a", "b", "combine.log.gz"),
-			filepath.Join("a", "b", "combine.dgut.db"),
-			filepath.Join("test.dgut.dbs", "0", "dgut.db"),
-			filepath.Join("test.dgut.dbs", "0", "dgut.db.children"),
-			filepath.Join("test.dgut.dbs", "1", "dgut.db"),
-			filepath.Join("test.dgut.dbs", "1", "dgut.db.children"),
+			filepath.Join("a", "b", "combine.dguta.db"),
+			filepath.Join("test.dguta.dbs", "0", "dguta.db"),
+			filepath.Join("test.dguta.dbs", "0", "dguta.db.children"),
+			filepath.Join("test.dguta.dbs", "1", "dguta.db"),
+			filepath.Join("test.dguta.dbs", "1", "dguta.db.children"),
 			"basedirs.db",
 			"basedirs.userusage.tsv",
 			"basedirs.groupusage.tsv",
@@ -1577,8 +1601,8 @@ func TestTidy(t *testing.T) {
 			"today_a.b.001.bygroup":             filepath.Join("a", "b", "combine.bygroup"),
 			"today_a.b.001.byusergroup.gz":      filepath.Join("a", "b", "combine.byusergroup.gz"),
 			"today_a.b.001.logs.gz":             filepath.Join("a", "b", "combine.log.gz"),
-			".dgut.dbs.updated":                 "",
-			"today_001.dgut.dbs/0":              filepath.Join("a", "b", "combine.dgut.db"),
+			".dguta.dbs.updated":                "",
+			"today_001.dguta.dbs/0":             filepath.Join("a", "b", "combine.dguta.db"),
 			"today_001.basedirs.userusage.tsv":  "basedirs.userusage.tsv",
 			"today_001.basedirs.db":             "basedirs.db",
 			"today_001.basedirs.groupusage.tsv": "basedirs.groupusage.tsv",
@@ -2032,11 +2056,11 @@ stop;`)
 			GroupA, GroupB, GroupD, GroupE,
 			time.Now().Unix()/86400)
 
-		uut, err := bdb.UserUsageTable()
+		uut, err := bdb.UserUsageTable(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
 		So(uut, ShouldEqual, userUsage)
 
-		gut, err := bdb.GroupUsageTable()
+		gut, err := bdb.GroupUsageTable(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
 		So(gut, ShouldEqual, groupUsage)
 	})

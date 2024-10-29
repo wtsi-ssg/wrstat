@@ -120,7 +120,7 @@ It might produce:
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
 /path/b/20210617.c35m8359bnc8ni7dgphg.basedirs
-/path/b/20210617.c35m8359bnc8ni7dgphg.dgut.dbs
+/path/b/20210617.c35m8359bnc8ni7dgphg.dguta.dbs
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -139,7 +139,7 @@ be recorded. The file format is a csv of gid,owner_name.
 Finally, the unique subdirectory of --working_directory that was created is
 deleted.
 
-Note that in your --final_output directory, if a *.dgut.dbs directory already
+Note that in your --final_output directory, if a *.dguta.dbs directory already
 exists, and you have a wrstat server using the database files inside, the server
 will automatically start using the new data and delete the old.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -346,7 +346,7 @@ func schedulePartialSentinel(outputRoot, unique string, s *scheduler.Scheduler) 
 }
 
 // scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
-// from the combined dgut.dbs folders.
+// from the combined dguta.dbs folders.
 func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
 	var baseDirsConfig string
 

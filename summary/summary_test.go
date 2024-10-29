@@ -47,7 +47,7 @@ func TestSummary(t *testing.T) {
 	})
 
 	Convey("Given a summaryWithAtime", t, func() {
-		s := &summaryWithAtime{}
+		s := &summaryWithTimes{}
 
 		Convey("You can add sizes and atime/mtimes to it", func() {
 			s.add(10, 12, 24)
