@@ -56,6 +56,7 @@ const (
 
 	sizeOfUint32 = 4
 	sizeOfUint16 = 2
+	sizeOfKeyWithoutPath = sizeOfUint32 + sizeOfUint16 + 2
 )
 
 var bucketKeySeparatorByteSlice = []byte{bucketKeySeparatorByte} //nolint:gochecknoglobals
@@ -226,7 +227,7 @@ func keyName(id uint32, path string, age summary.DirGUTAge) []byte {
 
 	ageBs := ageToByteSlice(age)
 
-	length := sizeOfUint32 + sizeOfUint16 + len(path)
+	length := sizeOfKeyWithoutPath + len(path)
 	b := make([]byte, 0, length)
 	b = append(b, idBs...)
 	b = append(b, bucketKeySeparatorByte)
