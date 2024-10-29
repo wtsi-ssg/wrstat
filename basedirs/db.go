@@ -54,8 +54,8 @@ const (
 	userUsageBucket       = "userUsage"
 	userSubDirsBucket     = "userSubDirs"
 
-	sizeOfUint32 = 4
-	sizeOfUint16 = 2
+	sizeOfUint32         = 4
+	sizeOfUint16         = 2
 	sizeOfKeyWithoutPath = sizeOfUint32 + sizeOfUint16 + 2
 )
 
