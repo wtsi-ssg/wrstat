@@ -87,12 +87,11 @@ func (d DCSs) Less(i, j int) bool {
 // SortByDirAndAge sorts by Dir first then Age instead of Size.
 func (d DCSs) SortByDirAndAge() {
 	sort.Slice(d, func(i, j int) bool {
-		switch {
-		case d[i].Dir != d[j].Dir:
+		if d[i].Dir != d[j].Dir {
 			return d[i].Dir < d[j].Dir
-		default:
-			return d[i].Age < d[j].Age
 		}
+
+		return d[i].Age < d[j].Age
 	})
 }
 
