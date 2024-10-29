@@ -43,17 +43,20 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const dbOpenMode = 0600
-const bucketKeySeparator = "-"
-const bucketKeySeparatorByte = '-'
-const gBytes = 1024 * 1024 * 1024
-
 const (
+	dbOpenMode             = 0600
+	bucketKeySeparator     = "-"
+	bucketKeySeparatorByte = '-'
+	gBytes                 = 1024 * 1024 * 1024
+
 	groupUsageBucket      = "groupUsage"
 	groupHistoricalBucket = "groupHistorical"
 	groupSubDirsBucket    = "groupSubDirs"
 	userUsageBucket       = "userUsage"
 	userSubDirsBucket     = "userSubDirs"
+
+	sizeOfUint32 = 4
+	sizeOfUint16 = 2
 )
 
 // Usage holds information summarising usage by a particular GID/UID-BaseDir.
@@ -222,7 +225,7 @@ func keyName(id uint32, path string, age summary.DirGUTAge) []byte {
 
 	ageBs := ageToByteSlice(age)
 
-	length := 6 + len(path)
+	length := sizeOfUint32 + sizeOfUint16 + len(path)
 	b := bytes.NewBuffer(make([]byte, 0, length))
 
 	b.Write(idBs)
@@ -235,14 +238,14 @@ func keyName(id uint32, path string, age summary.DirGUTAge) []byte {
 }
 
 func idToByteSlice(id uint32) []byte {
-	bs := make([]byte, 4)
+	bs := make([]byte, sizeOfUint32)
 	binary.LittleEndian.PutUint32(bs, id)
 
 	return bs
 }
 
 func ageToByteSlice(age summary.DirGUTAge) []byte {
-	bs := make([]byte, 2)
+	bs := make([]byte, sizeOfUint16)
 	binary.LittleEndian.PutUint16(bs, uint16(age))
 
 	return bs
