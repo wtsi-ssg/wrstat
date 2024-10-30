@@ -444,7 +444,7 @@ func (b *BaseDirs) storeGIDSubDirs(tx *bolt.Tx, gidBase map[uint32]dguta.DCSs) e
 
 	for gid, dcss := range gidBase {
 		for _, dcs := range dcss {
-			if err := b.storeSubDirs(bucket, dcs, gid, dguta.Filter{GIDs: []uint32{gid}}); err != nil {
+			if err := b.storeSubDirs(bucket, dcs, gid, dguta.Filter{GIDs: []uint32{gid}, Age: dcs.Age}); err != nil {
 				return err
 			}
 		}
@@ -559,7 +559,7 @@ func (b *BaseDirs) storeUIDSubDirs(tx *bolt.Tx, uids []uint32) error {
 		}
 
 		for _, dcs := range dcss {
-			if err := b.storeSubDirs(bucket, dcs, uid, dguta.Filter{UIDs: []uint32{uid}}); err != nil {
+			if err := b.storeSubDirs(bucket, dcs, uid, dguta.Filter{UIDs: []uint32{uid}, Age: dcs.Age}); err != nil {
 				return err
 			}
 		}
