@@ -939,6 +939,38 @@ func TestBaseDirs(t *testing.T) {
 
 					fixSubDirTimes(subdirsA1)
 					So(subdirsA1, ShouldResemble, expectedProjectASubDirs)
+
+					subdirsA3, err := bdr.GroupSubDirs(3, projectA, summary.DGUTAgeAll)
+					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsA3)
+					So(subdirsA3, ShouldResemble, []*SubDir{
+						{
+							SubDir:       ".",
+							NumFiles:     2,
+							SizeFiles:    100,
+							LastModified: expectedFixedAgeMtime,
+							FileUsage: map[summary.DirGUTAFileType]uint64{
+								summary.DGUTAFileTypeBam: 100,
+							},
+						},
+					})
+
+					subdirsA3, err = bdr.GroupSubDirs(3, projectA, summary.DGUTAgeA3Y)
+					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsA3)
+					So(subdirsA3, ShouldResemble, []*SubDir{
+						{
+							SubDir:       ".",
+							NumFiles:     1,
+							SizeFiles:    40,
+							LastModified: expectedFixedAgeMtime2,
+							FileUsage: map[summary.DirGUTAFileType]uint64{
+								summary.DGUTAFileTypeBam: 40,
+							},
+						},
+					})
 				})
 
 				Convey("getting subdir information for a user-basedir", func() {
@@ -1012,6 +1044,38 @@ func TestBaseDirs(t *testing.T) {
 							LastModified: expectedMtime,
 							FileUsage: UsageBreakdownByType{
 								summary.DGUTAFileTypePedBed: 9,
+							},
+						},
+					})
+
+					subdirsA3, err := bdr.UserSubDirs(103, projectA, summary.DGUTAgeAll)
+					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsA3)
+					So(subdirsA3, ShouldResemble, []*SubDir{
+						{
+							SubDir:       ".",
+							NumFiles:     2,
+							SizeFiles:    100,
+							LastModified: expectedFixedAgeMtime,
+							FileUsage: map[summary.DirGUTAFileType]uint64{
+								summary.DGUTAFileTypeBam: 100,
+							},
+						},
+					})
+
+					subdirsA3, err = bdr.UserSubDirs(103, projectA, summary.DGUTAgeA3Y)
+					So(err, ShouldBeNil)
+
+					fixSubDirTimes(subdirsA3)
+					So(subdirsA3, ShouldResemble, []*SubDir{
+						{
+							SubDir:       ".",
+							NumFiles:     1,
+							SizeFiles:    40,
+							LastModified: expectedFixedAgeMtime2,
+							FileUsage: map[summary.DirGUTAFileType]uint64{
+								summary.DGUTAFileTypeBam: 40,
 							},
 						},
 					})
