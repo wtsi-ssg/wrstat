@@ -52,7 +52,8 @@ func TestPaths(t *testing.T) {
 	Convey("Given a Paths with a report frequency", t, func() {
 		buff, l := newLogger()
 		s := WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
-		p := NewPaths(s, l, 15*time.Millisecond)
+		pConfig := PathsConfig{Logger: l, ReportFrequency: 15 * time.Millisecond}
+		p := NewPaths(s, pConfig)
 		So(p, ShouldNotBeNil)
 
 		Convey("You can't add an operation with the reserved name", func() {
@@ -90,7 +91,7 @@ func TestPaths(t *testing.T) {
 
 		Convey("Given a small max failure count, scan fails with consecutive failures", func() {
 			s = WithTimeout(1*time.Nanosecond, statterRetries, 2, l)
-			p = NewPaths(s, l, 15*time.Millisecond)
+			p = NewPaths(s, pConfig)
 			So(p, ShouldNotBeNil)
 
 			r := createScanInput(t)
@@ -114,7 +115,7 @@ func TestPaths(t *testing.T) {
 
 			s.SetLstat(mockLstat)
 
-			p = NewPaths(s, l, 15*time.Millisecond)
+			p = NewPaths(s, pConfig)
 			So(p, ShouldNotBeNil)
 
 			r := createScanInput(t)
@@ -122,12 +123,33 @@ func TestPaths(t *testing.T) {
 			err := p.Scan(r)
 			So(err, ShouldBeNil)
 		})
+
+		Convey("Given a too-short MaxTime, Scan() fails", func() {
+			s = WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
+
+			mockLstat := func(path string) (fs.FileInfo, error) {
+				time.Sleep(1 * time.Millisecond)
+
+				return os.Lstat(path)
+			}
+
+			s.SetLstat(mockLstat)
+
+			pConfig.MaxTime = 3 * time.Millisecond
+			p = NewPaths(s, pConfig)
+			So(p, ShouldNotBeNil)
+
+			r := createScanInput(t)
+			err := p.Scan(r)
+			So(err, ShouldEqual, errScanTimeout)
+		})
 	})
 
 	Convey("Given a Paths with 0 report frequency", t, func() {
 		buff, l := newLogger()
 		s := WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
-		p := NewPaths(s, l, 0)
+		pConfig := PathsConfig{Logger: l}
+		p := NewPaths(s, pConfig)
 		So(p, ShouldNotBeNil)
 
 		r := createScanInput(t)
