@@ -98,7 +98,8 @@ func TestDGUTA(t *testing.T) {
 		})
 	})
 
-	dgutaData, expectedRootGUTAs, expected, expectedKeys := testData(t)
+	refUnixTime := time.Now().Unix()
+	dgutaData, expectedRootGUTAs, expected, expectedKeys := testData(t, refUnixTime)
 
 	Convey("You can see if a GUTA passes a filter", t, func() {
 		numGutas := 17
@@ -588,10 +589,11 @@ type gutaInfo struct {
 }
 
 // testData provides some test data and expected results.
-func testData(t *testing.T) (dgutaData string, expectedRootGUTAs GUTAs, expected []*DGUTA, expectedKeys []string) {
+func testData(t *testing.T, refUnixTime int64) (dgutaData string, expectedRootGUTAs GUTAs,
+	expected []*DGUTA, expectedKeys []string) {
 	t.Helper()
 
-	dgutaData = internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
+	dgutaData = internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102, refUnixTime))
 
 	orderOfOldAges := []summary.DirGUTAge{
 		summary.DGUTAgeAll, summary.DGUTAgeA1M, summary.DGUTAgeM2M,

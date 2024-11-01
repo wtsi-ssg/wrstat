@@ -49,7 +49,7 @@ const exampleDBBatchSize = 20
 // CreateExampleDGUTADB creates a temporary dguta.db from some example data that
 // uses your uid and 2 of your gids, and returns the path to the database
 // directory. For use when testing something that needs a Tree.
-func CreateExampleDGUTADB(t *testing.T) (string, error) {
+func CreateExampleDGUTADB(t *testing.T, refUnixTime int64) (string, error) {
 	t.Helper()
 
 	_, uid, gids := GetUserAndGroups(t)
@@ -57,16 +57,16 @@ func CreateExampleDGUTADB(t *testing.T) (string, error) {
 		gids = append(gids, "0")
 	}
 
-	return CreateExampleDGUTADBCustomIDs(t, uid, gids[0], gids[1])
+	return CreateExampleDGUTADBCustomIDs(t, uid, gids[0], gids[1], refUnixTime)
 }
 
 // CreateExampleDGUTADBCustomIDs creates a temporary dguta.db from some example
 // data that uses the given uid and gids, and returns the path to the database
 // directory.
-func CreateExampleDGUTADBCustomIDs(t *testing.T, uid, gidA, gidB string) (string, error) {
+func CreateExampleDGUTADBCustomIDs(t *testing.T, uid, gidA, gidB string, refUnixTime int64) (string, error) {
 	t.Helper()
 
-	dgutaData := exampleDGUTAData(t, uid, gidA, gidB)
+	dgutaData := exampleDGUTAData(t, uid, gidA, gidB, refUnixTime)
 
 	return CreateCustomDGUTADB(t, dgutaData)
 }
@@ -103,7 +103,7 @@ func createExampleDgutaDir(t *testing.T) (string, error) {
 
 // exampleDGUTAData is some example DGUTA data that uses the given uid and gids,
 // along with root's uid.
-func exampleDGUTAData(t *testing.T, uidStr, gidAStr, gidBStr string) string {
+func exampleDGUTAData(t *testing.T, uidStr, gidAStr, gidBStr string, refUnixTime int64) string {
 	t.Helper()
 
 	uid, err := strconv.ParseUint(uidStr, 10, 64)
@@ -121,7 +121,7 @@ func exampleDGUTAData(t *testing.T, uidStr, gidAStr, gidBStr string) string {
 		t.Fatal(err)
 	}
 
-	return internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(int(gidA), int(gidB), 0, int(uid), 0))
+	return internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(int(gidA), int(gidB), 0, int(uid), 0, refUnixTime))
 }
 
 func CreateDGUTADBFromFakeFiles(t *testing.T, files []internaldata.TestFile,
