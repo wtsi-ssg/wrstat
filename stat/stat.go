@@ -37,7 +37,10 @@ type Error string
 
 func (e Error) Error() string { return string(e) }
 
-const errLstatSlow = Error("lstat exceeded timeout")
+const (
+	errLstatSlow        = Error("lstat exceeded timeout")
+	errLstatConsecFails = Error("lstat failed too many times in a row")
+)
 
 // Statter is something you use to get stats of files on disk.
 type Statter interface {
@@ -51,16 +54,22 @@ type StatterWithTimeout struct {
 	timeout         time.Duration
 	maxAttempts     int
 	currentAttempts int
+	maxFailureCount int
+	failureCount    int
 	logger          log15.Logger
 }
 
-// WithTimeout returns a Statter with the given timeout and maxAttempts
-// configured. Timeouts are logged with the given logger.
-func WithTimeout(timeout time.Duration, maxAttempts int, logger log15.Logger) *StatterWithTimeout {
+// WithTimeout returns a Statter with the given timeout, maxAttempts and
+// maxFailureCount configured. Timeouts are logged with the given logger.
+//
+// Timeouts on single files do not result in an error, but timeouts of
+// maxFailureCount consecutive files does.
+func WithTimeout(timeout time.Duration, maxAttempts, maxFailureCount int, logger log15.Logger) *StatterWithTimeout {
 	return &StatterWithTimeout{
-		timeout:     timeout,
-		maxAttempts: maxAttempts,
-		logger:      logger,
+		timeout:         timeout,
+		maxAttempts:     maxAttempts,
+		logger:          logger,
+		maxFailureCount: maxFailureCount,
 	}
 }
 
@@ -80,6 +89,7 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 	case err = <-errCh:
 		info = <-infoCh
 		s.currentAttempts = 0
+		s.failureCount = 0
 
 		timer.Stop()
 
@@ -93,10 +103,17 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 
 		s.logger.Warn("an lstat call exceeded timeout, giving up", "path", path, "attempts", s.currentAttempts)
 
-		err = errLstatSlow
 		s.currentAttempts = 0
+		err = errLstatSlow
 
-		return info, err
+		s.failureCount++
+		if s.failureCount < s.maxFailureCount {
+			return info, err
+		}
+
+		s.logger.Warn("too many lstat calls failed consecutively, terminating", "failures", s.failureCount)
+
+		return info, errLstatConsecFails
 	}
 }
 

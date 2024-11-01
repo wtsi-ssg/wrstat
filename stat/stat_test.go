@@ -39,11 +39,12 @@ import (
 func TestLstat(t *testing.T) {
 	timeout := 50 * time.Millisecond
 	attempts := 2
+	consecutiveFails := 10
 
 	Convey("Given a Statter with large timeout", t, func() {
 		buff, l := newLogger()
 
-		s := WithTimeout(timeout, attempts, l)
+		s := WithTimeout(timeout, attempts, consecutiveFails, l)
 		So(s, ShouldNotBeNil)
 
 		Convey("you can call Lstat on it", func() {
@@ -51,26 +52,31 @@ func TestLstat(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(info, ShouldBeNil)
 
-			pathEmpty, pathContent := createTestFiles(t)
+			pathEmpty, pathContent1, pathContent2 := createTestFiles(t)
 
 			info, err = s.Lstat(pathEmpty)
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
 			So(info.Size(), ShouldEqual, 0)
 
-			info, err = s.Lstat(pathContent)
+			info, err = s.Lstat(pathContent1)
+			So(err, ShouldBeNil)
+			So(info.Size(), ShouldEqual, 1)
+			So(buff.String(), ShouldBeBlank)
+
+			info, err = s.Lstat(pathContent2)
 			So(err, ShouldBeNil)
 			So(info.Size(), ShouldEqual, 1)
 			So(buff.String(), ShouldBeBlank)
 
 			Convey("but that fails with a tiny timeout", func() {
-				s = WithTimeout(1*time.Nanosecond, attempts, l)
+				s = WithTimeout(1*time.Nanosecond, attempts, consecutiveFails, l)
 				So(s, ShouldNotBeNil)
 
 				defer func() { os.Unsetenv("WRSTAT_TEST_LSTAT") }()
 				os.Setenv("WRSTAT_TEST_LSTAT", "long")
 
-				info, err = s.Lstat(pathContent)
+				info, err = s.Lstat(pathContent1)
 				So(err, ShouldNotBeNil)
 				So(info, ShouldBeNil)
 
@@ -95,6 +101,32 @@ func TestLstat(t *testing.T) {
 				So(logStr, ShouldContainSubstring, `attempts=2`)
 				So(logStr, ShouldContainSubstring, `attempts=3`)
 				So(logStr, ShouldNotContainSubstring, `attempts=4`)
+
+				Convey("after enough files fail consecutively it terminates", func() {
+					s = WithTimeout(1*time.Nanosecond, attempts, 2, l)
+					So(s, ShouldNotBeNil)
+
+					defer func() { os.Unsetenv("WRSTAT_TEST_LSTAT") }()
+					os.Setenv("WRSTAT_TEST_LSTAT", "long")
+
+					info, err = s.Lstat(pathEmpty)
+					So(err, ShouldEqual, errLstatSlow)
+					So(info, ShouldBeNil)
+
+					logStr = buff.String()
+					So(logStr, ShouldNotContainSubstring, `lvl=warn msg="too many lstat calls failed consecutively, terminating"`)
+
+					buff.Reset()
+
+					info, err = s.Lstat(pathContent1)
+					So(err, ShouldEqual, errLstatConsecFails)
+					So(info, ShouldBeNil)
+
+					logStr = buff.String()
+					So(logStr, ShouldContainSubstring, `lvl=warn msg="too many lstat calls failed consecutively, terminating"`)
+
+					So(s.failureCount, ShouldEqual, 2)
+				})
 			})
 		})
 	})
@@ -111,7 +143,7 @@ func newLogger() (*bytes.Buffer, log15.Logger) { //nolint:ireturn
 
 // createTestFiles creates 2 temp files, the first empty, the second 1 byte
 // long, and returns their paths.
-func createTestFiles(t *testing.T) (string, string) {
+func createTestFiles(t *testing.T) (string, string, string) {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -124,9 +156,9 @@ func createTestFiles(t *testing.T) (string, string) {
 
 	f.Close()
 
-	pathContent := filepath.Join(dir, "content")
+	pathContent1 := filepath.Join(dir, "content1")
 
-	f, err = os.Create(pathContent)
+	f, err = os.Create(pathContent1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,5 +170,19 @@ func createTestFiles(t *testing.T) (string, string) {
 
 	f.Close()
 
-	return pathEmpty, pathContent
+	pathContent2 := filepath.Join(dir, "content2")
+
+	f, err = os.Create(pathContent2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.WriteString("2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f.Close()
+
+	return pathEmpty, pathContent1, pathContent2
 }

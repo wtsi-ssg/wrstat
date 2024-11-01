@@ -47,10 +47,11 @@ const (
 func TestPaths(t *testing.T) {
 	statterTimeout := 1 * time.Second
 	statterRetries := 2
+	statterConsecutiveFails := 2
 
 	Convey("Given a Paths with a report frequency", t, func() {
 		buff, l := newLogger()
-		s := WithTimeout(statterTimeout, statterRetries, l)
+		s := WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
 		p := NewPaths(s, l, 15*time.Millisecond)
 		So(p, ShouldNotBeNil)
 
@@ -70,27 +71,38 @@ func TestPaths(t *testing.T) {
 				err := p.Scan(r)
 				So(err, ShouldBeNil)
 
-				So(*sleepN, ShouldEqual, 2)
+				So(*sleepN, ShouldEqual, 3)
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=check count=`)
-				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=check count=2`)
+				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=check count=3`)
 				So(buff.String(), ShouldNotContainSubstring, `file details wrong`)
 
-				So(*failN, ShouldEqual, 2)
+				So(*failN, ShouldEqual, 3)
 				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="operation error" op=fail err="test fail"`)
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=fail count=0 time=0s ops/s=n/a`)
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=fail count=0 time=0s ops/s=n/a`)
-				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=fail count=2`)
+				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=fail count=3`)
 
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=lstat count=`)
-				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=lstat count=2`)
-				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=lstat count=1`)
+				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=lstat count=3`)
+				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=lstat count=2`)
+			})
+		})
+		Convey("Given a small max consecutive files and failing files", func() {
+			s = WithTimeout(1*time.Nanosecond, statterRetries, 2, l)
+			p = NewPaths(s, l, 15*time.Millisecond)
+			So(p, ShouldNotBeNil)
+
+			Convey("But they never get called", func() {
+				r := createScanInput(t)
+				err := p.Scan(r)
+				So(err, ShouldEqual, errLstatConsecFails)
 			})
 		})
 	})
 
 	Convey("Given a Paths with 0 report frequency", t, func() {
 		buff, l := newLogger()
-		s := WithTimeout(statterTimeout, statterRetries, l)
+		s := WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
 		p := NewPaths(s, l, 0)
 		So(p, ShouldNotBeNil)
 
@@ -101,8 +113,8 @@ func TestPaths(t *testing.T) {
 			err := p.Scan(r)
 			So(err, ShouldBeNil)
 
-			So(*checkN, ShouldEqual, 2)
-			So(*failN, ShouldEqual, 2)
+			So(*checkN, ShouldEqual, 3)
+			So(*failN, ShouldEqual, 3)
 			So(buff.String(), ShouldNotContainSubstring, `lvl=info msg="report`)
 			So(buff.String(), ShouldContainSubstring, `lvl=warn msg="operation error" op=fail err="test fail"`)
 		})
@@ -181,7 +193,11 @@ func checkFileDetails(absPath string, info fs.FileInfo) error {
 		if info.Size() != 0 {
 			return errTestFileDetails
 		}
-	case strings.HasSuffix(absPath, "content"):
+	case strings.HasSuffix(absPath, "content1"):
+		if info.Size() != 1 {
+			return errTestFileDetails
+		}
+	case strings.HasSuffix(absPath, "content2"):
 		if info.Size() != 1 {
 			return errTestFileDetails
 		}
@@ -197,9 +213,10 @@ func checkFileDetails(absPath string, info fs.FileInfo) error {
 func createScanInput(t *testing.T) io.Reader {
 	t.Helper()
 
-	pathEmpty, pathContent := createTestFiles(t)
+	pathEmpty, pathContent1, pathContent2 := createTestFiles(t)
 	r := strings.NewReader(strconv.Quote(pathEmpty) + "\n" +
-		strconv.Quote("/foo/bar") + "\n" + strconv.Quote(pathContent))
+		strconv.Quote("/foo/bar") + "\n" + strconv.Quote(pathContent1) + "\n" +
+		strconv.Quote("/foo/bar") + "\n" + strconv.Quote(pathContent2))
 
 	return r
 }

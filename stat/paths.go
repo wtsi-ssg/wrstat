@@ -27,6 +27,7 @@ package stat
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"io/fs"
 	"strconv"
@@ -103,6 +104,10 @@ func (p *Paths) Scan(paths io.Reader) error {
 	p.startReporting()
 
 	var wg sync.WaitGroup
+	defer func() {
+		wg.Wait()
+		p.stopReporting()
+	}()
 
 	for scanner.Scan() {
 		path, err := strconv.Unquote(scanner.Text())
@@ -114,15 +119,14 @@ func (p *Paths) Scan(paths io.Reader) error {
 
 		wg.Wait()
 
-		if err != nil {
+		if errors.Is(err, errLstatConsecFails) {
+			return err
+		} else if err != nil {
 			continue
 		}
 
 		p.dispatch(path, info, &wg)
 	}
-
-	wg.Wait()
-	p.stopReporting()
 
 	return scanner.Err()
 }
