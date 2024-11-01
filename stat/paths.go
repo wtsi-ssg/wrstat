@@ -57,14 +57,14 @@ type Paths struct {
 	logger          log15.Logger
 	reportFrequency time.Duration
 	ops             map[string]Operation
+	ScanTimeout     time.Duration
 	reporters       map[string]*reporter.Reporter
-	maxTime         time.Duration
 }
 
 type PathsConfig struct {
 	Logger          log15.Logger
 	ReportFrequency time.Duration
-	MaxTime         time.Duration
+	ScanTimeout     time.Duration
 }
 
 // NewPaths returns a Paths that will use the given Statter to do the Lstat
@@ -77,9 +77,9 @@ func NewPaths(statter Statter, pathsConfig PathsConfig) *Paths {
 		statter:         statter,
 		logger:          pathsConfig.Logger,
 		reportFrequency: pathsConfig.ReportFrequency,
+		ScanTimeout:     pathsConfig.ScanTimeout,
 		ops:             make(map[string]Operation),
 		reporters:       make(map[string]*reporter.Reporter),
-		maxTime:         pathsConfig.MaxTime,
 	}
 }
 
@@ -121,13 +121,13 @@ func (p *Paths) Scan(paths io.Reader) error {
 	p.reporters[lstatOpName] = r
 	p.startReporting()
 
+	endTime := time.Now().Add(p.ScanTimeout)
+
 	var wg sync.WaitGroup
 	defer func() {
 		wg.Wait()
 		p.stopReporting()
 	}()
-
-	endTime := time.Now().Add(p.maxTime)
 
 	for scanner.Scan() {
 		path, err := strconv.Unquote(scanner.Text())
@@ -155,7 +155,7 @@ func (p *Paths) Scan(paths io.Reader) error {
 }
 
 func (p *Paths) waitUntilWGOrMaxTime(wg *sync.WaitGroup, endTime time.Time) error {
-	if p.maxTime == 0 {
+	if p.ScanTimeout == 0 {
 		wg.Wait()
 
 		return nil

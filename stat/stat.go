@@ -122,7 +122,7 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 			return info, err
 		}
 
-		s.logger.Warn("too many lstat calls failed consecutively, terminating", "failures", s.failureCount)
+		s.logger.Error("too many lstat calls failed consecutively, terminating", "failures", s.failureCount)
 
 		return info, errLstatConsecFails
 	}

@@ -114,7 +114,7 @@ func TestLstat(t *testing.T) {
 					So(info, ShouldBeNil)
 
 					logStr = buff.String()
-					So(logStr, ShouldNotContainSubstring, `lvl=warn msg="too many lstat calls failed consecutively, terminating"`)
+					So(logStr, ShouldNotContainSubstring, `too many lstat calls failed consecutively, terminating`)
 
 					buff.Reset()
 
@@ -123,7 +123,7 @@ func TestLstat(t *testing.T) {
 					So(info, ShouldBeNil)
 
 					logStr = buff.String()
-					So(logStr, ShouldContainSubstring, `lvl=warn msg="too many lstat calls failed consecutively, terminating"`)
+					So(logStr, ShouldContainSubstring, `too many lstat calls failed consecutively, terminating`)
 
 					So(s.failureCount, ShouldEqual, 2)
 				})

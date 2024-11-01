@@ -135,7 +135,7 @@ func TestPaths(t *testing.T) {
 
 			s.SetLstat(mockLstat)
 
-			pConfig.MaxTime = 3 * time.Millisecond
+			pConfig.ScanTimeout = 3 * time.Millisecond
 			p = NewPaths(s, pConfig)
 			So(p, ShouldNotBeNil)
 
