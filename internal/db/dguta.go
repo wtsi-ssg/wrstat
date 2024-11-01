@@ -121,7 +121,9 @@ func exampleDGUTAData(t *testing.T, uidStr, gidAStr, gidBStr string, refUnixTime
 		t.Fatal(err)
 	}
 
-	return internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(int(gidA), int(gidB), 0, int(uid), 0, refUnixTime))
+	return internaldata.TestDGUTAData(t,
+		internaldata.CreateDefaultTestData(int(gidA), int(gidB), 0, int(uid), 0, refUnixTime),
+	)
 }
 
 func CreateDGUTADBFromFakeFiles(t *testing.T, files []internaldata.TestFile,
