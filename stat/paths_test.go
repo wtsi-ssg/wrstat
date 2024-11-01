@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -102,13 +103,19 @@ func TestPaths(t *testing.T) {
 		Convey("Given a small max failure count, scan succeeds with non-consecutive failures", func() {
 			s = WithTimeout(100*time.Millisecond, 1, 2, l)
 
+			var mu sync.Mutex
+
 			count := 0
+
 			mockLstat := func(path string) (fs.FileInfo, error) {
-				if count%2 != 0 {
+				mu.Lock()
+				c := count
+				count++
+				mu.Unlock()
+
+				if c%2 != 0 {
 					time.Sleep(200 * time.Millisecond)
 				}
-
-				count++
 
 				return os.Lstat(path)
 			}

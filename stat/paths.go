@@ -123,35 +123,49 @@ func (p *Paths) Scan(paths io.Reader) error {
 
 	endTime := time.Now().Add(p.ScanTimeout)
 
+	err := p.lstatEachPath(scanner, r, endTime)
+	if err != nil {
+		return err
+	}
+
+	return scanner.Err()
+}
+
+func (p *Paths) lstatEachPath(scanner *bufio.Scanner, r *reporter.Reporter, //nolint:funlen,gocognit
+	endTime time.Time) (err error) {
 	var wg sync.WaitGroup
 	defer func() {
-		wg.Wait()
+		errw := p.waitUntilWGOrMaxTime(&wg, endTime)
+		if errw != nil {
+			err = errw
+		}
+
 		p.stopReporting()
 	}()
 
 	for scanner.Scan() {
-		path, err := strconv.Unquote(scanner.Text())
-		if err != nil {
-			return err
+		path, erru := strconv.Unquote(scanner.Text())
+		if erru != nil {
+			return erru
 		}
 
-		info, err := p.timeLstat(r, path)
+		info, errt := p.timeLstat(r, path)
 
 		errWg := p.waitUntilWGOrMaxTime(&wg, endTime)
 		if errWg != nil {
 			return errWg
 		}
 
-		if errors.Is(err, errLstatConsecFails) {
-			return err
-		} else if err != nil {
+		if errors.Is(errt, errLstatConsecFails) {
+			return errt
+		} else if errt != nil {
 			continue
 		}
 
 		p.dispatch(path, info, &wg)
 	}
 
-	return scanner.Err()
+	return err
 }
 
 func (p *Paths) waitUntilWGOrMaxTime(wg *sync.WaitGroup, endTime time.Time) error {
