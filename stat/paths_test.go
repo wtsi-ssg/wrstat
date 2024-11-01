@@ -87,16 +87,40 @@ func TestPaths(t *testing.T) {
 				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=lstat count=2`)
 			})
 		})
-		Convey("Given a small max consecutive files and failing files", func() {
+
+		Convey("Given a small max failure count, scan fails with consecutive failures", func() {
 			s = WithTimeout(1*time.Nanosecond, statterRetries, 2, l)
 			p = NewPaths(s, l, 15*time.Millisecond)
 			So(p, ShouldNotBeNil)
 
-			Convey("But they never get called", func() {
-				r := createScanInput(t)
-				err := p.Scan(r)
-				So(err, ShouldEqual, errLstatConsecFails)
-			})
+			r := createScanInput(t)
+			err := p.Scan(r)
+			So(err, ShouldEqual, errLstatConsecFails)
+		})
+
+		Convey("Given a small max failure count, scan succeeds with non-consecutive failures", func() {
+			s = WithTimeout(100*time.Millisecond, 1, 2, l)
+
+			count := 0
+			mockLstat := func(path string) (fs.FileInfo, error) {
+				if count%2 != 0 {
+					time.Sleep(200 * time.Millisecond)
+				}
+
+				count++
+
+				return os.Lstat(path)
+			}
+
+			s.SetLstat(mockLstat)
+
+			p = NewPaths(s, l, 15*time.Millisecond)
+			So(p, ShouldNotBeNil)
+
+			r := createScanInput(t)
+
+			err := p.Scan(r)
+			So(err, ShouldBeNil)
 		})
 	})
 

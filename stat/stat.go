@@ -48,6 +48,9 @@ type Statter interface {
 	Lstat(path string) (info fs.FileInfo, err error)
 }
 
+// LstatFunc matches the signature of os.Lstat.
+type LstatFunc func(string) (fs.FileInfo, error)
+
 // StatterWithTimeout is a Statter implementation. NB: this is NOT thread safe;
 // you should only call Lstat() one at a time.
 type StatterWithTimeout struct {
@@ -56,6 +59,7 @@ type StatterWithTimeout struct {
 	currentAttempts int
 	maxFailureCount int
 	failureCount    int
+	lstat           LstatFunc
 	logger          log15.Logger
 }
 
@@ -70,7 +74,14 @@ func WithTimeout(timeout time.Duration, maxAttempts, maxFailureCount int, logger
 		maxAttempts:     maxAttempts,
 		logger:          logger,
 		maxFailureCount: maxFailureCount,
+		lstat:           os.Lstat,
 	}
+}
+
+// SetLstat can be used when testing when you need to mock actual Lstat calls.
+// The lstat defaults to os.Lstat.
+func (s *StatterWithTimeout) SetLstat(lstat LstatFunc) {
+	s.lstat = lstat
 }
 
 // Lstat calls os.Lstat() on the given path, but times it out after our
@@ -123,7 +134,7 @@ func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh
 		<-time.After(1 * time.Millisecond)
 	}
 
-	info, err := os.Lstat(path)
+	info, err := s.lstat(path)
 	infoCh <- info
 	errCh <- err
 }
