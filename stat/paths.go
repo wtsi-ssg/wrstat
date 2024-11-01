@@ -27,6 +27,7 @@ package stat
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"io/fs"
 	"strconv"
@@ -39,7 +40,10 @@ import (
 
 const lstatOpName = "lstat"
 
-const errReservedOpName = Error("reserved operation name")
+const (
+	errReservedOpName = Error("reserved operation name")
+	errScanTimeout    = Error("scan took too long")
+)
 
 // Operation is a callback that once added to a Paths will be called on each
 // path encountered. It receives the absolute path to the filesystem entry, and
@@ -53,17 +57,27 @@ type Paths struct {
 	logger          log15.Logger
 	reportFrequency time.Duration
 	ops             map[string]Operation
+	ScanTimeout     time.Duration
 	reporters       map[string]*reporter.Reporter
 }
 
+type PathsConfig struct {
+	Logger          log15.Logger
+	ReportFrequency time.Duration
+	ScanTimeout     time.Duration
+}
+
 // NewPaths returns a Paths that will use the given Statter to do the Lstat
-// calls and log issues to the logger. If you supply a reportFrequency greater
-// than 0, then timings for the lstats and your operations will also be logged.
-func NewPaths(statter Statter, logger log15.Logger, reportFrequency time.Duration) *Paths {
+// calls and log issues to any configured logger. If you configure a
+// reportFrequency greater than 0, then timings for the lstats and your
+// operations will also be logged. You can also configure a MaxTime that a
+// Scan() can run for before it fails.
+func NewPaths(statter Statter, pathsConfig PathsConfig) *Paths {
 	return &Paths{
 		statter:         statter,
-		logger:          logger,
-		reportFrequency: reportFrequency,
+		logger:          pathsConfig.Logger,
+		reportFrequency: pathsConfig.ReportFrequency,
+		ScanTimeout:     pathsConfig.ScanTimeout,
 		ops:             make(map[string]Operation),
 		reporters:       make(map[string]*reporter.Reporter),
 	}
@@ -88,13 +102,18 @@ func (p *Paths) AddOperation(name string, op Operation) error {
 
 // Scan scans through the given reader which should consist of quoted absolute
 // file path per line. It calls our Statter.Lstat() on each, and passes the
-// absolute path and FileInfo to any Operation callbacks you've added.
+// absolute path and FileInfo to any Operation callbacks you've added. Errors
+// from the Statter are normally ignored, with the exeption of
+// StatterWithTimeout's failure due to too many consecutive timeouts in a row.
 //
 // Operations are run concurrently (so should not do something like write to the
 // same file) and their errors logged, but otherwise ignored.
 //
 // We wait for all operations to complete before they are all called again, so
 // it is safe to do something like write stat details to a file.
+//
+// If a MaxTime has been configured, Scan() will stop and return an error as
+// soon as that amount of time has passed.
 func (p *Paths) Scan(paths io.Reader) error {
 	scanner := bufio.NewScanner(paths)
 
@@ -102,29 +121,74 @@ func (p *Paths) Scan(paths io.Reader) error {
 	p.reporters[lstatOpName] = r
 	p.startReporting()
 
-	var wg sync.WaitGroup
+	endTime := time.Now().Add(p.ScanTimeout)
 
-	for scanner.Scan() {
-		path, err := strconv.Unquote(scanner.Text())
-		if err != nil {
-			return err
+	err := p.lstatEachPath(scanner, r, endTime)
+	if err != nil {
+		return err
+	}
+
+	return scanner.Err()
+}
+
+func (p *Paths) lstatEachPath(scanner *bufio.Scanner, r *reporter.Reporter, //nolint:funlen,gocognit
+	endTime time.Time) (err error) {
+	var wg sync.WaitGroup
+	defer func() {
+		errw := p.waitUntilWGOrMaxTime(&wg, endTime)
+		if errw != nil {
+			err = errw
 		}
 
-		info, err := p.timeLstat(r, path)
+		p.stopReporting()
+	}()
 
-		wg.Wait()
+	for scanner.Scan() {
+		path, erru := strconv.Unquote(scanner.Text())
+		if erru != nil {
+			return erru
+		}
 
-		if err != nil {
+		info, errt := p.timeLstat(r, path)
+
+		errWg := p.waitUntilWGOrMaxTime(&wg, endTime)
+		if errWg != nil {
+			return errWg
+		}
+
+		if errors.Is(errt, errLstatConsecFails) {
+			return errt
+		} else if errt != nil {
 			continue
 		}
 
 		p.dispatch(path, info, &wg)
 	}
 
-	wg.Wait()
-	p.stopReporting()
+	return err
+}
 
-	return scanner.Err()
+func (p *Paths) waitUntilWGOrMaxTime(wg *sync.WaitGroup, endTime time.Time) error {
+	if p.ScanTimeout == 0 {
+		wg.Wait()
+
+		return nil
+	}
+
+	waitCh := make(chan bool)
+	timer := time.NewTimer(time.Until(endTime))
+
+	go func() {
+		wg.Wait()
+		close(waitCh)
+	}()
+
+	select {
+	case <-timer.C:
+		return errScanTimeout
+	case <-waitCh:
+		return nil
+	}
 }
 
 // startReporting calls StartReproting on all our reporters.

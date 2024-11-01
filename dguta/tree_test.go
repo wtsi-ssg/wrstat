@@ -41,6 +41,8 @@ import (
 func TestTree(t *testing.T) {
 	expectedFTsBam := []summary.DirGUTAFileType{summary.DGUTAFileTypeBam}
 
+	refUnixTime := time.Now().Unix()
+
 	Convey("You can make a Tree from a dguta database", t, func() {
 		paths, err := testMakeDBPaths(t)
 		So(err, ShouldBeNil)
@@ -49,7 +51,7 @@ func TestTree(t *testing.T) {
 		So(errc, ShouldNotBeNil)
 		So(tree, ShouldBeNil)
 
-		errc = testCreateDB(t, paths[0])
+		errc = testCreateDB(t, paths[0], refUnixTime)
 		So(errc, ShouldBeNil)
 
 		tree, errc = NewTree(paths[0])
@@ -70,7 +72,7 @@ func TestTree(t *testing.T) {
 		expectedFTsCramAndDir := []summary.DirGUTAFileType{summary.DGUTAFileTypeCram, summary.DGUTAFileTypeDir}
 		expectedAtime := time.Unix(50, 0)
 		expectedAtimeG := time.Unix(60, 0)
-		expectedMtime := time.Unix(time.Now().Unix()-(summary.SecondsInAYear*3), 0)
+		expectedMtime := time.Unix(refUnixTime-(summary.SecondsInAYear*3), 0)
 
 		const numDirectories = 10
 
@@ -378,10 +380,10 @@ func TestTree(t *testing.T) {
 	})
 }
 
-func testCreateDB(t *testing.T, path string) error {
+func testCreateDB(t *testing.T, path string, refUnixTime int64) error {
 	t.Helper()
 
-	dgutData := internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102))
+	dgutData := internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102, refUnixTime))
 	data := strings.NewReader(dgutData)
 	db := NewDB(path)
 

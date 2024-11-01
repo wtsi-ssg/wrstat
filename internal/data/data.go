@@ -60,7 +60,7 @@ type TestFile struct {
 	ATime, MTime   int
 }
 
-func CreateDefaultTestData(gidA, gidB, gidC, uidA, uidB int) []TestFile {
+func CreateDefaultTestData(gidA, gidB, gidC, uidA, uidB int, refUnixTime int64) []TestFile {
 	dir := "/"
 	abdf := filepath.Join(dir, "a", "b", "d", "f")
 	abdg := filepath.Join(dir, "a", "b", "d", "g")
@@ -126,8 +126,8 @@ func CreateDefaultTestData(gidA, gidB, gidC, uidA, uidB int) []TestFile {
 			SizeOfEachFile: 1,
 			GID:            3,
 			UID:            103,
-			ATime:          int(time.Now().Unix() - summary.SecondsInAYear),
-			MTime:          int(time.Now().Unix() - (summary.SecondsInAYear * 3)),
+			ATime:          int(refUnixTime - summary.SecondsInAYear),
+			MTime:          int(refUnixTime - (summary.SecondsInAYear * 3)),
 		},
 	}
 

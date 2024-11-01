@@ -46,6 +46,8 @@ const (
 	statLogOutputFileSuffix              = ".log"
 	lstatTimeout                         = 10 * time.Second
 	lstatAttempts                        = 3
+	lstatConsecutiveFails                = 10
+	scanTimeout                          = 2 * time.Hour
 )
 
 var (
@@ -248,8 +250,9 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 		frequency = reportFrequency
 	}
 
-	statter := stat.WithTimeout(lstatTimeout, lstatAttempts, appLogger)
-	p := stat.NewPaths(statter, appLogger, frequency)
+	statter := stat.WithTimeout(lstatTimeout, lstatAttempts, lstatConsecutiveFails, appLogger)
+	pConfig := stat.PathsConfig{Logger: appLogger, ReportFrequency: frequency, ScanTimeout: scanTimeout}
+	p := stat.NewPaths(statter, pConfig)
 
 	if err := p.AddOperation("file", stat.FileOperation(output)); err != nil {
 		die("%s", err)

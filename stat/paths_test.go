@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -47,11 +48,13 @@ const (
 func TestPaths(t *testing.T) {
 	statterTimeout := 1 * time.Second
 	statterRetries := 2
+	statterConsecutiveFails := 2
 
 	Convey("Given a Paths with a report frequency", t, func() {
 		buff, l := newLogger()
-		s := WithTimeout(statterTimeout, statterRetries, l)
-		p := NewPaths(s, l, 15*time.Millisecond)
+		s := WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
+		pConfig := PathsConfig{Logger: l, ReportFrequency: 15 * time.Millisecond}
+		p := NewPaths(s, pConfig)
 		So(p, ShouldNotBeNil)
 
 		Convey("You can't add an operation with the reserved name", func() {
@@ -70,28 +73,90 @@ func TestPaths(t *testing.T) {
 				err := p.Scan(r)
 				So(err, ShouldBeNil)
 
-				So(*sleepN, ShouldEqual, 2)
+				So(*sleepN, ShouldEqual, 3)
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=check count=`)
-				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=check count=2`)
+				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=check count=3`)
 				So(buff.String(), ShouldNotContainSubstring, `file details wrong`)
 
-				So(*failN, ShouldEqual, 2)
+				So(*failN, ShouldEqual, 3)
 				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="operation error" op=fail err="test fail"`)
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=fail count=0 time=0s ops/s=n/a`)
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=fail count=0 time=0s ops/s=n/a`)
-				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=fail count=2`)
+				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=fail count=3`)
 
 				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report since last" op=lstat count=`)
-				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=lstat count=2`)
-				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=lstat count=1`)
+				So(buff.String(), ShouldContainSubstring, `lvl=info msg="report overall" op=lstat count=3`)
+				So(buff.String(), ShouldContainSubstring, `lvl=warn msg="report failed" op=lstat count=2`)
 			})
+		})
+
+		Convey("Given a small max failure count, scan fails with consecutive failures", func() {
+			s = WithTimeout(1*time.Nanosecond, statterRetries, 2, l)
+			p = NewPaths(s, pConfig)
+			So(p, ShouldNotBeNil)
+
+			r := createScanInput(t)
+			err := p.Scan(r)
+			So(err, ShouldEqual, errLstatConsecFails)
+		})
+
+		Convey("Given a small max failure count, scan succeeds with non-consecutive failures", func() {
+			s = WithTimeout(100*time.Millisecond, 1, 2, l)
+
+			var mu sync.Mutex
+
+			count := 0
+
+			mockLstat := func(path string) (fs.FileInfo, error) {
+				mu.Lock()
+				c := count
+				count++
+				mu.Unlock()
+
+				if c%2 != 0 {
+					time.Sleep(200 * time.Millisecond)
+				}
+
+				return os.Lstat(path)
+			}
+
+			s.SetLstat(mockLstat)
+
+			p = NewPaths(s, pConfig)
+			So(p, ShouldNotBeNil)
+
+			r := createScanInput(t)
+
+			err := p.Scan(r)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Given a too-short MaxTime, Scan() fails", func() {
+			s = WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
+
+			mockLstat := func(path string) (fs.FileInfo, error) {
+				time.Sleep(1 * time.Millisecond)
+
+				return os.Lstat(path)
+			}
+
+			s.SetLstat(mockLstat)
+
+			pConfig.ScanTimeout = 3 * time.Millisecond
+			p = NewPaths(s, pConfig)
+			So(p, ShouldNotBeNil)
+
+			r := createScanInput(t)
+			err := p.Scan(r)
+			So(err, ShouldEqual, errScanTimeout)
 		})
 	})
 
 	Convey("Given a Paths with 0 report frequency", t, func() {
 		buff, l := newLogger()
-		s := WithTimeout(statterTimeout, statterRetries, l)
-		p := NewPaths(s, l, 0)
+		s := WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
+		pConfig := PathsConfig{Logger: l}
+		p := NewPaths(s, pConfig)
 		So(p, ShouldNotBeNil)
 
 		r := createScanInput(t)
@@ -101,8 +166,8 @@ func TestPaths(t *testing.T) {
 			err := p.Scan(r)
 			So(err, ShouldBeNil)
 
-			So(*checkN, ShouldEqual, 2)
-			So(*failN, ShouldEqual, 2)
+			So(*checkN, ShouldEqual, 3)
+			So(*failN, ShouldEqual, 3)
 			So(buff.String(), ShouldNotContainSubstring, `lvl=info msg="report`)
 			So(buff.String(), ShouldContainSubstring, `lvl=warn msg="operation error" op=fail err="test fail"`)
 		})
@@ -181,7 +246,11 @@ func checkFileDetails(absPath string, info fs.FileInfo) error {
 		if info.Size() != 0 {
 			return errTestFileDetails
 		}
-	case strings.HasSuffix(absPath, "content"):
+	case strings.HasSuffix(absPath, "content1"):
+		if info.Size() != 1 {
+			return errTestFileDetails
+		}
+	case strings.HasSuffix(absPath, "content2"):
 		if info.Size() != 1 {
 			return errTestFileDetails
 		}
@@ -197,9 +266,10 @@ func checkFileDetails(absPath string, info fs.FileInfo) error {
 func createScanInput(t *testing.T) io.Reader {
 	t.Helper()
 
-	pathEmpty, pathContent := createTestFiles(t)
+	pathEmpty, pathContent1, pathContent2 := createTestFiles(t)
 	r := strings.NewReader(strconv.Quote(pathEmpty) + "\n" +
-		strconv.Quote("/foo/bar") + "\n" + strconv.Quote(pathContent))
+		strconv.Quote("/foo/bar") + "\n" + strconv.Quote(pathContent1) + "\n" +
+		strconv.Quote("/foo/bar") + "\n" + strconv.Quote(pathContent2))
 
 	return r
 }
