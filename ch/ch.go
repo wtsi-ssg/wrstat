@@ -191,6 +191,10 @@ func groupName(gid int) (string, error) {
 }
 
 func (c *Ch) chmod(rule *Rule, path string, info fs.FileInfo) error {
+	if info.Mode()&fs.ModeSymlink == fs.ModeSymlink {
+		return nil
+	}
+
 	currentPerms := info.Mode()
 
 	var desiredPerms fs.FileMode
@@ -205,21 +209,11 @@ func (c *Ch) chmod(rule *Rule, path string, info fs.FileInfo) error {
 		return nil
 	}
 
-	if err := chmod(info, path, desiredPerms); err != nil {
+	if err := os.Chmod(path, desiredPerms); err != nil {
 		return err
 	}
 
 	c.logger.Info("set permissions", "path", path, "old", currentPerms, "new", desiredPerms)
 
 	return nil
-}
-
-// chmod is like os.Chmod, but checks the given info to do nothing if this is a
-// symlink.
-func chmod(info fs.FileInfo, path string, mode fs.FileMode) error {
-	if info.Mode()&os.ModeSymlink == os.ModeSymlink {
-		return nil
-	}
-
-	return os.Chmod(path, mode)
 }
