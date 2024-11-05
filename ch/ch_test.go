@@ -179,6 +179,32 @@ func TestCh(t *testing.T) {
 				So(err.Error(), ShouldContainSubstring, "2 errors occurred")
 			})
 
+			Convey("Do on a symlink doesn't try to change permissions", func() {
+				mySymlink := filepath.Join(dir, "mySymlink")
+
+				err := os.Symlink("non-existent-target", mySymlink)
+				So(err, ShouldBeNil)
+
+				info, err := os.Lstat(mySymlink)
+				So(err, ShouldBeNil)
+
+				err = ch.Do(mySymlink, info)
+				So(err, ShouldBeNil)
+				So(buff.String(), ShouldNotContainSubstring, `lvl=info msg="set permissions" path=`)
+
+				createTestFile(t, filepath.Join(dir, "a"), otherGID, 0755)
+
+				err = os.Remove(mySymlink)
+				So(err, ShouldBeNil)
+
+				err = os.Symlink("a", mySymlink)
+				So(err, ShouldBeNil)
+
+				err = ch.Do(mySymlink, info)
+				So(err, ShouldBeNil)
+				So(buff.String(), ShouldNotContainSubstring, `lvl=info msg="set permissions" path=`)
+			})
+
 			Convey("chownGroup applies to symlinks themselves, not their targets", func() {
 				path := filepath.Join(dir, "e")
 				slink := filepath.Join(dir, "f")
@@ -198,20 +224,6 @@ func TestCh(t *testing.T) {
 
 				_, gid := getIDsFromFileInfo(info)
 				So(gid, ShouldEqual, otherGID)
-
-				Convey("chmod ignores symlinks but works on real files", func() {
-					err = chmod(info, slink, 0670)
-					So(err, ShouldBeNil)
-
-					info, err = os.Lstat(path)
-					So(info.Mode().Perm(), ShouldEqual, fs.FileMode(0660))
-
-					err = chmod(info, path, 0670)
-					So(err, ShouldBeNil)
-
-					info, err = os.Lstat(path)
-					So(info.Mode().Perm(), ShouldEqual, fs.FileMode(0670))
-				})
 			})
 		})
 	})

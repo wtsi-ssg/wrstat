@@ -836,8 +836,7 @@ func TestBaseDirs(t *testing.T) {
 						mainTable[0].DateNoSpace = time.Time{}
 						mainTable[0].DateNoFiles = time.Time{}
 
-						So(len(mainTable), ShouldEqual, 7)
-						So(mainTable, ShouldResemble, []*Usage{
+						mainTableExpectation := []*Usage{
 							{
 								Name: "group1", GID: 1, UIDs: []uint32{101}, Owner: "Alan", BaseDir: projectA,
 								UsageSize: twoGig + halfGig*2, QuotaSize: fiveGig,
@@ -873,7 +872,24 @@ func TestBaseDirs(t *testing.T) {
 								UsageSize: 60, QuotaSize: 500, UsageInodes: 1,
 								QuotaInodes: 50, Mtime: expectedMtime,
 							},
+						}
+
+						sort.Slice(mainTable, func(i, j int) bool {
+							return bytes.Compare(
+								idToByteSlice(mainTable[i].GID),
+								idToByteSlice(mainTable[j].GID),
+							) != -1
 						})
+
+						sort.Slice(mainTableExpectation, func(i, j int) bool {
+							return bytes.Compare(
+								idToByteSlice(mainTableExpectation[i].GID),
+								idToByteSlice(mainTableExpectation[j].GID),
+							) != -1
+						})
+
+						So(len(mainTable), ShouldEqual, 7)
+						So(mainTable, ShouldResemble, mainTableExpectation)
 
 						history, err := bdr.History(1, projectA)
 						fixHistoryTimes(history)
