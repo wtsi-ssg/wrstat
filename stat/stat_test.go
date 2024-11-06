@@ -29,6 +29,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -127,6 +128,77 @@ func TestLstat(t *testing.T) {
 
 					So(s.failureCount, ShouldEqual, 2)
 				})
+			})
+
+			Convey("which will correct invalid times", func() {
+				s.defTime = time.Now().Add(-24 * time.Hour).Unix()
+
+				err = os.Chtimes(pathContent1, time.Unix(0, 0), time.Unix(0, 0))
+				So(err, ShouldBeNil)
+
+				info, err = s.Lstat(pathContent1)
+				So(err, ShouldBeNil)
+				So(info, ShouldNotBeNil)
+
+				stat, ok := info.Sys().(*syscall.Stat_t)
+				So(ok, ShouldBeTrue)
+
+				So(stat.Atim.Sec, ShouldEqual, s.defTime)
+				So(stat.Mtim.Sec, ShouldEqual, s.defTime)
+
+				err = os.Chtimes(pathContent1, time.Now().Add(time.Hour), time.Now().Add(time.Hour*2))
+				So(err, ShouldBeNil)
+
+				info, err = s.Lstat(pathContent1)
+				So(err, ShouldBeNil)
+				So(info, ShouldNotBeNil)
+
+				stat, ok = info.Sys().(*syscall.Stat_t)
+				So(ok, ShouldBeTrue)
+
+				So(stat.Atim.Sec, ShouldEqual, s.defTime)
+				So(stat.Mtim.Sec, ShouldEqual, s.defTime)
+
+				validTime := time.Now().Add(-48 * time.Hour)
+
+				err = os.Chtimes(pathContent1, validTime, validTime)
+				So(err, ShouldBeNil)
+
+				info, err = s.Lstat(pathContent1)
+				So(err, ShouldBeNil)
+				So(info, ShouldNotBeNil)
+
+				stat, ok = info.Sys().(*syscall.Stat_t)
+				So(ok, ShouldBeTrue)
+
+				So(stat.Atim.Sec, ShouldEqual, validTime.Unix())
+				So(stat.Mtim.Sec, ShouldEqual, validTime.Unix())
+
+				err = os.Chtimes(pathContent1, validTime, time.Unix(0, 0))
+				So(err, ShouldBeNil)
+
+				info, err = s.Lstat(pathContent1)
+				So(err, ShouldBeNil)
+				So(info, ShouldNotBeNil)
+
+				stat, ok = info.Sys().(*syscall.Stat_t)
+				So(ok, ShouldBeTrue)
+
+				So(stat.Atim.Sec, ShouldEqual, validTime.Unix())
+				So(stat.Mtim.Sec, ShouldEqual, s.defTime)
+
+				err = os.Chtimes(pathContent1, time.Unix(0, 0), validTime)
+				So(err, ShouldBeNil)
+
+				info, err = s.Lstat(pathContent1)
+				So(err, ShouldBeNil)
+				So(info, ShouldNotBeNil)
+
+				stat, ok = info.Sys().(*syscall.Stat_t)
+				So(ok, ShouldBeTrue)
+
+				So(stat.Atim.Sec, ShouldEqual, s.defTime)
+				So(stat.Mtim.Sec, ShouldEqual, validTime.Unix())
 			})
 		})
 	})

@@ -28,6 +28,8 @@ package stat
 import (
 	"io/fs"
 	"os"
+	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/inconshreveable/log15"
@@ -61,6 +63,7 @@ type StatterWithTimeout struct {
 	failureCount    int
 	lstat           LstatFunc
 	logger          log15.Logger
+	defTime         int64
 }
 
 // WithTimeout returns a Statter with the given timeout, maxAttempts and
@@ -75,6 +78,7 @@ func WithTimeout(timeout time.Duration, maxAttempts, maxFailureCount int, logger
 		logger:          logger,
 		maxFailureCount: maxFailureCount,
 		lstat:           os.Lstat,
+		defTime:         time.Now().Unix(),
 	}
 }
 
@@ -135,6 +139,55 @@ func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh
 	}
 
 	info, err := s.lstat(path)
+	if err == nil {
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		if ok {
+			correctZeroTimes(stat, s.defTime, path, s.lstat)
+
+			correctFutureTimes(stat, s.defTime)
+		}
+	}
+
 	infoCh <- info
 	errCh <- err
+}
+
+func correctZeroTimes(stat *syscall.Stat_t, now int64, path string, lstat LstatFunc) {
+	for (stat.Atim.Sec == 0 || stat.Mtim.Sec == 0) && path != "/" {
+		path = filepath.Dir(path)
+
+		parentStat, errr := lstat(path)
+		if errr != nil {
+			nowTime := syscall.Timespec{Sec: now}
+
+			updateTime(&stat.Atim, nowTime)
+			updateTime(&stat.Mtim, nowTime)
+
+			return
+		}
+
+		pstat, ok := parentStat.Sys().(*syscall.Stat_t)
+		if !ok {
+			continue
+		}
+
+		updateTime(&stat.Atim, pstat.Atim)
+		updateTime(&stat.Mtim, pstat.Mtim)
+	}
+}
+
+func updateTime(from *syscall.Timespec, to syscall.Timespec) {
+	if from.Sec == 0 {
+		*from = to
+	}
+}
+
+func correctFutureTimes(stat *syscall.Stat_t, now int64) {
+	if stat.Atim.Sec > now {
+		stat.Atim.Sec = now
+	}
+
+	if stat.Mtim.Sec > now {
+		stat.Mtim.Sec = now
+	}
 }
