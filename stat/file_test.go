@@ -124,8 +124,9 @@ func testFileStats(path string, size int64, filetype string) {
 
 	var sb strings.Builder
 
-	_, err = stats.WriteTo(&sb)
+	n, err := stats.WriteTo(&sb)
 	So(err, ShouldBeNil)
+	So(n, ShouldNotBeZeroValue)
 
 	So(sb.String(), ShouldEqual, fmt.Sprintf(
 		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",

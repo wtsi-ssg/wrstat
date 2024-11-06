@@ -94,8 +94,8 @@ func (fs *FileStats) correctSize(stat *syscall.Stat_t) {
 //
 // You provide the absolute path to the file so that QuotedPath can be
 // calculated correctly (the info only contains the basename).
-func File(absPath string, info os.FileInfo) *FileStats {
-	fs := &FileStats{
+func File(absPath string, info os.FileInfo) FileStats {
+	fs := FileStats{
 		QuotedPath: strconv.Quote(absPath),
 		Size:       info.Size(),
 		Type:       modeToType(info.Mode()),
@@ -154,7 +154,8 @@ func nonRegularTypeToFileType(fileMode fs.FileMode) FileType {
 // to the given output file.
 func FileOperation(output *os.File) Operation {
 	return func(path string, info fs.FileInfo) error {
-		_, errw := File(path, info).WriteTo(output)
+		f := File(path, info)
+		_, errw := f.WriteTo(output)
 
 		return errw
 	}
