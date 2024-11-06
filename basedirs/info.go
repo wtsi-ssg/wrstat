@@ -75,7 +75,8 @@ func Info(dbPath string) (*DBInfo, error) {
 }
 
 func countFromFullBucketScan(tx *bolt.Tx, bucketName string,
-	cb func(v []byte, ch codec.Handle) int, ch codec.Handle) (int, int) {
+	cb func(v []byte, ch codec.Handle) int, ch codec.Handle,
+) (int, int) {
 	b := tx.Bucket([]byte(bucketName))
 
 	count := 0

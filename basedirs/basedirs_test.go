@@ -29,6 +29,7 @@ package basedirs
 
 import (
 	"bytes"
+	"encoding/binary"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -1558,6 +1559,13 @@ func sortByDatabaseKeyOrder(usageTable []*Usage) {
 	}
 
 	sortByGID(usageTable)
+}
+
+func idToByteSlice(id uint32) []byte {
+	bs := make([]byte, sizeOfUint32)
+	binary.LittleEndian.PutUint32(bs, id)
+
+	return bs
 }
 
 func sortByGID(usageTable []*Usage) {

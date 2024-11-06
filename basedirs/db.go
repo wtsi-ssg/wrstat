@@ -161,8 +161,10 @@ func clearUsageBuckets(tx *bolt.Tx) error {
 }
 
 func createBucketsIfNotExist(tx *bolt.Tx) error {
-	for _, bucket := range [...]string{groupUsageBucket, groupHistoricalBucket,
-		groupSubDirsBucket, userUsageBucket, userSubDirsBucket} {
+	for _, bucket := range [...]string{
+		groupUsageBucket, groupHistoricalBucket,
+		groupSubDirsBucket, userUsageBucket, userSubDirsBucket,
+	} {
 		if _, errc := tx.CreateBucketIfNotExists([]byte(bucket)); errc != nil {
 			return errc
 		}
@@ -223,36 +225,19 @@ func (b *BaseDirs) storeGIDBaseDirs(tx *bolt.Tx, gidBase map[uint32]dguta.DCSs) 
 }
 
 func keyName(id uint32, path string, age summary.DirGUTAge) []byte {
-	idBs := idToByteSlice(id)
-
-	ageBs := ageToByteSlice(age)
-
 	length := sizeOfKeyWithoutPath + len(path)
-	b := make([]byte, 0, length)
-	b = append(b, idBs...)
+	b := make([]byte, sizeOfUint32, length)
+	binary.LittleEndian.PutUint32(b, id)
 	b = append(b, bucketKeySeparatorByte)
 	b = append(b, path...)
 
 	if age != summary.DGUTAgeAll {
 		b = append(b, bucketKeySeparatorByte)
-		b = append(b, ageBs...)
+		b = b[:length]
+		binary.LittleEndian.PutUint16(b[length-sizeOfUint16:], uint16(age))
 	}
 
 	return b
-}
-
-func idToByteSlice(id uint32) []byte {
-	bs := make([]byte, sizeOfUint32)
-	binary.LittleEndian.PutUint32(bs, id)
-
-	return bs
-}
-
-func ageToByteSlice(age summary.DirGUTAge) []byte {
-	bs := make([]byte, sizeOfUint16)
-	binary.LittleEndian.PutUint16(bs, uint16(age))
-
-	return bs
 }
 
 func (b *BaseDirs) encodeToBytes(data any) []byte {
@@ -347,7 +332,8 @@ func (b *BaseDirs) dcssToMountPoints(dcss dguta.DCSs) map[string]dguta.DirSummar
 }
 
 func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,
-	mounts map[string]dguta.DirSummary) error {
+	mounts map[string]dguta.DirSummary,
+) error {
 	for mount, ds := range mounts {
 		quotaSize, quotaInode := b.quotas.Get(gid, mount)
 
@@ -369,7 +355,8 @@ func (b *BaseDirs) updateGroupHistories(ghb *bolt.Bucket, gid uint32,
 }
 
 func (b *BaseDirs) updateHistory(ds dguta.DirSummary, quotaSize, quotaInode uint64,
-	historyDate time.Time, existing []byte) ([]byte, error) {
+	historyDate time.Time, existing []byte,
+) ([]byte, error) {
 	var histories []History
 
 	if existing != nil {
@@ -475,7 +462,8 @@ func (b *BaseDirs) storeSubDirs(bucket *bolt.Bucket, dcs *dguta.DirSummary, id u
 }
 
 func (b *BaseDirs) dirAndSubDirTypes(info *dguta.DirInfo, filter dguta.Filter,
-	dir string) (UsageBreakdownByType, map[string]UsageBreakdownByType, error) {
+	dir string,
+) (UsageBreakdownByType, map[string]UsageBreakdownByType, error) {
 	childToTypes := make(map[string]UsageBreakdownByType)
 	parentTypes := make(UsageBreakdownByType)
 
@@ -498,7 +486,8 @@ func (b *BaseDirs) dirAndSubDirTypes(info *dguta.DirInfo, filter dguta.Filter,
 }
 
 func collateSubDirFileTypeSizes(children []*dguta.DirSummary,
-	childToTypes map[string]UsageBreakdownByType, ft summary.DirGUTAFileType) uint64 {
+	childToTypes map[string]UsageBreakdownByType, ft summary.DirGUTAFileType,
+) uint64 {
 	var fileTypeSize uint64
 
 	for _, child := range children {
@@ -516,7 +505,8 @@ func collateSubDirFileTypeSizes(children []*dguta.DirSummary,
 }
 
 func makeSubDirs(info *dguta.DirInfo, parentTypes UsageBreakdownByType, //nolint:funlen
-	childToTypes map[string]UsageBreakdownByType) []*SubDir {
+	childToTypes map[string]UsageBreakdownByType,
+) []*SubDir {
 	subDirs := make([]*SubDir, len(info.Children)+1)
 
 	var (
@@ -680,8 +670,10 @@ func transferAllBucketContents(utx *bolt.Tx, source *bolt.DB) error {
 	}
 
 	return source.View(func(vtx *bolt.Tx) error {
-		for _, bucket := range []string{groupUsageBucket, groupHistoricalBucket,
-			groupSubDirsBucket, userUsageBucket, userSubDirsBucket} {
+		for _, bucket := range []string{
+			groupUsageBucket, groupHistoricalBucket,
+			groupSubDirsBucket, userUsageBucket, userSubDirsBucket,
+		} {
 			err := transferBucketContents(vtx, utx, bucket)
 			if err != nil {
 				return err
