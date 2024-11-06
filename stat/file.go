@@ -29,6 +29,7 @@ package stat
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"strconv"
@@ -69,14 +70,16 @@ type FileStats struct {
 	Dev        uint64
 }
 
-// ToString produces our special format for describing the stats of a file. It
-// is \n terminated and ready to be written to a file.
-func (fs *FileStats) ToString() string {
-	return fmt.Sprintf(
+// WriteTo produces our special format for describing the stats of a file. It
+// is \n terminated and writes to the given Writer.
+func (fs *FileStats) WriteTo(w io.Writer) (int64, error) {
+	n, err := fmt.Fprintf(w,
 		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
 		fs.QuotedPath, fs.Size, fs.UID, fs.GID,
 		fs.Atim, fs.Mtim, fs.Ctim,
 		fs.Type, fs.Ino, fs.Nlink, fs.Dev)
+
+	return int64(n), err
 }
 
 // correctSize will adjust our Size to stat.Blocks*stat.Blksize if our current
@@ -151,7 +154,7 @@ func nonRegularTypeToFileType(fileMode fs.FileMode) FileType {
 // to the given output file.
 func FileOperation(output *os.File) Operation {
 	return func(path string, info fs.FileInfo) error {
-		_, errw := output.WriteString(File(path, info).ToString())
+		_, errw := File(path, info).WriteTo(output)
 
 		return errw
 	}

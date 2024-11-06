@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -121,7 +122,12 @@ func testFileStats(path string, size int64, filetype string) {
 	So(stats.Nlink, ShouldEqual, stat.Nlink)
 	So(stats.Dev, ShouldEqual, stat.Dev)
 
-	So(stats.ToString(), ShouldEqual, fmt.Sprintf(
+	var sb strings.Builder
+
+	_, err = stats.WriteTo(&sb)
+	So(err, ShouldBeNil)
+
+	So(sb.String(), ShouldEqual, fmt.Sprintf(
 		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
 		strconv.Quote("/abs/path/to/file"), size, stat.Uid, stat.Gid,
 		stat.Atim.Sec, stat.Mtim.Sec, stat.Ctim.Sec,
