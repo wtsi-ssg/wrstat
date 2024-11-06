@@ -117,6 +117,19 @@ const (
 	ErrInvalidAge  = Error("not a valid age")
 )
 
+var (
+	tmpSuffixes        = [...]string{".tmp", ".temp"}                                          //nolint:gochecknoglobals
+	tmpPaths           = [...]string{"/tmp/", "/temp/"}                                        //nolint:gochecknoglobals
+	tmpPrefixes        = [...]string{".tmp.", "tmp.", ".temp.", "temp."}                       //nolint:gochecknoglobals
+	fastASuffixes      = [...]string{".fasta", ".fa"}                                          //nolint:gochecknoglobals
+	fastQSuffixes      = [...]string{".fastq", ".fq"}                                          //nolint:gochecknoglobals
+	fastQQZSuffixes    = [...]string{".fastq.gz", ".fq.gz"}                                    //nolint:gochecknoglobals
+	pedBedSuffixes     = [...]string{".ped", ".map", ".bed", ".bim", ".fam"}                   //nolint:gochecknoglobals
+	compressedSuffixes = [...]string{".bzip2", ".gz", ".tgz", ".zip", ".xz", ".bgz"}           //nolint:gochecknoglobals
+	textSuffixes       = [...]string{".csv", ".tsv", ".txt", ".text", ".md", ".dat", "readme"} //nolint:gochecknoglobals
+	logSuffixes        = [...]string{".log", ".out", ".o", ".err", ".e", ".oe"}                //nolint:gochecknoglobals
+)
+
 // String lets you convert a DirGUTAFileType to a meaningful string.
 func (d DirGUTAFileType) String() string {
 	return [...]string{
@@ -293,13 +306,13 @@ func NewDirGroupUserTypeAge() *DirGroupUserTypeAge {
 
 // isTemp tells you if path is named like a temporary file.
 func isTemp(path string) bool {
-	if hasOneOfSuffixes(path, []string{".tmp", ".temp"}) {
+	if hasOneOfSuffixes(path, tmpSuffixes[:]) {
 		return true
 	}
 
 	lc := strings.ToLower(path)
 
-	for _, containing := range []string{"/tmp/", "/temp/"} {
+	for _, containing := range tmpPaths {
 		if strings.Contains(lc, containing) {
 			return true
 		}
@@ -307,7 +320,7 @@ func isTemp(path string) bool {
 
 	base := filepath.Base(lc)
 
-	for _, prefix := range []string{".tmp.", "tmp.", ".temp.", "temp."} {
+	for _, prefix := range tmpPrefixes {
 		if strings.HasPrefix(base, prefix) {
 			return true
 		}
@@ -366,22 +379,22 @@ func isCram(path string) bool {
 
 // isFasta tells you if path is named like a fasta file.
 func isFasta(path string) bool {
-	return hasOneOfSuffixes(path, []string{".fasta", ".fa"})
+	return hasOneOfSuffixes(path, fastASuffixes[:])
 }
 
 // isFastq tells you if path is named like a fastq file.
 func isFastq(path string) bool {
-	return hasOneOfSuffixes(path, []string{".fastq", ".fq"})
+	return hasOneOfSuffixes(path, fastQSuffixes[:])
 }
 
 // isFastqGz tells you if path is named like a fastq.gz file.
 func isFastqGz(path string) bool {
-	return hasOneOfSuffixes(path, []string{".fastq.gz", ".fq.gz"})
+	return hasOneOfSuffixes(path, fastQQZSuffixes[:])
 }
 
 // isPedBed tells you if path is named like a ped/bed file.
 func isPedBed(path string) bool {
-	return hasOneOfSuffixes(path, []string{".ped", ".map", ".bed", ".bim", ".fam"})
+	return hasOneOfSuffixes(path, pedBedSuffixes[:])
 }
 
 // isCompressed tells you if path is named like a compressed file.
@@ -390,17 +403,17 @@ func isCompressed(path string) bool {
 		return false
 	}
 
-	return hasOneOfSuffixes(path, []string{".bzip2", ".gz", ".tgz", ".zip", ".xz", ".bgz"})
+	return hasOneOfSuffixes(path, compressedSuffixes[:])
 }
 
 // isText tells you if path is named like some standard text file.
 func isText(path string) bool {
-	return hasOneOfSuffixes(path, []string{".csv", ".tsv", ".txt", ".text", ".md", ".dat", "readme"})
+	return hasOneOfSuffixes(path, textSuffixes[:])
 }
 
 // isLog tells you if path is named like some standard log file.
 func isLog(path string) bool {
-	return hasOneOfSuffixes(path, []string{".log", ".out", ".o", ".err", ".e", ".oe"})
+	return hasOneOfSuffixes(path, logSuffixes[:])
 }
 
 // Add is a github.com/wtsi-ssg/wrstat/stat Operation. It will break path in to
