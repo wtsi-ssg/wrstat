@@ -30,7 +30,6 @@ import (
 	"bytes"
 
 	"github.com/ugorji/go/codec"
-	"github.com/wtsi-ssg/wrstat/v5/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -97,7 +96,7 @@ func countFromFullBucketScan(tx *bolt.Tx, bucketName string,
 }
 
 func checkAgeOfKeyIsAll(key []byte) bool {
-	return bytes.Split(key, bucketKeySeparatorByteSlice)[2][0] == ageToByteSlice(summary.DGUTAgeAll)[0]
+	return bytes.Count(key, bucketKeySeparatorByteSlice) == 1
 }
 
 func countOnly(_ []byte, _ codec.Handle) int {
