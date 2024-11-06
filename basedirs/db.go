@@ -232,8 +232,11 @@ func keyName(id uint32, path string, age summary.DirGUTAge) []byte {
 	b = append(b, idBs...)
 	b = append(b, bucketKeySeparatorByte)
 	b = append(b, path...)
-	b = append(b, bucketKeySeparatorByte)
-	b = append(b, ageBs...)
+
+	if age != summary.DGUTAgeAll {
+		b = append(b, bucketKeySeparatorByte)
+		b = append(b, ageBs...)
+	}
 
 	return b
 }
