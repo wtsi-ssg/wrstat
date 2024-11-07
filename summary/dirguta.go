@@ -212,10 +212,12 @@ type gutaStore struct {
 
 // add will auto-vivify a summary for the given key (which should have been
 // generated with statToGUTAKey()) and call add(size, atime, mtime) on it.
-func (store gutaStore) add(key string, size int64, atime int64, mtime int64) {
-	if !FitsAgeInterval(key, atime, mtime, store.refTime) {
+func (store gutaStore) add(gkey GUTAKey, size int64, atime int64, mtime int64) {
+	if !FitsAgeInterval(gkey, atime, mtime, store.refTime) {
 		return
 	}
+
+	key := gkey.String()
 
 	s, ok := store.sumMap[key]
 	if !ok {
@@ -442,7 +444,7 @@ func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {
 
 	var atime int64
 
-	var gutaKeys []string
+	var gutaKeys []GUTAKey
 
 	if info.IsDir() {
 		atime = time.Now().Unix()
@@ -459,9 +461,19 @@ func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {
 	return nil
 }
 
+type GUTAKey struct {
+	GID, UID uint32
+	FileType DirGUTAFileType
+	Age      DirGUTAge
+}
+
+func (g GUTAKey) String() string {
+	return fmt.Sprintf("%d\t%d\t%d\t%d", g.GID, g.UID, g.FileType, g.Age)
+}
+
 // appendGUTAKeysForDir checks if the path is temp and calls appendGUTAKeys for the
 // relevant file types.
-func appendGUTAKeysForDir(path string, gutaKeys []string, gid, uid uint32) []string {
+func appendGUTAKeysForDir(path string, gutaKeys []GUTAKey, gid, uid uint32) []GUTAKey {
 	if isTemp(path) {
 		gutaKeys = appendGUTAKeys(gutaKeys, gid, uid, DGUTAFileTypeTemp)
 	}
@@ -473,9 +485,9 @@ func appendGUTAKeysForDir(path string, gutaKeys []string, gid, uid uint32) []str
 
 // appendGUTAKeys appends gutaKeys with keys including the given gid, uid, file
 // type and age.
-func appendGUTAKeys(gutaKeys []string, gid, uid uint32, fileType DirGUTAFileType) []string {
+func appendGUTAKeys(gutaKeys []GUTAKey, gid, uid uint32, fileType DirGUTAFileType) []GUTAKey {
 	for _, age := range DirGUTAges {
-		gutaKeys = append(gutaKeys, fmt.Sprintf("%d\t%d\t%d\t%d", gid, uid, fileType, age))
+		gutaKeys = append(gutaKeys, GUTAKey{gid, uid, fileType, age})
 	}
 
 	return gutaKeys
@@ -498,9 +510,9 @@ func maxInt(ints ...int64) int64 {
 // from the path, and combines them into a group+user+type+age key. More than 1
 // key will be returned, because there is a key for each age, possibly a "temp"
 // filetype as well as more specific types, and path could be both.
-func (d *DirGroupUserTypeAge) statToGUTAKeys(stat *syscall.Stat_t, path string) []string {
+func (d *DirGroupUserTypeAge) statToGUTAKeys(stat *syscall.Stat_t, path string) []GUTAKey {
 	types := d.pathToTypes(path)
-	gutaKeys := make([]string, 0, len(DirGUTAges)*len(types))
+	gutaKeys := make([]GUTAKey, 0, len(DirGUTAges)*len(types))
 
 	for _, t := range types {
 		gutaKeys = appendGUTAKeys(gutaKeys, stat.Gid, stat.Uid, t)
@@ -530,7 +542,7 @@ func (d *DirGroupUserTypeAge) pathToTypes(path string) []DirGUTAFileType {
 
 // addForEachDir breaks path into each directory, gets a gutaStore for each and
 // adds a file of the given size to them under the given gutaKeys.
-func (d *DirGroupUserTypeAge) addForEachDir(path string, gutaKeys []string, size int64, atime int64, mtime int64) {
+func (d *DirGroupUserTypeAge) addForEachDir(path string, gutaKeys []GUTAKey, size int64, atime int64, mtime int64) {
 	cb := func(dir string) {
 		gStore := d.store.getGUTAStore(dir)
 

@@ -27,11 +27,6 @@
 
 package summary
 
-import (
-	"strconv"
-	"strings"
-)
-
 const (
 	SecondsInAMonth = 2628000
 	SecondsInAYear  = SecondsInAMonth * 12
@@ -84,11 +79,8 @@ func (s *summaryWithTimes) add(size int64, atime int64, mtime int64) {
 // or atime respectively fits inside the age interval. E.g. if age = 3, this
 // corresponds to DGUTAgeA6M, so atime is checked to see if it is older than 6
 // months.
-func FitsAgeInterval(dguta string, atime, mtime, refTime int64) bool {
-	age, err := strconv.Atoi(dguta[strings.LastIndex(dguta, "\t")+1:])
-	if err != nil {
-		return false
-	}
+func FitsAgeInterval(dguta GUTAKey, atime, mtime, refTime int64) bool {
+	age := int(dguta.Age)
 
 	if age > len(ageThresholds) {
 		return checkTimeIsInInterval(mtime, refTime, age-(len(ageThresholds)+1))
