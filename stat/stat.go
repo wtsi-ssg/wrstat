@@ -28,7 +28,6 @@ package stat
 import (
 	"io/fs"
 	"os"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -142,9 +141,8 @@ func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh
 	if err == nil {
 		stat, ok := info.Sys().(*syscall.Stat_t)
 		if ok {
-			correctZeroTimes(stat, s.defTime, path, s.lstat)
-
-			correctFutureTimes(stat, s.defTime)
+			s.correctFutureTimes(stat)
+			s.correctZeroAtimes(stat)
 		}
 	}
 
@@ -152,42 +150,20 @@ func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh
 	errCh <- err
 }
 
-func correctZeroTimes(stat *syscall.Stat_t, now int64, path string, lstat LstatFunc) {
-	for (stat.Atim.Sec == 0 || stat.Mtim.Sec == 0) && path != "/" {
-		path = filepath.Dir(path)
+func (s *StatterWithTimeout) correctFutureTimes(stat *syscall.Stat_t) {
+	if stat.Atim.Sec > s.defTime {
+		stat.Atim.Sec = s.defTime
+	}
 
-		parentStat, errr := lstat(path)
-		if errr != nil {
-			nowTime := syscall.Timespec{Sec: now}
-
-			updateTime(&stat.Atim, nowTime)
-			updateTime(&stat.Mtim, nowTime)
-
-			return
-		}
-
-		pstat, ok := parentStat.Sys().(*syscall.Stat_t)
-		if !ok {
-			continue
-		}
-
-		updateTime(&stat.Atim, pstat.Atim)
-		updateTime(&stat.Mtim, pstat.Mtim)
+	if stat.Mtim.Sec > s.defTime {
+		stat.Mtim.Sec = s.defTime
 	}
 }
 
-func updateTime(from *syscall.Timespec, to syscall.Timespec) {
-	if from.Sec == 0 {
-		*from = to
-	}
-}
-
-func correctFutureTimes(stat *syscall.Stat_t, now int64) {
-	if stat.Atim.Sec > now {
-		stat.Atim.Sec = now
-	}
-
-	if stat.Mtim.Sec > now {
-		stat.Mtim.Sec = now
+func (s *StatterWithTimeout) correctZeroAtimes(stat *syscall.Stat_t) {
+	if stat.Atim.Sec == 0 && stat.Mtim.Sec != 0 {
+		stat.Atim.Sec = stat.Mtim.Sec
+	} else if stat.Atim.Sec == 0 {
+		stat.Atim.Sec = s.defTime
 	}
 }
