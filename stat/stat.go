@@ -142,7 +142,7 @@ func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh
 		stat, ok := info.Sys().(*syscall.Stat_t)
 		if ok {
 			s.correctFutureTimes(stat)
-			s.correctZeroAtimes(stat)
+			s.correctZeroTimes(stat)
 		}
 	}
 
@@ -160,17 +160,17 @@ func (s *StatterWithTimeout) correctFutureTimes(stat *syscall.Stat_t) {
 	}
 }
 
-func (s *StatterWithTimeout) correctZeroAtimes(stat *syscall.Stat_t) {
+func (s *StatterWithTimeout) correctZeroTimes(stat *syscall.Stat_t) {
 	if stat.Atim.Sec <= 0 {
-		stat.Atim.Sec = s.correctZeroTimes(stat)
+		stat.Atim.Sec = s.correctZeroTime(stat)
 	}
 
 	if stat.Mtim.Sec <= 0 {
-		stat.Mtim.Sec = s.correctZeroTimes(stat)
+		stat.Mtim.Sec = s.correctZeroTime(stat)
 	}
 }
 
-func (s *StatterWithTimeout) correctZeroTimes(stat *syscall.Stat_t) int64 {
+func (s *StatterWithTimeout) correctZeroTime(stat *syscall.Stat_t) int64 {
 	switch {
 	case stat.Mtim.Sec > 0:
 		return stat.Mtim.Sec
