@@ -143,8 +143,8 @@ func TestLstat(t *testing.T) {
 				stat, ok := info.Sys().(*syscall.Stat_t)
 				So(ok, ShouldBeTrue)
 
-				So(stat.Atim.Sec, ShouldEqual, s.defTime)
-				So(stat.Mtim.Sec, ShouldEqual, 0)
+				So(stat.Atim.Sec, ShouldEqual, stat.Ctim.Sec)
+				So(stat.Mtim.Sec, ShouldEqual, stat.Ctim.Sec)
 
 				err = os.Chtimes(pathContent1, time.Now().Add(time.Hour), time.Now().Add(time.Hour*2))
 				So(err, ShouldBeNil)
@@ -185,7 +185,7 @@ func TestLstat(t *testing.T) {
 				So(ok, ShouldBeTrue)
 
 				So(stat.Atim.Sec, ShouldEqual, validTime.Unix())
-				So(stat.Mtim.Sec, ShouldEqual, 0)
+				So(stat.Mtim.Sec, ShouldEqual, validTime.Unix())
 
 				err = os.Chtimes(pathContent1, time.Unix(0, 0), validTime)
 				So(err, ShouldBeNil)

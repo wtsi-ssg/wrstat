@@ -161,9 +161,24 @@ func (s *StatterWithTimeout) correctFutureTimes(stat *syscall.Stat_t) {
 }
 
 func (s *StatterWithTimeout) correctZeroAtimes(stat *syscall.Stat_t) {
-	if stat.Atim.Sec == 0 && stat.Mtim.Sec != 0 {
-		stat.Atim.Sec = stat.Mtim.Sec
-	} else if stat.Atim.Sec == 0 {
-		stat.Atim.Sec = s.defTime
+	if stat.Atim.Sec <= 0 {
+		stat.Atim.Sec = s.correctZeroTimes(stat)
+	}
+
+	if stat.Mtim.Sec <= 0 {
+		stat.Mtim.Sec = s.correctZeroTimes(stat)
+	}
+}
+
+func (s *StatterWithTimeout) correctZeroTimes(stat *syscall.Stat_t) int64 {
+	switch {
+	case stat.Mtim.Sec > 0:
+		return stat.Mtim.Sec
+	case stat.Atim.Sec > 0:
+		return stat.Atim.Sec
+	case stat.Ctim.Sec > 0:
+		return stat.Ctim.Sec
+	default:
+		return s.defTime
 	}
 }
