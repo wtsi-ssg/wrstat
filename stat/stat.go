@@ -28,6 +28,7 @@ package stat
 import (
 	"io/fs"
 	"os"
+	"syscall"
 	"time"
 
 	"github.com/inconshreveable/log15"
@@ -61,6 +62,7 @@ type StatterWithTimeout struct {
 	failureCount    int
 	lstat           LstatFunc
 	logger          log15.Logger
+	defTime         int64
 }
 
 // WithTimeout returns a Statter with the given timeout, maxAttempts and
@@ -75,6 +77,7 @@ func WithTimeout(timeout time.Duration, maxAttempts, maxFailureCount int, logger
 		logger:          logger,
 		maxFailureCount: maxFailureCount,
 		lstat:           os.Lstat,
+		defTime:         time.Now().Unix(),
 	}
 }
 
@@ -135,6 +138,47 @@ func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh
 	}
 
 	info, err := s.lstat(path)
+	if err == nil {
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		if ok {
+			s.correctFutureTimes(stat)
+			s.correctZeroTimes(stat)
+		}
+	}
+
 	infoCh <- info
 	errCh <- err
+}
+
+func (s *StatterWithTimeout) correctFutureTimes(stat *syscall.Stat_t) {
+	if stat.Atim.Sec > s.defTime {
+		stat.Atim.Sec = s.defTime
+	}
+
+	if stat.Mtim.Sec > s.defTime {
+		stat.Mtim.Sec = s.defTime
+	}
+}
+
+func (s *StatterWithTimeout) correctZeroTimes(stat *syscall.Stat_t) {
+	if stat.Atim.Sec <= 0 {
+		stat.Atim.Sec = s.correctZeroTime(stat)
+	}
+
+	if stat.Mtim.Sec <= 0 {
+		stat.Mtim.Sec = s.correctZeroTime(stat)
+	}
+}
+
+func (s *StatterWithTimeout) correctZeroTime(stat *syscall.Stat_t) int64 {
+	switch {
+	case stat.Mtim.Sec > 0:
+		return stat.Mtim.Sec
+	case stat.Atim.Sec > 0:
+		return stat.Atim.Sec
+	case stat.Ctim.Sec > 0:
+		return stat.Ctim.Sec
+	default:
+		return s.defTime
+	}
 }
