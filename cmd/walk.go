@@ -41,7 +41,7 @@ const (
 	defaultInodesPerJob   = 1000000
 	walkLogOutputBasename = "walk.log"
 	statTime              = 12 * time.Hour
-	statRAM               = 750
+	statRAM               = 7000
 )
 
 // options for this cmd.
