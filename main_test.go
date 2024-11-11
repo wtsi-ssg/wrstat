@@ -617,7 +617,7 @@ func TestWalk(t *testing.T) {
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
-					RAM:   750,
+					RAM:   7000,
 					Time:  12 * time.Hour,
 					Cores: 1,
 					Disk:  1,
@@ -655,7 +655,7 @@ func TestWalk(t *testing.T) {
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
-					RAM:   750,
+					RAM:   7000,
 					Time:  12 * time.Hour,
 					Cores: 1,
 					Disk:  1,
@@ -671,7 +671,7 @@ func TestWalk(t *testing.T) {
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
-					RAM:   750,
+					RAM:   7000,
 					Time:  12 * time.Hour,
 					Cores: 1,
 					Disk:  1,
@@ -1644,11 +1644,13 @@ func TestEnd2End(t *testing.T) {
 		So(buildSif.Run(), ShouldBeNil)
 
 		writeFileString(t, buildScript, `#!/bin/bash
+set -euo pipefail
 git clone --depth 1 --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr &&
 cd /opt/wr/ && GOPATH=/build/ make install;
 cd /opt/wrstat && GOPATH=/build/ make install;
 chmod -R +w /build;`)
 		writeFileString(t, runScript, `#!/bin/bash
+
 export PATH="/build/bin:$PATH";
 
 stop() {
@@ -1670,10 +1672,23 @@ waitForJobs() {
 	done;
 }
 
+getOpenPort() {
+	read LOWERPORT UPPERPORT < /proc/sys/net/ipv4/ip_local_port_range
+	declare PORT="";
+	while true; do
+		PORT="$(shuf -i $LOWERPORT-$UPPERPORT -n 1)";
+		cat /proc/net/tcp | grep -q ":$(printf "%04X" $PORT) " || break;
+	done;
+	echo $PORT
+}
+
 mkdir -p /tmp/working/partial/;
 mkdir -p /tmp/working/complete/;
 mkdir -p /tmp/final/;
 mkdir -p /tmp/final/simple/;
+
+export WR_ManagerPort=$(getOpenPort)
+export WR_ManagerWeb=0
 
 yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1;
 
@@ -1686,9 +1701,7 @@ waitForJobs;
 
 wrstat multi -m 0 -z "$(basename /tmp/working/partial/*)" -w /tmp/working/partial/ `+
 			`-f /tmp/final/simple -q /tmp/quota -b /tmp/basedirs -o /tmp/owners;
-waitForJobs;
-
-stop;`)
+waitForJobs;`)
 		writeFileString(t, filepath.Join(tmpTemp, "owners"), "")
 		writeFileString(t, filepath.Join(tmpTemp, "quota"), "")
 		writeFileString(t, filepath.Join(tmpTemp, "basedirs"),
@@ -1702,8 +1715,8 @@ stop;`)
 
 		build := exec.Command( //nolint:gosec
 			"singularity", "run", "-e",
-			"--bind", wrSrc+":/opt/wr,"+wd+":/opt/wrstat,"+binDir+":/build,"+buildScript+":/run.sh",
-			"--home", tmpHome, sif, "/run.sh")
+			"--bind", wrSrc+":/opt/wr,"+wd+":/opt/wrstat,"+binDir+":/build,"+buildScript+":/build.sh",
+			"--home", tmpHome, sif, "/build.sh")
 
 		err = build.Run()
 		So(err, ShouldBeNil)
@@ -1800,7 +1813,12 @@ stop;`)
 			"--home", tmpHome,
 			"--overlay", files, sif, "/run.sh")
 
-		So(cmd.Run(), ShouldBeNil)
+		o, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Logf("\nrun.sh failed: %s\n", string(o))
+		}
+
+		So(err, ShouldBeNil)
 
 		for file, contents := range map[string]string{
 			"*basedirs.userusage.tsv": fmt.Sprintf(``+
@@ -2015,6 +2033,11 @@ stop;`)
 		} {
 			files, errr := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
 			So(errr, ShouldBeNil)
+
+			if len(files) != 1 {
+				t.Logf("\nfile [%s] found %d times\n", file, len(files))
+			}
+
 			So(len(files), ShouldEqual, 1)
 
 			compareFileContents(t, filepath.Join(tmpTemp, files[0]), contents)
