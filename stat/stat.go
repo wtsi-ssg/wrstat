@@ -134,10 +134,6 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 
 // doLstat does the actual Lstat call and sends results on the given channels.
 func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh chan error) {
-	if os.Getenv("WRSTAT_TEST_LSTAT") != "" {
-		<-time.After(1 * time.Millisecond)
-	}
-
 	info, err := s.lstat(path)
 	if err == nil {
 		stat, ok := info.Sys().(*syscall.Stat_t)

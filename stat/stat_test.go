@@ -74,9 +74,6 @@ func TestLstat(t *testing.T) {
 				s = WithTimeout(1*time.Nanosecond, attempts, consecutiveFails, l)
 				So(s, ShouldNotBeNil)
 
-				defer func() { os.Unsetenv("WRSTAT_TEST_LSTAT") }()
-				os.Setenv("WRSTAT_TEST_LSTAT", "long")
-
 				info, err = s.Lstat(pathContent1)
 				So(err, ShouldNotBeNil)
 				So(info, ShouldBeNil)
@@ -106,9 +103,6 @@ func TestLstat(t *testing.T) {
 				Convey("after enough files fail consecutively it terminates", func() {
 					s = WithTimeout(1*time.Nanosecond, attempts, 2, l)
 					So(s, ShouldNotBeNil)
-
-					defer func() { os.Unsetenv("WRSTAT_TEST_LSTAT") }()
-					os.Setenv("WRSTAT_TEST_LSTAT", "long")
 
 					info, err = s.Lstat(pathEmpty)
 					So(err, ShouldEqual, errLstatSlow)
