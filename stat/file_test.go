@@ -107,7 +107,7 @@ func testFileStats(path string, size int64, filetype string) {
 
 	stats := File("/abs/path/to/file", info)
 	So(stats, ShouldNotBeNil)
-	So(len(stats.QuotedPath), ShouldBeGreaterThan, 0)
+	So(len(stats.Path), ShouldBeGreaterThan, 0)
 	So(stats.Size, ShouldEqual, size)
 
 	stat, ok := info.Sys().(*syscall.Stat_t)

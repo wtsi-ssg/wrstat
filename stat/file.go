@@ -32,7 +32,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"strconv"
 	"syscall"
 )
 
@@ -57,25 +56,25 @@ const (
 // FileStats contains all the file stats needed by wrstat, interpreted in our
 // custom way.
 type FileStats struct {
-	QuotedPath string
-	Size       int64
-	UID        uint32
-	GID        uint32
-	Atim       int64
-	Mtim       int64
-	Ctim       int64
-	Type       FileType
-	Ino        uint64
-	Nlink      uint64
-	Dev        uint64
+	Path  string
+	Size  int64
+	UID   uint32
+	GID   uint32
+	Atim  int64
+	Mtim  int64
+	Ctim  int64
+	Type  FileType
+	Ino   uint64
+	Nlink uint64
+	Dev   uint64
 }
 
 // WriteTo produces our special format for describing the stats of a file. It
 // is \n terminated and writes to the given Writer.
 func (fs *FileStats) WriteTo(w io.Writer) (int64, error) {
 	n, err := fmt.Fprintf(w,
-		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
-		fs.QuotedPath, fs.Size, fs.UID, fs.GID,
+		"%q\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
+		fs.Path, fs.Size, fs.UID, fs.GID,
 		fs.Atim, fs.Mtim, fs.Ctim,
 		fs.Type, fs.Ino, fs.Nlink, fs.Dev)
 
@@ -96,9 +95,9 @@ func (fs *FileStats) correctSize(stat *syscall.Stat_t) {
 // calculated correctly (the info only contains the basename).
 func File(absPath string, info os.FileInfo) FileStats {
 	fs := FileStats{
-		QuotedPath: strconv.Quote(absPath),
-		Size:       info.Size(),
-		Type:       modeToType(info.Mode()),
+		Path: absPath,
+		Size: info.Size(),
+		Type: modeToType(info.Mode()),
 	}
 
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
