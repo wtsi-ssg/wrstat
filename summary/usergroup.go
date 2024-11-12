@@ -47,20 +47,10 @@ type dirStore map[string]*summary
 
 // addForEachDir breaks path into each directory and calls add() on it.
 func (store dirStore) addForEachDir(path string, size int64) {
-	cb := func(dir string) {
-		store.add(dir, size)
-	}
-
-	doForEachDir(path, cb)
-}
-
-// doForEachDir breaks path into each sub-directory, and passes each to the
-// given callback.
-func doForEachDir(path string, cb func(dir string)) {
 	dir := filepath.Dir(path)
 
 	for {
-		cb(dir)
+		store.add(dir, size)
 
 		if dir == "/" || dir == "." {
 			return

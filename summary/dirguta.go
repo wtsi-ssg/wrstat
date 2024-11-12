@@ -33,6 +33,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -129,6 +130,12 @@ var (
 	textSuffixes       = [...]string{".csv", ".tsv", ".txt", ".text", ".md", ".dat", "readme"} //nolint:gochecknoglobals
 	logSuffixes        = [...]string{".log", ".out", ".o", ".err", ".e", ".oe"}                //nolint:gochecknoglobals
 )
+
+var gutaKey = sync.Pool{ //nolint:gochecknoglobals
+	New: func() any {
+		return new([34]GUTAKey)
+	},
+}
 
 // String lets you convert a DirGUTAFileType to a meaningful string.
 func (d DirGUTAFileType) String() string {
@@ -444,19 +451,23 @@ func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {
 
 	var atime int64
 
+	gutaKeysA := gutaKey.Get().(*[34]GUTAKey) //nolint:errcheck,forcetypeassert
+
 	var gutaKeys []GUTAKey
 
 	if info.IsDir() {
 		atime = time.Now().Unix()
 		path = filepath.Join(path, "leaf")
 
-		gutaKeys = appendGUTAKeysForDir(path, gutaKeys, stat.Gid, stat.Uid)
+		gutaKeys = appendGUTAKeysForDir(path, gutaKeysA[:0], stat.Gid, stat.Uid)
 	} else {
 		atime = maxInt(0, stat.Mtim.Sec, stat.Atim.Sec)
-		gutaKeys = d.statToGUTAKeys(stat, path)
+		gutaKeys = d.statToGUTAKeys(stat, gutaKeysA[:0], path)
 	}
 
 	d.addForEachDir(path, gutaKeys, info.Size(), atime, maxInt(0, stat.Mtim.Sec))
+
+	gutaKey.Put(gutaKeysA)
 
 	return nil
 }
@@ -510,9 +521,8 @@ func maxInt(ints ...int64) int64 {
 // from the path, and combines them into a group+user+type+age key. More than 1
 // key will be returned, because there is a key for each age, possibly a "temp"
 // filetype as well as more specific types, and path could be both.
-func (d *DirGroupUserTypeAge) statToGUTAKeys(stat *syscall.Stat_t, path string) []GUTAKey {
+func (d *DirGroupUserTypeAge) statToGUTAKeys(stat *syscall.Stat_t, gutaKeys []GUTAKey, path string) []GUTAKey {
 	types := d.pathToTypes(path)
-	gutaKeys := make([]GUTAKey, 0, len(DirGUTAges)*len(types))
 
 	for _, t := range types {
 		gutaKeys = appendGUTAKeys(gutaKeys, stat.Gid, stat.Uid, t)
@@ -543,15 +553,21 @@ func (d *DirGroupUserTypeAge) pathToTypes(path string) []DirGUTAFileType {
 // addForEachDir breaks path into each directory, gets a gutaStore for each and
 // adds a file of the given size to them under the given gutaKeys.
 func (d *DirGroupUserTypeAge) addForEachDir(path string, gutaKeys []GUTAKey, size int64, atime int64, mtime int64) {
-	cb := func(dir string) {
+	dir := filepath.Dir(path)
+
+	for {
 		gStore := d.store.getGUTAStore(dir)
 
 		for _, gutaKey := range gutaKeys {
 			gStore.add(gutaKey, size, atime, mtime)
 		}
-	}
 
-	doForEachDir(path, cb)
+		if dir == "/" || dir == "." {
+			return
+		}
+
+		dir = filepath.Dir(dir)
+	}
 }
 
 type StringCloser interface {
