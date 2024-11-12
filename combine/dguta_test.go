@@ -266,15 +266,20 @@ func buildDGUTAContent(directory, sgid, suid string, filetype, nestedFiles, //no
 
 	for _, split := range splitDir {
 		for _, age := range summary.DirGUTAges {
-			guta := summary.GUTAKey{uint32(gid), uint32(uid), summary.DirGUTAFileType(filetype), age}
+			guta := summary.GUTAKey{
+				GID:      uint32(gid),
+				UID:      uint32(uid),
+				FileType: summary.DirGUTAFileType(filetype),
+				Age:      age,
+			}
 
 			if !summary.FitsAgeInterval(guta, oldestAtime, newestAtime, refTime) {
 				continue
 			}
 
-			dgutaContents += strconv.Quote(split) + "\t" + guta.String() +
-				fmt.Sprintf("\t%d\t%d\t%d\t%d\n",
-					nestedFiles, fileSize, oldestAtime, newestAtime)
+			dgutaContents += fmt.Sprintf("%q\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+				split, gid, uid, guta.FileType, age,
+				nestedFiles, fileSize, oldestAtime, newestAtime)
 		}
 	}
 

@@ -26,6 +26,7 @@
 package summary
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/fs"
@@ -36,6 +37,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unsafe"
 )
 
 // DirGUTAge is one of the age types that the
@@ -478,8 +480,26 @@ type GUTAKey struct {
 	Age      DirGUTAge
 }
 
+func gutaKeyFromString(key string) GUTAKey {
+	dgutaBytes := unsafe.Slice(unsafe.StringData(key), len(key))
+
+	return GUTAKey{
+		GID:      binary.BigEndian.Uint32(dgutaBytes[:4]),
+		UID:      binary.BigEndian.Uint32(dgutaBytes[4:8]),
+		FileType: DirGUTAFileType(dgutaBytes[8]),
+		Age:      DirGUTAge(dgutaBytes[9]),
+	}
+}
+
 func (g GUTAKey) String() string {
-	return fmt.Sprintf("%d\t%d\t%d\t%d", g.GID, g.UID, g.FileType, g.Age)
+	var a [12]byte
+
+	binary.BigEndian.PutUint32(a[:4], g.GID)
+	binary.BigEndian.PutUint32(a[4:8], g.UID)
+	a[8] = uint8(g.FileType)
+	a[9] = uint8(g.Age)
+
+	return unsafe.String(&a[0], len(a))
 }
 
 // appendGUTAKeysForDir checks if the path is temp and calls appendGUTAKeys for the
@@ -632,11 +652,13 @@ func (d *DirGroupUserTypeAge) Output(output StringCloser) error {
 	for i, dir := range dirs {
 		dgutas, summaries := gStores[i].sort()
 
-		for j, dguta := range dgutas {
+		for j, gutaKey := range dgutas {
+			guta := gutaKeyFromString(gutaKey)
+
 			s := summaries[j]
-			_, errw := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\t%d\t%d\n",
+			_, errw := output.WriteString(fmt.Sprintf("%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
 				strconv.Quote(dir),
-				dguta,
+				guta.GID, guta.UID, guta.FileType, guta.Age,
 				s.count, s.size,
 				s.atime, s.mtime))
 
