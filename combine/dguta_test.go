@@ -261,8 +261,8 @@ func buildDGUTAContent(directory, sgid, suid string, filetype, nestedFiles, //no
 
 	splitDir := recursivePath(directory)
 
-	gid, _ := strconv.ParseUint(sgid, 10, 0)
-	uid, _ := strconv.ParseUint(suid, 10, 0)
+	gid, _ := strconv.ParseUint(sgid, 10, 0) //nolint:errcheck
+	uid, _ := strconv.ParseUint(suid, 10, 0) //nolint:errcheck
 
 	for _, split := range splitDir {
 		for _, age := range summary.DirGUTAges {

@@ -234,7 +234,7 @@ func checkDGUTAFileIsSorted(path string) bool {
 }
 
 func checkFileIsSorted(path string, args ...string) bool {
-	cmd := exec.Command("sort", append(append([]string{"-C"}, args...), path)...)
+	cmd := exec.Command("sort", append(append([]string{"-C"}, args...), path)...) //nolint:gosec
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "LC_ALL=C")
 
