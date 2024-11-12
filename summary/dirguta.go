@@ -621,11 +621,6 @@ func (d *DirGroupUserTypeAge) addForEachDir(path string, gutaKeys []GUTAKey, siz
 	}
 }
 
-type StringCloser interface {
-	io.StringWriter
-	io.Closer
-}
-
 // Output will write summary information for all the paths previously added. The
 // format is (tab separated):
 //
@@ -677,7 +672,7 @@ type StringCloser interface {
 //	14 = log (.log | .out | .o | .err | .e | .err | .oe suffix)
 //
 // Returns an error on failure to write. output is closed on completion.
-func (d *DirGroupUserTypeAge) Output(output StringCloser) error {
+func (d *DirGroupUserTypeAge) Output(output io.WriteCloser) error {
 	dirs, gStores := d.store.sort()
 
 	for i, dir := range dirs {
@@ -687,11 +682,11 @@ func (d *DirGroupUserTypeAge) Output(output StringCloser) error {
 			guta := gutaKeyFromString(gutaKey)
 
 			s := summaries[j]
-			_, errw := output.WriteString(fmt.Sprintf("%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+			_, errw := fmt.Fprintf(output, "%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
 				strconv.Quote(dir),
 				guta.GID, guta.UID, guta.FileType, guta.Age,
 				s.count, s.size,
-				s.atime, s.mtime))
+				s.atime, s.mtime)
 
 			if errw != nil {
 				return errw

@@ -26,6 +26,7 @@
 package summary
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -138,7 +139,7 @@ func TestUsergroup(t *testing.T) {
 // byColumnAdder describes one of our New* types.
 type byColumnAdder interface {
 	Add(string, fs.FileInfo) error
-	Output(output StringCloser) error
+	Output(output io.WriteCloser) error
 }
 
 func addTestData(a byColumnAdder, cuid uint32) {
