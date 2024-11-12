@@ -33,7 +33,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -321,18 +320,26 @@ func isTemp(path string) bool {
 		return true
 	}
 
-	lc := strings.ToLower(path)
-
 	for _, containing := range tmpPaths {
-		if strings.Contains(lc, containing) {
-			return true
+		if len(path) < len(containing) {
+			continue
+		}
+
+		for n := len(path) - len(containing); n >= 0; n-- {
+			if caseInsensitiveCompare(path[n:n+len(containing)], containing) {
+				return true
+			}
 		}
 	}
 
-	base := filepath.Base(lc)
+	base := filepath.Base(path)
 
 	for _, prefix := range tmpPrefixes {
-		if strings.HasPrefix(base, prefix) {
+		if len(base) < len(prefix) {
+			return false
+		}
+
+		if caseInsensitiveCompare(base[:len(prefix)], prefix) {
 			return true
 		}
 	}
@@ -342,10 +349,8 @@ func isTemp(path string) bool {
 
 // hasOneOfSuffixes tells you if path has one of the given suffixes.
 func hasOneOfSuffixes(path string, suffixes []string) bool {
-	lc := strings.ToLower(path)
-
 	for _, suffix := range suffixes {
-		if strings.HasSuffix(lc, suffix) {
+		if hasSuffix(path, suffix) {
 			return true
 		}
 	}
@@ -358,9 +363,35 @@ func isVCF(path string) bool {
 	return hasSuffix(path, ".vcf")
 }
 
+// caseInsensitiveCompare compares to equal length string for a case insensitive
+// match.
+func caseInsensitiveCompare(a, b string) bool {
+	for n := len(a) - 1; n >= 0; n-- {
+		if charToLower(a[n]) != charToLower(b[n]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// charToLower returns the lowercase form of an ascii letter passed to it,
+// returning any other character unmodified.
+func charToLower(char byte) byte {
+	if char >= 'A' && char <= 'Z' {
+		char += 'a' - 'A'
+	}
+
+	return char
+}
+
 // hasSuffix tells you if path has the given suffix.
 func hasSuffix(path, suffix string) bool {
-	return strings.HasSuffix(strings.ToLower(path), suffix)
+	if len(path) < len(suffix) {
+		return false
+	}
+
+	return caseInsensitiveCompare(path[len(path)-len(suffix):], suffix)
 }
 
 // isVCFGz tells you if path is named like a vcf.gz file.
