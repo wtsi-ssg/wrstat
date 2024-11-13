@@ -118,3 +118,7 @@ func TestGroupUser(t *testing.T) {
 		})
 	})
 }
+
+func checkGroupUserFileIsSorted(path string) bool {
+	return checkFileIsSorted(path, "-k1,1", "-k2,2", "-k3,3n", "-k4,4n")
+}

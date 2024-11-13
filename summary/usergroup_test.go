@@ -229,11 +229,6 @@ func testBadIds(err error, a byColumnAdder, out *os.File, outPath string) {
 	So(output, ShouldContainSubstring, "id999999999")
 }
 
-func checkDGUTAFileIsSorted(path string) bool {
-	return checkFileIsSorted(path, "-k1,1", "-k2,2n", "-k3,3n", "-k4,4n", "-k5,5n",
-		"-k6,6n", "-k7,7n", "-k8,8n", "-k9,9n")
-}
-
 func checkFileIsSorted(path string, args ...string) bool {
 	cmd := exec.Command("sort", append(append([]string{"-C"}, args...), path)...) //nolint:gosec
 	cmd.Env = os.Environ()
@@ -242,10 +237,6 @@ func checkFileIsSorted(path string, args ...string) bool {
 	err := cmd.Run()
 
 	return err == nil
-}
-
-func checkGroupUserFileIsSorted(path string) bool {
-	return checkFileIsSorted(path, "-k1,1", "-k2,2", "-k3,3n", "-k4,4n")
 }
 
 func checkUserGroupFileIsSorted(path string) bool {

@@ -803,3 +803,8 @@ func TestOldFile(t *testing.T) {
 		})
 	})
 }
+
+func checkDGUTAFileIsSorted(path string) bool {
+	return checkFileIsSorted(path, "-k1,1", "-k2,2n", "-k3,3n", "-k4,4n", "-k5,5n",
+		"-k6,6n", "-k7,7n", "-k8,8n", "-k9,9n")
+}
