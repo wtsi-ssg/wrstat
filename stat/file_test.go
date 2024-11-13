@@ -31,6 +31,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 
@@ -106,7 +107,7 @@ func testFileStats(path string, size int64, filetype string) {
 
 	stats := File("/abs/path/to/file", info)
 	So(stats, ShouldNotBeNil)
-	So(len(stats.QuotedPath), ShouldBeGreaterThan, 0)
+	So(len(stats.Path), ShouldBeGreaterThan, 0)
 	So(stats.Size, ShouldEqual, size)
 
 	stat, ok := info.Sys().(*syscall.Stat_t)
@@ -121,7 +122,13 @@ func testFileStats(path string, size int64, filetype string) {
 	So(stats.Nlink, ShouldEqual, stat.Nlink)
 	So(stats.Dev, ShouldEqual, stat.Dev)
 
-	So(stats.ToString(), ShouldEqual, fmt.Sprintf(
+	var sb strings.Builder
+
+	n, err := stats.WriteTo(&sb)
+	So(err, ShouldBeNil)
+	So(n, ShouldNotBeZeroValue)
+
+	So(sb.String(), ShouldEqual, fmt.Sprintf(
 		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
 		strconv.Quote("/abs/path/to/file"), size, stat.Uid, stat.Gid,
 		stat.Atim.Sec, stat.Mtim.Sec, stat.Ctim.Sec,

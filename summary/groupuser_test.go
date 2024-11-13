@@ -89,7 +89,7 @@ func TestGroupUser(t *testing.T) {
 
 					So(output, ShouldContainSubstring, g.Name+"\t"+os.Getenv("USER")+"\t3\t60\n")
 
-					So(checkFileIsSorted(outPath), ShouldBeTrue)
+					So(checkGroupUserFileIsSorted(outPath), ShouldBeTrue)
 				})
 
 				Convey("Output handles bad uids", func() {
@@ -117,4 +117,8 @@ func TestGroupUser(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 	})
+}
+
+func checkGroupUserFileIsSorted(path string) bool {
+	return checkFileIsSorted(path, "-k1,1", "-k2,2", "-k3,3n", "-k4,4n")
 }

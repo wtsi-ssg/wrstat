@@ -27,6 +27,7 @@ package summary
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"sort"
 	"syscall"
@@ -169,7 +170,7 @@ func (g *GroupUser) Add(_ string, info fs.FileInfo) error {
 // Returns an error on failure to write, or if username or group can't be
 // determined from the uids and gids in the added file info. output is closed
 // on completion.
-func (g *GroupUser) Output(output StringCloser) error {
+func (g *GroupUser) Output(output io.WriteCloser) error {
 	groups, uStores := g.store.sort()
 
 	uidLookupCache := make(map[uint32]string)
@@ -185,13 +186,13 @@ func (g *GroupUser) Output(output StringCloser) error {
 
 // outputUserSummariesForGroup sorts the users for this group and outputs the
 // summary information.
-func outputUserSummariesForGroup(output StringCloser, groupname string,
+func outputUserSummariesForGroup(output io.WriteCloser, groupname string,
 	uStore userToSummaryStore, uidLookupCache map[uint32]string) error {
 	usernames, summaries := uStore.sort(uidLookupCache)
 
 	for i, s := range summaries {
-		if _, err := output.WriteString(fmt.Sprintf("%s\t%s\t%d\t%d\n",
-			groupname, usernames[i], s.count, s.size)); err != nil {
+		if _, err := fmt.Fprintf(output, "%s\t%s\t%d\t%d\n",
+			groupname, usernames[i], s.count, s.size); err != nil {
 			return err
 		}
 	}

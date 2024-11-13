@@ -27,6 +27,7 @@ package stat
 
 import (
 	"bytes"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -74,9 +75,6 @@ func TestLstat(t *testing.T) {
 				s = WithTimeout(1*time.Nanosecond, attempts, consecutiveFails, l)
 				So(s, ShouldNotBeNil)
 
-				defer func() { os.Unsetenv("WRSTAT_TEST_LSTAT") }()
-				os.Setenv("WRSTAT_TEST_LSTAT", "long")
-
 				info, err = s.Lstat(pathContent1)
 				So(err, ShouldNotBeNil)
 				So(info, ShouldBeNil)
@@ -107,9 +105,6 @@ func TestLstat(t *testing.T) {
 					s = WithTimeout(1*time.Nanosecond, attempts, 2, l)
 					So(s, ShouldNotBeNil)
 
-					defer func() { os.Unsetenv("WRSTAT_TEST_LSTAT") }()
-					os.Setenv("WRSTAT_TEST_LSTAT", "long")
-
 					info, err = s.Lstat(pathEmpty)
 					So(err, ShouldEqual, errLstatSlow)
 					So(info, ShouldBeNil)
@@ -135,6 +130,13 @@ func TestLstat(t *testing.T) {
 
 				err = os.Chtimes(pathContent1, time.Unix(10, 0), time.Unix(2, 0))
 				So(err, ShouldBeNil)
+
+				existingLStat := s.lstat
+				s.lstat = func(path string) (fs.FileInfo, error) {
+					time.Sleep(time.Millisecond)
+
+					return existingLStat(path)
+				}
 
 				info, err = s.Lstat(pathContent1)
 				So(err, ShouldBeNil)

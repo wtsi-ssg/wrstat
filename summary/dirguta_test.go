@@ -456,8 +456,8 @@ func TestDirGUTA(t *testing.T) {
 						dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge,
 						count, size int, atime, mtime int64,
 					) string {
-						return fmt.Sprintf("%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
-							strconv.Quote(dir), gid, uid, ft, age, count, size, atime, mtime)
+						return fmt.Sprintf("%q\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+							dir, gid, uid, ft, age, count, size, atime, mtime)
 					}
 
 					buildExpectedEmptyOutputLine := func(dir string, gid, uid int, ft DirGUTAFileType, age DirGUTAge) string {
@@ -637,7 +637,7 @@ func TestDirGUTA(t *testing.T) {
 
 			cuidKey := fmt.Sprintf("2\t%d\t13\t0", cuid)
 
-			swa := dguta.store.gsMap["/a/b"].sumMap["2\t10\t15\t0"]
+			swa := dguta.store.gsMap["/a/b"].sumMap[GUTAKey{2, 10, 15, 0}.String()]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
@@ -647,7 +647,7 @@ func TestDirGUTA(t *testing.T) {
 				dguta.store.refTime, 18, 0,
 			})
 
-			swa = dguta.store.gsMap["/a/b/c"].sumMap["2\t10\t15\t0"]
+			swa = dguta.store.gsMap["/a/b/c"].sumMap[GUTAKey{2, 10, 15, 0}.String()]
 			if swa.atime >= before {
 				swa.atime = 18
 			}
@@ -656,7 +656,7 @@ func TestDirGUTA(t *testing.T) {
 				summary{1, 4096},
 				dguta.store.refTime, 18, 0,
 			})
-			So(dguta.store.gsMap["/a/b/c/d"].sumMap["2\t10\t15\t0"], ShouldNotBeNil)
+			So(dguta.store.gsMap["/a/b/c/d"].sumMap[GUTAKey{2, 10, 15, 0}.String()], ShouldNotBeNil)
 
 			Convey("And then given an output file", func() {
 				dir := t.TempDir()
@@ -698,7 +698,7 @@ func TestDirGUTA(t *testing.T) {
 					So(output, ShouldContainSubstring, strconv.Quote("/")+
 						"\t3\t2\t13\t0\t1\t6\t0\t0\n")
 
-					So(checkFileIsSorted(outPath), ShouldBeTrue)
+					So(checkDGUTAFileIsSorted(outPath), ShouldBeTrue)
 				})
 
 				Convey("Output fails if we can't write to the output file", func() {
@@ -756,50 +756,55 @@ func TestOldFile(t *testing.T) {
 		Convey("adding it results in correct a and m age sizes", func() {
 			err = dguta.Add(path, fileInfo)
 
-			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA1M)],
+			So(dguta.store.gsMap[tempDir].sumMap[GUTAKey{GID, UID, DGUTAFileTypeText, DGUTAgeA1M}.String()],
 				ShouldResemble, &summaryWithTimes{
 					summary{1, size64},
 					dguta.store.refTime,
 					amtime, amtime,
 				})
-			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA2M)],
+			So(dguta.store.gsMap[tempDir].sumMap[GUTAKey{GID, UID, DGUTAFileTypeText, DGUTAgeA2M}.String()],
 				ShouldResemble, &summaryWithTimes{
 					summary{1, size64},
 					dguta.store.refTime,
 					amtime, amtime,
 				})
-			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA6M)],
+			So(dguta.store.gsMap[tempDir].sumMap[GUTAKey{GID, UID, DGUTAFileTypeText, DGUTAgeA6M}.String()],
 				ShouldResemble, &summaryWithTimes{
 					summary{1, size64},
 					dguta.store.refTime,
 					amtime, amtime,
 				})
-			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA1Y)],
+			So(dguta.store.gsMap[tempDir].sumMap[GUTAKey{GID, UID, DGUTAFileTypeText, DGUTAgeA1Y}.String()],
 				ShouldResemble, &summaryWithTimes{
 					summary{1, size64},
 					dguta.store.refTime,
 					amtime, amtime,
 				})
-			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA2Y)],
+			So(dguta.store.gsMap[tempDir].sumMap[GUTAKey{GID, UID, DGUTAFileTypeText, DGUTAgeA2Y}.String()],
 				ShouldResemble, &summaryWithTimes{
 					summary{1, size64},
 					dguta.store.refTime,
 					amtime, amtime,
 				})
-			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA3Y)],
+			So(dguta.store.gsMap[tempDir].sumMap[GUTAKey{GID, UID, DGUTAFileTypeText, DGUTAgeA3Y}.String()],
 				ShouldResemble, &summaryWithTimes{
 					summary{1, size64},
 					dguta.store.refTime,
 					amtime, amtime,
 				})
-			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA5Y)],
+			So(dguta.store.gsMap[tempDir].sumMap[GUTAKey{GID, UID, DGUTAFileTypeText, DGUTAgeA5Y}.String()],
 				ShouldResemble, &summaryWithTimes{
 					summary{1, size64},
 					dguta.store.refTime,
 					amtime, amtime,
 				})
-			So(dguta.store.gsMap[tempDir].sumMap[fmt.Sprintf("%d\t%d\t%d\t%d", GID, UID, DGUTAFileTypeText, DGUTAgeA7Y)],
+			So(dguta.store.gsMap[tempDir].sumMap[GUTAKey{GID, UID, DGUTAFileTypeText, DGUTAgeA7Y}.String()],
 				ShouldBeNil)
 		})
 	})
+}
+
+func checkDGUTAFileIsSorted(path string) bool {
+	return checkFileIsSorted(path, "-k1,1", "-k2,2n", "-k3,3n", "-k4,4n", "-k5,5n",
+		"-k6,6n", "-k7,7n", "-k8,8n", "-k9,9n")
 }

@@ -105,9 +105,9 @@ func TestDGUTA(t *testing.T) {
 		numGutas := 17
 		emptyGutas := 8
 		testIndex := func(index int) int {
-			if index > 5 {
+			if index > 4 {
 				return index*numGutas - emptyGutas*2
-			} else if index > 1 {
+			} else if index > 3 {
 				return index*numGutas - emptyGutas
 			}
 
@@ -115,7 +115,7 @@ func TestDGUTA(t *testing.T) {
 		}
 
 		filter := &Filter{}
-		a, b := expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
+		a, b := expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
@@ -124,27 +124,27 @@ func TestDGUTA(t *testing.T) {
 		So(b, ShouldBeFalse)
 
 		filter.GIDs = []uint32{3, 4, 5}
-		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
 
 		filter.GIDs = []uint32{3, 2, 1}
-		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
-		So(a, ShouldBeTrue)
-		So(b, ShouldBeTrue)
-
-		filter.UIDs = []uint32{103}
-		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
-		So(a, ShouldBeFalse)
-		So(b, ShouldBeFalse)
-
-		filter.UIDs = []uint32{103, 102, 101}
 		a, b = expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
+		filter.UIDs = []uint32{103}
+		a, b = expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
+		So(a, ShouldBeFalse)
+		So(b, ShouldBeFalse)
+
+		filter.UIDs = []uint32{103, 102, 101}
+		a, b = expectedRootGUTAs[testIndex(1)].PassesFilter(filter)
+		So(a, ShouldBeTrue)
+		So(b, ShouldBeTrue)
+
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp}
-		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
 		So(a, ShouldBeFalse)
 		So(b, ShouldBeFalse)
 		a, b = expectedRootGUTAs[0].PassesFilter(filter)
@@ -152,7 +152,7 @@ func TestDGUTA(t *testing.T) {
 		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeTemp, summary.DGUTAFileTypeCram}
-		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 		a, b = expectedRootGUTAs[0].PassesFilter(filter)
@@ -160,17 +160,17 @@ func TestDGUTA(t *testing.T) {
 		So(b, ShouldBeFalse)
 
 		filter.UIDs = nil
-		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.GIDs = nil
-		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(2)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
 		filter.FTs = []summary.DirGUTAFileType{summary.DGUTAFileTypeDir}
-		a, b = expectedRootGUTAs[testIndex(1)].PassesFilter(filter)
+		a, b = expectedRootGUTAs[testIndex(3)].PassesFilter(filter)
 		So(a, ShouldBeTrue)
 		So(b, ShouldBeTrue)
 
@@ -595,29 +595,22 @@ func testData(t *testing.T, refUnixTime int64) (dgutaData string, expectedRootGU
 
 	dgutaData = internaldata.TestDGUTAData(t, internaldata.CreateDefaultTestData(1, 2, 1, 101, 102, refUnixTime))
 
-	orderOfOldAges := []summary.DirGUTAge{
-		summary.DGUTAgeAll, summary.DGUTAgeA1M, summary.DGUTAgeM2M,
-		summary.DGUTAgeM6M, summary.DGUTAgeM1Y, summary.DGUTAgeM2Y, summary.DGUTAgeM3Y,
-		summary.DGUTAgeM5Y, summary.DGUTAgeM7Y, summary.DGUTAgeA2M, summary.DGUTAgeA6M,
-		summary.DGUTAgeA1Y, summary.DGUTAgeA2Y, summary.DGUTAgeA3Y, summary.DGUTAgeA5Y,
-		summary.DGUTAgeA7Y, summary.DGUTAgeM1M,
-	}
+	orderOfOldAges := summary.DirGUTAges[:]
 
 	orderOfDiffAMtimesAges := []summary.DirGUTAge{
-		summary.DGUTAgeAll, summary.DGUTAgeA1M,
-		summary.DGUTAgeM2M, summary.DGUTAgeM6M, summary.DGUTAgeM1Y, summary.DGUTAgeM2Y,
-		summary.DGUTAgeM3Y, summary.DGUTAgeA2M, summary.DGUTAgeA6M, summary.DGUTAgeA1Y,
-		summary.DGUTAgeM1M,
+		summary.DGUTAgeAll, summary.DGUTAgeA1M, summary.DGUTAgeA2M, summary.DGUTAgeA6M,
+		summary.DGUTAgeA1Y, summary.DGUTAgeM1M, summary.DGUTAgeM2M, summary.DGUTAgeM6M,
+		summary.DGUTAgeM1Y, summary.DGUTAgeM2Y, summary.DGUTAgeM3Y,
 	}
 
 	expectedRootGUTAs = addGUTAs(t, []gutaInfo{
 		{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
-		{1, 101, summary.DGUTAFileTypeDir, 0, 8, 0, 8192, math.MaxInt, 1, orderOfOldAges},
 		{1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80, orderOfOldAges},
 		{1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60, orderOfOldAges},
+		{1, 101, summary.DGUTAFileTypeDir, 0, 8, 0, 8192, math.MaxInt, 1, orderOfOldAges},
 		{1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75, orderOfOldAges},
-		{2, 102, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
 		{2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90, orderOfOldAges},
+		{2, 102, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
 		{
 			3, 103, summary.DGUTAFileTypeCram, 7, 7, 7, 7, time.Now().Unix() - summary.SecondsInAYear,
 			time.Now().Unix() - (summary.SecondsInAYear * 3), orderOfDiffAMtimesAges,
@@ -634,57 +627,57 @@ func testData(t *testing.T, refUnixTime int64) (dgutaData string, expectedRootGU
 		{
 			Dir: "/a/b", GUTAs: addGUTAs(t, []gutaInfo{
 				{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
-				{1, 101, summary.DGUTAFileTypeDir, 0, 7, 0, 7168, math.MaxInt, 1, orderOfOldAges},
 				{1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80, orderOfOldAges},
 				{1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 7, 0, 7168, math.MaxInt, 1, orderOfOldAges},
 				{1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75, orderOfOldAges},
 			}),
 		},
 		{
 			Dir: "/a/b/d", GUTAs: addGUTAs(t, []gutaInfo{
-				{1, 101, summary.DGUTAFileTypeDir, 0, 3, 0, 3072, math.MaxInt, 1, orderOfOldAges},
 				{1, 101, summary.DGUTAFileTypeCram, 3, 3, 30, 30, 50, 60, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 3, 0, 3072, math.MaxInt, 1, orderOfOldAges},
 				{1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75, orderOfOldAges},
 			}),
 		},
 		{
 			Dir: "/a/b/d/f", GUTAs: addGUTAs(t, []gutaInfo{
-				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
 				{1, 101, summary.DGUTAFileTypeCram, 1, 1, 10, 10, 50, 50, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
 			}),
 		},
 		{
 			Dir: "/a/b/d/g", GUTAs: addGUTAs(t, []gutaInfo{
-				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
 				{1, 101, summary.DGUTAFileTypeCram, 2, 2, 20, 20, 60, 60, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
 				{1, 102, summary.DGUTAFileTypeCram, 4, 4, 40, 40, 75, 75, orderOfOldAges},
 			}),
 		},
 		{
 			Dir: "/a/b/e", GUTAs: addGUTAs(t, []gutaInfo{
 				{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
-				{1, 101, summary.DGUTAFileTypeDir, 0, 3, 0, 3072, math.MaxInt, 1, orderOfOldAges},
 				{1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 3, 0, 3072, math.MaxInt, 1, orderOfOldAges},
 			}),
 		},
 		{
 			Dir: "/a/b/e/h", GUTAs: addGUTAs(t, []gutaInfo{
 				{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
-				{1, 101, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
 				{1, 101, summary.DGUTAFileTypeBam, 2, 2, 10, 10, 80, 80, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
 			}),
 		},
 		{
 			Dir: "/a/b/e/h/tmp", GUTAs: addGUTAs(t, []gutaInfo{
 				{1, 101, summary.DGUTAFileTypeTemp, 1, 2, 5, 1029, 80, 80, orderOfOldAges},
-				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
 				{1, 101, summary.DGUTAFileTypeBam, 1, 1, 5, 5, 80, 80, orderOfOldAges},
+				{1, 101, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
 			}),
 		},
 		{
 			Dir: "/a/c", GUTAs: addGUTAs(t, []gutaInfo{
-				{2, 102, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
 				{2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90, orderOfOldAges},
+				{2, 102, summary.DGUTAFileTypeDir, 0, 2, 0, 2048, math.MaxInt, 1, orderOfOldAges},
 				{
 					3, 103, summary.DGUTAFileTypeCram, 7, 7, 7, 7, time.Now().Unix() - summary.SecondsInAYear,
 					time.Now().Unix() - (summary.SecondsInAYear * 3), orderOfDiffAMtimesAges,
@@ -693,8 +686,8 @@ func testData(t *testing.T, refUnixTime int64) (dgutaData string, expectedRootGU
 		},
 		{
 			Dir: "/a/c/d", GUTAs: addGUTAs(t, []gutaInfo{
-				{2, 102, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
 				{2, 102, summary.DGUTAFileTypeCram, 5, 5, 5, 5, 90, 90, orderOfOldAges},
+				{2, 102, summary.DGUTAFileTypeDir, 0, 1, 0, 1024, math.MaxInt, 1, orderOfOldAges},
 				{
 					3, 103, summary.DGUTAFileTypeCram, 7, 7, 7, 7, time.Now().Unix() - summary.SecondsInAYear,
 					time.Now().Unix() - (summary.SecondsInAYear * 3), orderOfDiffAMtimesAges,

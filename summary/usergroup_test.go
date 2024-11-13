@@ -26,6 +26,7 @@
 package summary
 
 import (
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -105,7 +106,7 @@ func TestUsergroup(t *testing.T) {
 					So(output, ShouldContainSubstring, os.Getenv("USER")+"\t"+
 						g.Name+"\t"+strconv.Quote("/a/b/c")+"\t2\t30\n")
 
-					So(checkFileIsSorted(outPath), ShouldBeTrue)
+					So(checkUserGroupFileIsSorted(outPath), ShouldBeTrue)
 				})
 
 				Convey("Output handles bad uids", func() {
@@ -138,7 +139,7 @@ func TestUsergroup(t *testing.T) {
 // byColumnAdder describes one of our New* types.
 type byColumnAdder interface {
 	Add(string, fs.FileInfo) error
-	Output(output StringCloser) error
+	Output(output io.WriteCloser) error
 }
 
 func addTestData(a byColumnAdder, cuid uint32) {
@@ -228,12 +229,16 @@ func testBadIds(err error, a byColumnAdder, out *os.File, outPath string) {
 	So(output, ShouldContainSubstring, "id999999999")
 }
 
-func checkFileIsSorted(path string) bool {
-	cmd := exec.Command("sort", "-C", path)
+func checkFileIsSorted(path string, args ...string) bool {
+	cmd := exec.Command("sort", append(append([]string{"-C"}, args...), path)...) //nolint:gosec
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "LC_ALL=C")
 
 	err := cmd.Run()
 
 	return err == nil
+}
+
+func checkUserGroupFileIsSorted(path string) bool {
+	return checkFileIsSorted(path, "-k1,1", "-k2,2", "-k3,3", "-k4,4n", "-k5,5n")
 }

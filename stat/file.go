@@ -29,9 +29,9 @@ package stat
 
 import (
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
-	"strconv"
 	"syscall"
 )
 
@@ -56,27 +56,29 @@ const (
 // FileStats contains all the file stats needed by wrstat, interpreted in our
 // custom way.
 type FileStats struct {
-	QuotedPath string
-	Size       int64
-	UID        uint32
-	GID        uint32
-	Atim       int64
-	Mtim       int64
-	Ctim       int64
-	Type       FileType
-	Ino        uint64
-	Nlink      uint64
-	Dev        uint64
+	Path  string
+	Size  int64
+	UID   uint32
+	GID   uint32
+	Atim  int64
+	Mtim  int64
+	Ctim  int64
+	Type  FileType
+	Ino   uint64
+	Nlink uint64
+	Dev   uint64
 }
 
-// ToString produces our special format for describing the stats of a file. It
-// is \n terminated and ready to be written to a file.
-func (fs *FileStats) ToString() string {
-	return fmt.Sprintf(
-		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
-		fs.QuotedPath, fs.Size, fs.UID, fs.GID,
+// WriteTo produces our special format for describing the stats of a file. It
+// is \n terminated and writes to the given Writer.
+func (fs *FileStats) WriteTo(w io.Writer) (int64, error) {
+	n, err := fmt.Fprintf(w,
+		"%q\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
+		fs.Path, fs.Size, fs.UID, fs.GID,
 		fs.Atim, fs.Mtim, fs.Ctim,
 		fs.Type, fs.Ino, fs.Nlink, fs.Dev)
+
+	return int64(n), err
 }
 
 // correctSize will adjust our Size to stat.Blocks*stat.Blksize if our current
@@ -91,11 +93,11 @@ func (fs *FileStats) correctSize(stat *syscall.Stat_t) {
 //
 // You provide the absolute path to the file so that QuotedPath can be
 // calculated correctly (the info only contains the basename).
-func File(absPath string, info os.FileInfo) *FileStats {
-	fs := &FileStats{
-		QuotedPath: strconv.Quote(absPath),
-		Size:       info.Size(),
-		Type:       modeToType(info.Mode()),
+func File(absPath string, info os.FileInfo) FileStats {
+	fs := FileStats{
+		Path: absPath,
+		Size: info.Size(),
+		Type: modeToType(info.Mode()),
 	}
 
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
@@ -151,7 +153,8 @@ func nonRegularTypeToFileType(fileMode fs.FileMode) FileType {
 // to the given output file.
 func FileOperation(output *os.File) Operation {
 	return func(path string, info fs.FileInfo) error {
-		_, errw := output.WriteString(File(path, info).ToString())
+		f := File(path, info)
+		_, errw := f.WriteTo(output)
 
 		return errw
 	}

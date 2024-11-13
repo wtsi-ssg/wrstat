@@ -254,24 +254,32 @@ func createDGUTAFile(t *testing.T, tempDir, fileName, content string) string {
 // nestedFiles, fileSize, atime. For example, /    1313    13912   0   0   1   0
 // 1668768807 /lustre  1313    13912   0   0   1   0   1668768807
 // /lustre/scratch123   1313    13912   0   0   1   0   1668768807.
-func buildDGUTAContent(directory, gid, uid string, filetype, nestedFiles, //nolint:unparam
+func buildDGUTAContent(directory, sgid, suid string, filetype, nestedFiles, //nolint:unparam
 	fileSize, oldestAtime, newestAtime, refTime int64,
 ) string {
 	var dgutaContents string
 
 	splitDir := recursivePath(directory)
 
+	gid, _ := strconv.ParseUint(sgid, 10, 0) //nolint:errcheck
+	uid, _ := strconv.ParseUint(suid, 10, 0) //nolint:errcheck
+
 	for _, split := range splitDir {
 		for _, age := range summary.DirGUTAges {
-			guta := fmt.Sprintf("\t%s\t%s\t%d\t%d", gid, uid, filetype, age)
+			guta := summary.GUTAKey{
+				GID:      uint32(gid),
+				UID:      uint32(uid),
+				FileType: summary.DirGUTAFileType(filetype),
+				Age:      age,
+			}
 
 			if !summary.FitsAgeInterval(guta, oldestAtime, newestAtime, refTime) {
 				continue
 			}
 
-			dgutaContents += strconv.Quote(split) + guta +
-				fmt.Sprintf("\t%d\t%d\t%d\t%d\n",
-					nestedFiles, fileSize, oldestAtime, newestAtime)
+			dgutaContents += fmt.Sprintf("%q\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+				split, gid, uid, guta.FileType, age,
+				nestedFiles, fileSize, oldestAtime, newestAtime)
 		}
 	}
 

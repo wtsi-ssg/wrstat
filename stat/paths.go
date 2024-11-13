@@ -191,7 +191,7 @@ func (p *Paths) waitUntilWGOrMaxTime(wg *sync.WaitGroup, endTime time.Time) erro
 	}
 }
 
-// startReporting calls StartReproting on all our reporters.
+// startReporting calls StartReporting on all our reporters.
 func (p *Paths) startReporting() {
 	if p.reportFrequency <= 0 {
 		return
