@@ -761,24 +761,24 @@ func TestStat(t *testing.T) {
 		for _, fileDefinition := range [...]File{
 			{
 				name:   "aDirectory/aFile\nfile",
-				mtime:  time.Unix(7383773, 0),
+				mtime:  time.Unix(minimumDate+7383773, 0),
 				length: 10,
 			},
 			{
 				name:  "aDirectory/aSubDirectory",
-				mtime: time.Unix(314159, 0),
+				mtime: time.Unix(minimumDate+314159, 0),
 			},
 			{
 				name:  "aDirectory",
-				mtime: time.Unix(133032, 0),
+				mtime: time.Unix(minimumDate+133032, 0),
 			},
 			{
 				name:  "anotherDirectory",
-				mtime: time.Unix(282820, 0),
+				mtime: time.Unix(minimumDate+282820, 0),
 			},
 			{
 				name:  ".",
-				mtime: time.Unix(271828, 0),
+				mtime: time.Unix(minimumDate+271828, 0),
 			},
 		} {
 			path := filepath.Join(tmp, fileDefinition.name)
@@ -840,11 +840,11 @@ func TestStat(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		statsExpectation := fmt.Sprintf(""+
-			"%[3]s\t4096\t%[1]s\t%[2]s\t%[14]d\t271828\t%[19]d\td\t%[8]d\t4\t%[13]d\n"+
-			"%[4]s\t4096\t%[1]s\t%[2]s\t%[15]d\t133032\t%[20]d\td\t%[9]d\t3\t%[13]d\n"+
-			"%[5]s\t10\t%[1]s\t%[2]s\t%[16]d\t7383773\t%[21]d\tf\t%[10]d\t1\t%[13]d\n"+
-			"%[6]s\t4096\t%[1]s\t%[2]s\t%[17]d\t314159\t%[22]d\td\t%[11]d\t2\t%[13]d\n"+
-			"%[7]s\t4096\t%[1]s\t%[2]s\t%[18]d\t282820\t%[23]d\td\t%[12]d\t2\t%[13]d\n",
+			"%[3]s\t4096\t%[1]s\t%[2]s\t%[14]d\t"+ct(271828)+"\t%[19]d\td\t%[8]d\t4\t%[13]d\n"+
+			"%[4]s\t4096\t%[1]s\t%[2]s\t%[15]d\t"+ct(133032)+"\t%[20]d\td\t%[9]d\t3\t%[13]d\n"+
+			"%[5]s\t10\t%[1]s\t%[2]s\t%[16]d\t"+ct(7383773)+"\t%[21]d\tf\t%[10]d\t1\t%[13]d\n"+
+			"%[6]s\t4096\t%[1]s\t%[2]s\t%[17]d\t"+ct(314159)+"\t%[22]d\td\t%[11]d\t2\t%[13]d\n"+
+			"%[7]s\t4096\t%[1]s\t%[2]s\t%[18]d\t"+ct(282820)+"\t%[23]d\td\t%[12]d\t2\t%[13]d\n",
 			u.Uid,
 			u.Gid,
 			strconv.Quote(tmp),
@@ -1620,6 +1620,12 @@ func TestTidy(t *testing.T) {
 	})
 }
 
+const minimumDate = 315532801
+
+func ct(n uint64) string {
+	return strconv.FormatUint(n+minimumDate, 10)
+}
+
 func TestEnd2End(t *testing.T) {
 	if !commandExists("singularity") || !commandExists("sqfstar") {
 		SkipConvey("need both 'singularity' and 'sqfstar' installed to run this test.", t, func() {})
@@ -1833,7 +1839,7 @@ waitForJobs;`)
 				"U%[5]d\t\t/objects/store2/part1/other/my\nDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
 				"U%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK",
 				UserA, UserB, UserC, UserD, UserE,
-				time.Now().Unix()/86400),
+				(time.Now().Unix()-minimumDate)/86400),
 			"*basedirs.groupusage.tsv": fmt.Sprintf(``+
 				"G%[1]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tNot OK\n"+
 				"G%[1]d\t\t/objects/store1/data/sheets\t%[5]d\t10240\t0\t2\t0\tNot OK\n"+
@@ -1847,7 +1853,7 @@ waitForJobs;`)
 				"G%[3]d\t\t/objects/store2/important/docs\t\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
 				"G%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK",
 				GroupA, GroupB, GroupD, GroupE,
-				time.Now().Unix()/86400),
+				(time.Now().Unix()-minimumDate)/86400),
 			"????????_A.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t1", GroupA, UserA),
 			"????????_E.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t2", GroupE, UserE),
 			"????????_store1.*.bygroup": fmt.Sprintf(``+
@@ -1946,70 +1952,99 @@ waitForJobs;`)
 			"????????_store2.*.logs.gz": "",
 			"????????_store3.*.logs.gz": "",
 			"????????_A.*.stats.gz": fmt.Sprintf(""+
-				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t166\t166\t166\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/simple/A")+"\t0\t%[1]d\t%[2]d\t166\t166\t166\td\t\x00\t2\t32",
+				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/simple/A")+"\t0\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\td\t\x00\t2\t32",
 				UserA, GroupA),
 			"????????_E.*.stats.gz": fmt.Sprintf(""+
-				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t171\t171\t171\tf\t\x00\t2\t34\n"+
-				strconv.Quote("/simple/E")+"\t0\t%[1]d\t%[2]d\t171\t171\t171\td\t\x00\t3\t32",
+				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\tf\t\x00\t2\t34\n"+
+				strconv.Quote("/simple/E")+"\t0\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\td\t\x00\t3\t32",
 				UserE, GroupE),
 			"????????_store1.*.stats.gz": fmt.Sprintf(""+
-				strconv.Quote("/objects/store1")+"\t0\t0\t0\t10\t10\t10\td\t\x00\t3\t32\n"+
-				strconv.Quote("/objects/store1/data")+"\t0\t0\t0\t42\t42\t42\td\t\x00\t5\t32\n"+
-				strconv.Quote("/objects/store1/data/temp")+"\t0\t%[1]d\t%[2]d\t69\t69\t69\td\t\x00\t5\t32\n"+
-				strconv.Quote("/objects/store1/data/temp/c/c.bed")+"\t512\t%[1]d\t%[2]d\t75\t75\t75\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/temp/c")+"\t0\t%[1]d\t%[2]d\t75\t75\t75\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store1/data/dbs/dbA.db")+"\t512\t%[3]d\t%[2]d\t33\t33\t33\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/dbs/dbB.db")+"\t512\t%[3]d\t%[2]d\t38\t38\t38\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/dbs")+"\t0\t%[3]d\t%[2]d\t38\t38\t38\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store1/data/sheets/doc1.txt")+"\t512\t%[4]d\t%[2]d\t19\t19\t19\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/sheets/doc2.txt")+"\t512\t%[4]d\t%[2]d\t24\t24\t24\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/sheets")+"\t0\t%[4]d\t%[2]d\t24\t24\t24\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store1/data/temp/a/a.bed")+"\t512\t%[1]d\t%[2]d\t53\t53\t53\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/temp/a")+"\t0\t%[1]d\t%[2]d\t53\t53\t53\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store1/data/temp/b/b.bed")+"\t512\t%[1]d\t%[2]d\t64\t64\t64\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/temp/b")+"\t0\t%[1]d\t%[2]d\t64\t64\t64\td\t\x00\t2\t32",
+				strconv.Quote("/objects/store1")+"\t0\t0\t0\t"+ct(10)+"\t"+
+				ct(10)+"\t"+ct(10)+"\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store1/data")+"\t0\t0\t0\t"+ct(42)+"\t"+
+				ct(42)+"\t"+ct(42)+"\td\t\x00\t5\t32\n"+
+				strconv.Quote("/objects/store1/data/temp")+"\t0\t%[1]d\t%[2]d\t"+
+				ct(69)+"\t"+ct(69)+"\t"+ct(69)+"\td\t\x00\t5\t32\n"+
+				strconv.Quote("/objects/store1/data/temp/c/c.bed")+"\t512\t%[1]d\t%[2]d\t"+
+				ct(75)+"\t"+ct(75)+"\t"+ct(75)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/temp/c")+"\t0\t%[1]d\t%[2]d\t"+
+				ct(75)+"\t"+ct(75)+"\t"+ct(75)+"\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store1/data/dbs/dbA.db")+"\t512\t%[3]d\t%[2]d\t"+
+				ct(33)+"\t"+ct(33)+"\t"+ct(33)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/dbs/dbB.db")+"\t512\t%[3]d\t%[2]d\t"+
+				ct(38)+"\t"+ct(38)+"\t"+ct(38)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/dbs")+"\t0\t%[3]d\t%[2]d\t"+ct(38)+"\t"+
+				ct(38)+"\t"+ct(38)+"\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store1/data/sheets/doc1.txt")+"\t512\t%[4]d\t%[2]d\t"+
+				ct(19)+"\t"+ct(19)+"\t"+ct(19)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/sheets/doc2.txt")+"\t512\t%[4]d\t%[2]d\t"+
+				ct(24)+"\t"+ct(24)+"\t"+ct(24)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/sheets")+"\t0\t%[4]d\t%[2]d\t"+
+				ct(24)+"\t"+ct(24)+"\t"+ct(24)+"\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store1/data/temp/a/a.bed")+"\t512\t%[1]d\t%[2]d\t"+
+				ct(53)+"\t"+ct(53)+"\t"+ct(53)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/temp/a")+"\t0\t%[1]d\t%[2]d\t"+
+				ct(53)+"\t"+ct(53)+"\t"+ct(53)+"\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store1/data/temp/b/b.bed")+"\t512\t%[1]d\t%[2]d\t"+
+				ct(64)+"\t"+ct(64)+"\t"+ct(64)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store1/data/temp/b")+"\t0\t%[1]d\t%[2]d\t"+
+				ct(64)+"\t"+ct(64)+"\t"+ct(64)+"\td\t\x00\t2\t32",
 				UserC, GroupA, UserB, UserA),
 			"????????_store2.*.stats.gz": fmt.Sprintf(""+
-				strconv.Quote("/objects/store2")+"\t0\t0\t0\t148\t148\t148\td\t\x00\t5\t32\n"+
-				strconv.Quote("/objects/store2/part1/other.bed")+"\t512\t%[1]d\t%[2]d\t119\t119\t119\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part1")+"\t0\t0\t0\t123\t123\t123\td\t\x00\t3\t32\n"+
-				strconv.Quote("/objects/store2/part1/other/my.tmp.gz")+"\t512\t%[1]d\t%[3]d\t128\t128\t128\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part1/other")+"\t0\t%[1]d\t%[2]d\t133\t133\t133\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store2")+"\t0\t0\t0\t"+ct(148)+"\t"+
+				ct(148)+"\t"+ct(148)+"\td\t\x00\t5\t32\n"+
+				strconv.Quote("/objects/store2/part1/other.bed")+"\t512\t%[1]d\t%[2]d\t"+
+				ct(119)+"\t"+ct(119)+"\t"+ct(119)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part1")+"\t0\t0\t0\t"+ct(123)+"\t"+
+				ct(123)+"\t"+ct(123)+"\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store2/part1/other/my.tmp.gz")+"\t512\t%[1]d\t%[3]d\t"+
+				ct(128)+"\t"+ct(128)+"\t"+ct(128)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part1/other")+"\t0\t%[1]d\t%[2]d\t"+
+				ct(133)+"\t"+ct(133)+"\t"+ct(133)+"\td\t\x00\t3\t32\n"+
 				strconv.Quote("/objects/store2/part1/other/my\nDir/my.tmp.old")+
-				"\t512\t%[1]d\t%[2]d\t139\t139\t139\tf\t\x00\t1\t34\n"+
+				"\t512\t%[1]d\t%[2]d\t"+ct(139)+"\t"+ct(139)+"\t"+ct(139)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/objects/store2/part1/other/my\nDir/another.file")+
-				"\t512\t%[7]d\t%[5]d\t145\t145\t145\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part1/other/my\nDir")+"\t0\t%[1]d\t%[2]d\t145\t145\t145\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store2/important")+"\t0\t0\t0\t152\t152\t152\td\t\x00\t3\t32\n"+
+				"\t512\t%[7]d\t%[5]d\t"+ct(145)+"\t"+ct(145)+"\t"+ct(145)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part1/other/my\nDir")+"\t0\t%[1]d\t%[2]d\t"+
+				ct(145)+"\t"+ct(145)+"\t"+ct(145)+"\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store2/important")+"\t0\t0\t0\t"+ct(152)+
+				"\t"+ct(152)+"\t"+ct(152)+"\td\t\x00\t3\t32\n"+
 				strconv.Quote("/objects/store2/important/docs\t/my.doc")+
-				"\t512\t%[4]d\t%[3]d\t157\t157\t157\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/important/docs\t")+"\t0\t%[4]d\t%[3]d\t157\t157\t157\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store2/part0")+"\t0\t0\t0\t87\t87\t87\td\t\x00\t3\t32\n"+
-				strconv.Quote("/objects/store2/part0/teams")+"\t0\t0\t0\t109\t109\t109\td\t\x00\t4\t32\n"+
+				"\t512\t%[4]d\t%[3]d\t"+ct(157)+"\t"+ct(157)+"\t"+ct(157)+
+				"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/important/docs\t")+"\t0\t%[4]d\t%[3]d\t"+
+				ct(157)+"\t"+ct(157)+"\t"+ct(157)+"\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store2/part0")+"\t0\t0\t0\t"+ct(87)+"\t"+
+				ct(87)+"\t"+ct(87)+"\td\t\x00\t3\t32\n"+
+				strconv.Quote("/objects/store2/part0/teams")+"\t0\t0\t0\t"+ct(109)+
+				"\t"+ct(109)+"\t"+ct(109)+"\td\t\x00\t4\t32\n"+
 				strconv.Quote("/objects/store2/part0/teams/team2/c.txt")+
-				"\t512\t%[4]d\t%[5]d\t115\t115\t115\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part0/teams/team2")+"\t0\t%[4]d\t%[5]d\t115\t115\t115\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store2/part0/teams/team1/a.txt")+"\t100\t%[6]d\t%[2]d\t98\t98\t98\tf\t\x00\t1\t34\n"+
+				"\t512\t%[4]d\t%[5]d\t"+ct(115)+"\t"+ct(115)+"\t"+ct(115)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part0/teams/team2")+"\t0\t%[4]d\t%[5]d\t"+
+				ct(115)+"\t"+ct(115)+"\t"+ct(115)+"\td\t\x00\t2\t32\n"+
+				strconv.Quote("/objects/store2/part0/teams/team1/a.txt")+"\t100\t%[6]d\t%[2]d\t"+
+				ct(98)+"\t"+ct(98)+"\t"+ct(98)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/objects/store2/part0/teams/team1/b.txt")+
-				"\t200\t%[6]d\t%[5]d\t104\t104\t104\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part0/teams/team1")+"\t0\t%[6]d\t%[2]d\t104\t104\t104\td\t\x00\t2\t32",
+				"\t200\t%[6]d\t%[5]d\t"+ct(104)+"\t"+ct(104)+"\t"+ct(104)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part0/teams/team1")+"\t0\t%[6]d\t%[2]d\t"+
+				ct(104)+"\t"+ct(104)+"\t"+ct(104)+"\td\t\x00\t2\t32",
 				UserD, GroupA, GroupD, UserB, GroupB, UserA, UserE),
 			"????????_store3.*.stats.gz": fmt.Sprintf(""+
-				strconv.Quote("/objects/store3/aFile")+"\t512\t%d\t%d\t160\t160\t160\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store3")+"\t0\t0\t0\t160\t160\t160\td\t\x00\t2\t32",
+				strconv.Quote("/objects/store3/aFile")+"\t512\t%d\t%d\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store3")+"\t0\t0\t0\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\td\t\x00\t2\t32",
 				UserA, GroupA),
 
 			"simple/*basedirs.userusage.tsv": fmt.Sprintf(``+
 				"U%[1]d\t\t/simple/A\t%[3]d\t1\t0\t1\t0\tOK\n"+
 				"U%[2]d\t\t/simple/E\t%[3]d\t2\t0\t1\t0\tOK",
 				UserA, UserE,
-				time.Now().Unix()/86400),
+				(time.Now().Unix()-minimumDate)/86400),
 			"simple/*basedirs.groupusage.tsv": fmt.Sprintf(``+
 				"G%[1]d\t\t/simple/A\t%[3]d\t1\t0\t1\t0\tNot OK\n"+
 				"G%[2]d\t\t/simple/E\t%[3]d\t2\t0\t1\t0\tNot OK",
 				GroupA, GroupE,
-				time.Now().Unix()/86400),
+				(time.Now().Unix()-minimumDate)/86400),
 			"simple/????????_A.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t1", GroupA, UserA),
 			"simple/????????_E.*.bygroup": fmt.Sprintf("G%d\tU%d\t1\t2", GroupE, UserE),
 			"simple/????????_A.*.byusergroup.gz": fmt.Sprintf(``+
@@ -2023,12 +2058,12 @@ waitForJobs;`)
 			"simple/????????_A.*.logs.gz": "",
 			"simple/????????_E.*.logs.gz": "",
 			"simple/????????_A.*.stats.gz": fmt.Sprintf(""+
-				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t166\t166\t166\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/simple/A")+"\t0\t%[1]d\t%[2]d\t166\t166\t166\td\t\x00\t2\t32",
+				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/simple/A")+"\t0\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\td\t\x00\t2\t32",
 				UserA, GroupA),
 			"simple/????????_E.*.stats.gz": fmt.Sprintf(""+
-				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t171\t171\t171\tf\t\x00\t2\t34\n"+
-				strconv.Quote("/simple/E")+"\t0\t%[1]d\t%[2]d\t171\t171\t171\td\t\x00\t3\t32",
+				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\tf\t\x00\t2\t34\n"+
+				strconv.Quote("/simple/E")+"\t0\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\td\t\x00\t3\t32",
 				UserE, GroupE),
 		} {
 			files, errr := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
@@ -2062,7 +2097,7 @@ waitForJobs;`)
 			"%[5]d\t\t/objects/store2/part1/other/my\nDir\t%[6]d\t2048\t0\t1\t0\tOK\n"+
 			"%[5]d\t\t/simple/E\t%[6]d\t2\t0\t1\t0\tOK\n",
 			UserA, UserB, UserC, UserD, UserE,
-			time.Now().Unix()/86400)
+			(time.Now().Unix()-minimumDate)/86400)
 
 		groupUsage := fmt.Sprintf(``+
 			"%[1]d\t\t/objects/store1/data/dbs\t%[5]d\t66666\t0\t2\t0\tNot OK\n"+
@@ -2077,7 +2112,7 @@ waitForJobs;`)
 			"%[3]d\t\t/objects/store2/important/docs\t\t%[5]d\t1200\t0\t1\t0\tNot OK\n"+
 			"%[4]d\t\t/simple/E\t%[5]d\t2\t0\t1\t0\tNot OK\n",
 			GroupA, GroupB, GroupD, GroupE,
-			time.Now().Unix()/86400)
+			(time.Now().Unix()-minimumDate)/86400)
 
 		uut, err := bdb.UserUsageTable(summary.DGUTAgeAll)
 		So(err, ShouldBeNil)
@@ -2089,7 +2124,7 @@ waitForJobs;`)
 	})
 }
 
-var pseudoNow = time.Unix(0, 0) //nolint:gochecknoglobals
+var pseudoNow = time.Unix(minimumDate, 0) //nolint:gochecknoglobals
 
 func commandExists(exe string) bool {
 	_, err := exec.LookPath(exe)
