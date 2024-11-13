@@ -133,13 +133,13 @@ var (
 )
 
 const (
-	maxNumOfGUTAKets = 34
+	maxNumOfGUTAKeys = 34
 	lengthOfGUTAKey  = 12
 )
 
 var gutaKey = sync.Pool{ //nolint:gochecknoglobals
 	New: func() any {
-		return new([maxNumOfGUTAKets]GUTAKey)
+		return new([maxNumOfGUTAKeys]GUTAKey)
 	},
 }
 
@@ -489,7 +489,7 @@ func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {
 
 	var atime int64
 
-	gutaKeysA := gutaKey.Get().(*[maxNumOfGUTAKets]GUTAKey) //nolint:errcheck,forcetypeassert
+	gutaKeysA := gutaKey.Get().(*[maxNumOfGUTAKeys]GUTAKey) //nolint:errcheck,forcetypeassert
 
 	var gutaKeys []GUTAKey
 
