@@ -132,9 +132,14 @@ var (
 	logSuffixes        = [...]string{".log", ".out", ".o", ".err", ".e", ".oe"}                //nolint:gochecknoglobals
 )
 
+const (
+	maxNumOfGUTAKets = 34
+	lengthOfGUTAKey  = 12
+)
+
 var gutaKey = sync.Pool{ //nolint:gochecknoglobals
 	New: func() any {
-		return new([34]GUTAKey)
+		return new([maxNumOfGUTAKets]GUTAKey)
 	},
 }
 
@@ -484,7 +489,7 @@ func (d *DirGroupUserTypeAge) Add(path string, info fs.FileInfo) error {
 
 	var atime int64
 
-	gutaKeysA := gutaKey.Get().(*[34]GUTAKey) //nolint:errcheck,forcetypeassert
+	gutaKeysA := gutaKey.Get().(*[maxNumOfGUTAKets]GUTAKey) //nolint:errcheck,forcetypeassert
 
 	var gutaKeys []GUTAKey
 
@@ -523,7 +528,7 @@ func gutaKeyFromString(key string) GUTAKey {
 }
 
 func (g GUTAKey) String() string {
-	var a [12]byte
+	var a [lengthOfGUTAKey]byte
 
 	binary.BigEndian.PutUint32(a[:4], g.GID)
 	binary.BigEndian.PutUint32(a[4:8], g.UID)
