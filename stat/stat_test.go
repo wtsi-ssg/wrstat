@@ -133,7 +133,7 @@ func TestLstat(t *testing.T) {
 			Convey("which will correct invalid times", func() {
 				s.defTime = time.Now().Add(-24 * time.Hour).Unix()
 
-				err = os.Chtimes(pathContent1, time.Unix(0, 0), time.Unix(0, 0))
+				err = os.Chtimes(pathContent1, time.Unix(10, 0), time.Unix(2, 0))
 				So(err, ShouldBeNil)
 
 				info, err = s.Lstat(pathContent1)
@@ -174,7 +174,7 @@ func TestLstat(t *testing.T) {
 				So(stat.Atim.Sec, ShouldEqual, validTime.Unix())
 				So(stat.Mtim.Sec, ShouldEqual, validTime.Unix())
 
-				err = os.Chtimes(pathContent1, validTime, time.Unix(0, 0))
+				err = os.Chtimes(pathContent1, validTime, time.Unix(1, 0))
 				So(err, ShouldBeNil)
 
 				info, err = s.Lstat(pathContent1)

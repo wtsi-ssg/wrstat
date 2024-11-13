@@ -41,6 +41,7 @@ func (e Error) Error() string { return string(e) }
 const (
 	errLstatSlow        = Error("lstat exceeded timeout")
 	errLstatConsecFails = Error("lstat failed too many times in a row")
+	minimumDate         = 315532801 // 1980-01-01T00:00:01+00
 )
 
 // Statter is something you use to get stats of files on disk.
@@ -161,22 +162,22 @@ func (s *StatterWithTimeout) correctFutureTimes(stat *syscall.Stat_t) {
 }
 
 func (s *StatterWithTimeout) correctZeroTimes(stat *syscall.Stat_t) {
-	if stat.Atim.Sec <= 0 {
+	if stat.Atim.Sec <= minimumDate {
 		stat.Atim.Sec = s.correctZeroTime(stat)
 	}
 
-	if stat.Mtim.Sec <= 0 {
+	if stat.Mtim.Sec <= minimumDate {
 		stat.Mtim.Sec = s.correctZeroTime(stat)
 	}
 }
 
 func (s *StatterWithTimeout) correctZeroTime(stat *syscall.Stat_t) int64 {
 	switch {
-	case stat.Mtim.Sec > 0:
+	case stat.Mtim.Sec > minimumDate:
 		return stat.Mtim.Sec
-	case stat.Atim.Sec > 0:
+	case stat.Atim.Sec > minimumDate:
 		return stat.Atim.Sec
-	case stat.Ctim.Sec > 0:
+	case stat.Ctim.Sec > minimumDate:
 		return stat.Ctim.Sec
 	default:
 		return s.defTime
