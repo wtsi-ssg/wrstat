@@ -27,6 +27,7 @@ package stat
 
 import (
 	"bytes"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -129,6 +130,13 @@ func TestLstat(t *testing.T) {
 
 				err = os.Chtimes(pathContent1, time.Unix(10, 0), time.Unix(2, 0))
 				So(err, ShouldBeNil)
+
+				existingLStat := s.lstat
+				s.lstat = func(path string) (fs.FileInfo, error) {
+					time.Sleep(time.Millisecond)
+
+					return existingLStat(path)
+				}
 
 				info, err = s.Lstat(pathContent1)
 				So(err, ShouldBeNil)
