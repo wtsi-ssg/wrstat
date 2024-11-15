@@ -65,20 +65,11 @@ It probably won't do the right thing if not.
 Final output files are named to include the given --date as follows:
 [date]_[interest basename].[interest unique].[multi unique].[suffix]
 
-Where [suffix] is one of 'stats.gz', 'byusergroup.gz', 'bygroup' or 'logs.gz'.
+Where [suffix] is one of 'stats.gz' or 'logs.gz'.
 
-The basedirs.* files directly inside the given "multi unique" directory is
-named:
-[date]_[multi unique].basedirs.*
-
-It also moves the combine.dguta.db directories to inside a directory named:
-[date]_[multi unique].dguta.dbs
-(making them sequentially numbered sub-directories)
-
-Finally, it creates or touches a file named '.dguta.dbs.updated' in the
+Finally, it creates or touches a file named '.updated' in the
 --final_output directory, giving it an mtime matching the oldest mtime of the
-walk log files. 'wrstat server' will use this file to reload its database and
-update its knowledge of when the data was captured.
+walk log files.
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -116,24 +107,11 @@ through; it won't clobber final outputs already moved.`,
 			Date:    tidyDate,
 
 			CombineFileSuffixes: map[string]string{
-				combineStatsOutputFileBasename:     "stats.gz",
-				combineUserGroupOutputFileBasename: "byusergroup.gz",
-				combineGroupOutputFileBasename:     "bygroup",
-				combineLogOutputFileBasename:       "logs.gz",
-			},
-
-			DBFileSuffixes: map[string]string{
-				combineDGUTAOutputFileBasename: "dguta.dbs",
-			},
-
-			BaseFileSuffixes: map[string]string{
-				basedirBasename:    basedirBasename,
-				groupUsageBasename: groupUsageBasename,
-				userUsageBasename:  userUsageBasename,
+				combineStatsOutputFileBasename: "stats.gz",
+				combineLogOutputFileBasename:   "logs.gz",
 			},
 
 			CombineFileGlobPattern:  "%s/*/*/%s",
-			DBFileGlobPattern:       "%s/*/*/%s",
 			WalkFilePathGlobPattern: "%s/*/*/*%s",
 
 			DestDirPerms: destDirPerms,

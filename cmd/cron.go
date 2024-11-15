@@ -69,7 +69,7 @@ invocations of cron, do 'sudo wrstsat cron --kill'.
 			return
 		}
 
-		checkMultiArgs(args)
+		checkMultiArgs()
 
 		if crontab == "" {
 			die("--crontab must be supplied")
@@ -102,14 +102,6 @@ func init() {
 	// flags specific to this sub-command
 	cronCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	cronCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
-	cronCmd.Flags().StringVarP(&partialDirMerge, "partial_dir_merge", "l", "", "merge results from a partial run"+
-		"stored in the specified directory")
-	cronCmd.Flags().BoolVarP(&partialDirClean, "partial_dir_clean", "r", false, "remove old results "+
-		"from specified directory after merging")
-	cronCmd.Flags().BoolVarP(&createPartial, "create_partial_dir", "p", false, "perform the walk, "+
-		"stat, and combine steps only")
-	cronCmd.Flags().StringVarP(&finishPartial, "partial_dir_finish", "z", "", "perform the basedir "+
-		"and tidy step on a partial run, requires the name of the unique subdirectory the partial run files are in")
 	cronCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	cronCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
@@ -118,15 +110,12 @@ func init() {
 	cronCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	cronCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
 		"force queues with this substring to be avoided when scheduling jobs")
-	cronCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
-	cronCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
 	cronCmd.Flags().IntVarP(&maxMem, "max_mem", "m",
-		basedirRAM, "maximum MBs to reserve for any job")
+		defaultMaxRAM, "maximum MBs to reserve for any job")
 	cronCmd.Flags().StringVarP(&crontab, "crontab", "c",
 		"0 17 * * *",
 		"crontab describing when to run, first 5 columns only")
 	cronCmd.Flags().BoolVar(&cronKill, "kill", false, "kill all wrstat processes on the system")
-	cronCmd.Flags().StringVarP(&configPath, "config", "b", "", "path to basedirs config file")
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.

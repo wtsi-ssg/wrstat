@@ -35,31 +35,19 @@ import (
 )
 
 const combineStatsOutputFileBasename = "combine.stats.gz"
-const combineUserGroupOutputFileBasename = "combine.byusergroup.gz"
-const combineGroupOutputFileBasename = "combine.bygroup"
-const combineDGUTAOutputFileBasename = "combine.dguta.db"
 const combineLogOutputFileBasename = "combine.log.gz"
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
 	Use:   "combine",
-	Short: "Combine the .stats files produced by 'wrstat walk'",
-	Long: `Combine the .stats files produced by 'wrstat walk'.
+	Short: "Combine the files produced by 'wrstat walk'",
+	Long: `Combine the files produced by 'wrstat walk'.
 	
 Within the given output directory, all the 'wrstat stat' *.stats files produced
 following an invocation of 'wrstat walk' will be concatenated, compressed and
 placed at the root of the output directory in a file called 'combine.stats.gz'.
 
-Likewise, all the 'wrstat stat' *.byusergroup files will be merged,
-compressed and placed at the root of the output directory in a file called
-'combine.byusergroup.gz'.
-
 The same applies to the *.log files, being called 'combine.log.gz'.
-
-The *.dugta files will be turned in to databases in a directory
-'combine.dguta.db'.
-
-The *.bygroup files are merged but not compressed and called 'combine.bygroup'.
 
 NB: only call this by adding it to wr with a dependency on the dependency group
 you supplied 'wrstat walk'.`,
@@ -79,24 +67,6 @@ you supplied 'wrstat walk'.`,
 		go func() {
 			defer wg.Done()
 			concatenateAndCompressStatsFiles(sourceDir)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			mergeAndCompressUserGroupFiles(sourceDir)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			mergeGroupFiles(sourceDir)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			mergeDGUTAFilesToDB(sourceDir)
 		}()
 
 		wg.Add(1)
@@ -127,33 +97,6 @@ func concatenateAndCompressStatsFiles(sourceDir string) {
 	}
 }
 
-// mergeAndCompressUserGroupFiles finds and merges the byusergroup files and
-// compresses the output.
-func mergeAndCompressUserGroupFiles(sourceDir string) {
-	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir,
-		sourceDir, statUserGroupSummaryOutputFileSuffix, combineUserGroupOutputFileBasename)
-	if err != nil {
-		die("failed to find, open or create usergroup files: %s", err)
-	}
-
-	if err = combine.UserGroupFiles(inputFiles, outputFile); err != nil {
-		die("failed to merge the user group files: %s", err)
-	}
-}
-
-// mergeGroupFiles finds and merges the bygroup files.
-func mergeGroupFiles(sourceDir string) {
-	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, sourceDir,
-		statGroupSummaryOutputFileSuffix, combineGroupOutputFileBasename)
-	if err != nil {
-		die("failed to find, open or create group files: %s", err)
-	}
-
-	if err = combine.GroupFiles(inputFiles, outputFile); err != nil {
-		die("failed to merge the group files: %s", err)
-	}
-}
-
 // concatenateAndCompressLogFiles finds and merges the log files and compresses the
 // output.
 func concatenateAndCompressLogFiles(sourceDir string) {
@@ -165,24 +108,5 @@ func concatenateAndCompressLogFiles(sourceDir string) {
 
 	if err := combine.LogFiles(inputFiles, outputFile); err != nil {
 		die("failed to merge the log files: %s", err)
-	}
-}
-
-// mergeDGUTAFilesToDB finds and merges the dguta files and then stores the
-// information in a database.
-func mergeDGUTAFilesToDB(sourceDir string) {
-	paths, err := fs.FindFilePathsInDir(sourceDir, statDGUTASummaryOutputFileSuffix)
-	if err != nil {
-		die("failed to find the dguta files: %s", err)
-	}
-
-	outputDir := filepath.Join(sourceDir, combineDGUTAOutputFileBasename)
-
-	if err = fs.RemoveAndCreateDir(outputDir); err != nil {
-		die("failed to remove or create the dguta directory: %s", err)
-	}
-
-	if err = combine.DgutaFiles(paths, outputDir); err != nil {
-		die("failed to merge the dguta files: %s", err)
 	}
 }

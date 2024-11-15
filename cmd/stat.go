@@ -27,28 +27,22 @@ package cmd
 
 import (
 	"fmt"
-	"io"
-	"io/fs"
 	"os"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/v5/ch"
 	"github.com/wtsi-ssg/wrstat/v5/stat"
-	"github.com/wtsi-ssg/wrstat/v5/summary"
 )
 
 const (
-	reportFrequency                      = 10 * time.Minute
-	statOutputFileSuffix                 = ".stats"
-	statUserGroupSummaryOutputFileSuffix = ".byusergroup"
-	statGroupSummaryOutputFileSuffix     = ".bygroup"
-	statDGUTASummaryOutputFileSuffix     = ".dguta"
-	statLogOutputFileSuffix              = ".log"
-	lstatTimeout                         = 10 * time.Second
-	lstatAttempts                        = 3
-	lstatConsecutiveFails                = 10
-	scanTimeout                          = 2 * time.Hour
+	reportFrequency         = 10 * time.Minute
+	statOutputFileSuffix    = ".stats"
+	statLogOutputFileSuffix = ".log"
+	lstatTimeout            = 10 * time.Second
+	lstatAttempts           = 3
+	lstatConsecutiveFails   = 10
+	scanTimeout             = 2 * time.Hour
 )
 
 var (
@@ -88,70 +82,6 @@ The output file format is 11 tab separated columns with the following contents:
 9. Inode number (on unix).
 10. Number of hard links.
 11. Identifier of the device on which this file resides.
-
-It also summarises file count and size information by grouping on
-user+group+directory, and stores this summary in another file named after the
-input file with a ".byusergroup" suffix. This is 5 tab separated columns with
-the following contents (sorted on the first 3 columns):
-
-1. username
-2. unix group name
-3. directory
-4. number of files nested under 3 belonging to both 1 & 2.
-5. total file size in bytes of the files in 4.
-
-For example, if user joe using unix group lemur had written 2 10 byte files to
-/disk1/dir1, 3 files to /disk1/dir1/dir1a, 1 file to /disk1/dir2, and 1 file to
-/disk1/dir1 as unix group fish, then the output would be:
-
-joe	fish	/disk1	1	10
-joe	fish	/disk1/dir1	1	10
-joe	lemur	/disk1	6	60
-joe	lemur	/disk1/dir1	5	50
-joe	lemur	/disk1/dir1/dir1a	3	30
-joe	lemur	/disk1/dir2	1	10
-
-Likewise, it produces a similar file that also shows nested numbers, with these
-8 tab separated columns, with a ".dguta" suffix:
-
-1. directory
-2. gid
-3. uid
-4. filetype - an int with the following meaning: 
-     0 = other (not any of the others below)
-     1 = temp (.tmp | temp suffix, or .tmp. | .temp. | tmp. | temp. prefix, or
-               a directory in its path is named "tmp" or "temp")
-     2 = vcf
-     3 = vcf.gz
-     4 = bcf
-     5 = sam
-     6 = bam
-     7 = cram
-     8 = fasta (.fa | .fasta suffix)
-     9 = fastq (.fq | .fastq suffix)
-    10 = fastq.gz (.fq.gz | .fastq.gz suffix)
-    11 = ped/bed (.ped | .map | .bed | .bim | .fam suffix)
-    12 = compresed (.bzip2 | .gz | .tgz | .zip | .xz | .bgz suffix)
-    13 = text (.csv | .tsv | .txt | .text | .md | .dat | readme suffix)
-    14 = log (.log | .out | .o | .err | .e | .err | .oe suffix)
-5. number of files nested under 1 belonging to 2 and 3 and having filetype in 4.
-6. total file size in bytes of the files in 5.
-7. the oldest access time of the files in 5, in seconds since Unix epoch.
-8. the newest modified time of the files in 5, in seconds since Unix epoch.
-
-(Note that files can be both "temp" and one of the other types, so ignore lines
-where column 4 is 1 if summing up columns 5 and 6 for a given 1+2+3 for an
-"all filetypes" query.)
-
-It also summarises file count and size information by grouping on group+user,
-and stores this summary in another file named after the input file with a
-".bygroup" suffix. This is 4 tab separated columns with the following contents
-(sorted on the first 2 columns):
-
-1. unix group name
-2. username
-3. number of files belonging to both 1 & 2.
-4. total file size in bytes of the files in 3.
 
 If you supply a tsv file to --ch with the following columns:
 directory user group fileperms dirperms
@@ -259,101 +189,13 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 		die("%s", err)
 	}
 
-	postScan, err := addSummaryOperations(input.Name(), p)
-	if err != nil {
+	if err := addChOperation(tsvPath, p); err != nil {
 		die("%s", err)
 	}
 
-	if err = addChOperation(tsvPath, p); err != nil {
+	if err := p.Scan(input); err != nil {
 		die("%s", err)
 	}
-
-	if err = p.Scan(input); err != nil {
-		die("%s", err)
-	}
-
-	if err = postScan(); err != nil {
-		die("%s", err)
-	}
-}
-
-// addSummaryOperations adds summary operations to p. Returns a function that
-// should be called after p.Scan.
-func addSummaryOperations(input string, p *stat.Paths) (func() error, error) {
-	outputUserGroupSummaryData, err := addUserGroupSummaryOperation(input, p)
-	if err != nil {
-		return nil, err
-	}
-
-	outputGroupSummaryData, err := addGroupSummaryOperation(input, p)
-	if err != nil {
-		return nil, err
-	}
-
-	outputDGUTASummaryData, err := addDGUTASummaryOperation(input, p)
-	if err != nil {
-		return nil, err
-	}
-
-	return func() error {
-		if err = outputUserGroupSummaryData(); err != nil {
-			return err
-		}
-
-		if err = outputGroupSummaryData(); err != nil {
-			return err
-		}
-
-		return outputDGUTASummaryData()
-	}, nil
-}
-
-// addUserGroupSummaryOperation adds an operation to Paths that collects [user,
-// group, directory, count, size] summary information. It returns a function
-// that you should call after calling p.Scan(), which outputs the summary data
-// to file.
-func addUserGroupSummaryOperation(input string, p *stat.Paths) (func() error, error) {
-	ug := summary.NewByUserGroup()
-
-	return addSummaryOperator(input, statUserGroupSummaryOutputFileSuffix, "usergroup", p, ug)
-}
-
-// outputOperators are types returned by summary.New*().
-type outputOperator interface {
-	Add(path string, info fs.FileInfo) error
-	Output(output io.WriteCloser) error
-}
-
-// addSummaryOperator adds the operation method of o to p after creating an
-// output file with given suffix. Returns function that actually writes to the
-// output.
-func addSummaryOperator(input, suffix, logName string, p *stat.Paths, o outputOperator) (func() error, error) {
-	output := createOutputFileWithSuffix(input, suffix)
-
-	err := p.AddOperation(logName, o.Add)
-
-	return func() error {
-		return o.Output(output)
-	}, err
-}
-
-// addGroupSummaryOperation adds an operation to Paths that collects [group,
-// user, count, size] summary information. It returns a function that you should
-// call after calling p.Scan(), which outputs the summary data to file.
-func addGroupSummaryOperation(input string, p *stat.Paths) (func() error, error) {
-	g := summary.NewByGroupUser()
-
-	return addSummaryOperator(input, statGroupSummaryOutputFileSuffix, "group", p, g)
-}
-
-// addDGUTASummaryOperation adds an operation to Paths that collects [directory,
-// group, user, filetype, count, size] summary information. It returns a
-// function that you should call after calling p.Scan(), which outputs the
-// summary data to file.
-func addDGUTASummaryOperation(input string, p *stat.Paths) (func() error, error) {
-	d := summary.NewDirGroupUserTypeAge()
-
-	return addSummaryOperator(input, statDGUTASummaryOutputFileSuffix, "dguta", p, d)
 }
 
 // addChOperation adds the chmod&chown operation to the Paths if the tsv file

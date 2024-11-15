@@ -32,7 +32,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -45,6 +44,8 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const ErrNoOutputsFound = Error("There are no existing files according to the provided input and output suffixes.")
+
+const Sentinal = ".updated"
 
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
@@ -63,19 +64,8 @@ type Tidy struct {
 	// the destDir.
 	CombineFileSuffixes map[string]string
 
-	// File suffixes of db files in the SrcDir, and their counterpart in the
-	// destDir.
-	DBFileSuffixes map[string]string
-
-	// File suffixes of base files in the SrcDir, and their counterpart in the
-	// destDir.
-	BaseFileSuffixes map[string]string
-
 	// Glob pattern describing the path of combine files in SrcDir.
 	CombineFileGlobPattern string
-
-	// Glob pattern describing the path of db files in SrcDir.
-	DBFileGlobPattern string
 
 	// Glob pattern describing the path of walk files in SrcDir.
 	WalkFilePathGlobPattern string
@@ -89,9 +79,9 @@ type Tidy struct {
 // Up takes our source directory of wrstat output files, renames them and
 // relocates them to our dest directory, using our date. Also ensures that the
 // permissions of wrstat output files match those of dest directory. If our dest
-// dir doesn't exist, it will be created. And it touches a file called
-// .dguta.db.updated, setting its mTime equal to the oldest of all those from
-// our srcDir. Finally, deletes the source directory.
+// dir doesn't exist, it will be created. And it touches a file called .updated,
+// setting its mTime equal to the oldest of all those from our srcDir. Finally,
+// deletes the source directory.
 //
 // For debugging purposes, set disableDeletion to true to disable deletion of
 // the source directory after a successful move.
@@ -127,6 +117,10 @@ func (t *Tidy) moveAndDelete(disableDeletion bool) error {
 		return t.matchPermsInsideDir(t.SrcDir)
 	}
 
+	if err := t.touchUpdatedFile(); err != nil {
+		return err
+	}
+
 	return os.RemoveAll(t.SrcDir)
 }
 
@@ -135,18 +129,6 @@ func (t *Tidy) moveAndDelete(disableDeletion bool) error {
 func (t *Tidy) move() error {
 	for inSuffix, outSuffix := range t.CombineFileSuffixes {
 		if err := t.findAndMoveOutputs(inSuffix, outSuffix); err != nil {
-			return err
-		}
-	}
-
-	for inSuffix, outSuffix := range t.DBFileSuffixes {
-		if err := t.findAndMoveDBs(inSuffix, outSuffix); err != nil {
-			return err
-		}
-	}
-
-	for inSuffix, outSuffix := range t.BaseFileSuffixes {
-		if err := t.moveBaseDirsFile(inSuffix, outSuffix); err != nil {
 			return err
 		}
 	}
@@ -267,76 +249,6 @@ func matchReadWrite(path string, current, destDirInfo fs.FileInfo) error {
 	return os.Chmod(path, currentMode|desiredRW)
 }
 
-// moveBaseDirsFile moves the base.dirs file in sourceDir to a uniquely named
-// .basedirs file in destDir that includes our date.
-func (t *Tidy) moveBaseDirsFile(inSuffix, outSuffix string) error {
-	source := filepath.Join(t.SrcDir, inSuffix)
-
-	dest := filepath.Join(t.DestDir, fmt.Sprintf("%s_%s.%s",
-		t.Date,
-		filepath.Base(t.SrcDir),
-		outSuffix))
-
-	return t.renameAndCorrectPerms(source, dest)
-}
-
-// findAndMoveDBs finds the combine.dguta.db directories in our sourceDir and
-// moves them to a uniquely named dir in destDir that includes our date, and
-// adjusts ownership and permissions to match our destDir.
-//
-// It also touches a file that 'wrstat server' monitors to know when to reload
-// its database files. It gives that file an mtime corresponding to the oldest
-// mtime of the walk log files.
-func (t *Tidy) findAndMoveDBs(inSuffix, outSuffix string) error {
-	sources, err := filepath.Glob(fmt.Sprintf(t.DBFileGlobPattern, t.SrcDir, inSuffix))
-	if err != nil {
-		return err
-	}
-
-	dbsDir, err := t.makeDBsDir(outSuffix)
-	if err != nil {
-		return err
-	}
-
-	for i, source := range sources {
-		if _, err = os.Stat(source); err != nil {
-			return err
-		}
-
-		dest := filepath.Join(dbsDir, strconv.Itoa(i))
-
-		err = t.renameAndCorrectPerms(source, dest)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = t.matchPermsInsideDir(dbsDir)
-	if err != nil {
-		return err
-	}
-
-	return t.touchDBUpdatedFile("." + outSuffix + ".updated")
-}
-
-// makeDBsDir makes a uniquely named directory featuring the given date to hold
-// database files in destDir. If it already exists, does nothing. Returns the
-// path to the database directory and any error.
-func (t *Tidy) makeDBsDir(dgutDBsSuffix string) (string, error) {
-	dbsDir := filepath.Join(t.DestDir, fmt.Sprintf("%s_%s.%s",
-		t.Date,
-		filepath.Base(t.SrcDir),
-		dgutDBsSuffix,
-	))
-
-	err := os.Mkdir(dbsDir, t.destDirInfo.Mode().Perm())
-	if os.IsExist(err) {
-		err = nil
-	}
-
-	return dbsDir, err
-}
-
 // matchPermsInsideDir does matchPerms for all the files in the given dir
 // recursively.
 func (t *Tidy) matchPermsInsideDir(dir string) error {
@@ -349,12 +261,12 @@ func (t *Tidy) matchPermsInsideDir(dir string) error {
 	})
 }
 
-// touchDBUpdatedFile touches a file that the server monitors so that it knows
-// to try and reload the databases. Matches the permissions of the touched file
-// to the given permissions. Gives the file an mtime corresponding to the oldest
-// mtime of walk log files.
-func (t *Tidy) touchDBUpdatedFile(dgutDBsSentinelBasename string) error {
-	sentinel := filepath.Join(t.DestDir, dgutDBsSentinelBasename)
+// touchUpdatedFile touches a file ".updated" in the final output dir so that
+// other processes can know when we're done. Matches the permissions of the
+// touched file to the given permissions. Gives the file an mtime corresponding
+// to the oldest mtime of walk log files.
+func (t *Tidy) touchUpdatedFile() error {
+	sentinel := filepath.Join(t.DestDir, Sentinal)
 
 	oldest, err := t.getOldestMtimeOfWalkFiles(t.SrcDir, ".log")
 	if err != nil {
