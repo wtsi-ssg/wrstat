@@ -36,6 +36,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/ugorji/go/codec"
+	"github.com/wtsi-ssg/wrstat/v5/summary"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -214,7 +215,9 @@ func gutaDBInfo(path string, info *DBInfo, ch codec.Handle) error {
 	defer gutaDB.Close()
 
 	fullBucketScan(gutaDB, gutaBucket, func(k, v []byte) {
-		info.NumDirs++
+		if k[0] == byte(summary.DGUTAgeAll) {
+			info.NumDirs++
+		}
 
 		dguta := decodeDGUTAbytes(ch, k, v)
 		info.NumDGUTAs += len(dguta.GUTAs)
@@ -510,9 +513,22 @@ func (d *DB) storeDGUTAs(tx *bolt.Tx) error {
 // storeDGUTA stores a DGUTA in the db. DGUTAs are expected to be unique per
 // Store() operation and database.
 func (d *DB) storeDGUTA(b *bolt.Bucket, dguta *DGUTA) error {
-	dir, gutas := dguta.encodeToBytes(d.ch)
+	var dgutas [len(summary.DirGUTAges)]DGUTA
 
-	return b.Put(dir, gutas)
+	for _, v := range dguta.GUTAs {
+		dgutas[v.Age].GUTAs = append(dgutas[v.Age].GUTAs, v)
+	}
+
+	for age, v := range dgutas {
+		v.Dir = string(byte(age)) + dguta.Dir
+		dir, gutas := v.encodeToBytes(d.ch)
+
+		if err := b.Put(dir, gutas); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Open opens the database(s) for reading. You need to call this before using
@@ -566,7 +582,13 @@ func (d *DB) Close() {
 //
 // You must call Open() before calling this.
 func (d *DB) DirInfo(dir string, filter *Filter) (*DirSummary, error) {
-	dguta, notFound, lastUpdated := d.combineDGUTAsFromReadSets(dir)
+	var age summary.DirGUTAge
+
+	if filter != nil {
+		age = filter.Age
+	}
+
+	dguta, notFound, lastUpdated := d.combineDGUTAsFromReadSets(dir, age)
 
 	if notFound == len(d.readSets) {
 		return &DirSummary{Modtime: lastUpdated}, ErrDirNotFound
@@ -580,7 +602,7 @@ func (d *DB) DirInfo(dir string, filter *Filter) (*DirSummary, error) {
 	return ds, nil
 }
 
-func (d *DB) combineDGUTAsFromReadSets(dir string) (*DGUTA, int, time.Time) {
+func (d *DB) combineDGUTAsFromReadSets(dir string, age summary.DirGUTAge) (*DGUTA, int, time.Time) {
 	var (
 		notFound    int
 		lastUpdated time.Time
@@ -596,7 +618,7 @@ func (d *DB) combineDGUTAsFromReadSets(dir string) (*DGUTA, int, time.Time) {
 				lastUpdated = readSet.modtime
 			}
 
-			return getDGUTAFromDBAndAppend(b, dir, d.ch, dguta)
+			return getDGUTAFromDBAndAppend(b, dir, d.ch, dguta, age)
 		}); err != nil {
 			notFound++
 		}
@@ -608,8 +630,8 @@ func (d *DB) combineDGUTAsFromReadSets(dir string) (*DGUTA, int, time.Time) {
 // getDGUTAFromDBAndAppend calls getDGUTAFromDB() and appends the result
 // to the given dguta. If the given dguta is empty, it will be populated with the
 // content of the result instead.
-func getDGUTAFromDBAndAppend(b *bolt.Bucket, dir string, ch codec.Handle, dguta *DGUTA) error {
-	thisDGUTA, err := getDGUTAFromDB(b, dir, ch)
+func getDGUTAFromDBAndAppend(b *bolt.Bucket, dir string, ch codec.Handle, dguta *DGUTA, age summary.DirGUTAge) error {
+	thisDGUTA, err := getDGUTAFromDB(b, dir, ch, age)
 	if err != nil {
 		return err
 	}
@@ -625,8 +647,10 @@ func getDGUTAFromDBAndAppend(b *bolt.Bucket, dir string, ch codec.Handle, dguta 
 }
 
 // getDGUTAFromDB gets and decodes a dguta from the given database.
-func getDGUTAFromDB(b *bolt.Bucket, dir string, ch codec.Handle) (*DGUTA, error) {
-	bdir := []byte(dir)
+func getDGUTAFromDB(b *bolt.Bucket, dir string, ch codec.Handle, age summary.DirGUTAge) (*DGUTA, error) {
+	bdir := make([]byte, 1, 1+len(dir))
+	bdir[0] = byte(age)
+	bdir = append(bdir, dir...)
 
 	v := b.Get(bdir)
 	if v == nil {

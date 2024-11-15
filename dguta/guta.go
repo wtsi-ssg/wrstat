@@ -174,6 +174,10 @@ func (g GUTAs) Summary(filter *Filter) *DirSummary { //nolint:funlen
 		age          summary.DirGUTAge
 	)
 
+	if filter != nil {
+		age = filter.Age
+	}
+
 	uniqueUIDs := make(map[uint32]bool)
 	uniqueGIDs := make(map[uint32]bool)
 	uniqueFTs := make(map[summary.DirGUTAFileType]bool)
@@ -182,7 +186,6 @@ func (g GUTAs) Summary(filter *Filter) *DirSummary { //nolint:funlen
 		passes, passesDisallowingTemp := guta.PassesFilter(filter)
 		if passes {
 			uniqueFTs[guta.FT] = true
-			age = guta.Age
 		}
 
 		if !passesDisallowingTemp {
