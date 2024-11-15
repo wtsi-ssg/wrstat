@@ -17,7 +17,7 @@ const (
 // DgutaFiles merges the pre-sorted dguta files, summing consecutive lines with
 // the same first 5 columns, and outputs the results to an embedded database.
 func DgutaFiles(inputs []string, outputDir string) (err error) {
-	sortMergeOutput, cleanup, err := MergeSortedFiles(inputs)
+	sortMergeOutput, err := MergeSortedFiles(inputs)
 	if err != nil {
 		return err
 	}
@@ -34,10 +34,10 @@ func DgutaFiles(inputs []string, outputDir string) (err error) {
 		}
 	}()
 
-	return processDgutaFiles(outputDir, sortMergeOutput, cleanup, errCh)
+	return processDgutaFiles(outputDir, sortMergeOutput, errCh)
 }
 
-func processDgutaFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup func() error, errCh chan error) error {
+func processDgutaFiles(outputDir string, sortMergeOutput io.ReadCloser, errCh chan error) error {
 	db := dguta.NewDB(outputDir)
 	reader, writer := io.Pipe()
 
@@ -57,12 +57,7 @@ func processDgutaFiles(outputDir string, sortMergeOutput io.ReadCloser, cleanup 
 		return err
 	}
 
-	err := <-errCh
-	if err != nil {
-		return err
-	}
-
-	return cleanup()
+	return <-errCh
 }
 
 func dgutaStore(db *dguta.DB, reader io.ReadCloser, errCh chan error) {
