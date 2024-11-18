@@ -30,7 +30,6 @@ import (
 	"bufio"
 	"io"
 	"os"
-	"os/exec"
 	"runtime"
 	"strings"
 
@@ -108,16 +107,12 @@ func Merge(inputs []*os.File, output io.Writer, streamFunc Merger) error {
 		inputFiles[i] = file.Name()
 	}
 
-	sortMergeOutput, cleanup, err := MergeSortedFiles(inputFiles)
+	sortMergeOutput, err := MergeSortedFiles(inputFiles)
 	if err != nil {
 		return err
 	}
 
-	if err = streamFunc(sortMergeOutput, output); err != nil {
-		return err
-	}
-
-	return cleanup()
+	return streamFunc(sortMergeOutput, output)
 }
 
 // MergeAndCompress takes a list of open files, an open output file, and a
@@ -138,35 +133,6 @@ func MergeAndCompress(inputs []*os.File, output *os.File, streamFunc Merger) err
 	closer()
 
 	return nil
-}
-
-// MergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
-// Returns a pipe of the output from sort, and function you should call after
-// you've finished reading the output to cleanup.
-func MergeSortedFiles(inputs []string) (io.ReadCloser, func() error, error) {
-	cmd := exec.Command("sort", "-m", "--files0-from", "-")
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "LC_ALL=C")
-
-	sortStdin, err := cmd.StdinPipe()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sortMergeOutput, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err = cmd.Start(); err != nil {
-		return nil, nil, err
-	}
-
-	if err = sendFilePathsToSort(sortStdin, inputs); err != nil {
-		return nil, nil, err
-	}
-
-	return sortMergeOutput, cmd.Wait, nil
 }
 
 // sendFilePathsToSort will pipe the given paths null terminated to the pipe.

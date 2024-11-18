@@ -159,13 +159,12 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 				inputFiles[i] = file.Name()
 			}
 
-			sortMergeOutput, cleanup, err := MergeSortedFiles(inputFiles)
+			sortMergeOutput, err := MergeSortedFiles(inputFiles)
 			So(err, ShouldBeNil)
+
+			defer sortMergeOutput.Close()
 
 			err = MergeSummaryLines(sortMergeOutput, 3, 2, lineMerger, output)
-			So(err, ShouldBeNil)
-
-			err = cleanup()
 			So(err, ShouldBeNil)
 
 			b, err := os.ReadFile(outputPath)
@@ -180,7 +179,7 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 				inputFiles[i] = file.Name()
 			}
 
-			sortMergeOutput, cleanup, err := MergeSortedFiles(inputFiles)
+			sortMergeOutput, err := MergeSortedFiles(inputFiles)
 			So(err, ShouldBeNil)
 
 			zw, closeOutput, err := Compress(output)
@@ -190,9 +189,6 @@ func TestConcatenateMergeAndCompress(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			closeOutput()
-
-			err = cleanup()
-			So(err, ShouldBeNil)
 
 			b, err := os.ReadFile(outputPath)
 			So(err, ShouldBeNil)
