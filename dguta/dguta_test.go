@@ -459,10 +459,10 @@ func TestDGUTA(t *testing.T) {
 							err = db.Open()
 							So(err, ShouldBeNil)
 
-							ds, errd := db.DirInfo("/", nil)
+							ds, errd := db.DirInfo("/", &Filter{})
 							So(errd, ShouldBeNil)
-							So(ds.Count, ShouldEqual, 407)
-							So(ds.Size, ShouldEqual, 93684)
+							So(ds.Count, ShouldEqual, 33)
+							So(ds.Size, ShouldEqual, 10334)
 							So(ds.Atime, ShouldEqual, time.Unix(25, 0))
 							So(ds.Mtime, ShouldHappenBetween, expectedMtime.Add(-5*time.Second), expectedMtime.Add(5*time.Second))
 							So(ds.UIDs, ShouldResemble, []uint32{101, 102, 103})
@@ -696,9 +696,13 @@ func testData(t *testing.T, refUnixTime int64) (dgutaData string, expectedRootGU
 		},
 	}
 
-	expectedKeys = []string{
+	for _, dir := range []string{
 		"/", "/a", "/a/b", "/a/b/d", "/a/b/d/f",
 		"/a/b/d/g", "/a/b/e", "/a/b/e/h", "/a/b/e/h/tmp", "/a/c", "/a/c/d",
+	} {
+		for age := 0; age < len(summary.DirGUTAges); age++ {
+			expectedKeys = append(expectedKeys, dir+string(byte(age)))
+		}
 	}
 
 	return dgutaData, expectedRootGUTAs, expected, expectedKeys
