@@ -215,7 +215,7 @@ func gutaDBInfo(path string, info *DBInfo, ch codec.Handle) error {
 	defer gutaDB.Close()
 
 	fullBucketScan(gutaDB, gutaBucket, func(k, v []byte) {
-		if k[0] == byte(summary.DGUTAgeAll) {
+		if k[len(k)-1] == byte(summary.DGUTAgeAll) {
 			info.NumDirs++
 		}
 
@@ -520,7 +520,7 @@ func (d *DB) storeDGUTA(b *bolt.Bucket, dguta *DGUTA) error {
 	}
 
 	for age, v := range dgutas {
-		v.Dir = string(byte(age)) + dguta.Dir
+		v.Dir = dguta.Dir + string(byte(age))
 		dir, gutas := v.encodeToBytes(d.ch)
 
 		if err := b.Put(dir, gutas); err != nil {
@@ -648,9 +648,9 @@ func getDGUTAFromDBAndAppend(b *bolt.Bucket, dir string, ch codec.Handle, dguta 
 
 // getDGUTAFromDB gets and decodes a dguta from the given database.
 func getDGUTAFromDB(b *bolt.Bucket, dir string, ch codec.Handle, age summary.DirGUTAge) (*DGUTA, error) {
-	bdir := make([]byte, 1, 1+len(dir))
-	bdir[0] = byte(age)
+	bdir := make([]byte, 0, 1+len(dir))
 	bdir = append(bdir, dir...)
+	bdir = append(bdir, byte(age))
 
 	v := b.Get(bdir)
 	if v == nil {

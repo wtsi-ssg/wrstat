@@ -696,12 +696,12 @@ func testData(t *testing.T, refUnixTime int64) (dgutaData string, expectedRootGU
 		},
 	}
 
-	for age := 0; age < len(summary.DirGUTAges); age++ {
-		for _, dir := range []string{
-			"/", "/a", "/a/b", "/a/b/d", "/a/b/d/f",
-			"/a/b/d/g", "/a/b/e", "/a/b/e/h", "/a/b/e/h/tmp", "/a/c", "/a/c/d",
-		} {
-			expectedKeys = append(expectedKeys, string(byte(age))+dir)
+	for _, dir := range []string{
+		"/", "/a", "/a/b", "/a/b/d", "/a/b/d/f",
+		"/a/b/d/g", "/a/b/e", "/a/b/e/h", "/a/b/e/h/tmp", "/a/c", "/a/c/d",
+	} {
+		for age := 0; age < len(summary.DirGUTAges); age++ {
+			expectedKeys = append(expectedKeys, dir+string(byte(age)))
 		}
 	}
 
