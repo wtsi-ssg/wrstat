@@ -8,18 +8,13 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v2.16.0+incompatible
 	github.com/klauspost/pgzip v1.2.6
-	github.com/moby/sys/mountinfo v0.7.2
-	github.com/otiai10/copy v1.14.0
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/rs/xid v1.5.0
 	github.com/smartystreets/goconvey v1.7.2
 	github.com/spf13/cobra v1.8.1
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
-	github.com/ugorji/go/codec v1.2.12
 	github.com/wtsi-hgi/godirwalk v1.18.1
 	github.com/wtsi-ssg/wr v0.5.9
-	go.etcd.io/bbolt v1.3.11
-	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
 )
 
 require (
@@ -84,6 +79,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.75 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
+	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
@@ -103,7 +99,9 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
+	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	go.etcd.io/bbolt v1.3.11 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect
 	go.opentelemetry.io/otel v1.28.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.28.0 // indirect
@@ -111,9 +109,9 @@ require (
 	go.opentelemetry.io/otel/sdk v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
+	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
 	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	golang.org/x/term v0.23.0 // indirect
 	golang.org/x/text v0.17.0 // indirect

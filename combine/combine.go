@@ -27,12 +27,10 @@
 package combine
 
 import (
-	"bufio"
 	"io"
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 
 	"github.com/klauspost/pgzip"
 )
@@ -180,82 +178,4 @@ func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
 	}
 
 	return in.Close()
-}
-
-// MergeSummaryLines merges pre-sorted (pre-merged) summary data (eg. from a
-// `sort -m` of .by* files), summing consecutive lines that have the same values
-// in the first matchColumns columns, and outputting the results.
-func MergeSummaryLines(data io.ReadCloser, matchColumns, summaryColumns int,
-	mslm MatchingSummaryLineMerger, output io.Writer) error {
-	scanner := bufio.NewScanner(data)
-	previous := make([]string, matchColumns+summaryColumns)
-
-	for scanner.Scan() {
-		current := strings.Split(scanner.Text(), "\t")
-
-		if summaryLinesMatch(matchColumns, previous, current) {
-			mslm(summaryColumns, previous, current)
-
-			continue
-		}
-
-		if previous[0] != "" {
-			if _, err := output.Write([]byte(strings.Join(previous, "\t") + "\n")); err != nil {
-				return err
-			}
-		}
-
-		previous = current
-	}
-
-	_, err := output.Write([]byte(strings.Join(previous, "\t") + "\n"))
-
-	return err
-}
-
-// MatchingSummaryLineMerger is a func used by MergeSummaryLines() to handle
-// summary columns when match columns match. a is the previous columns, b is the
-// current. a should have its summary columns altered to merge information from
-// b. Cols is the number of summary columns (the columns that contain info to
-// eg. sum).
-type MatchingSummaryLineMerger func(cols int, a, b []string)
-
-// summaryLinesMatch returns true if the first matchColumns elements of 'a'
-// match the first matchColums elements of 'b'.
-func summaryLinesMatch(matchColumns int, a, b []string) bool {
-	for i := 0; i < matchColumns; i++ {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
-// sumCountAndSizesAndKeepTimes sums summable columns using sumCountAndSizes(),
-// and keeps the oldest atime (smallest number) and newest mtime (largest
-// number).
-func sumCountAndSizesAndKeepTimes(_ int, a, b []string) {
-	sumCountAndSizes(a, b)
-
-	if atoi(b[dgutaAtimeColIndex]) < atoi(a[dgutaAtimeColIndex]) {
-		a[dgutaAtimeColIndex] = b[dgutaAtimeColIndex]
-	}
-
-	if atoi(b[dgutaMtimeColIndex]) > atoi(a[dgutaMtimeColIndex]) {
-		a[dgutaMtimeColIndex] = b[dgutaMtimeColIndex]
-	}
-}
-
-// sumCountAndSizes is a matchingSummaryLineMerger that, given cols 4, will sum
-// the corresponding elements of a and b and store the result in a, except for
-// the atime and mtime columns.
-func sumCountAndSizes(a, b []string) {
-	for i := dgutaSumCols; i < len(a); i++ {
-		if i == dgutaAtimeColIndex || i == dgutaMtimeColIndex {
-			continue
-		}
-
-		a[i] = addNumberStrings(a[i], b[i])
-	}
 }

@@ -52,8 +52,7 @@ func TestTidy(t *testing.T) {
 		interestUniqueDir1 := createTestPath([]string{srcDir, "go", srcUniqueGo})
 		interestUniqueDir2 := createTestPath([]string{srcDir, "perl", srcUniquePerl})
 
-		combineSuffixes, dbSuffixes, baseSuffixes := buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl,
-			interestUniqueDir1, interestUniqueDir2)
+		combineSuffixes := buildSrcDir(interestUniqueDir1, interestUniqueDir2)
 
 		createTestDirWithDifferentPerms(destDir)
 
@@ -63,11 +62,8 @@ func TestTidy(t *testing.T) {
 			Date:    date,
 
 			CombineFileSuffixes: combineSuffixes,
-			DBFileSuffixes:      dbSuffixes,
-			BaseFileSuffixes:    baseSuffixes,
 
 			CombineFileGlobPattern:  "%s/*/*/%s",
-			DBFileGlobPattern:       "%s/*/*/%s",
 			WalkFilePathGlobPattern: "%s/*/*/*%s",
 
 			DestDirPerms: modePermUser,
@@ -78,7 +74,7 @@ func TestTidy(t *testing.T) {
 		err := test.Up(disableDeletion)
 
 		Convey("And the combine files are moved from the source dir to the dest dir", func() {
-			combineFileSuffixes := [4]string{".logs.gz", ".byusergroup.gz", ".bygroup", ".stats.gz"}
+			combineFileSuffixes := []string{".logs.gz", ".stats.gz"}
 
 			for _, suffix := range combineFileSuffixes {
 				final1 := filepath.Join(destDir, date+"_go."+srcUniqueGo+"."+srcUniversal+suffix)
@@ -91,33 +87,18 @@ func TestTidy(t *testing.T) {
 			}
 		})
 
-		Convey("And the contents of the .basedirs and .dguta.dbs dir exist", func() {
-			dbsPath := filepath.Join(destDir, date+"_"+srcUniversal)
-			dbsSuffixes := [5]string{
-				".basedirs",
-				".dguta.dbs/0/dguta.db",
-				".dguta.dbs/0/dguta.db.children",
-				".dguta.dbs/1/dguta.db",
-				".dguta.dbs/1/dguta.db.children"}
-
-			for _, suffix := range dbsSuffixes {
-				_, err = os.Stat(dbsPath + suffix)
-				So(err, ShouldBeNil)
-			}
-		})
-
-		Convey("And the .dguta.dbs.updated file exists in the dest dir", func() {
-			expectedFileName := filepath.Join(destDir, ".dguta.dbs.updated")
+		Convey("And the .updated file exists in the dest dir", func() {
+			expectedFileName := filepath.Join(destDir, ".updated")
 
 			_, err = os.Stat(expectedFileName)
 			So(err, ShouldBeNil)
 		})
 
-		Convey("And the mtime of the .dguta.dbs file matches the oldest mtime of the walk log files", func() {
+		Convey("And the mtime of the .updated file matches the oldest mtime of the walk log files", func() {
 			err = os.RemoveAll(tmpDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
 
 			createTestDirWithDifferentPerms(destDir)
 
@@ -131,9 +112,9 @@ func TestTidy(t *testing.T) {
 			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
 
-			dbsFileMTime := getMTime(filepath.Join(destDir, ".dguta.dbs.updated"))
+			sentinalMTime := getMTime(filepath.Join(destDir, ".updated"))
 
-			So(dbsFileMTime, ShouldEqual, expectedMTime)
+			So(sentinalMTime, ShouldEqual, expectedMTime)
 		})
 
 		Convey("And the moved file permissions match those of the dest dir", func() {
@@ -161,7 +142,7 @@ func TestTidy(t *testing.T) {
 			err = os.RemoveAll(tmpDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
 
 			createTestDirWithDifferentPerms(destDir)
 
@@ -176,7 +157,7 @@ func TestTidy(t *testing.T) {
 			err = os.RemoveAll(tmpDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
 
 			createTestDirWithDifferentPerms(destDir)
 
@@ -194,7 +175,7 @@ func TestTidy(t *testing.T) {
 			err = os.RemoveAll(srcDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
 
 			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
@@ -221,7 +202,7 @@ func TestTidy(t *testing.T) {
 			err = os.RemoveAll(srcDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
 
 			relDir := filepath.Join(tmpDir, "rel")
 			err = os.MkdirAll(relDir, modePermUser)
@@ -242,10 +223,9 @@ func TestTidy(t *testing.T) {
 	})
 }
 
-func buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interestUniqueDir2 string) (map[string]string,
-	map[string]string, map[string]string) {
-	walkFileSuffixes := [5]string{"log", "byusergroup", "bygroup", "stats", "dgut"}
-	combineFileSuffixes := [4]string{"combine.log.gz", "combine.byusergroup.gz", "combine.bygroup", "combine.stats.gz"}
+func buildSrcDir(interestUniqueDir1, interestUniqueDir2 string) map[string]string {
+	walkFileSuffixes := []string{"log", "stats"}
+	combineFileSuffixes := []string{"combine.log.gz", "combine.stats.gz"}
 
 	for i := range walkFileSuffixes {
 		createTestPath([]string{interestUniqueDir1}, "walk.1."+walkFileSuffixes[i])
@@ -257,31 +237,12 @@ func buildSrcDir(srcDir, srcUniqueGo, srcUniquePerl, interestUniqueDir1, interes
 		createTestPath([]string{interestUniqueDir2}, combineFileSuffixes[i])
 	}
 
-	goDBDir := []string{srcDir, "go", srcUniqueGo, "combine.dguta.db"}
-	perlDBDir := []string{srcDir, "perl", srcUniquePerl, "combine.dguta.db"}
-	combineDirSuffixes := [2]string{"dguta.db", "dguta.db.children"}
-
-	for i := range combineDirSuffixes {
-		createTestPath(goDBDir, combineDirSuffixes[i])
-		createTestPath(perlDBDir, combineDirSuffixes[i])
-	}
-
-	createTestPath([]string{srcDir}, "base.dirs")
-
 	inputOutputCombineSuffixes := map[string]string{
 		combineFileSuffixes[0]: "logs.gz",
-		combineFileSuffixes[1]: "byusergroup.gz",
-		combineFileSuffixes[2]: "bygroup",
-		combineFileSuffixes[3]: "stats.gz",
+		combineFileSuffixes[1]: "stats.gz",
 	}
 
-	inputOutputDBSuffixes := map[string]string{
-		"combine.dguta.db": "dguta.dbs"}
-
-	inputOutputBaseSuffixes := map[string]string{
-		"base.dirs": "basedirs"}
-
-	return inputOutputCombineSuffixes, inputOutputDBSuffixes, inputOutputBaseSuffixes
+	return inputOutputCombineSuffixes
 }
 
 // createTestPath takes a set of subdirectory names and an optional file

@@ -34,37 +34,27 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	jqs "github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v5/merge"
 	"github.com/wtsi-ssg/wrstat/v5/scheduler"
 )
 
 const (
-	walkTime     = 19 * time.Hour
-	walkRAM      = 16000
-	combineTime  = 40 * time.Minute
-	combineRAM   = 800
-	mergedbsTime = 15 * time.Minute
-	mergedbsRAM  = 42000
-	basedirTime  = 15 * time.Minute
-	basedirRAM   = 42000
+	walkTime      = 19 * time.Hour
+	walkRAM       = 16000
+	combineTime   = 40 * time.Minute
+	combineRAM    = 800
+	defaultMaxRAM = 42000
 )
 
 // options for this cmd.
 var (
-	workDir             string
-	finalDir            string
-	partialDirMerge     string
-	partialDirClean     bool
-	createPartial       bool
-	finishPartial       string
-	multiInodes         int
-	multiStatJobs       int
-	multiCh             string
-	forcedQueue         string
-	queuesToAvoid       string
-	quota               string
-	maxMem              int
-	multiBasedirsConfig string
+	workDir       string
+	finalDir      string
+	multiInodes   int
+	multiStatJobs int
+	multiCh       string
+	forcedQueue   string
+	queuesToAvoid string
+	maxMem        int
 )
 
 // multiCmd represents the multi command.
@@ -95,11 +85,6 @@ unique directory created for all of them.
 'wr status -i wrstat -z -o s' to get information on how long everything or
 particular subsets of jobs took.)
 
-A partial walk->stat->combine run can be performed with the --create_partial_dir
-flag. These files can be used with the --partial_dir_merge flag to combine this
-partial run with a full run. The --partial_dir_clean can be used to provide the
---delete flag to the 'mergedb' subcommand.
-
 Once everything has completed, the final output files are moved to the given
 --final_output directory by 'wrstat tidy', with a name that includes the date
 this command was started, the basename of the directory operated on, a unique
@@ -107,43 +92,20 @@ string per directory of interest, and a unique string for this call of multi:
 [year][month][day]_[directory_basename]/[interest unique].[unique].[type]
 eg. for 'wrstat multi -i foo -w /path/a -f /path/b /mnt/foo /mnt/bar /home/bar'
 It might produce: 
-/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.bygroup
-/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.byusergroup.gz
 /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.stats.gz
-/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.bygroup
-/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.byusergroup.gz
 /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.stats.gz
-/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.bygroup
-/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.byusergroup.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
 /path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
-/path/b/20210617.c35m8359bnc8ni7dgphg.basedirs
-/path/b/20210617.c35m8359bnc8ni7dgphg.dguta.dbs
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
 
-The basedirs.* file gets made by calling 'wrstat basedirs' after the 'combine'
-step. The --splits and --mindirs arguments are passed through to basedir;
-see docs for the basedir command for values to use.
-
-This requires you provide a --quota file, so that the current max quota
-of each group can be recorded. The quota file is a csv of:
-gid,disk,size_quota,inode_quota 
-
-This also requires you provide a --owners file, so that the owners of groups can
-be recorded. The file format is a csv of gid,owner_name.
-
 Finally, the unique subdirectory of --working_directory that was created is
-deleted.
-
-Note that in your --final_output directory, if a *.dguta.dbs directory already
-exists, and you have a wrstat server using the database files inside, the server
-will automatically start using the new data and delete the old.`,
+deleted.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		checkMultiArgs(args)
+		checkMultiArgs()
 		err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, sudo)
 		if err != nil {
 			die("%s", err)
@@ -157,14 +119,6 @@ func init() {
 	// flags specific to this sub-command
 	multiCmd.Flags().StringVarP(&workDir, "working_directory", "w", "", "base directory for intermediate results")
 	multiCmd.Flags().StringVarP(&finalDir, "final_output", "f", "", "final output directory")
-	multiCmd.Flags().StringVarP(&partialDirMerge, "partial_dir_merge", "l", "", "merge results from a partial run"+
-		"stored in the specified directory")
-	multiCmd.Flags().BoolVarP(&partialDirClean, "partial_dir_clean", "r", false, "remove old results "+
-		"from specified directory after merging")
-	multiCmd.Flags().BoolVarP(&createPartial, "create_partial_dir", "p", false, "perform the walk, "+
-		"stat, and combine steps only")
-	multiCmd.Flags().StringVarP(&finishPartial, "partial_dir_finish", "z", "", "perform the basedir "+
-		"and tidy step on a partial run, requires the name of the unique subdirectory the partial run files are in")
 	multiCmd.Flags().IntVarP(&multiInodes, "inodes_per_stat", "n",
 		defaultInodesPerJob, "number of inodes per parallel stat job")
 	multiCmd.Flags().IntVarP(&multiStatJobs, "num_stat_jobs", "j",
@@ -173,38 +127,17 @@ func init() {
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	multiCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
 		"force queues with this substring to be avoided when scheduling jobs")
-	multiCmd.Flags().StringVarP(&quota, "quota", "q", "", "csv of gid,disk,size_quota,inode_quota")
-	multiCmd.Flags().StringVarP(&ownersPath, "owners", "o", "", "gid,owner csv file")
-	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", basedirRAM, "maximum MBs to reserve for any job")
-	multiCmd.Flags().StringVarP(&multiBasedirsConfig, "config", "b", "", "path to basedirs config file")
+	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", defaultMaxRAM, "maximum MBs to reserve for any job")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
-func checkMultiArgs(args []string) {
+func checkMultiArgs() {
 	if workDir == "" {
 		die("--working_directory is required")
 	}
 
-	if !createPartial {
-		checkStandardFlags()
-	}
-
-	if len(args) == 0 && finishPartial == "" {
-		die("at least 1 directory of interest must be supplied")
-	}
-}
-
-func checkStandardFlags() {
 	if finalDir == "" {
 		die("--final_output is required")
-	}
-
-	if quota == "" {
-		die("--quota is required")
-	}
-
-	if ownersPath == "" {
-		die("--owners is required")
 	}
 }
 
@@ -213,7 +146,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
-	unique := uniqueOrPartial(finishPartial)
+	unique := scheduler.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
 
 	err := os.MkdirAll(outputRoot, userGroupPerm)
@@ -221,33 +154,10 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 		return err
 	}
 
-	if finishPartial == "" { //nolint:nestif
-		scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
-
-		if partialDirMerge != "" {
-			unique = scheduleStaticCopy(outputRoot, unique, partialDirMerge, partialDirClean, s)
-		}
-
-		if createPartial {
-			s.DisableSudo()
-			schedulePartialSentinel(outputRoot, unique, s)
-
-			return nil
-		}
-	}
-
-	scheduleBasedirsJob(outputRoot, unique, s)
+	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
 	scheduleTidyJob(outputRoot, finalDir, unique, s)
 
 	return nil
-}
-
-func uniqueOrPartial(partial string) string {
-	if partial == "" {
-		return scheduler.UniqueString()
-	}
-
-	return partial
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
@@ -333,73 +243,6 @@ func walkRepGrp(dir, unique string) string {
 // will create.
 func combineRepGrp(dir, unique string) string {
 	return repGrp("combine", dir, unique)
-}
-
-// schedulePartialSentinel adds a job to wr's queue that creates a sentinel file
-// indicating the completion of a 'partial' run.
-func schedulePartialSentinel(outputRoot, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob("touch "+filepath.Join(outputRoot, merge.SentinelComplete),
-		repGrp("touchSentinel", "", unique), "wrstat-sentinel", unique+".sentinel",
-		unique, scheduler.DefaultRequirements())
-
-	addJobsToQueue(s, []*jobqueue.Job{job})
-}
-
-// scheduleBasedirsJob adds a job to wr's queue that creates a base.dirs file
-// from the combined dguta.dbs folders.
-func scheduleBasedirsJob(outputRoot, unique string, s *scheduler.Scheduler) {
-	var baseDirsConfig string
-
-	if multiBasedirsConfig != "" {
-		baseDirsConfig = fmt.Sprintf("-b %q", multiBasedirsConfig)
-	}
-
-	job := s.NewJob(fmt.Sprintf("%s basedir -q %q -o %q %s %q %q",
-		s.Executable(), quota, ownersPath, baseDirsConfig, outputRoot, finalDir),
-		repGrp("basedir", "", unique), "wrstat-basedir", unique+".basedir", unique, basedirReqs())
-
-	addJobsToQueue(s, []*jobqueue.Job{job})
-}
-
-func copyReqs() *jqs.Requirements {
-	req := scheduler.DefaultRequirements()
-	req.Time = mergedbsTime
-	req.RAM = min(mergedbsRAM, maxMem)
-
-	return req
-}
-
-func scheduleStaticCopy(outputRoot, unique, partialDirMerge string, partialDirClean bool,
-	s *scheduler.Scheduler,
-) string {
-	var remove string
-
-	if partialDirClean {
-		remove = "--delete"
-	}
-
-	thisUnique := unique + ".merge"
-
-	job := s.NewJob(fmt.Sprintf("%s mergedbs %s %q %q",
-		s.Executable(), remove, partialDirMerge, outputRoot),
-		repGrp("mergedirs", partialDirMerge, unique), "wrstat-merge",
-		thisUnique, unique, copyReqs())
-
-	addJobsToQueue(s, []*jobqueue.Job{job})
-
-	return thisUnique
-}
-
-// basedirReqs returns Requirements suitable for basedir jobs. The RAM
-// requirement is currently set so high due to a bad LSF&cgroups interaction
-// that means LSF counts the mmap of the database files as the job's memory
-// usage.
-func basedirReqs() *jqs.Requirements {
-	req := scheduler.DefaultRequirements()
-	req.Time = basedirTime
-	req.RAM = min(basedirRAM, maxMem)
-
-	return req
 }
 
 // scheduleTidyJob adds a job to wr's queue that for each working directory
