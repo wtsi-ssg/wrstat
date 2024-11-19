@@ -33,7 +33,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/fs"
+	"github.com/wtsi-ssg/wrstat/v6/fs"
 )
 
 // TestLogFiles tests that the log files merge and compress properly.

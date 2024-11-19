@@ -35,7 +35,7 @@ import (
 	"time"
 
 	"github.com/inconshreveable/log15"
-	"github.com/wtsi-ssg/wrstat/v5/reporter"
+	"github.com/wtsi-ssg/wrstat/v6/reporter"
 )
 
 const lstatOpName = "lstat"

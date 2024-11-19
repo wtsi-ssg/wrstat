@@ -34,7 +34,7 @@ import (
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	jqs "github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v5/scheduler"
+	"github.com/wtsi-ssg/wrstat/v6/scheduler"
 )
 
 const (
