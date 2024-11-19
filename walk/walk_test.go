@@ -31,6 +31,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -59,10 +61,8 @@ func TestWalk(t *testing.T) {
 		}
 
 		Convey("You can output the paths to a file", func() {
-			found, dups, missing := testOutputToFiles(false, walkDir, outDir, cb, expectedPaths)
-			So(found, ShouldEqual, 81)
-			So(dups, ShouldEqual, 0)
-			So(missing, ShouldEqual, 0)
+			ok := testOutputToFiles(true, false, walkDir, outDir, cb, expectedPaths)
+			So(ok, ShouldBeTrue)
 			So(len(walkErrors), ShouldEqual, 0)
 		})
 
@@ -75,28 +75,34 @@ func TestWalk(t *testing.T) {
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldBeNil)
 
-			totalFound := 0
+			splitExpected := make([][]string, n)
+			splitI := 0
 
-			for i := 1; i <= n+1; i++ {
-				outPath := filepath.Join(outDir, fmt.Sprintf("walk.%d", i))
+			for _, path := range expectedPaths {
+				splitExpected[splitI] = append(splitExpected[splitI], path)
+				splitI++
+
+				if splitI == n {
+					splitI = 0
+				}
+			}
+
+			for i, expectedPaths := range splitExpected {
+				outPath := filepath.Join(outDir, fmt.Sprintf("walk.%d", i+1))
 				content, errr := os.ReadFile(outPath)
 
-				if i <= n {
+				if i < n {
 					So(errr, ShouldBeNil)
 
-					So(files.Paths[i-1], ShouldEqual, outPath)
+					So(files.Paths[i], ShouldEqual, outPath)
 
-					found, dups, _ := checkPaths(string(content), expectedPaths)
-					So(found, ShouldBeGreaterThanOrEqualTo, 20)
-					So(dups, ShouldEqual, 0)
-
-					totalFound += found
+					ok := checkPaths(string(content), expectedPaths)
+					So(ok, ShouldBeTrue)
 				} else {
 					So(errr, ShouldNotBeNil)
 				}
 			}
 
-			So(totalFound, ShouldEqual, 81)
 			So(len(walkErrors), ShouldEqual, 0)
 
 			err = files.Close()
@@ -110,10 +116,9 @@ func TestWalk(t *testing.T) {
 		})
 
 		Convey("You can ignore symlinks", func() {
-			found, dups, missing := testOutputToFiles(true, walkDir, outDir, cb, expectedPaths)
-			So(found, ShouldEqual, 80)
-			So(dups, ShouldEqual, 0)
-			So(missing, ShouldEqual, 1)
+			expectedPaths = slices.Delete(expectedPaths, 3, 4)
+			ok := testOutputToFiles(true, true, walkDir, outDir, cb, expectedPaths)
+			So(ok, ShouldBeTrue)
 			So(len(walkErrors), ShouldEqual, 0)
 		})
 
@@ -130,7 +135,6 @@ func TestWalk(t *testing.T) {
 
 			lenErrors := len(walkErrors)
 			So(lenErrors, ShouldBeGreaterThanOrEqualTo, 1)
-			So(w.err, ShouldNotBeNil)
 
 			var writeError *WriteError
 
@@ -138,12 +142,6 @@ func TestWalk(t *testing.T) {
 
 			werr := walkErrors[0].(*WriteError) //nolint:errcheck,errorlint,forcetypeassert
 			So(werr.Unwrap(), ShouldEqual, werr.Err)
-
-			w.active.Add(1)
-			w.processDir(walkDir, nil)
-			So(len(walkErrors), ShouldEqual, lenErrors)
-
-			w.addDir(walkDir)
 		})
 
 		Convey("Read errors during a walk are reported and the path skipped", func() {
@@ -194,6 +192,20 @@ func TestWalk(t *testing.T) {
 			So(len(walkErrors), ShouldEqual, 0)
 			So(gotInode, ShouldEqual, u.Ino)
 		})
+
+		Convey("You can print just the files", func() {
+			expected := make([]string, 0, len(expectedPaths))
+
+			for _, path := range expectedPaths {
+				if !strings.HasSuffix(path, "/\"") {
+					expected = append(expected, path)
+				}
+			}
+
+			ok := testOutputToFiles(false, false, walkDir, outDir, cb, expected)
+			So(ok, ShouldBeTrue)
+			So(len(walkErrors), ShouldEqual, 0)
+		})
 	})
 
 	Convey("You can't create output files in a bad directory", t, func() {
@@ -213,7 +225,7 @@ func TestWalk(t *testing.T) {
 // prepareTestDirs creates a temporary directory filled with files to walk, and
 // an empty directory you can output to. Also returns all the paths created in a
 // map. One of the files will be a symlink to another of the files.
-func prepareTestDirs(t *testing.T) (string, string, map[string]int) {
+func prepareTestDirs(t *testing.T) (string, string, []string) {
 	t.Helper()
 	tmpDir := t.TempDir()
 
@@ -228,15 +240,14 @@ func prepareTestDirs(t *testing.T) (string, string, map[string]int) {
 		t.Fatalf("mkdir failed: %s", err)
 	}
 
-	paths := make(map[string]int)
-	paths[walkDir] = 0
-	fillDirWithFiles(t, walkDir, 4, paths)
+	paths := []string{walkDir + "/"}
+	paths = fillDirWithFiles(t, walkDir, 4, paths)
 
 	replaceFileWithSymlink(t, paths)
 
-	pathsEncoded := make(map[string]int, len(paths))
-	for k, v := range paths {
-		pathsEncoded[strconv.Quote(k)] = v
+	pathsEncoded := make([]string, len(paths))
+	for i, v := range paths {
+		pathsEncoded[i] = strconv.Quote(v)
 	}
 
 	return walkDir, outDir, pathsEncoded
@@ -244,11 +255,11 @@ func prepareTestDirs(t *testing.T) (string, string, map[string]int) {
 
 // fillDirWithFiles fills the given directory with files, size dirs wide and
 // deep. Adds all paths created to the given map, setting values to 0.
-func fillDirWithFiles(t *testing.T, dir string, size int, paths map[string]int) {
+func fillDirWithFiles(t *testing.T, dir string, size int, paths []string) []string {
 	t.Helper()
 
-	for i := 1; i <= size; i++ {
-		base := strconv.Itoa(i)
+	for i := 0; i < size; i++ {
+		base := strconv.Itoa(i + 1)
 		path := filepath.Join(dir, base)
 
 		filePath := path + ".file"
@@ -256,8 +267,7 @@ func fillDirWithFiles(t *testing.T, dir string, size int, paths map[string]int) 
 			filePath += "\ntest"
 		}
 
-		paths[path] = 0
-		paths[filePath] = 0
+		paths = append(paths, path+"/", filePath)
 
 		if err := os.WriteFile(filePath, []byte(base), userOnlyPerm); err != nil {
 			t.Fatalf("file creation failed: %s", err)
@@ -267,18 +277,22 @@ func fillDirWithFiles(t *testing.T, dir string, size int, paths map[string]int) 
 			t.Fatalf("mkdir failed: %s", err)
 		}
 
-		if size-1 > 1 {
-			fillDirWithFiles(t, path, size-1, paths)
+		if size > 1 {
+			paths = fillDirWithFiles(t, path, size-1, paths)
 		}
 	}
+
+	sort.Strings(paths)
+
+	return paths
 }
 
-func replaceFileWithSymlink(t *testing.T, paths map[string]int) {
+func replaceFileWithSymlink(t *testing.T, paths []string) {
 	t.Helper()
 
 	dest := ""
 
-	for path := range paths {
+	for _, path := range paths {
 		info, err := os.Stat(path)
 		if err != nil {
 			t.Fatalf("stat failed: %s", err)
@@ -312,13 +326,13 @@ func removeAndSymlink(t *testing.T, path, dest string) {
 	}
 }
 
-func testOutputToFiles(ignoreSymlinks bool, walkDir, outDir string, cb ErrorCallback,
-	expectedPaths map[string]int,
-) (int, int, int) {
+func testOutputToFiles(includDirs, ignoreSymlinks bool, walkDir, outDir string, cb ErrorCallback,
+	expectedPaths []string,
+) bool {
 	files, err := NewFiles(outDir, 1)
 	So(err, ShouldBeNil)
 
-	w := New(files.WritePaths(), true, ignoreSymlinks)
+	w := New(files.WritePaths(), includDirs, ignoreSymlinks)
 
 	err = w.Walk(walkDir, cb)
 	So(err, ShouldBeNil)
@@ -331,31 +345,22 @@ func testOutputToFiles(ignoreSymlinks bool, walkDir, outDir string, cb ErrorCall
 	return checkPaths(string(content), expectedPaths)
 }
 
-// checkPaths parses the string content of a Walk() output file and marks how
-// many times given paths were found in the map, returning numbers found,
-// duplicated and not found.
-func checkPaths(content string, paths map[string]int) (found, dups, missing int) {
+// checkPaths parses the string content of a Walk() output file and returns true
+// only if the content and order is the same.
+func checkPaths(content string, paths []string) bool {
 	scanner := bufio.NewScanner(strings.NewReader(content))
+
+	i := 0
 
 	for scanner.Scan() {
 		path := scanner.Text()
-		if n, exists := paths[path]; exists {
-			n++
-			if n > 1 {
-				dups++
-			}
 
-			paths[path] = n
-
-			found++
+		if paths[i] != path {
+			return false
 		}
+
+		i++
 	}
 
-	for _, n := range paths {
-		if n == 0 {
-			missing++
-		}
-	}
-
-	return found, dups, missing
+	return i == len(paths)
 }

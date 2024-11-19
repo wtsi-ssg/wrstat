@@ -30,9 +30,13 @@
 package walk
 
 import (
+	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"sync"
+	"slices"
+	"sort"
+	"strings"
 
 	"github.com/wtsi-hgi/godirwalk"
 )
@@ -49,15 +53,9 @@ type PathCallback func(entry *Dirent) error
 // Walker can be used to quickly walk a filesystem to just see what paths there
 // are on it.
 type Walker struct {
-	cb             PathCallback
+	pathCB         PathCallback
 	sendDirs       bool
 	ignoreSymlinks bool
-	dirsCh         chan string
-	active         sync.WaitGroup
-	err            error
-	errCB          ErrorCallback
-	mu             sync.RWMutex
-	ended          bool
 }
 
 // New creates a new Walker that can Walk() a filesystem and send all the
@@ -69,7 +67,7 @@ type Walker struct {
 // Set ignoreSymlinks to true to have symlinks not be sent do your PathCallback.
 func New(cb PathCallback, includDirs, ignoreSymlinks bool) *Walker {
 	return &Walker{
-		cb:             cb,
+		pathCB:         cb,
 		sendDirs:       includDirs,
 		ignoreSymlinks: ignoreSymlinks,
 	}
@@ -87,147 +85,187 @@ type ErrorCallback func(path string, err error)
 // walk terminating early and this method returning the error; other kinds of
 // errors will mean the path isn't output, but the walk will continue and this
 // method won't return an error.
-func (w *Walker) Walk(dir string, cb ErrorCallback) error {
-	dir = filepath.Clean(dir)
+func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
+	dir = filepath.Clean(dir) + "/"
+	requestCh := make(chan pathRequest)
+	sortedRequestCh := make(chan pathRequest)
+	direntCh := make(chan Dirent)
+	flowControlCh := make(chan chan<- Dirent)
+	ctx, stop := context.WithCancel(context.Background())
 
-	w.errCB = cb
-	w.dirsCh = make(chan string, dirsChSize)
-
-	defer func() {
-		w.mu.Lock()
-		w.ended = true
-		w.mu.Unlock()
-		close(w.dirsCh)
-	}()
-
-	w.addDir(dir)
-
-	for i := 0; i < walkers; i++ {
-		go w.processDirs()
+	for range walkers {
+		go w.handleDirReads(ctx, sortedRequestCh, errCB)
 	}
-
-	w.active.Wait()
-
-	return w.err
-}
-
-// addDir adds the given dir to our channel for processDirs() to pick up.
-func (w *Walker) addDir(dir string) {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-
-	if w.err != nil || w.ended {
-		return
-	}
-
-	w.active.Add(1)
 
 	go func() {
-		w.dirsCh <- dir
-	}()
-}
-
-// processDirs pulls from our dirsCh and calls processDir on each.
-func (w *Walker) processDirs() {
-	buffer := make([]byte, os.Getpagesize())
-
-	for dir := range w.dirsCh {
-		w.processDir(dir, buffer)
-	}
-}
-
-// processDir gets the contents of the given directory, outputs paths to our
-// output files, and adds directories to our dirsCh. The buffer is used to speed
-// up reading directory contents.
-func (w *Walker) processDir(dir string, buffer []byte) {
-	defer func() {
-		w.active.Done()
+		walkDirectory(ctx, Dirent{Path: dir, Type: fs.ModeDir}, flowControlCh, requestCh, w.sendDirs)
+		close(direntCh)
 	}()
 
-	if w.terminated() {
-		return
+	go sortPathRequests(ctx, requestCh, sortedRequestCh)
+
+	flowControlCh <- direntCh
+
+	defer stop()
+
+	return w.sendDirentsToPathCallback(direntCh, errCB)
+}
+
+func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent, errCB ErrorCallback) error {
+	for dirent := range direntCh {
+		if err := w.pathCB(&dirent); err != nil {
+			errCB(dirent.Path, err)
+
+			return err
+		}
 	}
 
-	children, ok := w.getImmediateChildren(dir, buffer)
-	if !ok {
-		return
-	}
+	return nil
+}
 
-	if w.sendDirs {
-		children = append(children, newDirentForDirectoryPath(dir))
-	}
+type heap []pathRequest
 
-	for _, entry := range children {
-		if ok := w.handleDirent(entry, dir); !ok {
+func pathCompare(a, b pathRequest) int {
+	return strings.Compare(b.path, a.path)
+}
+
+func (h *heap) Insert(req pathRequest) {
+	pos, _ := slices.BinarySearchFunc(*h, req, pathCompare)
+	*h = slices.Insert(*h, pos, req)
+}
+
+func (h heap) Top() pathRequest {
+	return h[len(h)-1]
+}
+
+func (h *heap) Pop() {
+	*h = (*h)[:len(*h)-1]
+}
+
+func (h *heap) Push(req pathRequest) {
+	*h = append(*h, req)
+}
+
+func sortPathRequests(ctx context.Context, requestCh <-chan pathRequest, //nolint:gocyclo
+	sortedRequestCh chan<- pathRequest) {
+	var h heap
+
+	for {
+		if len(h) == 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case req := <-requestCh:
+				h.Push(req)
+			}
+		}
+
+		select {
+		case <-ctx.Done():
 			return
+		case req := <-requestCh:
+			h.Insert(req)
+		case sortedRequestCh <- h.Top():
+			h.Pop()
 		}
 	}
 }
 
-// terminated returns true if one of our go routines has called terminate().
-func (w *Walker) terminated() bool {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
+func (w *Walker) handleDirReads(ctx context.Context, requests chan pathRequest, errCB ErrorCallback) {
+	buffer := make([]byte, os.Getpagesize())
 
-	return w.err != nil
+Loop:
+	for {
+		select {
+		case <-ctx.Done():
+			break Loop
+		case request := <-requests:
+			children, err := godirwalk.ReadDirents(request.path, buffer)
+			if err != nil {
+				errCB(request.path, err)
+			}
+
+			request.response <- w.childrenToDirents(children, request.path)
+		}
+	}
 }
 
-// getImmediateChildren finds the immediate children of the given directory and
-// returns the entries. Any failure to read is passed to our errCB, but we don't
-// return an error (just nil results and false).
-func (w *Walker) getImmediateChildren(dir string, buffer []byte) ([]*Dirent, bool) {
-	children, err := godirwalk.ReadDirents(dir, buffer)
-	if err != nil {
-		w.errCB(dir, err)
-
-		return nil, false
-	}
-
-	entries := make([]*Dirent, 0, len(children))
+func (w *Walker) childrenToDirents(children godirwalk.Dirents, parent string) []Dirent {
+	dirents := make([]Dirent, 0, len(children))
 
 	for _, child := range children {
-		if w.ignoreSymlinks && child.IsSymlink() {
+		dirent := Dirent{
+			Path:  filepath.Join(parent, child.Name()),
+			Type:  child.ModeType(),
+			Inode: child.Inode(),
+		}
+
+		if dirent.IsDir() {
+			dirent.Path += "/"
+		}
+
+		if w.ignoreSymlinks && dirent.IsSymlink() {
 			continue
 		}
 
-		entries = append(entries, &Dirent{
-			Path:  filepath.Join(dir, child.Name()),
-			Type:  child.ModeType(),
-			Inode: child.Inode(),
-		})
+		dirents = append(dirents, dirent)
 	}
 
-	return entries, true
+	sort.Slice(dirents, func(i, j int) bool {
+		return dirents[i].Path < dirents[j].Path
+	})
+
+	return dirents
 }
 
-// handleDirent calls addDir() for directories (except for the given parent dir
-// which was already done), and the path callback for files.
-//
-// Returns false if the path callback failed.
-func (w *Walker) handleDirent(entry *Dirent, parentDir string) bool {
-	if entry.IsDir() && entry.Path != parentDir {
-		w.addDir(entry.Path)
-
-		return true
-	}
-
-	if err := w.cb(entry); err != nil {
-		w.errCB(entry.Path, err)
-		w.terminate(err)
-
-		return false
-	}
-
-	return true
+type pathRequest struct {
+	path     string
+	response chan<- []Dirent
 }
 
-// terminate will store the err on self on the first call to terminate, and
-// cause subsequent terminated() calls to return true.
-func (w *Walker) terminate(err error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+func walkDirectory(ctx context.Context, dirent Dirent,
+	flowControlCh chan chan<- Dirent, request chan<- pathRequest, sendDirs bool) {
+	response := make(chan []Dirent)
+	request <- pathRequest{dirent.Path, response}
 
-	if w.err == nil {
-		w.err = err
+	children := <-response
+	childChans := make([]chan chan<- Dirent, len(children))
+
+	for n, child := range children {
+		childChans[n] = make(chan chan<- Dirent)
+
+		if child.IsDir() {
+			go walkDirectory(ctx, child, childChans[n], request, sendDirs)
+		} else {
+			go sendFileEntry(ctx, child, childChans[n])
+		}
+	}
+
+	direntCh := <-flowControlCh
+
+	if sendDirs {
+		sendEntry(ctx, dirent, direntCh)
+	}
+
+	for _, childChan := range childChans {
+		childChan <- direntCh
+		<-childChan
+	}
+
+	close(flowControlCh)
+}
+
+func sendFileEntry(ctx context.Context, dirent Dirent, childChan chan chan<- Dirent) {
+	direntCh := <-childChan
+
+	sendEntry(ctx, dirent, direntCh)
+	close(childChan)
+}
+
+func sendEntry(ctx context.Context, dirent Dirent, direntCh chan<- Dirent) {
+	select {
+	case <-ctx.Done():
+		return
+	case direntCh <- dirent:
 	}
 }
