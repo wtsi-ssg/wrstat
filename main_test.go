@@ -678,7 +678,7 @@ func TestEnd2End(t *testing.T) {
 		tmpTemp := t.TempDir()
 		tmpHome := t.TempDir()
 
-		buildSif := exec.Command("singularity", "build", sif, "docker://okteto/golang:1.22")
+		buildSif := exec.Command("singularity", "build", sif, "docker://okteto/golang:1.23")
 		So(buildSif.Run(), ShouldBeNil)
 
 		writeFileString(t, buildScript, `#!/bin/bash
