@@ -31,7 +31,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v5/ch"
+	"github.com/wtsi-ssg/wrstat/v6/ch"
 )
 
 // chtsvCmd represents the chtsv command.

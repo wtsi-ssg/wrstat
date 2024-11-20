@@ -56,7 +56,7 @@ const app = "wrstat_test"
 func buildSelf() func() {
 	cmd := exec.Command(
 		"go", "build", "-tags", "netgo",
-		"-ldflags=-X github.com/wtsi-ssg/wrstat/v5/cmd.runJobs=0 -X github.com/wtsi-ssg/wrstat/v5/cmd.Version=TESTVERSION",
+		"-ldflags=-X github.com/wtsi-ssg/wrstat/v6/cmd.runJobs=0 -X github.com/wtsi-ssg/wrstat/v6/cmd.Version=TESTVERSION",
 		"-o", app,
 	)
 
@@ -678,7 +678,7 @@ func TestEnd2End(t *testing.T) {
 		tmpTemp := t.TempDir()
 		tmpHome := t.TempDir()
 
-		buildSif := exec.Command("singularity", "build", sif, "docker://okteto/golang:1.22")
+		buildSif := exec.Command("singularity", "build", sif, "docker://okteto/golang:1.23")
 		So(buildSif.Run(), ShouldBeNil)
 
 		writeFileString(t, buildScript, `#!/bin/bash

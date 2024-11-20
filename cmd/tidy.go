@@ -31,7 +31,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v5/neaten"
+	"github.com/wtsi-ssg/wrstat/v6/neaten"
 )
 
 // destDirPerms are the permissions of the dest directory, to be used in making

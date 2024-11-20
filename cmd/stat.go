@@ -31,8 +31,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v5/ch"
-	"github.com/wtsi-ssg/wrstat/v5/stat"
+	"github.com/wtsi-ssg/wrstat/v6/ch"
+	"github.com/wtsi-ssg/wrstat/v6/stat"
 )
 
 const (

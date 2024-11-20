@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/wtsi-ssg/wrstat/v5/combine"
+	"github.com/wtsi-ssg/wrstat/v6/combine"
 )
 
 //nolint:lll
