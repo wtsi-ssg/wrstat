@@ -37,6 +37,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/wtsi-hgi/godirwalk"
 )
@@ -77,6 +78,19 @@ func New(cb PathCallback, includDirs, ignoreSymlinks bool) *Walker {
 // will be provided problematic paths encountered during the walk.
 type ErrorCallback func(path string, err error)
 
+type pathRequest struct {
+	path     string
+	response chan []Dirent
+}
+
+var pathRequestPool = sync.Pool{ //nolint:gochecknoglobals
+	New: func() any {
+		return &pathRequest{
+			response: make(chan []Dirent),
+		}
+	},
+}
+
 // Walk will discover all the paths nested under the given dir, and send them to
 // our PathCallback.
 //
@@ -87,8 +101,8 @@ type ErrorCallback func(path string, err error)
 // method won't return an error.
 func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	dir = filepath.Clean(dir) + "/"
-	requestCh := make(chan pathRequest)
-	sortedRequestCh := make(chan pathRequest)
+	requestCh := make(chan *pathRequest)
+	sortedRequestCh := make(chan *pathRequest)
 	direntCh := make(chan Dirent)
 	flowControlCh := make(chan chan<- Dirent)
 	ctx, stop := context.WithCancel(context.Background())
@@ -98,7 +112,8 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	}
 
 	go func() {
-		walkDirectory(ctx, Dirent{Path: dir, Type: fs.ModeDir}, flowControlCh, requestCh, w.sendDirs)
+		walkDirectory(ctx, Dirent{Path: dir, Type: fs.ModeDir},
+			flowControlCh, createPathRequestor(requestCh), w.sendDirs)
 		close(direntCh)
 	}()
 
@@ -109,6 +124,19 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	defer stop()
 
 	return w.sendDirentsToPathCallback(direntCh, errCB)
+}
+
+func createPathRequestor(requestCh chan *pathRequest) func(string) []Dirent {
+	return func(path string) []Dirent {
+		pr := pathRequestPool.Get().(*pathRequest) //nolint:errcheck,forcetypeassert
+		defer pathRequestPool.Put(pr)
+
+		pr.path = path
+
+		requestCh <- pr
+
+		return <-pr.response
+	}
 }
 
 func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent, errCB ErrorCallback) error {
@@ -123,18 +151,18 @@ func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent, errCB ErrorCa
 	return nil
 }
 
-type heap []pathRequest
+type heap []*pathRequest
 
-func pathCompare(a, b pathRequest) int {
+func pathCompare(a, b *pathRequest) int {
 	return strings.Compare(b.path, a.path)
 }
 
-func (h *heap) Insert(req pathRequest) {
+func (h *heap) Insert(req *pathRequest) {
 	pos, _ := slices.BinarySearchFunc(*h, req, pathCompare)
 	*h = slices.Insert(*h, pos, req)
 }
 
-func (h heap) Top() pathRequest {
+func (h heap) Top() *pathRequest {
 	return h[len(h)-1]
 }
 
@@ -142,12 +170,12 @@ func (h *heap) Pop() {
 	*h = (*h)[:len(*h)-1]
 }
 
-func (h *heap) Push(req pathRequest) {
+func (h *heap) Push(req *pathRequest) {
 	*h = append(*h, req)
 }
 
-func sortPathRequests(ctx context.Context, requestCh <-chan pathRequest, //nolint:gocyclo
-	sortedRequestCh chan<- pathRequest) {
+func sortPathRequests(ctx context.Context, requestCh <-chan *pathRequest, //nolint:gocyclo
+	sortedRequestCh chan<- *pathRequest) {
 	var h heap
 
 	for {
@@ -171,7 +199,7 @@ func sortPathRequests(ctx context.Context, requestCh <-chan pathRequest, //nolin
 	}
 }
 
-func (w *Walker) handleDirReads(ctx context.Context, requests chan pathRequest, errCB ErrorCallback) {
+func (w *Walker) handleDirReads(ctx context.Context, requests chan *pathRequest, errCB ErrorCallback) {
 	buffer := make([]byte, os.Getpagesize())
 
 Loop:
@@ -218,17 +246,9 @@ func (w *Walker) childrenToDirents(children godirwalk.Dirents, parent string) []
 	return dirents
 }
 
-type pathRequest struct {
-	path     string
-	response chan<- []Dirent
-}
-
 func walkDirectory(ctx context.Context, dirent Dirent,
-	flowControlCh chan chan<- Dirent, request chan<- pathRequest, sendDirs bool) {
-	response := make(chan []Dirent)
-	request <- pathRequest{dirent.Path, response}
-
-	children := <-response
+	flowControlCh chan chan<- Dirent, request func(string) []Dirent, sendDirs bool) {
+	children := request(dirent.Path)
 	childChans := make([]chan chan<- Dirent, len(children))
 
 	for n, child := range children {
