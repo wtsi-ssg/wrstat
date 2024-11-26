@@ -250,6 +250,11 @@ func walkDirectory(ctx context.Context, dirent Dirent,
 	flowControlCh chan chan<- Dirent, request func(string) []Dirent, sendDirs bool) {
 	children := request(dirent.Path)
 	childChans := make([]chan chan<- Dirent, len(children))
+	direntCh := <-flowControlCh
+
+	if sendDirs {
+		sendEntry(ctx, dirent, direntCh)
+	}
 
 	for n, child := range children {
 		childChans[n] = make(chan chan<- Dirent)
@@ -259,12 +264,6 @@ func walkDirectory(ctx context.Context, dirent Dirent,
 		} else {
 			go sendFileEntry(ctx, child, childChans[n])
 		}
-	}
-
-	direntCh := <-flowControlCh
-
-	if sendDirs {
-		sendEntry(ctx, dirent, direntCh)
 	}
 
 	for _, childChan := range childChans {
