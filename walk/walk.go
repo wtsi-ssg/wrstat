@@ -103,7 +103,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	dir = filepath.Clean(dir) + "/"
 	requestCh := make(chan *pathRequest)
 	sortedRequestCh := make(chan *pathRequest)
-	direntCh := make(chan Dirent)
+	direntCh := make(chan Dirent, 1<<1<<1<<1<<1<<1<<1<<1<<1<<1<<1)
 	flowControl := newController()
 	ctx, stop := context.WithCancel(context.Background())
 
