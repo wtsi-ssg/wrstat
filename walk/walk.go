@@ -104,7 +104,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	requestCh := make(chan *pathRequest)
 	sortedRequestCh := make(chan *pathRequest)
 	direntCh := make(chan Dirent)
-	flowControlCh := make(chan chan<- Dirent)
+	flowControl := newController()
 	ctx, stop := context.WithCancel(context.Background())
 
 	for range walkers {
@@ -113,13 +113,12 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 
 	go func() {
 		walkDirectory(ctx, Dirent{Path: dir, Type: fs.ModeDir},
-			flowControlCh, createPathRequestor(requestCh), w.sendDirs)
+			flowControl, createPathRequestor(requestCh), w.sendDirs)
 		close(direntCh)
 	}()
 
 	go sortPathRequests(ctx, requestCh, sortedRequestCh)
-
-	flowControlCh <- direntCh
+	go flowControl.PassControl(direntCh)
 
 	defer stop()
 
@@ -246,18 +245,48 @@ func (w *Walker) childrenToDirents(children godirwalk.Dirents, parent string) []
 	return dirents
 }
 
+type flowController struct {
+	controller chan chan<- Dirent
+}
+
+func newController() *flowController {
+	return controllerPool.Get().(*flowController) //nolint:forcetypeassert
+}
+
+func (f *flowController) GetControl() chan<- Dirent {
+	return <-f.controller
+}
+
+func (f *flowController) PassControl(control chan<- Dirent) {
+	f.controller <- control
+	<-f.controller
+}
+
+func (f *flowController) EndControl() {
+	f.controller <- nil
+	controllerPool.Put(f)
+}
+
+var controllerPool = sync.Pool{ //nolint:gochecknoglobals
+	New: func() any {
+		return &flowController{
+			controller: make(chan chan<- Dirent),
+		}
+	},
+}
+
 func walkDirectory(ctx context.Context, dirent Dirent,
-	flowControlCh chan chan<- Dirent, request func(string) []Dirent, sendDirs bool) {
+	flowControl *flowController, request func(string) []Dirent, sendDirs bool) {
 	children := request(dirent.Path)
-	childChans := make([]chan chan<- Dirent, len(children))
-	direntCh := <-flowControlCh
+	childChans := make([]*flowController, len(children))
+	control := flowControl.GetControl()
 
 	if sendDirs {
-		sendEntry(ctx, dirent, direntCh)
+		sendEntry(ctx, dirent, control)
 	}
 
 	for n, child := range children {
-		childChans[n] = make(chan chan<- Dirent)
+		childChans[n] = newController()
 
 		if child.IsDir() {
 			go walkDirectory(ctx, child, childChans[n], request, sendDirs)
@@ -267,18 +296,17 @@ func walkDirectory(ctx context.Context, dirent Dirent,
 	}
 
 	for _, childChan := range childChans {
-		childChan <- direntCh
-		<-childChan
+		childChan.PassControl(control)
 	}
 
-	close(flowControlCh)
+	flowControl.EndControl()
 }
 
-func sendFileEntry(ctx context.Context, dirent Dirent, childChan chan chan<- Dirent) {
-	direntCh := <-childChan
+func sendFileEntry(ctx context.Context, dirent Dirent, flowControl *flowController) {
+	control := flowControl.GetControl()
 
-	sendEntry(ctx, dirent, direntCh)
-	close(childChan)
+	sendEntry(ctx, dirent, control)
+	flowControl.EndControl()
 }
 
 func sendEntry(ctx context.Context, dirent Dirent, direntCh chan<- Dirent) {
