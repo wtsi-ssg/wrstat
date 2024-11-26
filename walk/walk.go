@@ -122,7 +122,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 
 	defer stop()
 
-	return w.sendDirentsToPathCallback(direntCh, errCB)
+	return w.sendDirentsToPathCallback(direntCh)
 }
 
 func createPathRequestor(requestCh chan *pathRequest) func(string) []Dirent {
@@ -138,11 +138,9 @@ func createPathRequestor(requestCh chan *pathRequest) func(string) []Dirent {
 	}
 }
 
-func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent, errCB ErrorCallback) error {
+func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent) error {
 	for dirent := range direntCh {
 		if err := w.pathCB(&dirent); err != nil {
-			errCB(dirent.Path, err)
-
 			return err
 		}
 	}

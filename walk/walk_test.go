@@ -133,14 +133,11 @@ func TestWalk(t *testing.T) {
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldNotBeNil)
 
-			lenErrors := len(walkErrors)
-			So(lenErrors, ShouldBeGreaterThanOrEqualTo, 1)
-
 			var writeError *WriteError
 
-			So(errors.As(walkErrors[0], &writeError), ShouldBeTrue)
+			So(errors.As(err, &writeError), ShouldBeTrue)
 
-			werr := walkErrors[0].(*WriteError) //nolint:errcheck,errorlint,forcetypeassert
+			werr := err.(*WriteError) //nolint:errcheck,errorlint,forcetypeassert
 			So(werr.Unwrap(), ShouldEqual, werr.Err)
 		})
 
