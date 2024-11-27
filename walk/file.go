@@ -118,7 +118,7 @@ func (f *Files) WritePaths() PathCallback {
 	var quoted [10240]byte
 
 	return func(entry *Dirent) error {
-		return f.writePath(append(strconv.AppendQuote(quoted[:0], entry.Path), '\n'))
+		return f.writePath(append(strconv.AppendQuote(quoted[:0], entry.Path.String()), '\n'))
 	}
 }
 

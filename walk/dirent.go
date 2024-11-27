@@ -28,14 +28,65 @@ package walk
 import (
 	"io/fs"
 	"os"
+	"sync"
+	"unsafe"
+
+	"github.com/wtsi-hgi/godirwalk"
 )
+
+const maxPathLength = 4096
+
+var filepathPool = sync.Pool{ //nolint:gochecknoglobals
+	New: func() any {
+		return new(filePath)
+	},
+}
+
+type filePath struct {
+	buf [maxPathLength]byte
+	len int
+}
+
+func newFilePath(path string) *filePath {
+	c := filepathPool.Get().(*filePath) //nolint:errcheck,forcetypeassert
+	c.len = copy(c.buf[:], path)
+
+	return c
+}
+
+func (f *filePath) Done() {
+	f.len = 0
+
+	filepathPool.Put(f)
+}
+
+func (f *filePath) Sub(d *godirwalk.Dirent) *filePath {
+	c := filepathPool.Get().(*filePath) //nolint:errcheck,forcetypeassert
+
+	copy(c.buf[:f.len], f.buf[:f.len])
+	c.len = len(append(c.buf[:f.len], d.Name()...))
+
+	if d.IsDir() {
+		c.len = len(append(c.buf[:c.len], '/'))
+	}
+
+	return c
+}
+
+func (f *filePath) Bytes() []byte {
+	return f.buf[:f.len]
+}
+
+func (f *filePath) String() string {
+	return unsafe.String(&f.buf[0], f.len)
+}
 
 // Dirent represents a file system directory entry (a file or a directory),
 // providing information about the entry's path, type and inode.
 type Dirent struct {
 	// Path is the complete path to the directory entry (including both
 	// directory and basename)
-	Path string
+	Path *filePath
 
 	// Type is the type bits of the file mode of this entry.
 	Type os.FileMode
@@ -46,8 +97,8 @@ type Dirent struct {
 
 // newDirentForDirectoryPath returns a Dirent for the given directory, with
 // a Type for directories and no Inode.
-func newDirentForDirectoryPath(dir string) *Dirent {
-	return &Dirent{Path: dir, Type: fs.ModeDir}
+func newDirentForDirectoryPath(dir string) Dirent {
+	return Dirent{Path: newFilePath(dir), Type: fs.ModeDir}
 }
 
 // IsDir returns true if we are a directory.
