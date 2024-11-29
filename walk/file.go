@@ -26,6 +26,7 @@
 package walk
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -36,6 +37,9 @@ import (
 
 const userOnlyPerm = 0700
 
+// non-ascii bytes could become \xXX (4x the length at worst) and the two speech-marks are +2.
+const maxQuotedPathLength = maxPathLength*4 + 2
+
 // WriteError is an error received when trying to write strings to disk.
 type WriteError struct {
 	Err error
@@ -45,10 +49,23 @@ func (e *WriteError) Error() string { return e.Err.Error() }
 
 func (e *WriteError) Unwrap() error { return e.Err }
 
+type bufferedFile struct {
+	bufio.Writer
+	io.Closer
+}
+
+func (b *bufferedFile) Close() error {
+	if err := b.Writer.Flush(); err != nil {
+		return err
+	}
+
+	return b.Closer.Close()
+}
+
 // Files represents a collection of output files that can be written to in a
 // round-robin.
 type Files struct {
-	files    []*os.File
+	files    []bufferedFile
 	Paths    []string
 	filesI   int
 	filesMax int
@@ -70,18 +87,19 @@ func NewFiles(outDir string, n int) (*Files, error) {
 		return nil, err
 	}
 
-	files := make([]*os.File, n)
+	files := make([]bufferedFile, n)
 	outPaths := make([]string, n)
 
 	for i := range files {
-		var err error
-
 		path := filepath.Join(outDir, fmt.Sprintf("walk.%d", i+1))
 
-		files[i], err = os.Create(path)
+		file, err := os.Create(path)
 		if err != nil {
 			return nil, err
 		}
+
+		files[i].Reset(file)
+		files[i].Closer = file
 
 		outPaths[i] = path
 	}
@@ -100,15 +118,16 @@ func NewFiles(outDir string, n int) (*Files, error) {
 //
 // It will terminate the walk if writes to our output files fail.
 func (f *Files) WritePaths() PathCallback {
+	var quoted [maxQuotedPathLength]byte
+
 	return func(entry *Dirent) error {
-		return f.writePath(strconv.Quote(entry.Path))
+		return f.writePath(append(strconv.AppendQuote(quoted[:0], entry.Path.String()), '\n'))
 	}
 }
 
 // writePath is a thread-safe way of writing the given path to our next output
 // file. Returns a WriteError on failure to write to an output file.
-func (f *Files) writePath(path string) error {
-	f.mu.Lock()
+func (f *Files) writePath(path []byte) error {
 	i := f.filesI
 	f.filesI++
 
@@ -116,12 +135,7 @@ func (f *Files) writePath(path string) error {
 		f.filesI = 0
 	}
 
-	f.mu.Unlock()
-
-	f.mus[i].Lock()
-	defer f.mus[i].Unlock()
-
-	_, err := io.WriteString(f.files[i], path+"\n")
+	_, err := f.files[i].Write(path)
 	if err != nil {
 		err = &WriteError{Err: err}
 	}

@@ -75,6 +75,9 @@ func TestWalk(t *testing.T) {
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldBeNil)
 
+			err = files.Close()
+			So(err, ShouldBeNil)
+
 			splitExpected := make([][]string, n)
 			splitI := 0
 
@@ -105,9 +108,6 @@ func TestWalk(t *testing.T) {
 
 			So(len(walkErrors), ShouldEqual, 0)
 
-			err = files.Close()
-			So(err, ShouldBeNil)
-
 			err = files.files[0].Close()
 			So(err, ShouldNotBeNil)
 
@@ -133,14 +133,11 @@ func TestWalk(t *testing.T) {
 			err = w.Walk(walkDir, cb)
 			So(err, ShouldNotBeNil)
 
-			lenErrors := len(walkErrors)
-			So(lenErrors, ShouldBeGreaterThanOrEqualTo, 1)
-
 			var writeError *WriteError
 
-			So(errors.As(walkErrors[0], &writeError), ShouldBeTrue)
+			So(errors.As(err, &writeError), ShouldBeTrue)
 
-			werr := walkErrors[0].(*WriteError) //nolint:errcheck,errorlint,forcetypeassert
+			werr := err.(*WriteError) //nolint:errcheck,errorlint,forcetypeassert
 			So(werr.Unwrap(), ShouldEqual, werr.Err)
 		})
 
@@ -335,6 +332,9 @@ func testOutputToFiles(includDirs, ignoreSymlinks bool, walkDir, outDir string, 
 	w := New(files.WritePaths(), includDirs, ignoreSymlinks)
 
 	err = w.Walk(walkDir, cb)
+	So(err, ShouldBeNil)
+
+	err = files.Close()
 	So(err, ShouldBeNil)
 
 	outPath := filepath.Join(outDir, "walk.1")
