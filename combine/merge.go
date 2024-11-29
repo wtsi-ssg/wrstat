@@ -35,6 +35,8 @@ import (
 	"slices"
 )
 
+var newline = []byte{'\n'} //nolint:gochecknoglobals
+
 type fileLine struct {
 	line  []byte
 	index int
@@ -101,6 +103,10 @@ func (rh *readerHeap) pushToHeap(index int) error {
 		if !errors.Is(err, io.EOF) || len(line) == 0 {
 			return err
 		}
+	}
+
+	if !bytes.HasSuffix(line, newline) {
+		line = append(line, '\n')
 	}
 
 	rh.Push(fileLine{

@@ -584,7 +584,7 @@ func TestCombine(t *testing.T) {
 
 		for file, contents := range map[string]string{
 			"combine.stats.gz": "a\nb\nc\nd\ne\nf\ng\nh\n",
-			"combine.log.gz":   "A log file\nwith 2 lines\nAnother log file, with 1 line\nLorem ipsum!!!!",
+			"combine.log.gz":   "A log file\nAnother log file, with 1 line\nLorem ipsum!!!!\nwith 2 lines\n",
 		} {
 			f, errr := os.Open(filepath.Join(tmp, file))
 			So(errr, ShouldBeNil)
