@@ -36,7 +36,9 @@ import (
 )
 
 const userOnlyPerm = 0700
-const maxQuotedPathLength = 4096*4 + 2
+
+// non-ascii bytes could become \xXX (4x the length at worst) and the two speech-marks are +2.
+const maxQuotedPathLength = maxPathLength*4 + 2
 
 // WriteError is an error received when trying to write strings to disk.
 type WriteError struct {
