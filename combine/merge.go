@@ -33,13 +33,17 @@ import (
 	"io"
 	"os"
 	"slices"
+	"strconv"
+	"strings"
+	"unsafe"
 )
 
 var newline = []byte{'\n'} //nolint:gochecknoglobals
 
 type fileLine struct {
-	line  []byte
-	index int
+	comparator string
+	line       []byte
+	index      int
 }
 
 type readerHeap struct {
@@ -54,7 +58,7 @@ func (rh *readerHeap) Len() int {
 
 func (rh *readerHeap) Push(fl fileLine) {
 	pos, _ := slices.BinarySearchFunc(rh.heap, fl, func(a, b fileLine) int {
-		return bytes.Compare(b.line, a.line)
+		return strings.Compare(b.comparator, a.comparator)
 	})
 
 	rh.heap = slices.Insert(rh.heap, pos, fl)
@@ -109,12 +113,36 @@ func (rh *readerHeap) pushToHeap(index int) error {
 		line = append(line, '\n')
 	}
 
+	comparator := comparatorFromLine(line)
+
 	rh.Push(fileLine{
-		line:  line,
-		index: index,
+		comparator: comparator,
+		line:       line,
+		index:      index,
 	})
 
 	return nil
+}
+
+func comparatorFromLine(line []byte) string {
+	lineStr := unsafe.String(&line[0], len(line))
+	comparator := lineStr
+
+	if line[0] != '"' {
+		return comparator
+	}
+
+	pos := bytes.IndexByte(line, '\t')
+	if pos <= 0 {
+		return comparator
+	}
+
+	comparator, err := strconv.Unquote(comparator)
+	if err != nil {
+		return lineStr
+	}
+
+	return comparator
 }
 
 // MergeSortedFiles merges pre-sorted files together.
