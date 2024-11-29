@@ -26,6 +26,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -66,12 +67,14 @@ you supplied 'wrstat walk'.`,
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			concatenateAndCompressStatsFiles(sourceDir)
 		}()
 
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
 			concatenateAndCompressLogFiles(sourceDir)
 		}()
 
@@ -95,6 +98,18 @@ func concatenateAndCompressStatsFiles(sourceDir string) {
 	if err = combine.StatFiles(inputFiles, outputFile); err != nil {
 		die("failed to concatenate and compress stats files (err: %s)", err)
 	}
+
+	closeFiles(inputFiles, outputFile)
+}
+
+func closeFiles(inputFiles []*os.File, outputFile *os.File) {
+	for _, file := range inputFiles {
+		file.Close()
+	}
+
+	if err := outputFile.Close(); err != nil {
+		die("failed to close compressed stats file (err: %s)", err)
+	}
 }
 
 // concatenateAndCompressLogFiles finds and merges the log files and compresses the
@@ -109,4 +124,6 @@ func concatenateAndCompressLogFiles(sourceDir string) {
 	if err := combine.LogFiles(inputFiles, outputFile); err != nil {
 		die("failed to merge the log files: %s", err)
 	}
+
+	closeFiles(inputFiles, outputFile)
 }
