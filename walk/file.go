@@ -36,6 +36,7 @@ import (
 )
 
 const userOnlyPerm = 0700
+const maxQuotedPathLength = 4096*4 + 2
 
 // WriteError is an error received when trying to write strings to disk.
 type WriteError struct {
@@ -115,7 +116,7 @@ func NewFiles(outDir string, n int) (*Files, error) {
 //
 // It will terminate the walk if writes to our output files fail.
 func (f *Files) WritePaths() PathCallback {
-	var quoted [10240]byte
+	var quoted [maxQuotedPathLength]byte
 
 	return func(entry *Dirent) error {
 		return f.writePath(append(strconv.AppendQuote(quoted[:0], entry.Path.String()), '\n'))
