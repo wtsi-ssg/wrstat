@@ -64,6 +64,7 @@ func (f *filePath) Sub(d *godirwalk.Dirent) *filePath {
 	c := filepathPool.Get().(*filePath) //nolint:errcheck,forcetypeassert
 
 	copy(c.buf[:f.len], f.buf[:f.len])
+
 	c.len = len(append(c.buf[:f.len], d.Name()...))
 
 	if d.IsDir() {
