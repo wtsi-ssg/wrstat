@@ -109,7 +109,7 @@ func init() {
 	cronCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	cronCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	cronCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
-		"force queues with this substring to be avoided when scheduling jobs")
+		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 	cronCmd.Flags().IntVarP(&maxMem, "max_mem", "m",
 		defaultMaxRAM, "maximum MBs to reserve for any job")
 	cronCmd.Flags().StringVarP(&crontab, "crontab", "c",

@@ -65,7 +65,7 @@ type Scheduler struct {
 // deployment, timeout and logger. Added jobs will have the given cwd, which
 // matters. If cwd is blank, the current working dir is used. If queue is not
 // blank, that queue will be used during NewJob(). If queuesAvoid is not blank,
-// queues including that substring will be avoided during NewJob().
+// queues including a substring from the list will be avoided during NewJob().
 func New(deployment, cwd, queue, queuesAvoid string, timeout time.Duration, logger log15.Logger) (*Scheduler, error) {
 	cwd, err := pickCWD(cwd)
 	if err != nil {

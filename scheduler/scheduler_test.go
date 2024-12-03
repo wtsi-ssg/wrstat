@@ -195,7 +195,7 @@ func TestStatFile(t *testing.T) {
 		})
 
 		Convey("You can make a Scheduler with queues to avoid", func() {
-			s, err := New(deployment, "", "", "avoid", timeout, logger)
+			s, err := New(deployment, "", "", "avoid,queue", timeout, logger)
 			So(err, ShouldBeNil)
 			So(s, ShouldNotBeNil)
 
@@ -203,7 +203,7 @@ func TestStatFile(t *testing.T) {
 			job := s.NewJob("cmd", "rep", "req", "", "", nil)
 			So(job.Requirements.RAM, ShouldEqual, dreq.RAM)
 			So(job.Override, ShouldEqual, 0)
-			So(job.Requirements.Other, ShouldResemble, map[string]string{"scheduler_queues_avoid": "avoid"})
+			So(job.Requirements.Other, ShouldResemble, map[string]string{"scheduler_queues_avoid": "avoid,queue"})
 		})
 	})
 
