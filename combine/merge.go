@@ -33,23 +33,21 @@ import (
 	"io"
 	"os"
 	"slices"
-	"strconv"
-	"strings"
-	"unsafe"
+	"unicode/utf8"
 )
 
 var newline = []byte{'\n'} //nolint:gochecknoglobals
 
 type fileLine struct {
-	comparator string
-	line       []byte
-	index      int
+	line  []byte
+	index int
 }
 
 type readerHeap struct {
-	readers []bufio.Reader
-	heap    []fileLine
-	line    []byte
+	readers           []bufio.Reader
+	heap              []fileLine
+	line              []byte
+	unquoteComparison bool
 }
 
 func (rh *readerHeap) Len() int {
@@ -57,11 +55,126 @@ func (rh *readerHeap) Len() int {
 }
 
 func (rh *readerHeap) Push(fl fileLine) {
-	pos, _ := slices.BinarySearchFunc(rh.heap, fl, func(a, b fileLine) int {
-		return strings.Compare(b.comparator, a.comparator)
-	})
+	cmp := compareLines
+
+	if rh.unquoteComparison {
+		cmp = compareQuotedPaths
+	}
+
+	pos, _ := slices.BinarySearchFunc(rh.heap, fl, cmp)
 
 	rh.heap = slices.Insert(rh.heap, pos, fl)
+}
+
+func compareLines(a, b fileLine) int {
+	return bytes.Compare(b.line, a.line)
+}
+
+type unquoter []byte
+
+func (u *unquoter) Next() rune { //nolint:gocyclo,funlen,cyclop
+	switch b := u.next(); b {
+	case '\\':
+		switch v := u.next(); v {
+		case '\'':
+			return '\''
+		case '"':
+			return '"'
+		case 'a':
+			return '\a'
+		case 'b':
+			return '\b'
+		case 'f':
+			return '\f'
+		case 'n':
+			return '\n'
+		case 'r':
+			return '\r'
+		case 't':
+			return '\t'
+		case '0', '1', '2', '3', '4', '5', '6', '7':
+			return u.readOctal(v)
+		case 'x':
+			return u.readHex(2) //nolint:mnd
+		case 'u':
+			return u.readHex(4) //nolint:mnd
+		case 'U':
+			return u.readHex(8) //nolint:mnd
+		default:
+			return -1
+		}
+	case '"':
+		*u = (*u)[:0]
+
+		return 0
+	default:
+		return b
+	}
+}
+
+func (u *unquoter) next() rune {
+	if len(*u) == 0 {
+		return -1
+	}
+
+	r, l := utf8.DecodeRune(*u)
+
+	*u = (*u)[l:]
+
+	return r
+}
+
+func (u *unquoter) readOctal(v rune) rune {
+	w := u.next()
+	if w < '0' || w > '9' {
+		return -1
+	}
+
+	x := u.next()
+	if x < '0' || x > '9' {
+		return -1
+	}
+
+	return (v - '0'<<6) | (w - '0'<<3) | (x - '0')
+}
+
+func (u *unquoter) readHex(n int) rune { //nolint:gocyclo
+	var r rune
+
+	for range n {
+		r <<= 8
+
+		x := u.next()
+		if '0' <= x && x <= '9' { //nolint:gocritic,nestif
+			r |= x - '0'
+		} else if 'A' <= x && x <= 'F' {
+			r |= x - 'A' + 10 //nolint:mnd
+		} else if 'a' <= x && x <= 'f' {
+			r |= x - 'a' + 10 //nolint:mnd
+		} else {
+			*u = (*u)[:0]
+
+			return -1
+		}
+	}
+
+	return r
+}
+
+func compareQuotedPaths(a, b fileLine) int {
+	una := unquoter(a.line[1:])
+	unb := unquoter(b.line[1:])
+
+	for {
+		a := una.Next()
+		b := unb.Next()
+
+		if a != b {
+			return int(b - a)
+		} else if a == -1 && b == -1 {
+			return 0
+		}
+	}
 }
 
 func (rh *readerHeap) Pop() fileLine {
@@ -113,43 +226,20 @@ func (rh *readerHeap) pushToHeap(index int) error {
 		line = append(line, '\n')
 	}
 
-	comparator := comparatorFromLine(line)
-
 	rh.Push(fileLine{
-		comparator: comparator,
-		line:       line,
-		index:      index,
+		line:  line,
+		index: index,
 	})
 
 	return nil
 }
 
-func comparatorFromLine(line []byte) string {
-	lineStr := unsafe.String(&line[0], len(line))
-	comparator := lineStr
-
-	if line[0] != '"' {
-		return comparator
-	}
-
-	pos := bytes.IndexByte(line, '\t')
-	if pos <= 0 {
-		return comparator
-	}
-
-	comparator, err := strconv.Unquote(comparator)
-	if err != nil {
-		return lineStr
-	}
-
-	return comparator
-}
-
 // MergeSortedFiles merges pre-sorted files together.
-func MergeSortedFiles(inputs []*os.File) (io.Reader, error) {
+func MergeSortedFiles(inputs []*os.File, unquoteComparison bool) (io.Reader, error) {
 	rh := readerHeap{
-		readers: make([]bufio.Reader, len(inputs)),
-		heap:    make([]fileLine, 0, len(inputs)),
+		readers:           make([]bufio.Reader, len(inputs)),
+		heap:              make([]fileLine, 0, len(inputs)),
+		unquoteComparison: unquoteComparison,
 	}
 
 	for i, file := range inputs {

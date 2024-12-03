@@ -18,7 +18,7 @@ func TestFS(t *testing.T) {
 	Convey("Given two files each containing a line over 65536 characters long, they can be concatenated and compressed.", t, func() {
 		inputs, output, outputPath := buildTestFiles(t)
 
-		err := combine.ConcatenateAndCompress(inputs, output)
+		err := combine.ConcatenateAndCompress(inputs, output, false)
 		So(err, ShouldBeNil)
 
 		_, err = os.Stat(outputPath)

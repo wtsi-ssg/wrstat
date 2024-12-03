@@ -40,7 +40,7 @@ const pgzipWriterBlocksMultiplier = 2
 // ConcatenateAndCompress takes a list of open files as its input, and an open
 // file for its output. It writes to the output the compressed, concatenated
 // inputs.
-func ConcatenateAndCompress(inputs []*os.File, output *os.File) error {
+func ConcatenateAndCompress(inputs []*os.File, output *os.File, unquoteComparison bool) error {
 	compressor := pgzip.NewWriter(output)
 
 	err := compressor.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
@@ -48,7 +48,7 @@ func ConcatenateAndCompress(inputs []*os.File, output *os.File) error {
 		return err
 	}
 
-	r, err := MergeSortedFiles(inputs)
+	r, err := MergeSortedFiles(inputs, unquoteComparison)
 	if err != nil {
 		return err
 	}

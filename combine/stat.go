@@ -30,5 +30,5 @@ import "os"
 
 // StatFiles concatenates and compresses the input stat files to the output.
 func StatFiles(inputs []*os.File, output *os.File) error {
-	return ConcatenateAndCompress(inputs, output)
+	return ConcatenateAndCompress(inputs, output, true)
 }

@@ -568,9 +568,9 @@ func TestCombine(t *testing.T) {
 		tmp := t.TempDir()
 
 		for file, contents := range map[string]string{
-			"a.stats": "a\nb\nc\n",
-			"b.stats": "d\ne\nf\ng\n",
-			"c.stats": "h\n",
+			"a.stats": "\"a\"\n\"b\"\n\"c\"\n",
+			"b.stats": "\"d\"\n\"e\"\n\"f\"\n\"g\"\n",
+			"c.stats": "\"h\"\n",
 			"a.log":   "A log file\nwith 2 lines\n",
 			"b.log":   "Another log file, with 1 line\n",
 			"c.log":   "Lorem ipsum!!!!",
@@ -583,7 +583,7 @@ func TestCombine(t *testing.T) {
 		So(len(jobs), ShouldEqual, 0)
 
 		for file, contents := range map[string]string{
-			"combine.stats.gz": "a\nb\nc\nd\ne\nf\ng\nh\n",
+			"combine.stats.gz": "\"a\"\n\"b\"\n\"c\"\n\"d\"\n\"e\"\n\"f\"\n\"g\"\n\"h\"\n",
 			"combine.log.gz":   "A log file\nAnother log file, with 1 line\nLorem ipsum!!!!\nwith 2 lines\n",
 		} {
 			f, errr := os.Open(filepath.Join(tmp, file))

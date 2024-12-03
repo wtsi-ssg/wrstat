@@ -32,5 +32,5 @@ import (
 
 // LogFiles merges the log files and stores in the output, compressed.
 func LogFiles(inputs []*os.File, output *os.File) error {
-	return ConcatenateAndCompress(inputs, output)
+	return ConcatenateAndCompress(inputs, output, false)
 }
