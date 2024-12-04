@@ -146,8 +146,8 @@ func die(msg string, a ...interface{}) {
 // function you should defer.
 //
 // If you provide a non-blank queue, that queue will be used when scheduling. If
-// you provide a non-black queuesAvoid, queues with that substring will be
-// avoided.
+// you provide a non-black queuesAvoid, queues including a substring from the
+// list will be avoided.
 func newScheduler(cwd, queue, queuesAvoid string, sudo bool) (*scheduler.Scheduler, func()) {
 	if runJobs != "" {
 		return testScheduler(sudo)

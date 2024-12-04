@@ -245,7 +245,7 @@ type flowController struct {
 }
 
 func newController() *flowController {
-	return controllerPool.Get().(*flowController) //nolint:forcetypeassert
+	return controllerPool.Get().(*flowController) //nolint:forcetypeassert,errcheck
 }
 
 func (f *flowController) GetControl() chan<- Dirent {

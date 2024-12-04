@@ -126,7 +126,7 @@ func init() {
 	multiCmd.Flags().StringVar(&multiCh, "ch", "", "passed through to 'wrstat walk'")
 	multiCmd.Flags().StringVar(&forcedQueue, "queue", "", "force a particular queue to be used when scheduling jobs")
 	multiCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
-		"force queues with this substring to be avoided when scheduling jobs")
+		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", defaultMaxRAM, "maximum MBs to reserve for any job")
 }
 

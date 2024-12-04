@@ -122,7 +122,7 @@ func init() {
 	walkCmd.Flags().StringVar(&walkCh, "ch", "", "passed through to 'wrstat stat'")
 	walkCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
 	walkCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
-		"force queues with this substring to be avoided when scheduling jobs")
+		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 }
 
 // checkArgs checks we have required args and returns desired dir.
