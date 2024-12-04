@@ -29,7 +29,6 @@ package combine
 import (
 	"io"
 	"os"
-	"os/exec"
 	"runtime"
 
 	"github.com/klauspost/pgzip"
@@ -41,141 +40,22 @@ const pgzipWriterBlocksMultiplier = 2
 // ConcatenateAndCompress takes a list of open files as its input, and an open
 // file for its output. It writes to the output the compressed, concatenated
 // inputs.
-func ConcatenateAndCompress(inputs []*os.File, output *os.File) error {
-	compressor, closer, err := Compress(output)
+func ConcatenateAndCompress(inputs []*os.File, output *os.File, unquoteComparison bool) error {
+	compressor := pgzip.NewWriter(output)
+
+	err := compressor.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
 	if err != nil {
 		return err
 	}
 
-	err = Concatenate(inputs, compressor)
+	r, err := MergeSortedFiles(inputs, unquoteComparison)
 	if err != nil {
 		return err
 	}
 
-	closer()
-
-	return nil
-}
-
-// Concatenate takes a list of open files as its input, and an io.Writer as its
-// output. It concatenates the contents of the inputs into the output.
-func Concatenate(inputs []*os.File, output io.Writer) error {
-	buf := make([]byte, bytesInMB)
-
-	for _, input := range inputs {
-		if _, err := io.CopyBuffer(output, input, buf); err != nil {
-			return err
-		}
-
-		if err := input.Close(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// Compress takes an io writer as its input, and compresses it. It returns this,
-// along with a function to close the writer and an error status.
-func Compress(output io.Writer) (*pgzip.Writer, func(), error) {
-	zw := pgzip.NewWriter(output)
-
-	err := zw.SetConcurrency(bytesInMB, runtime.GOMAXPROCS(0)*pgzipWriterBlocksMultiplier)
-
-	return zw, func() {
-		err = zw.Close()
-		if err != nil {
-			return
-		}
-
-		if err != nil {
-			return
-		}
-	}, err
-}
-
-// Merger takes an input io.readCloser and an output io.writer, and defines how
-// we want to merge the content in the io.readCloser, and stream it to the
-// output io.writer.
-type Merger func(data io.ReadCloser, output io.Writer) error
-
-// Merge merges the inputs files and streams the content to the streamFunc.
-func Merge(inputs []*os.File, output io.Writer, streamFunc Merger) error {
-	inputFiles := make([]string, len(inputs))
-	for i, file := range inputs {
-		inputFiles[i] = file.Name()
-	}
-
-	sortMergeOutput, cleanup, err := MergeSortedFiles(inputFiles)
-	if err != nil {
+	if _, err := io.Copy(compressor, r); err != nil {
 		return err
 	}
 
-	if err = streamFunc(sortMergeOutput, output); err != nil {
-		return err
-	}
-
-	return cleanup()
-}
-
-// MergeAndCompress takes a list of open files, an open output file, and a
-// Merger function to express the details of how the file contents should be
-// merged. It compresses the output, and stores the merged input contents in
-// there.
-func MergeAndCompress(inputs []*os.File, output *os.File, streamFunc Merger) error {
-	zw, closer, err := Compress(output)
-	if err != nil {
-		return err
-	}
-
-	err = Merge(inputs, zw, streamFunc)
-	if err != nil {
-		return err
-	}
-
-	closer()
-
-	return nil
-}
-
-// MergeSortedFiles shells out to `sort -m` to merge pre-sorted files together.
-// Returns a pipe of the output from sort, and function you should call after
-// you've finished reading the output to cleanup.
-func MergeSortedFiles(inputs []string) (io.ReadCloser, func() error, error) {
-	cmd := exec.Command("sort", "-m", "--files0-from", "-")
-	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "LC_ALL=C")
-
-	sortStdin, err := cmd.StdinPipe()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sortMergeOutput, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err = cmd.Start(); err != nil {
-		return nil, nil, err
-	}
-
-	if err = sendFilePathsToSort(sortStdin, inputs); err != nil {
-		return nil, nil, err
-	}
-
-	return sortMergeOutput, cmd.Wait, nil
-}
-
-// sendFilePathsToSort will pipe the given paths null terminated to the pipe.
-// For use with the StdinPipe of an exec.Command for `sort -m --files0-from -`.
-// The in is closed afterwards.
-func sendFilePathsToSort(in io.WriteCloser, paths []string) error {
-	for _, path := range paths {
-		if _, err := in.Write([]byte(path + string(rune(0)))); err != nil {
-			return err
-		}
-	}
-
-	return in.Close()
+	return compressor.Close()
 }
