@@ -34,52 +34,99 @@ import (
 	"github.com/wtsi-hgi/godirwalk"
 )
 
-const maxPathLength = 4096
+var (
+	filePathPool64   = sync.Pool{New: func() any { x := make(filePath, 0, 64); return &x }}   //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool128  = sync.Pool{New: func() any { x := make(filePath, 0, 128); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool256  = sync.Pool{New: func() any { x := make(filePath, 0, 256); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool512  = sync.Pool{New: func() any { x := make(filePath, 0, 512); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool1024 = sync.Pool{New: func() any { x := make(filePath, 0, 1024); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool2048 = sync.Pool{New: func() any { x := make(filePath, 0, 2048); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool4096 = sync.Pool{New: func() any { x := make(filePath, 0, 4096); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
+)
 
-var filepathPool = sync.Pool{ //nolint:gochecknoglobals
-	New: func() any {
-		return new(filePath)
-	},
-}
+type filePath []byte
 
-type filePath struct {
-	buf [maxPathLength]byte
-	len int
+func newFilePathSize(size int) *filePath {
+	switch {
+	case size <= 64: //nolint:mnd
+		return filePathPool64.Get().(*filePath) //nolint:forcetypeassert
+	case size <= 128: //nolint:mnd
+		return filePathPool128.Get().(*filePath) //nolint:forcetypeassert
+	case size <= 256: //nolint:mnd
+		return filePathPool256.Get().(*filePath) //nolint:forcetypeassert
+	case size <= 512: //nolint:mnd
+		return filePathPool512.Get().(*filePath) //nolint:forcetypeassert
+	case size <= 1024: //nolint:mnd
+		return filePathPool1024.Get().(*filePath) //nolint:forcetypeassert
+	case size <= 2048: //nolint:mnd
+		return filePathPool2048.Get().(*filePath) //nolint:forcetypeassert
+	}
+
+	return filePathPool4096.Get().(*filePath) //nolint:forcetypeassert
 }
 
 func newFilePath(path string) *filePath {
-	c := filepathPool.Get().(*filePath) //nolint:errcheck,forcetypeassert
-	c.len = copy(c.buf[:], path)
+	c := newFilePathSize(len(path))
+	c.writeString(path)
 
 	return c
 }
 
-func (f *filePath) Done() {
-	f.len = 0
+func (f *filePath) writeString(str string) {
+	*f = append(*f, str...)
+}
 
-	filepathPool.Put(f)
+func (f *filePath) writeBytes(p []byte) {
+	*f = append(*f, p...)
+}
+
+func (f *filePath) Done() { //nolint:gocyclo
+	*f = (*f)[:0]
+
+	switch cap(*f) {
+	case 64: //nolint:mnd
+		filePathPool64.Put(f)
+	case 128: //nolint:mnd
+		filePathPool128.Put(f)
+	case 256: //nolint:mnd
+		filePathPool256.Put(f)
+	case 512: //nolint:mnd
+		filePathPool512.Put(f)
+	case 1024: //nolint:mnd
+		filePathPool1024.Put(f)
+	case 2048: //nolint:mnd
+		filePathPool2048.Put(f)
+	case 4096: //nolint:mnd
+		filePathPool4096.Put(f)
+	}
 }
 
 func (f *filePath) Sub(d *godirwalk.Dirent) *filePath {
-	c := filepathPool.Get().(*filePath) //nolint:errcheck,forcetypeassert
-
-	copy(c.buf[:f.len], f.buf[:f.len])
-
-	c.len = len(append(c.buf[:f.len], d.Name()...))
+	name := d.Name()
+	size := len(*f) + len(name)
 
 	if d.IsDir() {
-		c.len = len(append(c.buf[:c.len], '/'))
+		size++
+	}
+
+	c := newFilePathSize(size)
+
+	c.writeBytes(*f)
+	c.writeString(name)
+
+	if d.IsDir() {
+		c.writeString("/")
 	}
 
 	return c
 }
 
 func (f *filePath) Bytes() []byte {
-	return f.buf[:f.len]
+	return *f
 }
 
 func (f *filePath) String() string {
-	return unsafe.String(&f.buf[0], f.len)
+	return unsafe.String(&(*f)[0], len(*f))
 }
 
 // Dirent represents a file system directory entry (a file or a directory),
