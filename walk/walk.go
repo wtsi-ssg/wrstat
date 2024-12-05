@@ -271,15 +271,15 @@ var controllerPool = sync.Pool{ //nolint:gochecknoglobals
 func walkDirectory(ctx context.Context, dirent Dirent,
 	flowControl *flowController, request func(*FilePath) []Dirent, sendDirs bool) {
 	children := request(dirent.Path)
-	childChans := make([]*flowController, len(children))
+	childControllers := make([]*flowController, len(children))
 
 	for n, child := range children {
-		childChans[n] = newController()
+		childControllers[n] = newController()
 
 		if child.IsDir() {
-			go walkDirectory(ctx, child, childChans[n], request, sendDirs)
+			go walkDirectory(ctx, child, childControllers[n], request, sendDirs)
 		} else {
-			go sendFileEntry(ctx, child, childChans[n])
+			go sendFileEntry(ctx, child, childControllers[n])
 		}
 	}
 
@@ -289,8 +289,8 @@ func walkDirectory(ctx context.Context, dirent Dirent,
 		sendEntry(ctx, dirent, control)
 	}
 
-	for _, childChan := range childChans {
-		childChan.PassControl(control)
+	for _, childController := range childControllers {
+		childController.PassControl(control)
 	}
 
 	flowControl.EndControl()
