@@ -1,8 +1,8 @@
 /*******************************************************************************
- * Copyright (c) 2022, 2023 Genome Research Ltd.
+ * Copyright (c) 2022, 2023, 2024 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
- * Partially based on github.com/MichaelTJones/walk
+ *         Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
