@@ -38,7 +38,9 @@ import (
 const userOnlyPerm = 0700
 
 // non-ascii bytes could become \xXX (4x the length at worst) and the two speech-marks are +2.
-const maxQuotedPathLength = maxPathLength*4 + 2
+const maxQuotedPathLength = 4096*4 + 2
+
+const bufferSize = 1 << 20
 
 // WriteError is an error received when trying to write strings to disk.
 type WriteError struct {
@@ -50,7 +52,7 @@ func (e *WriteError) Error() string { return e.Err.Error() }
 func (e *WriteError) Unwrap() error { return e.Err }
 
 type bufferedFile struct {
-	bufio.Writer
+	*bufio.Writer
 	io.Closer
 }
 
@@ -98,7 +100,7 @@ func NewFiles(outDir string, n int) (*Files, error) {
 			return nil, err
 		}
 
-		files[i].Reset(file)
+		files[i].Writer = bufio.NewWriterSize(file, bufferSize)
 		files[i].Closer = file
 
 		outPaths[i] = path
@@ -147,7 +149,7 @@ func (f *Files) writePath(path []byte) error {
 func (f *Files) Close() error {
 	for _, file := range f.files {
 		if err := file.Close(); err != nil {
-			return err
+			return &WriteError{err}
 		}
 	}
 
