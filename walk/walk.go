@@ -245,7 +245,7 @@ type flowController struct {
 }
 
 func newController() *flowController {
-	return controllerPool.Get().(*flowController) //nolint:forcetypeassert,errcheck
+	return controllerPool.Get().(*flowController) //nolint:forcetypeassert
 }
 
 func (f *flowController) GetControl() chan<- Dirent {
@@ -274,11 +274,6 @@ func walkDirectory(ctx context.Context, dirent Dirent,
 	flowControl *flowController, request func(*filePath) []Dirent, sendDirs bool) {
 	children := request(dirent.Path)
 	childChans := make([]*flowController, len(children))
-	control := flowControl.GetControl()
-
-	if sendDirs {
-		sendEntry(ctx, dirent, control)
-	}
 
 	for n, child := range children {
 		childChans[n] = newController()
@@ -288,6 +283,12 @@ func walkDirectory(ctx context.Context, dirent Dirent,
 		} else {
 			go sendFileEntry(ctx, child, childChans[n])
 		}
+	}
+
+	control := flowControl.GetControl()
+
+	if sendDirs {
+		sendEntry(ctx, dirent, control)
 	}
 
 	for _, childChan := range childChans {
