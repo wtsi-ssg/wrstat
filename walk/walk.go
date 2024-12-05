@@ -78,7 +78,7 @@ func New(cb PathCallback, includDirs, ignoreSymlinks bool) *Walker {
 type ErrorCallback func(path string, err error)
 
 type pathRequest struct {
-	path     *filePath
+	path     *FilePath
 	response chan []Dirent
 }
 
@@ -124,8 +124,8 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	return w.sendDirentsToPathCallback(direntCh)
 }
 
-func createPathRequestor(requestCh chan *pathRequest) func(*filePath) []Dirent {
-	return func(path *filePath) []Dirent {
+func createPathRequestor(requestCh chan *pathRequest) func(*FilePath) []Dirent {
+	return func(path *FilePath) []Dirent {
 		pr := pathRequestPool.Get().(*pathRequest) //nolint:errcheck,forcetypeassert
 		defer pathRequestPool.Put(pr)
 
@@ -142,8 +142,6 @@ func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent) error {
 		if err := w.pathCB(&dirent); err != nil {
 			return err
 		}
-
-		dirent.Path.Done()
 	}
 
 	return nil
@@ -152,7 +150,7 @@ func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent) error {
 type heap []*pathRequest
 
 func pathCompare(a, b *pathRequest) int {
-	return strings.Compare(b.path.String(), a.path.String())
+	return strings.Compare(b.path.string(), a.path.string())
 }
 
 func (h *heap) Insert(req *pathRequest) {
@@ -206,7 +204,7 @@ Loop:
 		case <-ctx.Done():
 			break Loop
 		case request := <-requests:
-			children, err := godirwalk.ReadDirents(request.path.String(), buffer)
+			children, err := godirwalk.ReadDirents(request.path.string(), buffer)
 			if err != nil {
 				errCB(string(request.path.Bytes()), err)
 			}
@@ -216,12 +214,12 @@ Loop:
 	}
 }
 
-func (w *Walker) childrenToDirents(children godirwalk.Dirents, parent *filePath) []Dirent {
+func (w *Walker) childrenToDirents(children godirwalk.Dirents, parent *FilePath) []Dirent {
 	dirents := make([]Dirent, 0, len(children))
 
 	for _, child := range children {
 		dirent := Dirent{
-			Path:  parent.Sub(child),
+			Path:  parent.sub(child),
 			Type:  child.ModeType(),
 			Inode: child.Inode(),
 		}
@@ -234,7 +232,7 @@ func (w *Walker) childrenToDirents(children godirwalk.Dirents, parent *filePath)
 	}
 
 	sort.Slice(dirents, func(i, j int) bool {
-		return dirents[i].Path.String() < dirents[j].Path.String()
+		return dirents[i].Path.string() < dirents[j].Path.string()
 	})
 
 	return dirents
@@ -271,7 +269,7 @@ var controllerPool = sync.Pool{ //nolint:gochecknoglobals
 }
 
 func walkDirectory(ctx context.Context, dirent Dirent,
-	flowControl *flowController, request func(*filePath) []Dirent, sendDirs bool) {
+	flowControl *flowController, request func(*FilePath) []Dirent, sendDirs bool) {
 	children := request(dirent.Path)
 	childChans := make([]*flowController, len(children))
 
