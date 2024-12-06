@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022, 2023 Genome Research Ltd.
+ * Copyright (c) 2022, 2023, 2024 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
  *
@@ -37,8 +37,11 @@ import (
 
 const userOnlyPerm = 0700
 
-// non-ascii bytes could become \xXX (4x the length at worst) and the two speech-marks are +2.
-const maxQuotedPathLength = maxPathLength*4 + 2
+// non-ascii bytes could become \xXX (4x the length at worst), the two
+// speech-marks are +2 and a newline is +1.
+const maxQuotedPathLength = 4096*4 + 2 + 1
+
+const bufferSize = 1 << 20
 
 // WriteError is an error received when trying to write strings to disk.
 type WriteError struct {
@@ -50,7 +53,7 @@ func (e *WriteError) Error() string { return e.Err.Error() }
 func (e *WriteError) Unwrap() error { return e.Err }
 
 type bufferedFile struct {
-	bufio.Writer
+	*bufio.Writer
 	io.Closer
 }
 
@@ -98,7 +101,7 @@ func NewFiles(outDir string, n int) (*Files, error) {
 			return nil, err
 		}
 
-		files[i].Reset(file)
+		files[i].Writer = bufio.NewWriterSize(file, bufferSize)
 		files[i].Closer = file
 
 		outPaths[i] = path
@@ -121,7 +124,9 @@ func (f *Files) WritePaths() PathCallback {
 	var quoted [maxQuotedPathLength]byte
 
 	return func(entry *Dirent) error {
-		return f.writePath(append(strconv.AppendQuote(quoted[:0], entry.Path.String()), '\n'))
+		defer entry.Path.Done()
+
+		return f.writePath(append(strconv.AppendQuote(quoted[:0], entry.Path.string()), '\n'))
 	}
 }
 
@@ -147,7 +152,7 @@ func (f *Files) writePath(path []byte) error {
 func (f *Files) Close() error {
 	for _, file := range f.files {
 		if err := file.Close(); err != nil {
-			return err
+			return &WriteError{err}
 		}
 	}
 

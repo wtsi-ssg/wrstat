@@ -131,6 +131,10 @@ func TestWalk(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			err = w.Walk(walkDir, cb)
+			if err == nil {
+				err = files.Close()
+			}
+
 			So(err, ShouldNotBeNil)
 
 			var writeError *WriteError

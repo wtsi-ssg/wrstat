@@ -1,7 +1,8 @@
 /*******************************************************************************
- * Copyright (c) 2023 Genome Research Ltd.
+ * Copyright (c) 2023, 2024 Genome Research Ltd.
  *
  * Author: Sendu Bala <sb10@sanger.ac.uk>
+ *         Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -34,52 +35,108 @@ import (
 	"github.com/wtsi-hgi/godirwalk"
 )
 
-const maxPathLength = 4096
+var (
+	filePathPool64   = sync.Pool{New: func() any { x := make(FilePath, 0, 64); return &x }}   //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool128  = sync.Pool{New: func() any { x := make(FilePath, 0, 128); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool256  = sync.Pool{New: func() any { x := make(FilePath, 0, 256); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool512  = sync.Pool{New: func() any { x := make(FilePath, 0, 512); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool1024 = sync.Pool{New: func() any { x := make(FilePath, 0, 1024); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool2048 = sync.Pool{New: func() any { x := make(FilePath, 0, 2048); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
+	filePathPool4096 = sync.Pool{New: func() any { x := make(FilePath, 0, 4096); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
+)
 
-var filepathPool = sync.Pool{ //nolint:gochecknoglobals
-	New: func() any {
-		return new(filePath)
-	},
+// FilePath is a byte-slice of a path, utilising object pools to reduce memory
+// allocations.
+//
+// It is the clients responsibility to call the Done method once it is no longer
+// needed.
+type FilePath []byte
+
+func newFilePathSize(size int) *FilePath {
+	switch {
+	case size <= 64: //nolint:mnd
+		return filePathPool64.Get().(*FilePath) //nolint:forcetypeassert
+	case size <= 128: //nolint:mnd
+		return filePathPool128.Get().(*FilePath) //nolint:forcetypeassert
+	case size <= 256: //nolint:mnd
+		return filePathPool256.Get().(*FilePath) //nolint:forcetypeassert
+	case size <= 512: //nolint:mnd
+		return filePathPool512.Get().(*FilePath) //nolint:forcetypeassert
+	case size <= 1024: //nolint:mnd
+		return filePathPool1024.Get().(*FilePath) //nolint:forcetypeassert
+	case size <= 2048: //nolint:mnd
+		return filePathPool2048.Get().(*FilePath) //nolint:forcetypeassert
+	}
+
+	return filePathPool4096.Get().(*FilePath) //nolint:forcetypeassert
 }
 
-type filePath struct {
-	buf [maxPathLength]byte
-	len int
-}
-
-func newFilePath(path string) *filePath {
-	c := filepathPool.Get().(*filePath) //nolint:errcheck,forcetypeassert
-	c.len = copy(c.buf[:], path)
+// NewFilePath creates a new FilePath, setting the value to the given string.
+func NewFilePath(path string) *FilePath {
+	c := newFilePathSize(len(path))
+	c.writeString(path)
 
 	return c
 }
 
-func (f *filePath) Done() {
-	f.len = 0
-
-	filepathPool.Put(f)
+func (f *FilePath) writeString(str string) {
+	*f = append(*f, str...)
 }
 
-func (f *filePath) Sub(d *godirwalk.Dirent) *filePath {
-	c := filepathPool.Get().(*filePath) //nolint:errcheck,forcetypeassert
+func (f *FilePath) writeBytes(p []byte) {
+	*f = append(*f, p...)
+}
 
-	copy(c.buf[:f.len], f.buf[:f.len])
+// Done deallocates the underlying byte-slice; any uses of the Bytes method are
+// now invalid and may change.
+func (f *FilePath) Done() { //nolint:gocyclo
+	*f = (*f)[:0]
 
-	c.len = len(append(c.buf[:f.len], d.Name()...))
+	switch cap(*f) {
+	case 64: //nolint:mnd
+		filePathPool64.Put(f)
+	case 128: //nolint:mnd
+		filePathPool128.Put(f)
+	case 256: //nolint:mnd
+		filePathPool256.Put(f)
+	case 512: //nolint:mnd
+		filePathPool512.Put(f)
+	case 1024: //nolint:mnd
+		filePathPool1024.Put(f)
+	case 2048: //nolint:mnd
+		filePathPool2048.Put(f)
+	case 4096: //nolint:mnd
+		filePathPool4096.Put(f)
+	}
+}
+
+func (f *FilePath) sub(d *godirwalk.Dirent) *FilePath {
+	name := d.Name()
+	size := len(*f) + len(name)
 
 	if d.IsDir() {
-		c.len = len(append(c.buf[:c.len], '/'))
+		size++
+	}
+
+	c := newFilePathSize(size)
+
+	c.writeBytes(*f)
+	c.writeString(name)
+
+	if d.IsDir() {
+		c.writeString("/")
 	}
 
 	return c
 }
 
-func (f *filePath) Bytes() []byte {
-	return f.buf[:f.len]
+// Bytes returns the FilePath as a literal byte-slice.
+func (f *FilePath) Bytes() []byte {
+	return *f
 }
 
-func (f *filePath) String() string {
-	return unsafe.String(&f.buf[0], f.len)
+func (f *FilePath) string() string {
+	return unsafe.String(&(*f)[0], len(*f))
 }
 
 // Dirent represents a file system directory entry (a file or a directory),
@@ -87,7 +144,7 @@ func (f *filePath) String() string {
 type Dirent struct {
 	// Path is the complete path to the directory entry (including both
 	// directory and basename)
-	Path *filePath
+	Path *FilePath
 
 	// Type is the type bits of the file mode of this entry.
 	Type os.FileMode
@@ -99,7 +156,7 @@ type Dirent struct {
 // newDirentForDirectoryPath returns a Dirent for the given directory, with
 // a Type for directories and no Inode.
 func newDirentForDirectoryPath(dir string) Dirent {
-	return Dirent{Path: newFilePath(dir), Type: fs.ModeDir}
+	return Dirent{Path: NewFilePath(dir), Type: fs.ModeDir}
 }
 
 // IsDir returns true if we are a directory.
