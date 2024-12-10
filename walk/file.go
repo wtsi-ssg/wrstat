@@ -65,6 +65,45 @@ func (b *bufferedFile) Close() error {
 	return b.Closer.Close()
 }
 
+type asyncWriter struct {
+	mu     sync.Mutex
+	buffer [bufferSize]byte
+	len    int
+	err    error
+	io.WriteCloser
+}
+
+func (a *asyncWriter) Write(p []byte) (int, error) {
+	a.mu.Lock()
+
+	if a.err != nil {
+		defer a.mu.Unlock()
+
+		return 0, a.err
+	}
+
+	a.len = copy(a.buffer[:], p)
+
+	go func() {
+		defer a.mu.Unlock()
+
+		_, a.err = a.WriteCloser.Write(a.buffer[:a.len])
+	}()
+
+	return len(p), nil
+}
+
+func (a *asyncWriter) Close() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.err != nil {
+		return a.err
+	}
+
+	return a.WriteCloser.Close()
+}
+
 // Files represents a collection of output files that can be written to in a
 // round-robin.
 type Files struct {
@@ -101,8 +140,10 @@ func NewFiles(outDir string, n int) (*Files, error) {
 			return nil, err
 		}
 
-		files[i].Writer = bufio.NewWriterSize(file, bufferSize)
-		files[i].Closer = file
+		f := &asyncWriter{WriteCloser: file}
+
+		files[i].Writer = bufio.NewWriterSize(f, bufferSize)
+		files[i].Closer = f
 
 		outPaths[i] = path
 	}
