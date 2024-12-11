@@ -274,12 +274,10 @@ func walkDirectory(ctx context.Context, dirent Dirent,
 	childControllers := make([]*flowController, len(children))
 
 	for n, child := range children {
-		childControllers[n] = newController()
-
 		if child.IsDir() {
+			childControllers[n] = newController()
+
 			go walkDirectory(ctx, child, childControllers[n], request, sendDirs)
-		} else {
-			go sendFileEntry(ctx, child, childControllers[n])
 		}
 	}
 
@@ -289,17 +287,14 @@ func walkDirectory(ctx context.Context, dirent Dirent,
 		sendEntry(ctx, dirent, control)
 	}
 
-	for _, childController := range childControllers {
-		childController.PassControl(control)
+	for n, childController := range childControllers {
+		if childController == nil {
+			sendEntry(ctx, children[n], control)
+		} else {
+			childController.PassControl(control)
+		}
 	}
 
-	flowControl.EndControl()
-}
-
-func sendFileEntry(ctx context.Context, dirent Dirent, flowControl *flowController) {
-	control := flowControl.GetControl()
-
-	sendEntry(ctx, dirent, control)
 	flowControl.EndControl()
 }
 
