@@ -303,7 +303,7 @@ func TestWalk(t *testing.T) {
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
-					RAM:   7000,
+					RAM:   200,
 					Time:  12 * time.Hour,
 					Cores: 1,
 					Disk:  1,
@@ -341,7 +341,7 @@ func TestWalk(t *testing.T) {
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
-					RAM:   7000,
+					RAM:   200,
 					Time:  12 * time.Hour,
 					Cores: 1,
 					Disk:  1,
@@ -357,7 +357,7 @@ func TestWalk(t *testing.T) {
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
-					RAM:   7000,
+					RAM:   200,
 					Time:  12 * time.Hour,
 					Cores: 1,
 					Disk:  1,
