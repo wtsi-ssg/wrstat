@@ -210,7 +210,7 @@ func TestPaths(t *testing.T) {
 			So(string(output), ShouldContainSubstring, "\tf\t")
 		})
 
-		Convey("can stat files and non-existant directories", func() {
+		Convey("can stat files and non-existent directories", func() {
 			dir := t.TempDir()
 
 			existingDir := filepath.Join(dir, "existingDir") + "/"
