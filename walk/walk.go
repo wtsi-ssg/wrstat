@@ -206,17 +206,21 @@ Loop:
 				errCB(string(pathBuffer[:l]), err)
 			}
 
-			go scanChildDirs(requestCh, request)
+			go scanChildDirs(ctx, requestCh, request)
 		}
 	}
 }
 
-func scanChildDirs(requestCh chan *pathRequest, request *pathRequest) {
+func scanChildDirs(ctx context.Context, requestCh chan *pathRequest, request *pathRequest) {
 	for p, r := &request.Path, request.next; r != nil && r.Path.parent == p; {
 		next := r.next
 
 		if r.IsDir() {
-			requestCh <- r
+			select {
+			case <-ctx.Done():
+				return
+			case requestCh <- r:
+			}
 		}
 
 		r = next
