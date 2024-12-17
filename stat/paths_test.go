@@ -26,6 +26,7 @@
 package stat
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -207,6 +208,50 @@ func TestPaths(t *testing.T) {
 			So(string(output), ShouldContainSubstring, "\t0\t")
 			So(string(output), ShouldContainSubstring, "\t1\t")
 			So(string(output), ShouldContainSubstring, "\tf\t")
+		})
+
+		Convey("can stat files and non-existent directories", func() {
+			dir := t.TempDir()
+
+			existingDir := filepath.Join(dir, "existingDir") + "/"
+			notExistingDir := filepath.Join(dir, "notExistingDir") + "/"
+			existingFile := filepath.Join(dir, "existingFile")
+
+			err := os.Mkdir(existingDir, 0755)
+			So(err, ShouldBeNil)
+
+			f, err := os.Create(existingFile)
+			So(err, ShouldBeNil)
+
+			_, err = f.Write([]byte{0})
+			So(err, ShouldBeNil)
+
+			err = f.Close()
+			So(err, ShouldBeNil)
+
+			r := strings.NewReader(strconv.Quote(existingDir) + "\n" +
+				strconv.Quote(notExistingDir) + "\n" +
+				strconv.Quote(filepath.Join(dir, "notExistingFile")) + "\n" +
+				strconv.Quote(existingFile) + "\n")
+
+			stats := make([]string, 0, 3)
+
+			err = p.AddOperation("file", func(absPath string, info fs.FileInfo) error {
+				stats = append(stats, fmt.Sprintf("%s\t%d", absPath, info.Size()))
+
+				return nil
+			})
+
+			So(err, ShouldBeNil)
+
+			err = p.Scan(r)
+			So(err, ShouldBeNil)
+
+			So(stats, ShouldResemble, []string{
+				existingDir + "\t4096",
+				notExistingDir + "\t0",
+				existingFile + "\t1",
+			})
 		})
 	})
 }
