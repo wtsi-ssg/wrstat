@@ -60,7 +60,7 @@ func TestWalk(t *testing.T) {
 			walkErrors = append(walkErrors, err)
 		}
 
-		Convey("You can output the paths to a file", func() {
+		FocusConvey("You can output the paths to a file", func() {
 			ok := testOutputToFiles(true, false, walkDir, outDir, cb, expectedPaths)
 			So(ok, ShouldBeTrue)
 			So(len(walkErrors), ShouldEqual, 0)

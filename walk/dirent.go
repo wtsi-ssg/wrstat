@@ -29,114 +29,64 @@ package walk
 import (
 	"io/fs"
 	"os"
-	"sync"
-	"unsafe"
-
-	"github.com/wtsi-hgi/godirwalk"
+	"strings"
 )
 
-var (
-	filePathPool64   = sync.Pool{New: func() any { x := make(FilePath, 0, 64); return &x }}   //nolint:gochecknoglobals,mnd,nlreturn,lll
-	filePathPool128  = sync.Pool{New: func() any { x := make(FilePath, 0, 128); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
-	filePathPool256  = sync.Pool{New: func() any { x := make(FilePath, 0, 256); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
-	filePathPool512  = sync.Pool{New: func() any { x := make(FilePath, 0, 512); return &x }}  //nolint:gochecknoglobals,mnd,nlreturn,lll
-	filePathPool1024 = sync.Pool{New: func() any { x := make(FilePath, 0, 1024); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
-	filePathPool2048 = sync.Pool{New: func() any { x := make(FilePath, 0, 2048); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
-	filePathPool4096 = sync.Pool{New: func() any { x := make(FilePath, 0, 4096); return &x }} //nolint:gochecknoglobals,mnd,nlreturn,lll
-)
-
-// FilePath is a byte-slice of a path, utilising object pools to reduce memory
-// allocations.
-//
-// It is the clients responsibility to call the Done method once it is no longer
-// needed.
-type FilePath []byte
-
-func newFilePathSize(size int) *FilePath {
-	switch {
-	case size <= 64: //nolint:mnd
-		return filePathPool64.Get().(*FilePath) //nolint:forcetypeassert
-	case size <= 128: //nolint:mnd
-		return filePathPool128.Get().(*FilePath) //nolint:forcetypeassert
-	case size <= 256: //nolint:mnd
-		return filePathPool256.Get().(*FilePath) //nolint:forcetypeassert
-	case size <= 512: //nolint:mnd
-		return filePathPool512.Get().(*FilePath) //nolint:forcetypeassert
-	case size <= 1024: //nolint:mnd
-		return filePathPool1024.Get().(*FilePath) //nolint:forcetypeassert
-	case size <= 2048: //nolint:mnd
-		return filePathPool2048.Get().(*FilePath) //nolint:forcetypeassert
-	}
-
-	return filePathPool4096.Get().(*FilePath) //nolint:forcetypeassert
+// FilePath is a byte-slice of a path.
+type FilePath struct {
+	parent *FilePath
+	name   string
+	depth  uint16
 }
 
 // NewFilePath creates a new FilePath, setting the value to the given string.
-func NewFilePath(path string) *FilePath {
-	c := newFilePathSize(len(path))
-	c.writeString(path)
-
-	return c
+func NewFilePath(path string) FilePath {
+	return FilePath{name: path}
 }
 
-func (f *FilePath) writeString(str string) {
-	*f = append(*f, str...)
-}
-
-func (f *FilePath) writeBytes(p []byte) {
-	*f = append(*f, p...)
-}
-
-// Done deallocates the underlying byte-slice; any uses of the Bytes method are
-// now invalid and may change.
-func (f *FilePath) Done() { //nolint:gocyclo
-	*f = (*f)[:0]
-
-	switch cap(*f) {
-	case 64: //nolint:mnd
-		filePathPool64.Put(f)
-	case 128: //nolint:mnd
-		filePathPool128.Put(f)
-	case 256: //nolint:mnd
-		filePathPool256.Put(f)
-	case 512: //nolint:mnd
-		filePathPool512.Put(f)
-	case 1024: //nolint:mnd
-		filePathPool1024.Put(f)
-	case 2048: //nolint:mnd
-		filePathPool2048.Put(f)
-	case 4096: //nolint:mnd
-		filePathPool4096.Put(f)
-	}
-}
-
-func (f *FilePath) sub(d *godirwalk.Dirent) *FilePath {
-	name := d.Name()
-	size := len(*f) + len(name)
-
-	if d.IsDir() {
-		size++
+func (f *FilePath) appendTo(p []byte) []byte {
+	if f.parent != nil {
+		p = f.parent.appendTo(p)
 	}
 
-	c := newFilePathSize(size)
-
-	c.writeBytes(*f)
-	c.writeString(name)
-
-	if d.IsDir() {
-		c.writeString("/")
-	}
-
-	return c
+	return append(p, f.name...)
 }
 
 // Bytes returns the FilePath as a literal byte-slice.
 func (f *FilePath) Bytes() []byte {
-	return *f
+	return f.appendTo(nil)
 }
 
-func (f *FilePath) string() string {
-	return unsafe.String(&(*f)[0], len(*f))
+func (f *FilePath) compare(g *FilePath) int {
+	if f.depth < g.depth {
+		return f.compareTo(g.getDepth(f.depth))
+	} else if f.depth > g.depth {
+		return f.getDepth(g.depth).compareTo(g)
+	}
+
+	return f.compareTo(g)
+}
+
+func (f *FilePath) getDepth(n uint16) *FilePath {
+	for f.depth != n {
+		f = f.parent
+	}
+
+	return f
+}
+
+func (f *FilePath) compareTo(g *FilePath) int {
+	if f == g {
+		return 0
+	}
+
+	cmp := f.parent.compareTo(g.parent)
+
+	if cmp == 0 {
+		return strings.Compare(f.name, g.name)
+	}
+
+	return cmp
 }
 
 // Dirent represents a file system directory entry (a file or a directory),
@@ -144,19 +94,13 @@ func (f *FilePath) string() string {
 type Dirent struct {
 	// Path is the complete path to the directory entry (including both
 	// directory and basename)
-	Path *FilePath
+	Path FilePath
 
 	// Type is the type bits of the file mode of this entry.
-	Type os.FileMode
+	Type fs.FileMode
 
 	// Inode is the file system inode number for this entry.
 	Inode uint64
-}
-
-// newDirentForDirectoryPath returns a Dirent for the given directory, with
-// a Type for directories and no Inode.
-func newDirentForDirectoryPath(dir string) Dirent {
-	return Dirent{Path: NewFilePath(dir), Type: fs.ModeDir}
 }
 
 // IsDir returns true if we are a directory.

@@ -33,9 +33,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"unsafe"
 )
 
 const userOnlyPerm = 0700
+
+const maxPathLength = 4096
 
 // non-ascii bytes could become \xXX (4x the length at worst), the two
 // speech-marks are +2 and a newline is +1.
@@ -162,12 +165,16 @@ func NewFiles(outDir string, n int) (*Files, error) {
 //
 // It will terminate the walk if writes to our output files fail.
 func (f *Files) WritePaths() PathCallback {
-	var quoted [maxQuotedPathLength]byte
+	var (
+		quoted  [maxQuotedPathLength]byte
+		tmpPath [maxPathLength]byte
+	)
 
 	return func(entry *Dirent) error {
-		defer entry.Path.Done()
-
-		return f.writePath(append(strconv.AppendQuote(quoted[:0], entry.Path.string()), '\n'))
+		return f.writePath(append(
+			strconv.AppendQuote(
+				quoted[:0], unsafe.String(&tmpPath[0], len(entry.Path.appendTo(tmpPath[:0]))),
+			), '\n'))
 	}
 }
 

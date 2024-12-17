@@ -30,15 +30,16 @@
 package walk
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
-	"strings"
 	"sync"
-
-	"github.com/wtsi-hgi/godirwalk"
+	"syscall"
+	"unsafe"
 )
 
 const walkers = 16
@@ -78,16 +79,9 @@ func New(cb PathCallback, includDirs, ignoreSymlinks bool) *Walker {
 type ErrorCallback func(path string, err error)
 
 type pathRequest struct {
-	path     *FilePath
-	response chan []Dirent
-}
-
-var pathRequestPool = sync.Pool{ //nolint:gochecknoglobals
-	New: func() any {
-		return &pathRequest{
-			response: make(chan []Dirent),
-		}
-	},
+	Dirent
+	next  *pathRequest
+	ready sync.Mutex
 }
 
 // Walk will discover all the paths nested under the given dir, and send them to
@@ -102,45 +96,43 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	dir = filepath.Clean(dir) + "/"
 	requestCh := make(chan *pathRequest)
 	sortedRequestCh := make(chan *pathRequest)
-	direntCh := make(chan Dirent, dirsChSize)
-	flowControl := newController()
 	ctx, stop := context.WithCancel(context.Background())
 
 	for range walkers {
-		go w.handleDirReads(ctx, sortedRequestCh, errCB)
+		go w.handleDirReads(ctx, sortedRequestCh, requestCh, errCB, w.ignoreSymlinks)
 	}
 
-	go func() {
-		walkDirectory(ctx, newDirentForDirectoryPath(dir),
-			flowControl, createPathRequestor(requestCh), w.sendDirs)
-		close(direntCh)
-	}()
-
 	go sortPathRequests(ctx, requestCh, sortedRequestCh)
-	go flowControl.PassControl(direntCh)
+
+	r := &pathRequest{
+		Dirent: Dirent{
+			Path:  NewFilePath(dir),
+			Type:  fs.ModeDir,
+			Inode: 0,
+		},
+	}
+
+	r.ready.Lock()
+
+	sortedRequestCh <- r
 
 	defer stop()
 
-	return w.sendDirentsToPathCallback(direntCh)
+	return w.sendDirentsToPathCallback(r)
 }
 
-func createPathRequestor(requestCh chan *pathRequest) func(*FilePath) []Dirent {
-	return func(path *FilePath) []Dirent {
-		pr := pathRequestPool.Get().(*pathRequest) //nolint:errcheck,forcetypeassert
-		defer pathRequestPool.Put(pr)
+func (w *Walker) sendDirentsToPathCallback(r *pathRequest) error {
+	for ; r != nil; r = r.next {
+		isDir := r.IsDir()
 
-		pr.path = path
+		if w.sendDirs || !isDir {
+			if err := w.pathCB(&r.Dirent); err != nil {
+				return err
+			}
+		}
 
-		requestCh <- pr
-
-		return <-pr.response
-	}
-}
-
-func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent) error {
-	for dirent := range direntCh {
-		if err := w.pathCB(&dirent); err != nil {
-			return err
+		if isDir {
+			r.ready.Lock()
 		}
 	}
 
@@ -150,7 +142,7 @@ func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent) error {
 type heap []*pathRequest
 
 func pathCompare(a, b *pathRequest) int {
-	return strings.Compare(b.path.string(), a.path.string())
+	return b.Path.compare(&a.Path)
 }
 
 func (h *heap) Insert(req *pathRequest) {
@@ -195,113 +187,218 @@ func sortPathRequests(ctx context.Context, requestCh <-chan *pathRequest, //noli
 	}
 }
 
-func (w *Walker) handleDirReads(ctx context.Context, requests chan *pathRequest, errCB ErrorCallback) {
+func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh chan *pathRequest,
+	errCB ErrorCallback, ignoreSymlinks bool) {
 	buffer := make([]byte, os.Getpagesize())
+
+	var pathBuffer [maxPathLength + 1]byte
 
 Loop:
 	for {
 		select {
 		case <-ctx.Done():
 			break Loop
-		case request := <-requests:
-			children, err := godirwalk.ReadDirents(request.path.string(), buffer)
-			if err != nil {
-				errCB(string(request.path.Bytes()), err)
+		case request := <-sortedRequests:
+			l := len(request.Path.appendTo(pathBuffer[:0]))
+			pathBuffer[l] = 0
+
+			if err := scan(buffer, &pathBuffer[0], request, ignoreSymlinks); err != nil {
+				errCB(string(pathBuffer[:l]), err)
 			}
 
-			request.response <- w.childrenToDirents(children, request.path)
+			go scanChildDirs(requestCh, request)
 		}
 	}
 }
 
-func (w *Walker) childrenToDirents(children godirwalk.Dirents, parent *FilePath) []Dirent {
-	dirents := make([]Dirent, 0, len(children))
+func scanChildDirs(requestCh chan *pathRequest, request *pathRequest) {
+	for p, r := &request.Path, request.next; r != nil && r.Path.parent == p; {
+		next := r.next
 
-	for _, child := range children {
-		dirent := Dirent{
-			Path:  parent.sub(child),
-			Type:  child.ModeType(),
-			Inode: child.Inode(),
+		if r.IsDir() {
+			requestCh <- r
 		}
 
-		if w.ignoreSymlinks && dirent.IsSymlink() {
+		r = next
+	}
+}
+
+type scanner struct {
+	buffer, read []byte
+	fh           int
+	syscall.Dirent
+	err error
+}
+
+func (s *scanner) Next() bool {
+	for len(s.read) == 0 {
+		n, err := syscall.ReadDirent(s.fh, s.buffer)
+		if err != nil {
+			if errors.Is(err, syscall.EINTR) {
+				continue
+			}
+
+			s.err = err
+
+			return false
+		}
+
+		if n <= 0 {
+			return false
+		}
+
+		s.read = s.buffer[:n]
+	}
+
+	copy((*[unsafe.Sizeof(syscall.Dirent{})]byte)(unsafe.Pointer(&s.Dirent))[:], s.read)
+	s.read = s.read[s.Reclen:]
+
+	return true
+}
+
+func (s *scanner) Get() (string, fs.FileMode, uint64) {
+	mode := s.getMode()
+
+	return s.getName(mode.IsDir()), mode, s.Ino
+}
+
+func (s *scanner) getName(isDir bool) string { //nolint:gocyclo
+	n := s.Dirent.Name[:]
+	name := *(*[]byte)(unsafe.Pointer(&n))
+
+	l := bytes.IndexByte(name, 0)
+	if l < 0 || l == 1 && s.Dirent.Name[0] == '.' || l == 2 && s.Dirent.Name[0] == '.' && s.Dirent.Name[1] == '.' {
+		return ""
+	}
+
+	if isDir {
+		s.Dirent.Name[l] = '/'
+		l++
+	}
+
+	return string(name[:l])
+}
+
+func (s *scanner) getMode() fs.FileMode {
+	switch s.Type {
+	case syscall.DT_DIR:
+		return fs.ModeDir
+	case syscall.DT_LNK:
+		return fs.ModeSymlink
+	case syscall.DT_CHR:
+		return fs.ModeDevice | fs.ModeCharDevice
+	case syscall.DT_BLK:
+		return fs.ModeDevice
+	case syscall.DT_FIFO:
+		return fs.ModeNamedPipe
+	case syscall.DT_SOCK:
+		return fs.ModeSocket
+	}
+
+	return 0
+}
+
+func scan(buffer []byte, path *byte, request *pathRequest, ignoreSymlinks bool) error {
+	defer request.ready.Unlock()
+
+	fh, err := open(path)
+	if err != nil {
+		return err
+	}
+
+	defer syscall.Close(fh)
+
+	s := scanner{
+		buffer: buffer,
+		fh:     fh,
+	}
+
+	var last *pathRequest
+
+	for s.Next() {
+		name, mode, inode := s.Get()
+		if inode == 0 || name == "" || ignoreSymlinks && mode&fs.ModeSymlink != 0 {
 			continue
 		}
 
-		dirents = append(dirents, dirent)
+		last = addDirent(request, last, name, mode, inode)
 	}
 
-	sort.Slice(dirents, func(i, j int) bool {
-		return dirents[i].Path.string() < dirents[j].Path.string()
-	})
-
-	return dirents
+	return nil
 }
 
-type flowController struct {
-	controller chan chan<- Dirent
+func open(path *byte) (int, error) {
+	const atFDCWD = -0x64
+
+	dfd := atFDCWD
+
+	ifh, _, err := syscall.Syscall6(
+		syscall.SYS_OPENAT,
+		uintptr(dfd),
+		uintptr(unsafe.Pointer(path)),
+		uintptr(syscall.O_RDONLY),
+		uintptr(0), 0, 0)
+	if err != 0 {
+		return 0, err
+	}
+
+	return int(ifh), nil
 }
 
-func newController() *flowController {
-	return controllerPool.Get().(*flowController) //nolint:forcetypeassert
+func addDirent(request, last *pathRequest, name string,
+	mode fs.FileMode, inode uint64) *pathRequest {
+	d := &pathRequest{
+		Dirent: Dirent{
+			Path: FilePath{
+				parent: &request.Path,
+				name:   name,
+				depth:  request.Path.depth + 1,
+			},
+			Type:  mode,
+			Inode: inode,
+		},
+	}
+
+	if mode.IsDir() {
+		d.ready.Lock()
+	}
+
+	return insertDirent(request, last, d)
 }
 
-func (f *flowController) GetControl() chan<- Dirent {
-	return <-f.controller
+func insertDirent(request, last, d *pathRequest) *pathRequest {
+	if last == nil {
+		return addFirst(request, d)
+	} else if last.Path.name < d.Path.name {
+		return insertAtEnd(last, d)
+	}
+
+	insertIntoList(request, last, d)
+
+	return last
 }
 
-func (f *flowController) PassControl(control chan<- Dirent) {
-	f.controller <- control
-	<-f.controller
+func addFirst(request, d *pathRequest) *pathRequest {
+	d.next = request.next
+	request.next = d
+
+	return d
 }
 
-func (f *flowController) EndControl() {
-	f.controller <- nil
-	controllerPool.Put(f)
+func insertAtEnd(last, d *pathRequest) *pathRequest {
+	d.next = last.next
+	last.next = d
+
+	return d
 }
 
-var controllerPool = sync.Pool{ //nolint:gochecknoglobals
-	New: func() any {
-		return &flowController{
-			controller: make(chan chan<- Dirent),
+func insertIntoList(request, last, d *pathRequest) {
+	for curr := &request.next; curr != &last.next; curr = &(*curr).next {
+		if d.Path.name < (*curr).Path.name {
+			d.next = *curr
+			*curr = d
+
+			return
 		}
-	},
-}
-
-func walkDirectory(ctx context.Context, dirent Dirent,
-	flowControl *flowController, request func(*FilePath) []Dirent, sendDirs bool) {
-	children := request(dirent.Path)
-	childControllers := make([]*flowController, len(children))
-
-	for n, child := range children {
-		if child.IsDir() {
-			childControllers[n] = newController()
-
-			go walkDirectory(ctx, child, childControllers[n], request, sendDirs)
-		}
-	}
-
-	control := flowControl.GetControl()
-
-	if sendDirs {
-		sendEntry(ctx, dirent, control)
-	}
-
-	for n, childController := range childControllers {
-		if childController == nil {
-			sendEntry(ctx, children[n], control)
-		} else {
-			childController.PassControl(control)
-		}
-	}
-
-	flowControl.EndControl()
-}
-
-func sendEntry(ctx context.Context, dirent Dirent, direntCh chan<- Dirent) {
-	select {
-	case <-ctx.Done():
-		return
-	case direntCh <- dirent:
 	}
 }

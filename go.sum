@@ -284,8 +284,6 @@ github.com/tklauser/numcpus v0.9.0 h1:lmyCHtANi8aRUgkckBgoDk1nHCux3n2cgkJLXdQGPD
 github.com/tklauser/numcpus v0.9.0/go.mod h1:SN6Nq1O3VychhC1npsWostA+oW+VOQTxZrS604NSRyI=
 github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65EE=
 github.com/ugorji/go/codec v1.2.12/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
-github.com/wtsi-hgi/godirwalk v1.18.1 h1:t7eaGXYBfTtfIEGLizPCC9fzASTvZtdhKEEri8TyyJs=
-github.com/wtsi-hgi/godirwalk v1.18.1/go.mod h1:rLa4FlI9kdT7o67jwFos8qgaX3K2sMC6XI4FXJ1iVyk=
 github.com/wtsi-ssg/wr v0.5.9 h1:lJWNuJfVvhTpXQqxRN5RbffhvK3HMog0fFpUFznvoz8=
 github.com/wtsi-ssg/wr v0.5.9/go.mod h1:njSdCX+xv1xzzw3Oy3Smid6s/IyIQEvLsKbRwaq4fC8=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
