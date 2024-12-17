@@ -26,8 +26,11 @@
 package stat
 
 import (
+	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -132,9 +135,43 @@ func (s *StatterWithTimeout) Lstat(path string) (info fs.FileInfo, err error) {
 	}
 }
 
+type fakeDir struct {
+	name string
+	syscall.Stat_t
+}
+
+func (f *fakeDir) Name() string {
+	return f.name
+}
+
+func (fakeDir) Size() int64 {
+	return 0
+}
+
+func (fakeDir) ModTime() time.Time {
+	return time.Time{}
+}
+
+func (fakeDir) Mode() fs.FileMode {
+	return 0
+}
+
+func (fakeDir) IsDir() bool {
+	return true
+}
+
+func (f *fakeDir) Sys() any {
+	return &f.Stat_t
+}
+
 // doLstat does the actual Lstat call and sends results on the given channels.
 func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh chan error) {
 	info, err := s.lstat(path)
+	if errors.Is(err, fs.ErrNotExist) && strings.HasSuffix(path, "/") {
+		err = nil
+		info = &fakeDir{name: filepath.Base(path)}
+	}
+
 	if err == nil {
 		stat, ok := info.Sys().(*syscall.Stat_t)
 		if ok {
