@@ -305,7 +305,7 @@ func TestWalk(t *testing.T) {
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
 					Time:  12 * time.Hour,
-					Cores: 1,
+					Cores: 0.1,
 					Disk:  1,
 				},
 				Override:  1,
@@ -343,7 +343,7 @@ func TestWalk(t *testing.T) {
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
 					Time:  12 * time.Hour,
-					Cores: 1,
+					Cores: 0.1,
 					Disk:  1,
 				},
 				Override:  1,
@@ -359,7 +359,7 @@ func TestWalk(t *testing.T) {
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
 					Time:  12 * time.Hour,
-					Cores: 1,
+					Cores: 0.1,
 					Disk:  1,
 				},
 				Override:  1,
