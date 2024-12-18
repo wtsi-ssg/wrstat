@@ -42,6 +42,7 @@ const (
 	walkLogOutputBasename = "walk.log"
 	statTime              = 12 * time.Hour
 	statRAM               = 200
+	statCores             = 0.1
 )
 
 // options for this cmd.
@@ -214,6 +215,7 @@ func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath strin
 	req := scheduler.DefaultRequirements()
 	req.Time = statTime
 	req.RAM = statRAM
+	req.Cores = statCores
 
 	for i, path := range outPaths {
 		jobs[i] = s.NewJob(cmd+path, repGrp, "wrstat-stat", depGroup, "", req)
