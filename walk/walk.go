@@ -37,7 +37,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sync"
 	"syscall"
 	"unsafe"
 )
@@ -78,12 +77,6 @@ func New(cb PathCallback, includDirs, ignoreSymlinks bool) *Walker {
 // will be provided problematic paths encountered during the walk.
 type ErrorCallback func(path string, err error)
 
-type pathRequest struct {
-	Dirent
-	next  *pathRequest
-	ready sync.Mutex
-}
-
 // Walk will discover all the paths nested under the given dir, and send them to
 // our PathCallback.
 //
@@ -94,22 +87,20 @@ type pathRequest struct {
 // method won't return an error.
 func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	dir = filepath.Clean(dir) + "/"
-	requestCh := make(chan *pathRequest)
-	sortedRequestCh := make(chan *pathRequest)
+	requestCh := make(chan *Dirent)
+	sortedRequestCh := make(chan *Dirent)
 	ctx, stop := context.WithCancel(context.Background())
 
 	for range walkers {
 		go w.handleDirReads(ctx, sortedRequestCh, requestCh, errCB, w.ignoreSymlinks)
 	}
 
-	go sortPathRequests(ctx, requestCh, sortedRequestCh)
+	go sortDirents(ctx, requestCh, sortedRequestCh)
 
-	r := &pathRequest{
-		Dirent: Dirent{
-			Path:  NewFilePath(dir),
-			Type:  fs.ModeDir,
-			Inode: 0,
-		},
+	r := &Dirent{
+		name:  []byte(dir),
+		Type:  fs.ModeDir,
+		Inode: 0, //TODO
 	}
 
 	r.ready.Lock()
@@ -121,36 +112,43 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	return w.sendDirentsToPathCallback(r)
 }
 
-func (w *Walker) sendDirentsToPathCallback(r *pathRequest) error {
-	for ; r != nil; r = r.next {
-		isDir := r.IsDir()
-
-		if w.sendDirs || !isDir {
-			if err := w.pathCB(&r.Dirent); err != nil {
+func (w *Walker) sendDirentsToPathCallback(r *Dirent) error {
+	for ; r != nil; r = r.done() {
+		if len(r.name) > 0 {
+			if err := w.sendDirentToPathCallback(r); err != nil {
 				return err
 			}
-		}
-
-		if isDir {
-			r.ready.Lock()
 		}
 	}
 
 	return nil
 }
 
-type heap []*pathRequest
+func (w *Walker) sendDirentToPathCallback(r *Dirent) error {
+	isDir := r.IsDir()
 
-func pathCompare(a, b *pathRequest) int {
-	return b.Path.compare(&a.Path)
+	if w.sendDirs || !isDir {
+		if err := w.pathCB(r); err != nil {
+			return err
+		}
+	}
+
+	if isDir {
+		r.ready.Lock()
+		r.ready.Unlock() //nolint:staticcheck
+	}
+
+	return nil
 }
 
-func (h *heap) Insert(req *pathRequest) {
-	pos, _ := slices.BinarySearchFunc(*h, req, pathCompare)
+type heap []*Dirent
+
+func (h *heap) Insert(req *Dirent) {
+	pos, _ := slices.BinarySearchFunc(*h, req, (*Dirent).compare)
 	*h = slices.Insert(*h, pos, req)
 }
 
-func (h heap) Top() *pathRequest {
+func (h heap) Top() *Dirent {
 	return h[len(h)-1]
 }
 
@@ -158,12 +156,12 @@ func (h *heap) Pop() {
 	*h = (*h)[:len(*h)-1]
 }
 
-func (h *heap) Push(req *pathRequest) {
+func (h *heap) Push(req *Dirent) {
 	*h = append(*h, req)
 }
 
-func sortPathRequests(ctx context.Context, requestCh <-chan *pathRequest, //nolint:gocyclo
-	sortedRequestCh chan<- *pathRequest) {
+func sortDirents(ctx context.Context, requestCh <-chan *Dirent, //nolint:gocyclo
+	sortedRequestCh chan<- *Dirent) {
 	var h heap
 
 	for {
@@ -187,7 +185,7 @@ func sortPathRequests(ctx context.Context, requestCh <-chan *pathRequest, //noli
 	}
 }
 
-func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh chan *pathRequest,
+func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh chan *Dirent,
 	errCB ErrorCallback, ignoreSymlinks bool) {
 	buffer := make([]byte, os.Getpagesize())
 
@@ -199,7 +197,7 @@ Loop:
 		case <-ctx.Done():
 			break Loop
 		case request := <-sortedRequests:
-			l := len(request.Path.appendTo(pathBuffer[:0]))
+			l := len(request.appendTo(pathBuffer[:0]))
 			pathBuffer[l] = 0
 
 			if err := scan(buffer, &pathBuffer[0], request, ignoreSymlinks); err != nil {
@@ -211,8 +209,10 @@ Loop:
 	}
 }
 
-func scanChildDirs(ctx context.Context, requestCh chan *pathRequest, request *pathRequest) {
-	for p, r := &request.Path, request.next; r != nil && r.Path.parent == p; {
+func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request *Dirent) {
+	defer request.ready.Unlock()
+
+	for r := request.next; len(r.name) != 0; {
 		next := r.next
 
 		if r.IsDir() {
@@ -260,19 +260,24 @@ func (s *scanner) Next() bool {
 	return true
 }
 
-func (s *scanner) Get() (string, fs.FileMode, uint64) {
+func (s *scanner) Get() ([]byte, fs.FileMode, uint64) {
 	mode := s.getMode()
 
 	return s.getName(mode.IsDir()), mode, s.Ino
 }
 
-func (s *scanner) getName(isDir bool) string { //nolint:gocyclo
+var (
+	dot    = []byte{'.', '\x00'}      //nolint:gochecknoglobals
+	dotdot = []byte{'.', '.', '\x00'} //nolint:gochecknoglobals
+)
+
+func (s *scanner) getName(isDir bool) []byte {
 	n := s.Dirent.Name[:]
 	name := *(*[]byte)(unsafe.Pointer(&n))
 
 	l := bytes.IndexByte(name, 0)
-	if l < 0 || l == 1 && s.Dirent.Name[0] == '.' || l == 2 && s.Dirent.Name[0] == '.' && s.Dirent.Name[1] == '.' {
-		return ""
+	if l <= 0 || bytes.Equal(name[:2], dot) || bytes.Equal(name[:3], dotdot) {
+		return nil
 	}
 
 	if isDir {
@@ -280,7 +285,7 @@ func (s *scanner) getName(isDir bool) string { //nolint:gocyclo
 		l++
 	}
 
-	return string(name[:l])
+	return name[:l]
 }
 
 func (s *scanner) getMode() fs.FileMode {
@@ -302,8 +307,10 @@ func (s *scanner) getMode() fs.FileMode {
 	return 0
 }
 
-func scan(buffer []byte, path *byte, request *pathRequest, ignoreSymlinks bool) error {
-	defer request.ready.Unlock()
+func scan(buffer []byte, path *byte, request *Dirent, ignoreSymlinks bool) error {
+	marker := request.sub(nil, 0, 0)
+	marker.next = request.next
+	request.next = marker
 
 	fh, err := open(path)
 	if err != nil {
@@ -317,15 +324,13 @@ func scan(buffer []byte, path *byte, request *pathRequest, ignoreSymlinks bool) 
 		fh:     fh,
 	}
 
-	var last *pathRequest
-
 	for s.Next() {
 		name, mode, inode := s.Get()
-		if inode == 0 || name == "" || ignoreSymlinks && mode&fs.ModeSymlink != 0 {
+		if inode == 0 || len(name) == 0 || ignoreSymlinks && mode&fs.ModeSymlink != 0 {
 			continue
 		}
 
-		last = addDirent(request, last, name, mode, inode)
+		insertDirent(request, request.sub(name, mode, inode))
 	}
 
 	return nil
@@ -349,56 +354,9 @@ func open(path *byte) (int, error) {
 	return int(ifh), nil
 }
 
-func addDirent(request, last *pathRequest, name string,
-	mode fs.FileMode, inode uint64) *pathRequest {
-	d := &pathRequest{
-		Dirent: Dirent{
-			Path: FilePath{
-				parent: &request.Path,
-				name:   name,
-				depth:  request.Path.depth + 1,
-			},
-			Type:  mode,
-			Inode: inode,
-		},
-	}
-
-	if mode.IsDir() {
-		d.ready.Lock()
-	}
-
-	return insertDirent(request, last, d)
-}
-
-func insertDirent(request, last, d *pathRequest) *pathRequest {
-	if last == nil {
-		return addFirst(request, d)
-	} else if last.Path.name < d.Path.name {
-		return insertAtEnd(last, d)
-	}
-
-	insertIntoList(request, last, d)
-
-	return last
-}
-
-func addFirst(request, d *pathRequest) *pathRequest {
-	d.next = request.next
-	request.next = d
-
-	return d
-}
-
-func insertAtEnd(last, d *pathRequest) *pathRequest {
-	d.next = last.next
-	last.next = d
-
-	return d
-}
-
-func insertIntoList(request, last, d *pathRequest) {
-	for curr := &request.next; curr != &last.next; curr = &(*curr).next {
-		if d.Path.name < (*curr).Path.name {
+func insertDirent(request, d *Dirent) {
+	for curr := &request.next; ; curr = &(*curr).next {
+		if name := (*curr).name; len(name) == 0 || bytes.Compare(d.name, name) == -1 {
 			d.next = *curr
 			*curr = d
 

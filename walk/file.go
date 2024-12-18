@@ -173,7 +173,7 @@ func (f *Files) WritePaths() PathCallback {
 	return func(entry *Dirent) error {
 		return f.writePath(append(
 			strconv.AppendQuote(
-				quoted[:0], unsafe.String(&tmpPath[0], len(entry.Path.appendTo(tmpPath[:0]))),
+				quoted[:0], unsafe.String(&tmpPath[0], len(entry.appendTo(tmpPath[:0]))),
 			), '\n'))
 	}
 }
