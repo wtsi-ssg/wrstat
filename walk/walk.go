@@ -86,6 +86,11 @@ type ErrorCallback func(path string, err error)
 // errors will mean the path isn't output, but the walk will continue and this
 // method won't return an error.
 func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
+	inode, err := getInitialInode(dir)
+	if err != nil {
+		return err
+	}
+
 	dir = filepath.Clean(dir) + "/"
 	requestCh := make(chan *Dirent)
 	sortedRequestCh := make(chan *Dirent)
@@ -100,7 +105,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	r := &Dirent{
 		name:  []byte(dir),
 		Type:  fs.ModeDir,
-		Inode: 0, //TODO
+		Inode: inode,
 		next:  nullDirEnt,
 	}
 
@@ -111,6 +116,24 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	defer stop()
 
 	return w.sendDirentsToPathCallback(r)
+}
+
+func getInitialInode(dir string) (uint64, error) {
+	fi, err := os.Stat(dir)
+	if err != nil {
+		return 0, err
+	}
+
+	if !fi.IsDir() {
+		return 0, fs.ErrInvalid
+	}
+
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, fs.ErrInvalid
+	}
+
+	return st.Ino, nil
 }
 
 func (w *Walker) sendDirentsToPathCallback(r *Dirent) error {
