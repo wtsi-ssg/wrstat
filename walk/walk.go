@@ -370,7 +370,7 @@ func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
 		root = root.insert(de)
 	}
 
-	return root, nil
+	return root, s.err
 }
 
 func open(path *byte) (int, error) {
