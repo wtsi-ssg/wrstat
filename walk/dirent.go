@@ -63,16 +63,16 @@ func init() { //nolint:gochecknoinits
 func getDirent(size int) *Dirent {
 	switch {
 	case size == 0:
-		return direntPool0.Get().(*Dirent) //nolint:forcetypeassert
+		return direntPool0.Get().(*Dirent) //nolint:forcetypeassert,errcheck
 	case size <= 32: //nolint:mnd
-		return direntPool32.Get().(*Dirent) //nolint:forcetypeassert
+		return direntPool32.Get().(*Dirent) //nolint:forcetypeassert,errcheck
 	case size <= 64: //nolint:mnd
-		return direntPool64.Get().(*Dirent) //nolint:forcetypeassert
+		return direntPool64.Get().(*Dirent) //nolint:forcetypeassert,errcheck
 	case size <= 128: //nolint:mnd
-		return direntPool128.Get().(*Dirent) //nolint:forcetypeassert
+		return direntPool128.Get().(*Dirent) //nolint:forcetypeassert,errcheck
 	}
 
-	return dirEntPool256.Get().(*Dirent) //nolint:forcetypeassert
+	return dirEntPool256.Get().(*Dirent) //nolint:forcetypeassert,errcheck
 }
 
 func putDirent(d *Dirent) {
