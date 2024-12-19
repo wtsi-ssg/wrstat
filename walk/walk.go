@@ -101,6 +101,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 		name:  []byte(dir),
 		Type:  fs.ModeDir,
 		Inode: 0, //TODO
+		next:  nullDirEnt,
 	}
 
 	r.ready.Lock()
@@ -113,7 +114,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 }
 
 func (w *Walker) sendDirentsToPathCallback(r *Dirent) error {
-	for ; r != nil; r = r.done() {
+	for ; r != nullDirEnt; r = r.done() {
 		if len(r.name) > 0 {
 			if err := w.sendDirentToPathCallback(r); err != nil {
 				return err
@@ -200,22 +201,29 @@ Loop:
 			l := len(request.appendTo(pathBuffer[:0]))
 			pathBuffer[l] = 0
 
-			if err := scan(buffer, &pathBuffer[0], request, ignoreSymlinks); err != nil {
+			root, err := scan(buffer, &pathBuffer[0], ignoreSymlinks)
+			if err != nil {
 				errCB(string(pathBuffer[:l]), err)
 			}
 
-			go scanChildDirs(ctx, requestCh, request)
+			go scanChildDirs(ctx, requestCh, request, root)
 		}
 	}
 }
 
-func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request *Dirent) {
-	defer request.ready.Unlock()
+func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, root *Dirent) {
+	marker := getDirent(0)
+	marker.next = request.next
+	marker.parent = request
 
-	for r := request.next; len(r.name) != 0; {
+	root.flatten(request, request, request.depth+1).next = marker
+
+	for r := request.next; r != marker; {
 		next := r.next
 
 		if r.IsDir() {
+			r.ready.Lock()
+
 			select {
 			case <-ctx.Done():
 				return
@@ -225,6 +233,8 @@ func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request *Dirent)
 
 		r = next
 	}
+
+	request.ready.Unlock()
 }
 
 type scanner struct {
@@ -307,14 +317,12 @@ func (s *scanner) getMode() fs.FileMode {
 	return 0
 }
 
-func scan(buffer []byte, path *byte, request *Dirent, ignoreSymlinks bool) error {
-	marker := request.sub(nil, 0, 0)
-	marker.next = request.next
-	request.next = marker
+func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
+	root := nullDirEnt
 
 	fh, err := open(path)
 	if err != nil {
-		return err
+		return root, err
 	}
 
 	defer syscall.Close(fh)
@@ -330,10 +338,16 @@ func scan(buffer []byte, path *byte, request *Dirent, ignoreSymlinks bool) error
 			continue
 		}
 
-		insertDirent(request, request.sub(name, mode, inode))
+		de := getDirent(len(name))
+
+		de.name = append(de.name, name...)
+		de.Type = mode
+		de.Inode = inode
+
+		root = root.insert(de)
 	}
 
-	return nil
+	return root, nil
 }
 
 func open(path *byte) (int, error) {
@@ -352,15 +366,4 @@ func open(path *byte) (int, error) {
 	}
 
 	return int(ifh), nil
-}
-
-func insertDirent(request, d *Dirent) {
-	for curr := &request.next; ; curr = &(*curr).next {
-		if name := (*curr).name; len(name) == 0 || bytes.Compare(d.name, name) == -1 {
-			d.next = *curr
-			*curr = d
-
-			return
-		}
-	}
 }

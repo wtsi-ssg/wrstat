@@ -37,7 +37,9 @@ func newDirentPool(size int) *sync.Pool {
 	return &sync.Pool{
 		New: func() any {
 			return &Dirent{
-				name: make([]byte, 0, size),
+				name:   make([]byte, 0, size),
+				parent: nullDirEnt,
+				next:   nullDirEnt,
 			}
 		},
 	}
@@ -49,7 +51,14 @@ var (
 	direntPool64  = newDirentPool(64)  //nolint:gochecknoglobals,mnd
 	direntPool128 = newDirentPool(128) //nolint:gochecknoglobals,mnd
 	dirEntPool256 = newDirentPool(257) //nolint:gochecknoglobals,mnd
+
+	nullDirEnt = new(Dirent) //nolint:gochecknoglobals
 )
+
+func init() { //nolint:gochecknoinits
+	nullDirEnt.parent = nullDirEnt
+	nullDirEnt.next = nullDirEnt
+}
 
 func getDirent(size int) *Dirent {
 	switch {
@@ -68,7 +77,9 @@ func getDirent(size int) *Dirent {
 
 func putDirent(d *Dirent) {
 	d.name = d.name[:0]
-	d.parent = nil
+	d.parent = nullDirEnt
+	d.next = nullDirEnt
+	d.depth = 0
 
 	switch cap(d.name) {
 	case 0:
@@ -87,9 +98,9 @@ func putDirent(d *Dirent) {
 // Dirent represents a file system directory entry (a file or a directory),
 // providing information about the entry's path, type and inode.
 type Dirent struct {
-	parent *Dirent
+	parent *Dirent // left
 	name   []byte
-	depth  uint16
+	depth  int16
 
 	// Type is the type bits of the file mode of this entry.
 	Type fs.FileMode
@@ -97,7 +108,7 @@ type Dirent struct {
 	// Inode is the file system inode number for this entry.
 	Inode uint64
 
-	next  *Dirent
+	next  *Dirent // right
 	ready sync.Mutex
 }
 
@@ -139,7 +150,7 @@ func (d *Dirent) compare(e *Dirent) int {
 	return e.compareTo(d)
 }
 
-func (d *Dirent) getDepth(n uint16) *Dirent {
+func (d *Dirent) getDepth(n int16) *Dirent {
 	for d.depth != n {
 		d = d.parent
 	}
@@ -161,25 +172,9 @@ func (d *Dirent) compareTo(e *Dirent) int {
 	return cmp
 }
 
-func (d *Dirent) sub(name []byte, mode fs.FileMode, inode uint64) *Dirent {
-	de := getDirent(len(name))
-
-	de.parent = d
-	de.name = append(de.name, name...)
-	de.depth = d.depth + 1
-	de.Type = mode
-	de.Inode = inode
-
-	if mode.IsDir() {
-		de.ready.Lock()
-	}
-
-	return de
-}
-
 func (d *Dirent) done() *Dirent {
 	next := d.next
-	d.next = nil
+	d.next = nullDirEnt
 
 	if len(d.name) == 0 {
 		putDirent(d.parent)
@@ -190,4 +185,82 @@ func (d *Dirent) done() *Dirent {
 	}
 
 	return next
+}
+
+func (d *Dirent) insert(e *Dirent) *Dirent { //nolint:gocyclo
+	if d == nullDirEnt {
+		return e
+	}
+
+	switch bytes.Compare(d.name, e.name) {
+	case 1:
+		d.parent = d.parent.insert(e)
+	case -1:
+		d.next = d.next.insert(e)
+	}
+
+	d.setDepth()
+
+	switch d.parent.depth - d.next.depth {
+	case -2:
+		if d.next.parent.depth > d.next.next.depth {
+			d.next = d.next.rotateRight()
+		}
+
+		return d.rotateLeft()
+	case 2: //nolint:mnd
+		if d.parent.next.depth > d.parent.parent.depth {
+			d.parent = d.parent.rotateLeft()
+		}
+
+		return d.rotateRight()
+	}
+
+	return d
+}
+
+func (d *Dirent) setDepth() {
+	if d == nullDirEnt {
+		return
+	}
+
+	if d.parent.depth > d.next.depth {
+		d.depth = d.parent.depth + 1
+	} else {
+		d.depth = d.next.depth + 1
+	}
+}
+
+func (d *Dirent) rotateLeft() *Dirent {
+	n := d.next
+	d.next = n.parent
+	n.parent = d
+
+	d.setDepth()
+	n.setDepth()
+
+	return n
+}
+
+func (d *Dirent) rotateRight() *Dirent {
+	n := d.parent
+	d.parent = n.next
+	n.next = d
+
+	d.setDepth()
+	n.setDepth()
+
+	return n
+}
+
+func (d *Dirent) flatten(parent, prev *Dirent, depth int16) *Dirent {
+	if d == nullDirEnt {
+		return prev
+	}
+
+	d.parent.flatten(parent, prev, depth).next = d
+	d.parent = parent
+	d.depth = depth
+
+	return d.next.flatten(parent, d, depth)
 }
