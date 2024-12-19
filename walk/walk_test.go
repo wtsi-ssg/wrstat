@@ -152,11 +152,20 @@ func TestWalk(t *testing.T) {
 			w := New(files.WritePaths(), true, false)
 			err = w.Walk("/root", cb)
 			So(err, ShouldBeNil)
-			So(len(walkErrors), ShouldEqual, 1)
+
+			mu.Lock()
+			l := len(walkErrors)
+			mu.Unlock()
+
+			So(l, ShouldEqual, 1)
 
 			var writeError *WriteError
 
-			So(errors.As(walkErrors[0], &writeError), ShouldBeFalse)
+			mu.Lock()
+			err = walkErrors[0]
+			mu.Unlock()
+
+			So(errors.As(err, &writeError), ShouldBeFalse)
 
 			outPath := filepath.Join(outDir, "walk.1")
 			_, err = os.ReadFile(outPath)

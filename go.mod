@@ -13,7 +13,6 @@ require (
 	github.com/smartystreets/goconvey v1.7.2
 	github.com/spf13/cobra v1.8.1
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
-	github.com/wtsi-hgi/godirwalk v1.18.1
 	github.com/wtsi-ssg/wr v0.5.9
 )
 
