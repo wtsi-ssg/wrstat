@@ -71,11 +71,4 @@ func TestDirent(t *testing.T) {
 		So(d.IsRegular(), ShouldBeFalse)
 		So(d.IsSymlink(), ShouldBeTrue)
 	})
-
-	Convey("You can make a fake Direct for directories", t, func() {
-		d := newDirentForDirectoryPath("/a/dir")
-		So(d.IsDir(), ShouldBeTrue)
-		So(d.IsRegular(), ShouldBeFalse)
-		So(d.IsSymlink(), ShouldBeFalse)
-	})
 }

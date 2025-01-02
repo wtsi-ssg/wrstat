@@ -30,15 +30,15 @@
 package walk
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
-	"strings"
-	"sync"
-
-	"github.com/wtsi-hgi/godirwalk"
+	"syscall"
+	"unsafe"
 )
 
 const walkers = 16
@@ -77,19 +77,6 @@ func New(cb PathCallback, includDirs, ignoreSymlinks bool) *Walker {
 // will be provided problematic paths encountered during the walk.
 type ErrorCallback func(path string, err error)
 
-type pathRequest struct {
-	path     *FilePath
-	response chan []Dirent
-}
-
-var pathRequestPool = sync.Pool{ //nolint:gochecknoglobals
-	New: func() any {
-		return &pathRequest{
-			response: make(chan []Dirent),
-		}
-	},
-}
-
 // Walk will discover all the paths nested under the given dir, and send them to
 // our PathCallback.
 //
@@ -99,66 +86,93 @@ var pathRequestPool = sync.Pool{ //nolint:gochecknoglobals
 // errors will mean the path isn't output, but the walk will continue and this
 // method won't return an error.
 func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
+	inode, err := getInitialInode(dir)
+	if err != nil {
+		return err
+	}
+
 	dir = filepath.Clean(dir) + "/"
-	requestCh := make(chan *pathRequest)
-	sortedRequestCh := make(chan *pathRequest)
-	direntCh := make(chan Dirent, dirsChSize)
-	flowControl := newController()
+	requestCh := make(chan *Dirent)
+	sortedRequestCh := make(chan *Dirent)
 	ctx, stop := context.WithCancel(context.Background())
 
 	for range walkers {
-		go w.handleDirReads(ctx, sortedRequestCh, errCB)
+		go w.handleDirReads(ctx, sortedRequestCh, requestCh, errCB, w.ignoreSymlinks)
 	}
 
-	go func() {
-		walkDirectory(ctx, newDirentForDirectoryPath(dir),
-			flowControl, createPathRequestor(requestCh), w.sendDirs)
-		close(direntCh)
-	}()
+	go sortDirents(ctx, requestCh, sortedRequestCh)
 
-	go sortPathRequests(ctx, requestCh, sortedRequestCh)
-	go flowControl.PassControl(direntCh)
+	r := &Dirent{
+		name:  []byte(dir),
+		Type:  fs.ModeDir,
+		Inode: inode,
+		next:  nullDirEnt,
+	}
+
+	r.ready.Lock()
+
+	sortedRequestCh <- r
 
 	defer stop()
 
-	return w.sendDirentsToPathCallback(direntCh)
+	return w.sendDirentsToPathCallback(r)
 }
 
-func createPathRequestor(requestCh chan *pathRequest) func(*FilePath) []Dirent {
-	return func(path *FilePath) []Dirent {
-		pr := pathRequestPool.Get().(*pathRequest) //nolint:errcheck,forcetypeassert
-		defer pathRequestPool.Put(pr)
-
-		pr.path = path
-
-		requestCh <- pr
-
-		return <-pr.response
+func getInitialInode(dir string) (uint64, error) {
+	fi, err := os.Stat(dir)
+	if err != nil {
+		return 0, err
 	}
+
+	if !fi.IsDir() {
+		return 0, fs.ErrInvalid
+	}
+
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, fs.ErrInvalid
+	}
+
+	return st.Ino, nil
 }
 
-func (w *Walker) sendDirentsToPathCallback(direntCh <-chan Dirent) error {
-	for dirent := range direntCh {
-		if err := w.pathCB(&dirent); err != nil {
-			return err
+func (w *Walker) sendDirentsToPathCallback(r *Dirent) error {
+	for ; r != nullDirEnt; r = r.done() {
+		if len(r.name) > 0 {
+			if err := w.sendDirentToPathCallback(r); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-type heap []*pathRequest
+func (w *Walker) sendDirentToPathCallback(r *Dirent) error {
+	isDir := r.IsDir()
 
-func pathCompare(a, b *pathRequest) int {
-	return strings.Compare(b.path.string(), a.path.string())
+	if w.sendDirs || !isDir {
+		if err := w.pathCB(r); err != nil {
+			return err
+		}
+	}
+
+	if isDir {
+		r.ready.Lock()
+		r.ready.Unlock() //nolint:staticcheck
+	}
+
+	return nil
 }
 
-func (h *heap) Insert(req *pathRequest) {
-	pos, _ := slices.BinarySearchFunc(*h, req, pathCompare)
+type heap []*Dirent
+
+func (h *heap) Insert(req *Dirent) {
+	pos, _ := slices.BinarySearchFunc(*h, req, (*Dirent).compare)
 	*h = slices.Insert(*h, pos, req)
 }
 
-func (h heap) Top() *pathRequest {
+func (h heap) Top() *Dirent {
 	return h[len(h)-1]
 }
 
@@ -166,12 +180,12 @@ func (h *heap) Pop() {
 	*h = (*h)[:len(*h)-1]
 }
 
-func (h *heap) Push(req *pathRequest) {
+func (h *heap) Push(req *Dirent) {
 	*h = append(*h, req)
 }
 
-func sortPathRequests(ctx context.Context, requestCh <-chan *pathRequest, //nolint:gocyclo
-	sortedRequestCh chan<- *pathRequest) {
+func sortDirents(ctx context.Context, requestCh <-chan *Dirent, //nolint:gocyclo
+	sortedRequestCh chan<- *Dirent) {
 	var h heap
 
 	for {
@@ -195,113 +209,184 @@ func sortPathRequests(ctx context.Context, requestCh <-chan *pathRequest, //noli
 	}
 }
 
-func (w *Walker) handleDirReads(ctx context.Context, requests chan *pathRequest, errCB ErrorCallback) {
+func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh chan *Dirent,
+	errCB ErrorCallback, ignoreSymlinks bool) {
 	buffer := make([]byte, os.Getpagesize())
+
+	var pathBuffer [maxPathLength + 1]byte
 
 Loop:
 	for {
 		select {
 		case <-ctx.Done():
 			break Loop
-		case request := <-requests:
-			children, err := godirwalk.ReadDirents(request.path.string(), buffer)
+		case request := <-sortedRequests:
+			l := len(request.appendTo(pathBuffer[:0]))
+			pathBuffer[l] = 0
+
+			root, err := scan(buffer, &pathBuffer[0], ignoreSymlinks)
 			if err != nil {
-				errCB(string(request.path.Bytes()), err)
+				errCB(string(pathBuffer[:l]), err)
 			}
 
-			request.response <- w.childrenToDirents(children, request.path)
+			go scanChildDirs(ctx, requestCh, request, root)
 		}
 	}
 }
 
-func (w *Walker) childrenToDirents(children godirwalk.Dirents, parent *FilePath) []Dirent {
-	dirents := make([]Dirent, 0, len(children))
+func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, root *Dirent) {
+	marker := getDirent(0)
+	marker.next = request.next
+	marker.parent = request
 
-	for _, child := range children {
-		dirent := Dirent{
-			Path:  parent.sub(child),
-			Type:  child.ModeType(),
-			Inode: child.Inode(),
+	root.flatten(request, request, request.depth+1).next = marker
+
+	for r := request.next; r != marker; {
+		next := r.next
+
+		if r.IsDir() {
+			r.ready.Lock()
+
+			select {
+			case <-ctx.Done():
+				return
+			case requestCh <- r:
+			}
 		}
 
-		if w.ignoreSymlinks && dirent.IsSymlink() {
+		r = next
+	}
+
+	request.ready.Unlock()
+}
+
+type scanner struct {
+	buffer, read []byte
+	fh           int
+	syscall.Dirent
+	err error
+}
+
+func (s *scanner) Next() bool {
+	for len(s.read) == 0 {
+		n, err := syscall.ReadDirent(s.fh, s.buffer)
+		if err != nil {
+			if errors.Is(err, syscall.EINTR) {
+				continue
+			}
+
+			s.err = err
+
+			return false
+		}
+
+		if n <= 0 {
+			return false
+		}
+
+		s.read = s.buffer[:n]
+	}
+
+	copy((*[unsafe.Sizeof(syscall.Dirent{})]byte)(unsafe.Pointer(&s.Dirent))[:], s.read)
+	s.read = s.read[s.Reclen:]
+
+	return true
+}
+
+func (s *scanner) Get() ([]byte, fs.FileMode, uint64) {
+	mode := s.getMode()
+
+	return s.getName(mode.IsDir()), mode, s.Ino
+}
+
+var (
+	dot    = []byte{'.', '\x00'}      //nolint:gochecknoglobals
+	dotdot = []byte{'.', '.', '\x00'} //nolint:gochecknoglobals
+)
+
+func (s *scanner) getName(isDir bool) []byte {
+	n := s.Dirent.Name[:]
+	name := *(*[]byte)(unsafe.Pointer(&n))
+
+	l := bytes.IndexByte(name, 0)
+	if l <= 0 || bytes.Equal(name[:2], dot) || bytes.Equal(name[:3], dotdot) {
+		return nil
+	}
+
+	if isDir {
+		s.Dirent.Name[l] = '/'
+		l++
+	}
+
+	return name[:l]
+}
+
+func (s *scanner) getMode() fs.FileMode {
+	switch s.Type {
+	case syscall.DT_DIR:
+		return fs.ModeDir
+	case syscall.DT_LNK:
+		return fs.ModeSymlink
+	case syscall.DT_CHR:
+		return fs.ModeDevice | fs.ModeCharDevice
+	case syscall.DT_BLK:
+		return fs.ModeDevice
+	case syscall.DT_FIFO:
+		return fs.ModeNamedPipe
+	case syscall.DT_SOCK:
+		return fs.ModeSocket
+	}
+
+	return 0
+}
+
+func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
+	root := nullDirEnt
+
+	fh, err := open(path)
+	if err != nil {
+		return root, err
+	}
+
+	defer syscall.Close(fh)
+
+	s := scanner{
+		buffer: buffer,
+		fh:     fh,
+	}
+
+	for s.Next() {
+		name, mode, inode := s.Get()
+		if inode == 0 || len(name) == 0 || ignoreSymlinks && mode&fs.ModeSymlink != 0 {
 			continue
 		}
 
-		dirents = append(dirents, dirent)
+		de := getDirent(len(name))
+
+		de.name = append(de.name, name...)
+		de.Type = mode
+		de.Inode = inode
+
+		root = root.insert(de)
 	}
 
-	sort.Slice(dirents, func(i, j int) bool {
-		return dirents[i].Path.string() < dirents[j].Path.string()
-	})
-
-	return dirents
+	return root, s.err
 }
 
-type flowController struct {
-	controller chan chan<- Dirent
-}
+func open(path *byte) (int, error) {
+	const atFDCWD = -0x64
 
-func newController() *flowController {
-	return controllerPool.Get().(*flowController) //nolint:forcetypeassert
-}
+	dfd := atFDCWD
 
-func (f *flowController) GetControl() chan<- Dirent {
-	return <-f.controller
-}
-
-func (f *flowController) PassControl(control chan<- Dirent) {
-	f.controller <- control
-	<-f.controller
-}
-
-func (f *flowController) EndControl() {
-	f.controller <- nil
-	controllerPool.Put(f)
-}
-
-var controllerPool = sync.Pool{ //nolint:gochecknoglobals
-	New: func() any {
-		return &flowController{
-			controller: make(chan chan<- Dirent),
-		}
-	},
-}
-
-func walkDirectory(ctx context.Context, dirent Dirent,
-	flowControl *flowController, request func(*FilePath) []Dirent, sendDirs bool) {
-	children := request(dirent.Path)
-	childControllers := make([]*flowController, len(children))
-
-	for n, child := range children {
-		if child.IsDir() {
-			childControllers[n] = newController()
-
-			go walkDirectory(ctx, child, childControllers[n], request, sendDirs)
-		}
+	ifh, _, err := syscall.Syscall6(
+		syscall.SYS_OPENAT,
+		uintptr(dfd),
+		uintptr(unsafe.Pointer(path)),
+		uintptr(syscall.O_RDONLY),
+		uintptr(0), 0, 0)
+	if err != 0 {
+		return 0, err
 	}
 
-	control := flowControl.GetControl()
-
-	if sendDirs {
-		sendEntry(ctx, dirent, control)
-	}
-
-	for n, childController := range childControllers {
-		if childController == nil {
-			sendEntry(ctx, children[n], control)
-		} else {
-			childController.PassControl(control)
-		}
-	}
-
-	flowControl.EndControl()
-}
-
-func sendEntry(ctx context.Context, dirent Dirent, direntCh chan<- Dirent) {
-	select {
-	case <-ctx.Done():
-		return
-	case direntCh <- dirent:
-	}
+	return int(ifh), nil
 }
