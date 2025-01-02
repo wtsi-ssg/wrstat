@@ -250,7 +250,7 @@ func combineRepGrp(dir, unique string) string {
 // directory.
 func scheduleTidyJob(outputRoot, finalDir, unique string, s *scheduler.Scheduler) {
 	job := s.NewJob(fmt.Sprintf("%s tidy -f %s -d %s %s", s.Executable(), finalDir, dateStamp(), outputRoot),
-		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique+".basedir", scheduler.DefaultRequirements())
+		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique, scheduler.DefaultRequirements())
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
