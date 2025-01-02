@@ -255,7 +255,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				Retries:      30,
 				Dependencies: jobqueue.Dependencies{
 					{
-						DepGroup: repGroup + ".basedir",
+						DepGroup: repGroup,
 					},
 				},
 			},
