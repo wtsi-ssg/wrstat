@@ -25,7 +25,7 @@
  ******************************************************************************/
 
 // package walk is used to quickly walk a filesystem to just see what paths
-// there are on it. It does 0 stat calls.
+// there are on it.
 
 package walk
 
@@ -35,7 +35,6 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"runtime"
 	"slices"
 	"syscall"
 	"unsafe"
@@ -122,28 +121,10 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 
 func (w *Walker) sendDirentsToPathCallback(r *Dirent) error {
 	for ; r != nullDirEnt; r = r.done() {
-		if r.name != nil {
-			if err := w.sendDirentToPathCallback(r); err != nil {
+		if r.name != nil && (w.sendDirs || !r.IsDir()) {
+			if err := w.pathCB(r); err != nil {
 				return err
 			}
-		}
-	}
-
-	return nil
-}
-
-func (w *Walker) sendDirentToPathCallback(r *Dirent) error {
-	isDir := r.IsDir()
-
-	if w.sendDirs || !isDir {
-		if err := w.pathCB(r); err != nil {
-			return err
-		}
-	}
-
-	if isDir {
-		for !r.isReady() {
-			runtime.Gosched()
 		}
 	}
 

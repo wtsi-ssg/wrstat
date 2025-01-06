@@ -31,6 +31,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -300,8 +301,13 @@ func (d *Dirent) compare(e *Dirent) int {
 }
 
 func (d *Dirent) done() *Dirent {
+	if d.IsDir() {
+		for !d.isReady() {
+			runtime.Gosched()
+		}
+	}
+
 	next := d.next
-	d.next = nullDirEnt
 
 	if d.name == nil {
 		putDirent(d.parent)
@@ -309,6 +315,8 @@ func (d *Dirent) done() *Dirent {
 
 	if !d.IsDir() {
 		putDirent(d)
+	} else {
+		d.next = nullDirEnt
 	}
 
 	return next
