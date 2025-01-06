@@ -302,7 +302,7 @@ func (s *scanner) getType() bool {
 
 	var stat syscall.Stat_t
 
-	if _, _, err := syscall.Syscall6(syscall.SYS_FSTATAT, uintptr(s.fh),
+	if _, _, err := syscall.Syscall6(statCall, uintptr(s.fh),
 		uintptr(unsafe.Pointer(&s.Dirent.Name[0])), uintptr(unsafe.Pointer(&stat)),
 		symlinkNoFollow, 0, 0); err != 0 {
 		s.err = err
