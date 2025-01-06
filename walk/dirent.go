@@ -169,11 +169,12 @@ func pathToDirEnt(path string, inode uint64) (*Dirent, error) {
 		d := getDirent(len(name))
 		d.parent = de
 		d.typ = syscall.DT_DIR
-		d.Inode = inode
 		de = d
 
 		copy(d.bytes(), name)
 	}
+
+	de.Inode = inode
 
 	return de, nil
 }
