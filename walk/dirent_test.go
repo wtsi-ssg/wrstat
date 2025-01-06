@@ -26,8 +26,10 @@
 package walk
 
 import (
+	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -71,4 +73,47 @@ func TestDirent(t *testing.T) {
 		So(d.IsRegular(), ShouldBeFalse)
 		So(d.IsSymlink(), ShouldBeTrue)
 	})
+
+	Convey("You can sort a heap of Dirents", t, func() {
+		root := newDirent("/some/path/", nil)
+		dirA := newDirent("dirA/", root)
+		dirB := newDirent("dirB/", root)
+		dirC := newDirent("dirC/", root)
+		dirD := newDirent("dirD/", dirC)
+		dirE := newDirent("dirE/", dirC)
+
+		list := []*Dirent{dirA, dirB, dirD, dirE}
+		result := []*Dirent{dirE, dirD, dirB, dirA}
+
+		for i := 0; i < 100; i++ {
+			shuffle(list)
+
+			sort.Slice(list, func(i, j int) bool {
+				return list[i].compare(list[j]) == -1
+			})
+
+			So(list, ShouldResemble, result)
+		}
+	})
+}
+
+func newDirent(path string, parent *Dirent) *Dirent {
+	var depth int16
+
+	if parent != nil {
+		depth = parent.depth + 1
+	}
+
+	return &Dirent{
+		parent: parent,
+		name:   []byte(path),
+		depth:  depth,
+	}
+}
+
+func shuffle[T any](list []T) {
+	for i := range list {
+		j := rand.Intn(i + 1) //nolint:gosec
+		list[i], list[j] = list[j], list[i]
+	}
 }

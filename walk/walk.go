@@ -35,14 +35,15 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"slices"
 	"syscall"
 	"unsafe"
 )
 
-const walkers = 16
-const dirsChSize = 1024
+const (
+	walkers    = 16
+	dirsChSize = 1024
+)
 
 // PathCallback is a callback used by Walker.Walk() that receives a directory
 // entry containing the path, inode and file type each time it's called. It
@@ -86,12 +87,13 @@ type ErrorCallback func(path string, err error)
 // errors will mean the path isn't output, but the walk will continue and this
 // method won't return an error.
 func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
-	inode, err := getInitialInode(dir)
+	r, err := NewDirent(dir)
 	if err != nil {
 		return err
+	} else if !r.IsDir() {
+		return fs.ErrInvalid
 	}
 
-	dir = filepath.Clean(dir) + "/"
 	requestCh := make(chan *Dirent)
 	sortedRequestCh := make(chan *Dirent)
 	ctx, stop := context.WithCancel(context.Background())
@@ -102,13 +104,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 
 	go sortDirents(ctx, requestCh, sortedRequestCh)
 
-	r := &Dirent{
-		name:  []byte(dir),
-		Type:  fs.ModeDir,
-		Inode: inode,
-		next:  nullDirEnt,
-	}
-
+	r.next = nullDirEnt
 	r.ready.Lock()
 
 	sortedRequestCh <- r
@@ -116,24 +112,6 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	defer stop()
 
 	return w.sendDirentsToPathCallback(r)
-}
-
-func getInitialInode(dir string) (uint64, error) {
-	fi, err := os.Stat(dir)
-	if err != nil {
-		return 0, err
-	}
-
-	if !fi.IsDir() {
-		return 0, fs.ErrInvalid
-	}
-
-	st, ok := fi.Sys().(*syscall.Stat_t)
-	if !ok {
-		return 0, fs.ErrInvalid
-	}
-
-	return st.Ino, nil
 }
 
 func (w *Walker) sendDirentsToPathCallback(r *Dirent) error {
@@ -185,7 +163,8 @@ func (h *heap) Push(req *Dirent) {
 }
 
 func sortDirents(ctx context.Context, requestCh <-chan *Dirent, //nolint:gocyclo
-	sortedRequestCh chan<- *Dirent) {
+	sortedRequestCh chan<- *Dirent,
+) {
 	var h heap
 
 	for {
@@ -210,7 +189,8 @@ func sortDirents(ctx context.Context, requestCh <-chan *Dirent, //nolint:gocyclo
 }
 
 func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh chan *Dirent,
-	errCB ErrorCallback, ignoreSymlinks bool) {
+	errCB ErrorCallback, ignoreSymlinks bool,
+) {
 	buffer := make([]byte, os.Getpagesize())
 
 	var pathBuffer [maxPathLength + 1]byte

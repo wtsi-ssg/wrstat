@@ -30,7 +30,9 @@ import (
 	"bytes"
 	"io/fs"
 	"os"
+	"strings"
 	"sync"
+	"syscall"
 )
 
 func newDirentPool(size int) *sync.Pool {
@@ -90,7 +92,7 @@ func putDirent(d *Dirent) {
 		direntPool64.Put(d)
 	case 128: //nolint:mnd
 		direntPool128.Put(d)
-	default:
+	case 257: //nolint:mnd
 		dirEntPool256.Put(d)
 	}
 }
@@ -110,6 +112,41 @@ type Dirent struct {
 
 	next  *Dirent // right
 	ready sync.Mutex
+}
+
+func NewDirent(path string) (*Dirent, error) {
+	mode, inode, err := statNode(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if mode.IsDir() && !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+
+	return &Dirent{
+		name:  []byte(path),
+		Type:  mode,
+		Inode: inode,
+	}, nil
+}
+
+func statNode(path string) (fs.FileMode, uint64, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if !fi.IsDir() {
+		return 0, 0, fs.ErrInvalid
+	}
+
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, 0, fs.ErrInvalid
+	}
+
+	return fi.Mode(), st.Ino, nil
 }
 
 // IsDir returns true if we are a directory.
@@ -141,35 +178,20 @@ func (d *Dirent) Bytes() []byte {
 }
 
 func (d *Dirent) compare(e *Dirent) int {
-	if d.depth < e.depth {
-		e = e.getDepth(d.depth)
-	} else if d.depth > e.depth {
-		d = d.getDepth(e.depth)
-	}
-
-	return e.compareTo(d)
-}
-
-func (d *Dirent) getDepth(n int16) *Dirent {
-	for d.depth != n {
+	for d.depth > e.depth {
 		d = d.parent
 	}
 
-	return d
-}
-
-func (d *Dirent) compareTo(e *Dirent) int {
-	if d == e {
-		return 0
+	for e.depth > d.depth {
+		e = e.parent
 	}
 
-	cmp := d.parent.compareTo(e.parent)
-
-	if cmp == 0 {
-		return bytes.Compare(d.name, e.name)
+	for d.parent != e.parent {
+		d = d.parent
+		e = e.parent
 	}
 
-	return cmp
+	return bytes.Compare(e.name, d.name)
 }
 
 func (d *Dirent) done() *Dirent {
