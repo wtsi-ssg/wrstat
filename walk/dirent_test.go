@@ -52,7 +52,7 @@ func TestDirent(t *testing.T) {
 		info, err := os.Lstat(tdir)
 		So(err, ShouldBeNil)
 
-		d := &Dirent{Type: info.Mode().Type()}
+		d := &Dirent{typ: fsModeToType(info.Mode())}
 		So(d.IsDir(), ShouldBeTrue)
 		So(d.IsRegular(), ShouldBeFalse)
 		So(d.IsSymlink(), ShouldBeFalse)
@@ -60,7 +60,7 @@ func TestDirent(t *testing.T) {
 		info, err = os.Lstat(reg)
 		So(err, ShouldBeNil)
 
-		d = &Dirent{Type: info.Mode().Type()}
+		d = &Dirent{typ: fsModeToType(info.Mode())}
 		So(d.IsDir(), ShouldBeFalse)
 		So(d.IsRegular(), ShouldBeTrue)
 		So(d.IsSymlink(), ShouldBeFalse)
@@ -68,7 +68,7 @@ func TestDirent(t *testing.T) {
 		info, err = os.Lstat(sym)
 		So(err, ShouldBeNil)
 
-		d = &Dirent{Type: info.Mode().Type()}
+		d = &Dirent{typ: fsModeToType(info.Mode())}
 		So(d.IsDir(), ShouldBeFalse)
 		So(d.IsRegular(), ShouldBeFalse)
 		So(d.IsSymlink(), ShouldBeTrue)
@@ -104,9 +104,12 @@ func newDirent(path string, parent *Dirent) *Dirent {
 		depth = parent.depth + 1
 	}
 
+	pathBytes := []byte(path)
+
 	return &Dirent{
 		parent: parent,
-		name:   []byte(path),
+		name:   &pathBytes[0],
+		len:    uint8(len(path)),
 		depth:  depth,
 	}
 }

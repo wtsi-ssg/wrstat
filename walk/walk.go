@@ -35,6 +35,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"runtime"
 	"slices"
 	"syscall"
 	"unsafe"
@@ -43,6 +44,11 @@ import (
 const (
 	walkers    = 16
 	dirsChSize = 1024
+)
+
+const (
+	dot    = ".\x00"
+	dotdot = "..\x00"
 )
 
 // PathCallback is a callback used by Walker.Walk() that receives a directory
@@ -105,7 +111,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	go sortDirents(ctx, requestCh, sortedRequestCh)
 
 	r.next = nullDirEnt
-	r.ready.Lock()
+	r.markNotReady()
 
 	sortedRequestCh <- r
 
@@ -116,7 +122,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 
 func (w *Walker) sendDirentsToPathCallback(r *Dirent) error {
 	for ; r != nullDirEnt; r = r.done() {
-		if len(r.name) > 0 {
+		if r.name != nil {
 			if err := w.sendDirentToPathCallback(r); err != nil {
 				return err
 			}
@@ -136,8 +142,9 @@ func (w *Walker) sendDirentToPathCallback(r *Dirent) error {
 	}
 
 	if isDir {
-		r.ready.Lock()
-		r.ready.Unlock() //nolint:staticcheck
+		for !r.isReady() {
+			runtime.Gosched()
+		}
 	}
 
 	return nil
@@ -225,7 +232,7 @@ func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, root *D
 		next := r.next
 
 		if r.IsDir() {
-			r.ready.Lock()
+			r.markNotReady()
 
 			select {
 			case <-ctx.Done():
@@ -237,7 +244,7 @@ func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, root *D
 		r = next
 	}
 
-	request.ready.Unlock()
+	request.markReady()
 }
 
 type scanner struct {
@@ -314,51 +321,25 @@ func modeToType(mode uint32) uint8 {
 	return syscall.DT_REG
 }
 
-func (s *scanner) Get() ([]byte, fs.FileMode, uint64) {
-	mode := s.getMode()
-
-	return s.getName(mode.IsDir()), mode, s.Ino
+func (s *scanner) Get() ([]byte, uint8, uint64) {
+	return s.getName(), s.Type, s.Ino
 }
 
-var (
-	dot    = []byte{'.', '\x00'}      //nolint:gochecknoglobals
-	dotdot = []byte{'.', '.', '\x00'} //nolint:gochecknoglobals
-)
-
-func (s *scanner) getName(isDir bool) []byte {
+func (s *scanner) getName() []byte {
 	n := s.Dirent.Name[:]
 	name := *(*[]byte)(unsafe.Pointer(&n))
 
 	l := bytes.IndexByte(name, 0)
-	if l <= 0 || bytes.Equal(name[:2], dot) || bytes.Equal(name[:3], dotdot) {
+	if l <= 0 || string(name[:2]) == dot || string(name[:3]) == dotdot {
 		return nil
 	}
 
-	if isDir {
-		s.Dirent.Name[l] = '/'
+	if s.Type == syscall.DT_DIR {
+		name[l] = '/'
 		l++
 	}
 
 	return name[:l]
-}
-
-func (s *scanner) getMode() fs.FileMode {
-	switch s.Type {
-	case syscall.DT_DIR:
-		return fs.ModeDir
-	case syscall.DT_LNK:
-		return fs.ModeSymlink
-	case syscall.DT_CHR:
-		return fs.ModeDevice | fs.ModeCharDevice
-	case syscall.DT_BLK:
-		return fs.ModeDevice
-	case syscall.DT_FIFO:
-		return fs.ModeNamedPipe
-	case syscall.DT_SOCK:
-		return fs.ModeSocket
-	}
-
-	return 0
 }
 
 func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
@@ -378,15 +359,15 @@ func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
 
 	for s.Next() {
 		name, mode, inode := s.Get()
-		if inode == 0 || len(name) == 0 || ignoreSymlinks && mode&fs.ModeSymlink != 0 {
+		if inode == 0 || len(name) == 0 || ignoreSymlinks && mode == syscall.DT_LNK {
 			continue
 		}
 
 		de := getDirent(len(name))
-
-		de.name = append(de.name, name...)
-		de.Type = mode
+		de.typ = mode
 		de.Inode = inode
+
+		copy(de.bytes(), name)
 
 		root = root.insert(de)
 	}
