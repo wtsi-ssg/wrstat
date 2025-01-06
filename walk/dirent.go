@@ -179,7 +179,7 @@ func pathToDirEnt(path string, inode uint64) (*Dirent, error) {
 }
 
 func fsModeToType(mode fs.FileMode) uint8 {
-	switch mode.Type() { //nolint:exhaustive
+	switch mode.Type() {
 	case fs.ModeDir:
 		return syscall.DT_DIR
 	case fs.ModeSymlink:
@@ -192,9 +192,9 @@ func fsModeToType(mode fs.FileMode) uint8 {
 		return syscall.DT_FIFO
 	case fs.ModeSocket:
 		return syscall.DT_SOCK
+	default:
+		return syscall.DT_REG
 	}
-
-	return syscall.DT_REG
 }
 
 func (d *Dirent) markNotReady() {
