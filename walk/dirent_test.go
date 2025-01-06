@@ -109,7 +109,7 @@ func newDirent(path string, parent *Dirent) *Dirent {
 	return &Dirent{
 		parent: parent,
 		name:   &pathBytes[0],
-		len:    uint8(len(path)),
+		len:    uint8(len(path)), //nolint:gosec
 		depth:  depth,
 	}
 }
