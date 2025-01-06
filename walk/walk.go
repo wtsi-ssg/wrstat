@@ -33,7 +33,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/fs"
 	"os"
 	"slices"
 	"syscall"
@@ -95,8 +94,6 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	r, err := NewDirent(dir)
 	if err != nil {
 		return err
-	} else if !r.IsDir() {
-		return fs.ErrInvalid
 	}
 
 	requestCh := make(chan *Dirent)
