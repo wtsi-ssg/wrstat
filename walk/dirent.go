@@ -303,7 +303,7 @@ func (d *Dirent) done() *Dirent {
 	next := d.next
 	d.next = nullDirEnt
 
-	if d.len == 0 {
+	if d.name == nil {
 		putDirent(d.parent)
 	}
 
