@@ -39,10 +39,7 @@ import (
 	"unsafe"
 )
 
-const (
-	walkers    = 16
-	dirsChSize = 1024
-)
+const walkers = 16
 
 const (
 	dot    = ".\x00"
