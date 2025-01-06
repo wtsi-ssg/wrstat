@@ -290,7 +290,48 @@ func (s *scanner) Next() bool {
 	copy((*[unsafe.Sizeof(syscall.Dirent{})]byte)(unsafe.Pointer(&s.Dirent))[:], s.read)
 	s.read = s.read[s.Reclen:]
 
+	if s.Dirent.Type == syscall.DT_UNKNOWN {
+		return s.getType()
+	}
+
 	return true
+}
+
+func (s *scanner) getType() bool {
+	const symlinkNoFollow = 0x100
+
+	var stat syscall.Stat_t
+
+	if _, _, err := syscall.Syscall6(statCall, uintptr(s.fh),
+		uintptr(unsafe.Pointer(&s.Dirent.Name[0])), uintptr(unsafe.Pointer(&stat)),
+		symlinkNoFollow, 0, 0); err != 0 {
+		s.err = err
+
+		return false
+	}
+
+	s.Dirent.Type = modeToType(stat.Mode)
+
+	return true
+}
+
+func modeToType(mode uint32) uint8 {
+	switch mode & syscall.S_IFMT {
+	case syscall.S_IFBLK:
+		return syscall.DT_BLK
+	case syscall.S_IFCHR:
+		return syscall.DT_CHR
+	case syscall.S_IFDIR:
+		return syscall.DT_DIR
+	case syscall.S_IFIFO:
+		return syscall.DT_FIFO
+	case syscall.S_IFLNK:
+		return syscall.DT_LNK
+	case syscall.S_IFSOCK:
+		return syscall.DT_SOCK
+	}
+
+	return syscall.DT_REG
 }
 
 func (s *scanner) Get() ([]byte, fs.FileMode, uint64) {
