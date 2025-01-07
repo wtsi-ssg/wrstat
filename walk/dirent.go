@@ -160,7 +160,7 @@ func pathToDirEnt(path string, inode uint64) (*Dirent, error) {
 				return nil, fs.ErrInvalid
 			}
 
-			name = path[:split]
+			name = path[:split+1]
 			path = path[split+1:]
 		} else {
 			path = ""
