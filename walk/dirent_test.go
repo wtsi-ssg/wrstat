@@ -100,6 +100,7 @@ func TestDirent(t *testing.T) {
 
 	Convey("You can create a Dirent from a path", t, func() {
 		str100 := strings.Repeat("a", 100)
+		str255 := strings.Repeat("b", 255)
 
 		for _, test := range [...]struct {
 			Path   string
@@ -170,6 +171,31 @@ func TestDirent(t *testing.T) {
 						len:    201,
 						typ:    syscall.DT_DIR,
 						Inode:  0,
+					},
+					next:  nullDirEnt,
+					name:  &append(make([]byte, 0, 128), str100+"/"...)[0],
+					len:   100,
+					typ:   syscall.DT_DIR,
+					Inode: 1,
+				},
+			},
+			{
+				"/" + str100 + "/" + str255 + "/" + str100 + "/",
+				&Dirent{
+					parent: &Dirent{
+						parent: &Dirent{
+							parent: nil,
+							next:   nullDirEnt,
+							name:   &append(make([]byte, 0, 256), str100+"/"...)[0],
+							len:    100,
+							typ:    syscall.DT_DIR,
+							Inode:  0,
+						},
+						next:  nullDirEnt,
+						name:  &append(make([]byte, 0, 256), str255+"/"...)[0],
+						len:   255,
+						typ:   syscall.DT_DIR,
+						Inode: 0,
 					},
 					next:  nullDirEnt,
 					name:  &append(make([]byte, 0, 128), str100+"/"...)[0],
