@@ -225,7 +225,7 @@ func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, root *D
 type scanner struct {
 	buffer, read []byte
 	fh           int
-	syscall.Dirent
+	*syscall.Dirent
 	err error
 }
 
@@ -249,7 +249,7 @@ func (s *scanner) Next() bool {
 		s.read = s.buffer[:n]
 	}
 
-	copy((*[unsafe.Sizeof(syscall.Dirent{})]byte)(unsafe.Pointer(&s.Dirent))[:], s.read)
+	s.Dirent = (*syscall.Dirent)(unsafe.Pointer(&s.read[0]))
 	s.read = s.read[s.Reclen:]
 
 	if s.Dirent.Type == syscall.DT_UNKNOWN {
