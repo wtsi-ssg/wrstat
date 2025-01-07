@@ -30,6 +30,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
+	"syscall"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -93,6 +95,94 @@ func TestDirent(t *testing.T) {
 			})
 
 			So(list, ShouldResemble, result)
+		}
+	})
+
+	Convey("You can create a Dirent from a path", t, func() {
+		str100 := strings.Repeat("a", 100)
+
+		for _, test := range [...]struct {
+			Path   string
+			Output *Dirent
+		}{
+			{
+				"/a/",
+				&Dirent{
+					parent: nil,
+					next:   nullDirEnt,
+					name:   &append(make([]byte, 0, 32), "a/"...)[0],
+					len:    1,
+					typ:    syscall.DT_DIR,
+					Inode:  1,
+				},
+			},
+			{
+				"/a/b/",
+				&Dirent{
+					parent: nil,
+					next:   nullDirEnt,
+					name:   &append(make([]byte, 0, 32), "a/b/"...)[0],
+					len:    3,
+					typ:    syscall.DT_DIR,
+					Inode:  1,
+				},
+			},
+			{
+				"/" + str100 + "/b/",
+				&Dirent{
+					parent: nil,
+					next:   nullDirEnt,
+					name:   &append(make([]byte, 0, 128), str100+"/b/"...)[0],
+					len:    102,
+					typ:    syscall.DT_DIR,
+					Inode:  1,
+				},
+			},
+			{
+				"/" + str100 + "/" + str100 + "/",
+				&Dirent{
+					parent: nil,
+					next:   nullDirEnt,
+					name:   &append(make([]byte, 0, 256), str100+"/"+str100+"/"...)[0],
+					len:    201,
+					typ:    syscall.DT_DIR,
+					Inode:  1,
+				},
+			},
+			{
+				"/" + str100 + "/" + str100 + "/c/",
+				&Dirent{
+					parent: nil,
+					next:   nullDirEnt,
+					name:   &append(make([]byte, 0, 256), str100+"/"+str100+"/c/"...)[0],
+					len:    203,
+					typ:    syscall.DT_DIR,
+					Inode:  1,
+				},
+			},
+			{
+				"/" + str100 + "/" + str100 + "/" + str100 + "/",
+				&Dirent{
+					parent: &Dirent{
+						parent: nil,
+						next:   nullDirEnt,
+						name:   &append(make([]byte, 0, 256), str100+"/"+str100+"/"...)[0],
+						len:    201,
+						typ:    syscall.DT_DIR,
+						Inode:  0,
+					},
+					next:  nullDirEnt,
+					name:  &append(make([]byte, 0, 128), str100+"/"...)[0],
+					len:   100,
+					typ:   syscall.DT_DIR,
+					Inode: 1,
+				},
+			},
+		} {
+			d, err := pathToDirEnt(test.Path[1:], 1)
+			So(err, ShouldBeNil)
+			So(d, ShouldResemble, test.Output)
+			So(string(d.appendTo(nil)), ShouldEqual, test.Path)
 		}
 	})
 }
