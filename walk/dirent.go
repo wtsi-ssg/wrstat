@@ -154,7 +154,7 @@ func pathToDirEnt(path string, inode uint64) (*Dirent, error) {
 		name := path
 
 		if len(path) > maxEntryNameLength { //nolint:nestif
-			split := strings.LastIndexByte(path[:maxEntryNameLength], '/')
+			split := strings.LastIndexByte(path[:maxEntryNameLength+1], '/')
 
 			if split <= 0 {
 				return nil, fs.ErrInvalid
@@ -249,7 +249,7 @@ func (d *Dirent) Type() fs.FileMode {
 }
 
 func (d *Dirent) bytes() []byte {
-	return unsafe.Slice(d.name, d.len+1)
+	return unsafe.Slice(d.name, int(d.len)+1)
 }
 
 // IsDir returns true if we are a directory.
