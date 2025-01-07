@@ -360,7 +360,7 @@ func open(path *byte) (int, error) {
 		uintptr(dfd),
 		uintptr(unsafe.Pointer(path)),
 		uintptr(syscall.O_RDONLY),
-		uintptr(0), 0, 0)
+		0, 0, 0)
 	if err != 0 {
 		return 0, err
 	}
