@@ -185,22 +185,22 @@ Loop:
 			l := len(request.appendTo(pathBuffer[:0]))
 			pathBuffer[l] = 0
 
-			root, err := scan(buffer, &pathBuffer[0], ignoreSymlinks)
+			children, err := scan(buffer, &pathBuffer[0], ignoreSymlinks)
 			if err != nil {
 				errCB(string(pathBuffer[:l]), err)
 			}
 
-			go scanChildDirs(ctx, requestCh, request, root)
+			go scanChildDirs(ctx, requestCh, request, children)
 		}
 	}
 }
 
-func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, root *Dirent) {
+func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, children *Dirent) {
 	marker := getDirent(0)
 	marker.next = request.next
 	marker.parent = request
 
-	root.flatten(request, request, request.depth+1).next = marker
+	sortChildren(children).flatten(request, request, request.depth+1).next = marker
 
 	for r := request.next; r != marker; {
 		next := r.next
@@ -219,6 +219,19 @@ func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, root *D
 	}
 
 	request.markReady()
+}
+
+func sortChildren(children *Dirent) *Dirent {
+	root := nullDirEnt
+
+	for children != nullDirEnt {
+		this := children
+		children = children.next
+		this.next = nullDirEnt
+		root = root.insert(this)
+	}
+
+	return root
 }
 
 type scanner struct {
@@ -317,11 +330,11 @@ func (s *scanner) getName() []byte {
 }
 
 func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
-	root := nullDirEnt
+	children := nullDirEnt
 
 	fh, err := open(path)
 	if err != nil {
-		return root, err
+		return children, err
 	}
 
 	defer syscall.Close(fh)
@@ -340,13 +353,13 @@ func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
 		de := getDirent(len(name))
 		de.typ = mode
 		de.Inode = inode
+		de.next = children
+		children = de
 
 		copy(de.bytes(), name)
-
-		root = root.insert(de)
 	}
 
-	return root, s.err
+	return children, s.err
 }
 
 func open(path *byte) (int, error) {
