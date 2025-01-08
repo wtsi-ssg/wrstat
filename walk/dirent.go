@@ -44,10 +44,8 @@ const maxEntryNameLength = 255
 func newDirentPool(size int) *sync.Pool {
 	return &sync.Pool{
 		New: func() any {
-			buf := make([]byte, size)
-
 			return &Dirent{
-				name:   &buf[0],
+				name:   &make([]byte, size)[0],
 				parent: nullDirEnt,
 				next:   nullDirEnt,
 			}
