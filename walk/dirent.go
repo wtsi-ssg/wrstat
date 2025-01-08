@@ -31,11 +31,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -304,7 +304,7 @@ func (d *Dirent) compare(e *Dirent) int {
 func (d *Dirent) done() *Dirent {
 	if d.IsDir() {
 		for !d.isReady() {
-			runtime.Gosched()
+			time.Sleep(time.Millisecond)
 		}
 	}
 

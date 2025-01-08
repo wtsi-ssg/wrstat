@@ -103,7 +103,6 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 
 	go sortDirents(ctx, requestCh, sortedRequestCh)
 
-	r.next = nullDirEnt
 	r.markNotReady()
 
 	sortedRequestCh <- r
