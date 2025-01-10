@@ -30,14 +30,22 @@ import (
 	"bytes"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
+	"time"
+	"unsafe"
 )
+
+const maxEntryNameLength = 255
 
 func newDirentPool(size int) *sync.Pool {
 	return &sync.Pool{
 		New: func() any {
 			return &Dirent{
-				name:   make([]byte, 0, size),
+				name:   &make([]byte, size)[0],
 				parent: nullDirEnt,
 				next:   nullDirEnt,
 			}
@@ -46,11 +54,18 @@ func newDirentPool(size int) *sync.Pool {
 }
 
 var (
-	direntPool0   = newDirentPool(0)   //nolint:gochecknoglobals
+	direntPool0 = &sync.Pool{ //nolint:gochecknoglobals
+		New: func() any {
+			return &Dirent{
+				parent: nullDirEnt,
+				next:   nullDirEnt,
+			}
+		},
+	}
 	direntPool32  = newDirentPool(32)  //nolint:gochecknoglobals,mnd
 	direntPool64  = newDirentPool(64)  //nolint:gochecknoglobals,mnd
 	direntPool128 = newDirentPool(128) //nolint:gochecknoglobals,mnd
-	dirEntPool256 = newDirentPool(257) //nolint:gochecknoglobals,mnd
+	dirEntPool256 = newDirentPool(256) //nolint:gochecknoglobals,mnd
 
 	nullDirEnt = new(Dirent) //nolint:gochecknoglobals
 )
@@ -60,79 +75,206 @@ func init() { //nolint:gochecknoinits
 	nullDirEnt.next = nullDirEnt
 }
 
-func getDirent(size int) *Dirent {
+func getDirentPool(size int) *sync.Pool {
 	switch {
 	case size == 0:
-		return direntPool0.Get().(*Dirent) //nolint:forcetypeassert,errcheck
+		return direntPool0
 	case size <= 32: //nolint:mnd
-		return direntPool32.Get().(*Dirent) //nolint:forcetypeassert,errcheck
+		return direntPool32
 	case size <= 64: //nolint:mnd
-		return direntPool64.Get().(*Dirent) //nolint:forcetypeassert,errcheck
+		return direntPool64
 	case size <= 128: //nolint:mnd
-		return direntPool128.Get().(*Dirent) //nolint:forcetypeassert,errcheck
+		return direntPool128
 	}
 
-	return dirEntPool256.Get().(*Dirent) //nolint:forcetypeassert,errcheck
+	return dirEntPool256
+}
+
+func getDirent(size int) *Dirent {
+	de := getDirentPool(size).Get().(*Dirent) //nolint:forcetypeassert,errcheck
+
+	if de.name != nil {
+		de.len = uint8(size - 1) //nolint:gosec
+	}
+
+	return de
 }
 
 func putDirent(d *Dirent) {
-	d.name = d.name[:0]
 	d.parent = nullDirEnt
 	d.next = nullDirEnt
 	d.depth = 0
+	length := int(d.len)
 
-	switch cap(d.name) {
-	case 0:
-		direntPool0.Put(d)
-	case 32: //nolint:mnd
-		direntPool32.Put(d)
-	case 64: //nolint:mnd
-		direntPool64.Put(d)
-	case 128: //nolint:mnd
-		direntPool128.Put(d)
-	default:
-		dirEntPool256.Put(d)
+	if d.name != nil {
+		length++
 	}
+
+	getDirentPool(length).Put(d)
 }
 
 // Dirent represents a file system directory entry (a file or a directory),
 // providing information about the entry's path, type and inode.
 type Dirent struct {
 	parent *Dirent // left
-	name   []byte
+	next   *Dirent // right
+	name   *byte
+	len    uint8
+	typ    uint8
 	depth  int16
-
-	// Type is the type bits of the file mode of this entry.
-	Type fs.FileMode
+	ready  uint32
 
 	// Inode is the file system inode number for this entry.
 	Inode uint64
+}
 
-	next  *Dirent // right
-	ready sync.Mutex
+func NewDirent(path string) (*Dirent, error) {
+	if !strings.HasPrefix(path, "/") {
+		return nil, fs.ErrInvalid
+	}
+
+	mode, inode, err := statNode(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if !mode.IsDir() {
+		return nil, fs.ErrInvalid
+	}
+
+	return pathToDirEnt(filepath.Clean(path)[1:]+"/", inode)
+}
+
+func pathToDirEnt(path string, inode uint64) (*Dirent, error) {
+	var de *Dirent
+
+	for len(path) > 0 {
+		name := path
+
+		if len(path) > maxEntryNameLength { //nolint:nestif
+			split := strings.LastIndexByte(path[:maxEntryNameLength+1], '/')
+
+			if split <= 0 {
+				return nil, fs.ErrInvalid
+			}
+
+			name = path[:split+1]
+			path = path[split+1:]
+		} else {
+			path = ""
+		}
+
+		d := getDirent(len(name))
+		d.parent = de
+		d.typ = syscall.DT_DIR
+		de = d
+
+		copy(d.bytes(), name)
+	}
+
+	de.Inode = inode
+
+	return de, nil
+}
+
+func fsModeToType(mode fs.FileMode) uint8 {
+	switch mode.Type() {
+	case fs.ModeDir:
+		return syscall.DT_DIR
+	case fs.ModeSymlink:
+		return syscall.DT_LNK
+	case fs.ModeDevice | fs.ModeCharDevice, fs.ModeCharDevice:
+		return syscall.DT_CHR
+	case fs.ModeDevice:
+		return syscall.DT_BLK
+	case fs.ModeNamedPipe:
+		return syscall.DT_FIFO
+	case fs.ModeSocket:
+		return syscall.DT_SOCK
+	default:
+		return syscall.DT_REG
+	}
+}
+
+func (d *Dirent) markNotReady() {
+	d.ready = 1
+}
+
+func (d *Dirent) markReady() {
+	atomic.StoreUint32(&d.ready, 0)
+}
+
+func (d *Dirent) isReady() bool {
+	return atomic.LoadUint32(&d.ready) == 0
+}
+
+func statNode(path string) (fs.FileMode, uint64, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if !fi.IsDir() {
+		return 0, 0, fs.ErrInvalid
+	}
+
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, 0, fs.ErrInvalid
+	}
+
+	return fi.Mode(), st.Ino, nil
+}
+
+// Type returns the type bits of the file mode of this entry.
+func (d *Dirent) Type() fs.FileMode {
+	switch d.typ {
+	case syscall.DT_DIR:
+		return fs.ModeDir
+	case syscall.DT_LNK:
+		return fs.ModeSymlink
+	case syscall.DT_CHR:
+		return fs.ModeDevice | fs.ModeCharDevice
+	case syscall.DT_BLK:
+		return fs.ModeDevice
+	case syscall.DT_FIFO:
+		return fs.ModeNamedPipe
+	case syscall.DT_SOCK:
+		return fs.ModeSocket
+	}
+
+	return 0
+}
+
+func (d *Dirent) bytes() []byte {
+	return unsafe.Slice(d.name, int(d.len)+1)
 }
 
 // IsDir returns true if we are a directory.
 func (d *Dirent) IsDir() bool {
-	return d.Type.IsDir()
+	return d.typ == syscall.DT_DIR
 }
 
 // IsRegular returns true if we are a regular file.
 func (d *Dirent) IsRegular() bool {
-	return d.Type.IsRegular()
+	return d.typ == syscall.DT_REG
 }
 
 // IsSymlink returns true if we are a symlink.
 func (d *Dirent) IsSymlink() bool {
-	return d.Type&os.ModeSymlink != 0
+	return d.typ == syscall.DT_LNK
 }
 
 func (d *Dirent) appendTo(p []byte) []byte {
-	if d.parent != nil {
+	if d.parent == nil {
+		p = append(p, '/')
+	} else {
 		p = d.parent.appendTo(p)
 	}
 
-	return append(p, d.name...)
+	p = append(p, d.bytes()...)
+
+	return p
 }
 
 // Bytes returns the FilePath as a literal byte-slice.
@@ -141,47 +283,39 @@ func (d *Dirent) Bytes() []byte {
 }
 
 func (d *Dirent) compare(e *Dirent) int {
-	if d.depth < e.depth {
-		e = e.getDepth(d.depth)
-	} else if d.depth > e.depth {
-		d = d.getDepth(e.depth)
-	}
-
-	return e.compareTo(d)
-}
-
-func (d *Dirent) getDepth(n int16) *Dirent {
-	for d.depth != n {
+	for d.depth > e.depth {
 		d = d.parent
 	}
 
-	return d
-}
-
-func (d *Dirent) compareTo(e *Dirent) int {
-	if d == e {
-		return 0
+	for e.depth > d.depth {
+		e = e.parent
 	}
 
-	cmp := d.parent.compareTo(e.parent)
-
-	if cmp == 0 {
-		return bytes.Compare(d.name, e.name)
+	for d.parent != e.parent {
+		d = d.parent
+		e = e.parent
 	}
 
-	return cmp
+	return bytes.Compare(e.bytes(), d.bytes())
 }
 
 func (d *Dirent) done() *Dirent {
-	next := d.next
-	d.next = nullDirEnt
+	if d.IsDir() {
+		for !d.isReady() {
+			time.Sleep(time.Millisecond)
+		}
+	}
 
-	if len(d.name) == 0 {
+	next := d.next
+
+	if d.name == nil {
 		putDirent(d.parent)
 	}
 
 	if !d.IsDir() {
 		putDirent(d)
+	} else {
+		d.next = nullDirEnt
 	}
 
 	return next
@@ -192,7 +326,7 @@ func (d *Dirent) insert(e *Dirent) *Dirent { //nolint:gocyclo
 		return e
 	}
 
-	switch bytes.Compare(d.name, e.name) {
+	switch bytes.Compare(d.bytes(), e.bytes()) {
 	case 1:
 		d.parent = d.parent.insert(e)
 	case -1:
