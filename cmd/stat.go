@@ -109,8 +109,6 @@ on the above) are stored in another file named after the input file with a
 			die("exactly 1 input file should be provided")
 		}
 
-		logToFile(args[0] + statLogOutputFileSuffix)
-
 		statPathsInFile(args[0], statCh, statDebug)
 	},
 }
@@ -192,6 +190,8 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 	if err := addChOperation(tsvPath, p); err != nil {
 		die("%s", err)
 	}
+
+	logToFile(input.Name() + statLogOutputFileSuffix)
 
 	if err := p.Scan(input); err != nil {
 		die("%s", err)
