@@ -43,7 +43,7 @@ const maxFilenameLength = 256
 
 // non-ascii bytes could become \xXX (4x the length at worst), the two
 // speech-marks are +2 and a newline is +1.
-const maxQuotedPathLength = (4096+maxFilenameLength)*4 + 2 + 1
+const maxQuotedPathLength = (maxPathLength+maxFilenameLength)*4 + 2 + 1
 
 const bufferSize = 1 << 20
 
