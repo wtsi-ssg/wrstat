@@ -39,6 +39,7 @@ import (
 const userOnlyPerm = 0700
 
 const maxPathLength = 4096
+const maxFilenameLength = 256
 
 // non-ascii bytes could become \xXX (4x the length at worst), the two
 // speech-marks are +2 and a newline is +1.
