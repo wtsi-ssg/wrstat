@@ -39,10 +39,11 @@ import (
 const userOnlyPerm = 0700
 
 const maxPathLength = 4096
+const maxFilenameLength = 256
 
 // non-ascii bytes could become \xXX (4x the length at worst), the two
 // speech-marks are +2 and a newline is +1.
-const maxQuotedPathLength = 4096*4 + 2 + 1
+const maxQuotedPathLength = (maxPathLength+maxFilenameLength)*4 + 2 + 1
 
 const bufferSize = 1 << 20
 
@@ -167,7 +168,7 @@ func NewFiles(outDir string, n int) (*Files, error) {
 func (f *Files) WritePaths() PathCallback {
 	var (
 		quoted  [maxQuotedPathLength]byte
-		tmpPath [maxPathLength]byte
+		tmpPath [maxPathLength + maxFilenameLength]byte
 	)
 
 	return func(entry *Dirent) error {

@@ -29,6 +29,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -229,6 +230,68 @@ func TestWalk(t *testing.T) {
 
 		_, err = NewFiles(outDir, 1)
 		So(err, ShouldNotBeNil)
+	})
+
+	Convey("With absolute paths longer than 4096", t, func() {
+		tdir := t.TempDir()
+		fname := strings.Repeat("a", 255)
+
+		So(os.Chdir(tdir), ShouldBeNil)
+
+		for i := 0; i < 18; i++ {
+			So(os.Mkdir(fname, 0700), ShouldBeNil)
+			So(os.Chdir(fname), ShouldBeNil)
+		}
+
+		Convey("the walk throws an error, but does not crash", func() {
+			_, err := os.Getwd()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "getwd: file name too long")
+
+			outDir := t.TempDir()
+
+			files, err := NewFiles(outDir, 1)
+			So(err, ShouldBeNil)
+
+			w := New(files.WritePaths(), true, false)
+
+			var errors []error
+
+			err = w.Walk(tdir, func(_ string, err error) {
+				errors = append(errors, err)
+			})
+			So(err, ShouldBeNil)
+			So(len(errors), ShouldEqual, 1)
+			So(errors[0].Error(), ShouldEqual, "file name too long")
+
+			So(files.Close(), ShouldBeNil)
+
+			f, err := os.Open(filepath.Join(outDir, "walk.1"))
+			So(err, ShouldBeNil)
+
+			var buf strings.Builder
+
+			_, err = io.Copy(&buf, f)
+			So(err, ShouldBeNil)
+
+			base := tdir + "/"
+
+			var expectation string
+
+			for i := 0; i < 17; i++ {
+				expectation += strconv.Quote(base) + "\n"
+				base = filepath.Join(base, fname) + "/"
+			}
+
+			So(buf.String(), ShouldEqual, expectation)
+		})
+
+		Reset(func() {
+			So(os.Chdir(".."), ShouldBeNil)
+			So(os.Remove(fname), ShouldBeNil)
+			So(os.Chdir(".."), ShouldBeNil)
+			So(os.Remove(fname), ShouldBeNil)
+		})
 	})
 }
 

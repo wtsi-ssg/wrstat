@@ -174,7 +174,7 @@ func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh c
 ) {
 	buffer := make([]byte, os.Getpagesize())
 
-	var pathBuffer [maxPathLength + 1]byte
+	var pathBuffer [maxPathLength + maxFilenameLength + 1]byte
 
 Loop:
 	for {
