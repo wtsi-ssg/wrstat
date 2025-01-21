@@ -38,6 +38,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -178,14 +179,22 @@ func multiTests(t *testing.T, subcommand ...string) {
 			"-f", "final_output")...)
 		So(err, ShouldBeNil)
 
-		So(len(jobs), ShouldEqual, 5)
+		So(len(jobs), ShouldEqual, 6)
 		So(len(jobs[0].DepGroups), ShouldEqual, 1)
 		So(len(jobs[1].DepGroups), ShouldEqual, 1)
 		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
 
 		walk1DepGroup := jobs[0].DepGroups[0]
 		walk2DepGroup := jobs[1].DepGroups[0]
+		combine1DepGroup := jobs[2].DepGroups[0]
+		combine2DepGroup := jobs[3].DepGroups[0]
 		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
+
+		dateStr := regexp.MustCompile(`final_output/(\d+)_`).FindStringSubmatch(jobs[4].Cmd)
+		So(len(dateStr), ShouldEqual, 2)
+
+		now, err := strconv.ParseInt(dateStr[1], 10, 64)
+		So(err, ShouldBeNil)
 
 		exe, err := filepath.Abs(app)
 		So(err, ShouldBeNil)
@@ -216,14 +225,14 @@ func multiTests(t *testing.T, subcommand ...string) {
 				DepGroups:    []string{walk2DepGroup},
 			},
 			{
-				Cmd:          fmt.Sprintf("%s combine %s/%s/path/%s", exe, workingDir, repGroup, walk1DepGroup),
+				Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk1DepGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-combine",
 				Requirements: combineReqs,
 				Override:     1,
 				Retries:      30,
-				DepGroups:    []string{repGroup},
+				DepGroups:    []string{combine1DepGroup},
 				Dependencies: jobqueue.Dependencies{
 					{
 						DepGroup: walk1DepGroup,
@@ -231,14 +240,14 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf("%s combine %s/%s/path/%s", exe, workingDir, repGroup, walk2DepGroup),
+				Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk2DepGroup),
 				CwdMatters:   true,
 				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-combine",
 				Requirements: combineReqs,
 				Override:     1,
 				Retries:      30,
-				DepGroups:    []string{repGroup},
+				DepGroups:    []string{combine2DepGroup},
 				Dependencies: jobqueue.Dependencies{
 					{
 						DepGroup: walk2DepGroup,
@@ -246,16 +255,32 @@ func multiTests(t *testing.T, subcommand ...string) {
 				},
 			},
 			{
-				Cmd:          fmt.Sprintf("%s tidy -f final_output -d %s %s/%s", exe, date, workingDir, repGroup),
+				Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome%%2Fpath\" \"%s/%s/path/%s\"",
+					exe, now, workingDir, repGroup, walk1DepGroup),
 				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-tidy-final_output-%s-%s", date, repGroup),
+				RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
 				ReqGroup:     "wrstat-tidy",
 				Requirements: tidyReqs,
 				Override:     1,
 				Retries:      30,
 				Dependencies: jobqueue.Dependencies{
 					{
-						DepGroup: repGroup,
+						DepGroup: combine1DepGroup,
+					},
+				},
+			},
+			{
+				Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome-other%%2Fpath\" \"%s/%s/path/%s\"",
+					exe, now, workingDir, repGroup, walk2DepGroup),
+				CwdMatters:   true,
+				RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
+				ReqGroup:     "wrstat-tidy",
+				Requirements: tidyReqs,
+				Override:     1,
+				Retries:      30,
+				Dependencies: jobqueue.Dependencies{
+					{
+						DepGroup: combine2DepGroup,
 					},
 				},
 			},
@@ -615,8 +640,9 @@ func TestTidy(t *testing.T) {
 		finalDir := t.TempDir()
 
 		for _, file := range [...]string{
-			filepath.Join("a", "b", "combine.stats.gz"),
-			filepath.Join("a", "b", "combine.log.gz"),
+			"walk.1.log",
+			"combine.stats.gz",
+			"combine.log.gz",
 		} {
 			fp := filepath.Join(srcDir, file)
 			err := os.MkdirAll(filepath.Dir(fp), 0755)
@@ -625,7 +651,7 @@ func TestTidy(t *testing.T) {
 			writeFileString(t, fp, file)
 		}
 
-		_, _, jobs, err := runWRStat("tidy", "-d", "today", "-f", finalDir, srcDir)
+		_, _, jobs, err := runWRStat("tidy", "-f", finalDir, srcDir)
 		So(err, ShouldBeNil)
 
 		So(len(jobs), ShouldEqual, 0)
@@ -635,9 +661,8 @@ func TestTidy(t *testing.T) {
 		So(err.Error(), ShouldEndWith, "no such file or directory")
 
 		for file, expected := range map[string]string{
-			"today_a.b.001.stats.gz": filepath.Join("a", "b", "combine.stats.gz"),
-			"today_a.b.001.logs.gz":  filepath.Join("a", "b", "combine.log.gz"),
-			".updated":               "",
+			"stats.gz": "combine.stats.gz",
+			"logs.gz":  "combine.log.gz",
 		} {
 			f, err := os.Open(filepath.Join(finalDir, file))
 			So(err, ShouldBeNil)
@@ -683,7 +708,7 @@ func TestEnd2End(t *testing.T) {
 
 		writeFileString(t, buildScript, `#!/bin/bash
 set -euo pipefail
-git clone --depth 1 --branch v0.32.4 https://github.com/VertebrateResequencing/wr /opt/wr &&
+git clone --depth 1 --branch v0.33.0 https://github.com/VertebrateResequencing/wr /opt/wr &&
 cd /opt/wr/ && GOPATH=/build/ make install;
 cd /opt/wrstat && GOPATH=/build/ make install;
 chmod -R +w /build;`)
@@ -831,7 +856,7 @@ waitForJobs;`)
 			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n",
 			u.Gid, GroupA, UserA, GroupB, UserB, GroupC, UserC, GroupD, UserD, GroupE, UserE))
 
-		cmd := exec.Command("singularity", "run", "-e", //nolint:gosec
+		cmd := exec.Command("singularity", "run", "-p", "-e", //nolint:gosec
 			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group,"+
 				binDir+":/build,"+runScript+":/run.sh",
 			"--home", tmpHome,
@@ -845,20 +870,20 @@ waitForJobs;`)
 		So(err, ShouldBeNil)
 
 		for file, contents := range map[string]string{
-			"????????_A.*.logs.gz":      "",
-			"????????_E.*.logs.gz":      "",
-			"????????_store1.*.logs.gz": "",
-			"????????_store2.*.logs.gz": "",
-			"????????_store3.*.logs.gz": "",
-			"????????_A.*.stats.gz": fmt.Sprintf(""+
+			"*_%2Fsimple%2FA/logs.gz":       "",
+			"*_%2Fsimple%2FE/logs.gz":       "",
+			"*_%2Fobjects%2Fstore1/logs.gz": "",
+			"*_%2Fobjects%2Fstore2/logs.gz": "",
+			"*_%2Fobjects%2Fstore3/logs.gz": "",
+			"*_%2Fsimple%2FA/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/simple/A/")+"\t0\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\td\t\x00\t2\t32",
 				UserA, GroupA),
-			"????????_E.*.stats.gz": fmt.Sprintf(""+
+			"*_%2Fsimple%2FE/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\tf\t\x00\t2\t34\n"+
 				strconv.Quote("/simple/E/")+"\t0\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\td\t\x00\t3\t32",
 				UserE, GroupE),
-			"????????_store1.*.stats.gz": fmt.Sprintf(""+
+			"*_%2Fobjects%2Fstore1/stats.gz": fmt.Sprintf(""+ //nolint:dupl
 				strconv.Quote("/objects/store1/")+"\t0\t0\t0\t"+ct(10)+"\t"+
 				ct(10)+"\t"+ct(10)+"\td\t\x00\t3\t32\n"+
 				strconv.Quote("/objects/store1/data/")+"\t0\t0\t0\t"+ct(42)+"\t"+
@@ -890,7 +915,7 @@ waitForJobs;`)
 				strconv.Quote("/objects/store1/data/temp/b/")+"\t0\t%[1]d\t%[2]d\t"+
 				ct(64)+"\t"+ct(64)+"\t"+ct(64)+"\td\t\x00\t2\t32",
 				UserC, GroupA, UserB, UserA),
-			"????????_store2.*.stats.gz": fmt.Sprintf(""+
+			"*_%2Fobjects%2Fstore2/stats.gz": fmt.Sprintf(""+ //nolint:dupl
 				strconv.Quote("/objects/store2/")+"\t0\t0\t0\t"+ct(148)+"\t"+
 				ct(148)+"\t"+ct(148)+"\td\t\x00\t5\t32\n"+
 				strconv.Quote("/objects/store2/part1/other.bed")+"\t512\t%[1]d\t%[2]d\t"+
@@ -929,7 +954,7 @@ waitForJobs;`)
 				strconv.Quote("/objects/store2/part0/teams/team1/")+"\t0\t%[6]d\t%[2]d\t"+
 				ct(104)+"\t"+ct(104)+"\t"+ct(104)+"\td\t\x00\t2\t32",
 				UserD, GroupA, GroupD, UserB, GroupB, UserA, UserE),
-			"????????_store3.*.stats.gz": fmt.Sprintf(""+
+			"*_%2Fobjects%2Fstore3/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/objects/store3/aFile")+"\t512\t%d\t%d\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/objects/store3/")+"\t0\t0\t0\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\td\t\x00\t2\t32",
 				UserA, GroupA),

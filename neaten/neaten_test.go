@@ -40,31 +40,26 @@ import (
 const modePermUser = 0770
 
 func TestTidy(t *testing.T) {
-	date := "20220829"
 	srcUniversal := "cci4fafnu1ia052l75sg"
-	srcUniqueGo := "cci4fafnu1ia052l75t0"
-	srcUniquePerl := "cci4fafnu1ia052l75tg"
 
 	Convey("Given existing source and dest dirs you can tidy the source", t, func() {
 		tmpDir := t.TempDir()
 		srcDir := filepath.Join(tmpDir, "src", srcUniversal)
-		destDir := filepath.Join(tmpDir, "dest", "final")
-		interestUniqueDir1 := createTestPath([]string{srcDir, "go", srcUniqueGo})
-		interestUniqueDir2 := createTestPath([]string{srcDir, "perl", srcUniquePerl})
+		dest := filepath.Join(tmpDir, "dest")
+		final := filepath.Join(dest, "final")
 
-		combineSuffixes := buildSrcDir(interestUniqueDir1, interestUniqueDir2)
+		combineSuffixes := buildSrcDir(srcDir)
 
-		createTestDirWithDifferentPerms(destDir)
+		createTestDirWithDifferentPerms(dest)
 
 		test := Tidy{
 			SrcDir:  srcDir,
-			DestDir: destDir,
-			Date:    date,
+			DestDir: final,
 
 			CombineFileSuffixes: combineSuffixes,
 
-			CombineFileGlobPattern:  "%s/*/*/%s",
-			WalkFilePathGlobPattern: "%s/*/*/*%s",
+			CombineFileGlobPattern:  "%s/%s",
+			WalkFilePathGlobPattern: "%s/*%s",
 
 			DestDirPerms: modePermUser,
 		}
@@ -72,37 +67,27 @@ func TestTidy(t *testing.T) {
 		disableDeletion := false
 
 		err := test.Up(disableDeletion)
+		So(err, ShouldBeNil)
 
 		Convey("And the combine files are moved from the source dir to the dest dir", func() {
-			combineFileSuffixes := []string{".logs.gz", ".stats.gz"}
+			combineFileSuffixes := []string{"logs.gz", "stats.gz"}
 
 			for _, suffix := range combineFileSuffixes {
-				final1 := filepath.Join(destDir, date+"_go."+srcUniqueGo+"."+srcUniversal+suffix)
+				final1 := filepath.Join(final, suffix)
 				_, err = os.Stat(final1)
-				So(err, ShouldBeNil)
-
-				final2 := filepath.Join(destDir, date+"_perl."+srcUniquePerl+"."+srcUniversal+suffix)
-				_, err = os.Stat(final2)
 				So(err, ShouldBeNil)
 			}
 		})
 
-		Convey("And the .updated file exists in the dest dir", func() {
-			expectedFileName := filepath.Join(destDir, ".updated")
-
-			_, err = os.Stat(expectedFileName)
-			So(err, ShouldBeNil)
-		})
-
-		Convey("And the mtime of the .updated file matches the oldest mtime of the walk log files", func() {
+		Convey("And the mtime of the final directory matches the oldest mtime of the walk log files", func() {
 			err = os.RemoveAll(tmpDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(srcDir)
 
-			createTestDirWithDifferentPerms(destDir)
+			createTestDirWithDifferentPerms(final)
 
-			newMtimeFile := filepath.Join(interestUniqueDir1, "walk.1.log")
+			newMtimeFile := filepath.Join(srcDir, "walk.1.log")
 			expectedMTime := time.Date(2006, time.April, 1, 3, 4, 5, 0, time.UTC)
 			expectedATime := time.Date(2007, time.March, 2, 4, 5, 6, 0, time.UTC)
 
@@ -112,16 +97,16 @@ func TestTidy(t *testing.T) {
 			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
 
-			sentinalMTime := getMTime(filepath.Join(destDir, ".updated"))
+			finalMTime := getMTime(final)
 
-			So(sentinalMTime, ShouldEqual, expectedMTime)
+			So(finalMTime, ShouldEqual, expectedMTime)
 		})
 
 		Convey("And the moved file permissions match those of the dest dir", func() {
-			destDirPerm, errs := os.Stat(destDir)
+			destDirPerm, errs := os.Stat(dest)
 			So(errs, ShouldBeNil)
 
-			err = filepath.WalkDir(destDir, func(path string, d fs.DirEntry, err error) error {
+			err = filepath.WalkDir(final, func(path string, d fs.DirEntry, err error) error {
 				if err != nil {
 					return err
 				}
@@ -142,9 +127,9 @@ func TestTidy(t *testing.T) {
 			err = os.RemoveAll(tmpDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(srcDir)
 
-			createTestDirWithDifferentPerms(destDir)
+			createTestDirWithDifferentPerms(final)
 
 			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
@@ -157,9 +142,9 @@ func TestTidy(t *testing.T) {
 			err = os.RemoveAll(tmpDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(srcDir)
 
-			createTestDirWithDifferentPerms(destDir)
+			createTestDirWithDifferentPerms(final)
 
 			err = test.Up(true)
 			So(err, ShouldBeNil)
@@ -169,18 +154,18 @@ func TestTidy(t *testing.T) {
 		})
 
 		Convey("And it also works if the dest dir doesn't exist", func() {
-			err := os.RemoveAll(destDir)
+			err := os.RemoveAll(final)
 			So(err, ShouldBeNil)
 
 			err = os.RemoveAll(srcDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(srcDir)
 
 			err = test.Up(disableDeletion)
 			So(err, ShouldBeNil)
 
-			_, err = os.Stat(destDir)
+			_, err = os.Stat(final)
 			So(err, ShouldBeNil)
 		})
 
@@ -196,13 +181,13 @@ func TestTidy(t *testing.T) {
 		})
 
 		Convey("And it doesn't work if source or dest is an incorrect relative path", func() {
-			err := os.RemoveAll(destDir)
+			err := os.RemoveAll(final)
 			So(err, ShouldBeNil)
 
 			err = os.RemoveAll(srcDir)
 			So(err, ShouldBeNil)
 
-			buildSrcDir(interestUniqueDir1, interestUniqueDir2)
+			buildSrcDir(srcDir)
 
 			relDir := filepath.Join(tmpDir, "rel")
 			err = os.MkdirAll(relDir, modePermUser)
@@ -223,18 +208,16 @@ func TestTidy(t *testing.T) {
 	})
 }
 
-func buildSrcDir(interestUniqueDir1, interestUniqueDir2 string) map[string]string {
+func buildSrcDir(srcDir string) map[string]string {
 	walkFileSuffixes := []string{"log", "stats"}
 	combineFileSuffixes := []string{"combine.log.gz", "combine.stats.gz"}
 
 	for i := range walkFileSuffixes {
-		createTestPath([]string{interestUniqueDir1}, "walk.1."+walkFileSuffixes[i])
-		createTestPath([]string{interestUniqueDir2}, "walk.1."+walkFileSuffixes[i])
+		createTestPath([]string{srcDir}, "walk.1."+walkFileSuffixes[i])
 	}
 
 	for i := range combineFileSuffixes {
-		createTestPath([]string{interestUniqueDir1}, combineFileSuffixes[i])
-		createTestPath([]string{interestUniqueDir2}, combineFileSuffixes[i])
+		createTestPath([]string{srcDir}, combineFileSuffixes[i])
 	}
 
 	inputOutputCombineSuffixes := map[string]string{

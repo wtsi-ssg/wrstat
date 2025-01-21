@@ -28,6 +28,7 @@ package fs
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -150,7 +151,14 @@ func DirValid(dir string) error {
 		return err
 	}
 
-	_, err = os.Stat(dir)
+	s, err := os.Stat(dir)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if !s.IsDir() {
+		return fs.ErrInvalid
+	}
+
+	return nil
 }

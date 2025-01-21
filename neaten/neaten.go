@@ -45,8 +45,6 @@ func (e Error) Error() string { return string(e) }
 
 const ErrNoOutputsFound = Error("There are no existing files according to the provided input and output suffixes.")
 
-const Sentinal = ".updated"
-
 // modeRW are the read-write permission bits for user, group and other.
 const modeRW = 0666
 
@@ -54,11 +52,9 @@ const modeRW = 0666
 // input files, and information about your destination directory, so that Up()
 // can tidy your source files to the DestDir.
 type Tidy struct {
-	SrcDir  string
-	DestDir string
-
-	// Date used in the renaming of files.
-	Date string
+	SrcDir     string
+	dotDestDir string
+	DestDir    string
 
 	// File suffixes of combine files in the SrcDir, and their counterpart in
 	// the destDir.
@@ -90,15 +86,26 @@ func (t *Tidy) Up(disableDeletion bool) error {
 		return err
 	}
 
-	err := fileCheck.DirValid(t.DestDir)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(t.DestDir, t.DestDirPerms)
-		if err != nil {
+	t.dotDestDir = filepath.Join(filepath.Dir(t.DestDir), "."+filepath.Base(t.DestDir))
+
+	if err := fileCheck.DirValid(t.DestDir); err != nil { //nolint:nestif
+		if !os.IsNotExist(err) {
 			return err
 		}
+	} else if err = os.Rename(t.DestDir, t.dotDestDir); err != nil {
+		return err
 	}
 
-	t.destDirInfo, err = os.Stat(t.DestDir)
+	err := fileCheck.DirValid(t.dotDestDir)
+	if os.IsNotExist(err) {
+		if err = os.MkdirAll(t.dotDestDir, t.DestDirPerms); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	t.destDirInfo, err = os.Stat(filepath.Dir(t.dotDestDir))
 	if err != nil {
 		return err
 	}
@@ -162,17 +169,7 @@ func (t *Tidy) findAndMoveOutputs(inSuffix, outSuffix string) error {
 // moveOutput moves an output file to our desrDir and changes its name to the
 // correct format, then adjusts ownership and permissions to match the destDir.
 func (t *Tidy) moveOutput(source string, suffix string) error {
-	interestUniqueDir := filepath.Dir(source)
-	interestBaseDir := filepath.Dir(interestUniqueDir)
-	multiUniqueDir := filepath.Dir(interestBaseDir)
-	dest := filepath.Join(t.DestDir, fmt.Sprintf("%s_%s.%s.%s.%s",
-		t.Date,
-		filepath.Base(interestBaseDir),
-		filepath.Base(interestUniqueDir),
-		filepath.Base(multiUniqueDir),
-		suffix))
-
-	return t.renameAndCorrectPerms(source, dest)
+	return t.renameAndCorrectPerms(source, filepath.Join(t.dotDestDir, suffix))
 }
 
 // renameAndCorrectPerms tries 2 ways to rename the file (resorting to a copy if
@@ -182,14 +179,19 @@ func (t *Tidy) moveOutput(source string, suffix string) error {
 // If source doesn't exist, but dest does, assumes the rename was done
 // previously and just tries to match the permissions.
 func (t *Tidy) renameAndCorrectPerms(source, dest string) error {
-	if _, err := os.Stat(source); errors.Is(err, os.ErrNotExist) {
+	s, err := os.Stat(source)
+	if errors.Is(err, os.ErrNotExist) {
 		if _, err = os.Stat(dest); err == nil {
 			return CorrectPerms(dest, t.destDirInfo)
 		}
 	}
 
-	err := os.Rename(source, dest)
+	err = os.Rename(source, dest)
 	if err != nil {
+		if s.IsDir() {
+			return fs.ErrInvalid
+		}
+
 		if err = shutil.CopyFile(source, dest, false); err != nil {
 			return err
 		}
@@ -261,30 +263,21 @@ func (t *Tidy) matchPermsInsideDir(dir string) error {
 	})
 }
 
-// touchUpdatedFile touches a file ".updated" in the final output dir so that
+// touchUpdatedFile touches the final output dir so that
 // other processes can know when we're done. Matches the permissions of the
 // touched file to the given permissions. Gives the file an mtime corresponding
 // to the oldest mtime of walk log files.
 func (t *Tidy) touchUpdatedFile() error {
-	sentinel := filepath.Join(t.DestDir, Sentinal)
-
 	oldest, err := t.getOldestMtimeOfWalkFiles(t.SrcDir, ".log")
 	if err != nil {
 		return err
 	}
 
-	_, err = os.Stat(sentinel)
-	if os.IsNotExist(err) {
-		if err = CreateFile(sentinel); err != nil {
-			return err
-		}
-	}
-
-	if err = changeAMFileTime(sentinel, oldest); err != nil {
+	if err = changeAMFileTime(t.dotDestDir, oldest); err != nil {
 		return err
 	}
 
-	return CorrectPerms(sentinel, t.destDirInfo)
+	return t.renameAndCorrectPerms(t.dotDestDir, t.DestDir)
 }
 
 // CreateFile creates a file in the given path.

@@ -146,7 +146,7 @@ func DefaultRequirements() *jqs.Requirements {
 // Dependencies.
 //
 // If req is supplied, sets the job override to 1. Otherwise, req will default
-// to a minimal set of requirments, and override will be 0. If this Scheduler
+// to a minimal set of requirements, and override will be 0. If this Scheduler
 // had been made with a queue override, the requirements will be altered to add
 // that queue.
 func (s *Scheduler) NewJob(cmd, repGroup, reqGroup, depGroup, dep string, req *jqs.Requirements) *jobqueue.Job {
