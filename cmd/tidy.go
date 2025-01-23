@@ -65,8 +65,8 @@ Final output files are named to include the given --date as follows:
 
 Where [suffix] is one of 'stats.gz' or 'logs.gz'.
 
-Finally, if --date is set, it sets the modtime of the --final_output directory
-to the requested time (in seconds since Unix epoch).
+Finally it sets the modtime of the --final_output directory to the mtime of the
+oldest log file in the source directory.
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
