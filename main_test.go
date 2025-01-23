@@ -150,6 +150,39 @@ func TestCron(t *testing.T) {
 func multiTests(t *testing.T, subcommand ...string) {
 	t.Helper()
 
+	date := time.Now().Format("20060102")
+
+	Convey("'wrstat multi' command produces the correct jobs to run", func() {
+		workingDir := t.TempDir()
+		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "/some/path", "/some-other/path",
+			"-f", "final_output")...)
+		So(err, ShouldBeNil)
+
+		So(len(jobs), ShouldEqual, 6)
+		So(len(jobs[0].DepGroups), ShouldEqual, 1)
+		So(len(jobs[1].DepGroups), ShouldEqual, 1)
+		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
+
+		expectation := createMultiJobExpectation(t, jobs, workingDir, date, 0)
+
+		So(jobs, ShouldResemble, expectation)
+
+		Convey("'wrstat multi' with a maximum run time produces jobs with the correct limit group", func() {
+			_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "-t", "13", "/some/path", "/some-other/path",
+				"-f", "final_output")...)
+			So(err, ShouldBeNil)
+
+			expectation := createMultiJobExpectation(t, jobs, workingDir, date, 13)
+
+			So(jobs, ShouldResemble, expectation)
+		})
+	})
+}
+
+func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
+	date string, timeout int) []*jobqueue.Job {
+	t.Helper()
+
 	walkReqs := &scheduler.Requirements{
 		RAM:   16000,
 		Time:  19 * time.Hour,
@@ -171,123 +204,141 @@ func multiTests(t *testing.T, subcommand ...string) {
 		Disk:  1,
 	}
 
-	date := time.Now().Format("20060102")
+	walk1DepGroup := jobs[0].DepGroups[0]
+	walk2DepGroup := jobs[1].DepGroups[0]
+	combine1DepGroup := jobs[2].DepGroups[0]
+	combine2DepGroup := jobs[3].DepGroups[0]
+	repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
 
-	Convey("'wrstat multi' command produces the correct jobs to run", func() {
-		workingDir := t.TempDir()
-		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "/some/path", "/some-other/path",
-			"-f", "final_output")...)
+	dateStr := regexp.MustCompile(`final_output/(\d+)_`).FindStringSubmatch(jobs[4].Cmd)
+	So(len(dateStr), ShouldEqual, 2)
+
+	now, err := strconv.ParseInt(dateStr[1], 10, 64)
+	So(err, ShouldBeNil)
+
+	exe, err := filepath.Abs(app)
+	So(err, ShouldBeNil)
+
+	var timeoutDate int64
+
+	if timeout > 0 {
+		timeoutStr := regexp.MustCompile(`-t (\d+) `).FindStringSubmatch(jobs[0].Cmd)
+		So(len(timeoutStr), ShouldEqual, 2)
+
+		timeoutDate, err = strconv.ParseInt(timeoutStr[1], 10, 0)
 		So(err, ShouldBeNil)
+		So(timeoutDate, ShouldAlmostEqual, time.Now().Unix()+int64(timeout)*3600, 5)
+	}
 
-		So(len(jobs), ShouldEqual, 6)
-		So(len(jobs[0].DepGroups), ShouldEqual, 1)
-		So(len(jobs[1].DepGroups), ShouldEqual, 1)
-		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
-
-		walk1DepGroup := jobs[0].DepGroups[0]
-		walk2DepGroup := jobs[1].DepGroups[0]
-		combine1DepGroup := jobs[2].DepGroups[0]
-		combine2DepGroup := jobs[3].DepGroups[0]
-		repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
-
-		dateStr := regexp.MustCompile(`final_output/(\d+)_`).FindStringSubmatch(jobs[4].Cmd)
-		So(len(dateStr), ShouldEqual, 2)
-
-		now, err := strconv.ParseInt(dateStr[1], 10, 64)
-		So(err, ShouldBeNil)
-
-		exe, err := filepath.Abs(app)
-		So(err, ShouldBeNil)
-
-		expectation := []*jobqueue.Job{
-			{
-				Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -t 0 -o %[2]s/%[3]s/path/%[1]s -i"+
-					" wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
-					workingDir, repGroup, date, exe),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-walk",
-				Requirements: walkReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{walk1DepGroup},
-			},
-			{
-				Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -t 0 -o %[2]s/%[3]s/path/%[1]s -i"+
-					" wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
-					workingDir, repGroup, date, exe),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-walk",
-				Requirements: walkReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{walk2DepGroup},
-			},
-			{
-				Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk1DepGroup),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-combine",
-				Requirements: combineReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{combine1DepGroup},
-				Dependencies: jobqueue.Dependencies{
-					{
-						DepGroup: walk1DepGroup,
-					},
+	expectation := []*jobqueue.Job{
+		{
+			Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
+				" wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
+				workingDir, repGroup, date, exe, timeoutDate),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-walk",
+			Requirements: walkReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{walk1DepGroup},
+		},
+		{
+			Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
+				" wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
+				workingDir, repGroup, date, exe, timeoutDate),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-walk",
+			Requirements: walkReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{walk2DepGroup},
+		},
+		{
+			Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk1DepGroup),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-combine",
+			Requirements: combineReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{combine1DepGroup},
+			Dependencies: jobqueue.Dependencies{
+				{
+					DepGroup: walk1DepGroup,
 				},
 			},
-			{
-				Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk2DepGroup),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-combine",
-				Requirements: combineReqs,
-				Override:     1,
-				Retries:      30,
-				DepGroups:    []string{combine2DepGroup},
-				Dependencies: jobqueue.Dependencies{
-					{
-						DepGroup: walk2DepGroup,
-					},
+		},
+		{
+			Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk2DepGroup),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-combine",
+			Requirements: combineReqs,
+			Override:     1,
+			Retries:      30,
+			DepGroups:    []string{combine2DepGroup},
+			Dependencies: jobqueue.Dependencies{
+				{
+					DepGroup: walk2DepGroup,
 				},
 			},
-			{
-				Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome%%2Fpath\" \"%s/%s/path/%s\"",
-					exe, now, workingDir, repGroup, walk1DepGroup),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-tidy",
-				Requirements: tidyReqs,
-				Override:     1,
-				Retries:      30,
-				Dependencies: jobqueue.Dependencies{
-					{
-						DepGroup: combine1DepGroup,
-					},
+		},
+		{
+			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome%%2Fpath\" \"%s/%s/path/%s\"",
+				exe, now, workingDir, repGroup, walk1DepGroup),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-tidy",
+			Requirements: tidyReqs,
+			Override:     1,
+			Retries:      30,
+			Dependencies: jobqueue.Dependencies{
+				{
+					DepGroup: combine1DepGroup,
 				},
 			},
-			{
-				Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome-other%%2Fpath\" \"%s/%s/path/%s\"",
-					exe, now, workingDir, repGroup, walk2DepGroup),
-				CwdMatters:   true,
-				RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
-				ReqGroup:     "wrstat-tidy",
-				Requirements: tidyReqs,
-				Override:     1,
-				Retries:      30,
-				Dependencies: jobqueue.Dependencies{
-					{
-						DepGroup: combine2DepGroup,
-					},
+		},
+		{
+			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome-other%%2Fpath\" \"%s/%s/path/%s\"",
+				exe, now, workingDir, repGroup, walk2DepGroup),
+			CwdMatters:   true,
+			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
+			ReqGroup:     "wrstat-tidy",
+			Requirements: tidyReqs,
+			Override:     1,
+			Retries:      30,
+			Dependencies: jobqueue.Dependencies{
+				{
+					DepGroup: combine2DepGroup,
 				},
 			},
+		},
+	}
+
+	if timeout > 0 {
+		finishTime := time.Unix(timeoutDate, 0).Format(time.DateTime)
+		timeoutLimit := []string{"datetime<" + finishTime}
+
+		for _, job := range expectation[:4] {
+			job.LimitGroups = timeoutLimit
 		}
 
-		So(jobs, ShouldResemble, expectation)
-	})
+		expectation = append(expectation, &jobqueue.Job{
+			Cmd: fmt.Sprintf("%s cleanup -w \"%s/%s\"",
+				exe, workingDir, repGroup),
+			CwdMatters:   true,
+			RepGroup:     "wrstat-cleanup",
+			ReqGroup:     "wrstat-cleanup",
+			Requirements: tidyReqs,
+			LimitGroups:  []string{finishTime + "<datetime"},
+			Override:     1,
+			Retries:      30,
+		})
+	}
+
+	return expectation
 }
 
 func TestMulti(t *testing.T) {
