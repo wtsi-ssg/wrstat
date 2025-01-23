@@ -27,6 +27,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"syscall"
 	"time"
@@ -43,6 +44,7 @@ const (
 	statTime              = 12 * time.Hour
 	statRAM               = 200
 	statCores             = 0.1
+	timeoutExitCode       = 128
 )
 
 // options for this cmd.
@@ -124,6 +126,7 @@ func init() {
 	walkCmd.Flags().StringVarP(&forcedQueue, "queue", "q", "", "force a particular queue to be used when scheduling jobs")
 	walkCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
 		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
+	walkCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "stat jobs should start running before this unix timestamp")
 }
 
 // checkArgs checks we have required args and returns desired dir.
@@ -163,6 +166,8 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int,
 		die("failed to create walk output files: %s", err)
 	}
 
+	go keepAliveCheck(outputDir, "output directory no longer exists")
+
 	walker := walk.New(files.WritePaths(), true, false)
 
 	defer func() {
@@ -180,6 +185,17 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int,
 	}
 
 	scheduleStatJobs(files.Paths, depGroup, repGroup, yamlPath, s)
+}
+
+func keepAliveCheck(required, msg string) {
+	for {
+		time.Sleep(time.Minute)
+
+		if _, err := os.Stat(required); err != nil {
+			appLogger.Error(msg)
+			os.Exit(timeoutExitCode)
+		}
+	}
 }
 
 // calculateSplitBasedOnInodes sees how many used inodes are on the given path
@@ -216,10 +232,15 @@ func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath strin
 	req.Time = statTime
 	req.RAM = statRAM
 	req.Cores = statCores
+	limitGroups := []string{"wrstat-stat"}
+
+	if timeout > 0 {
+		limitGroups = append(limitGroups, "datetime<"+time.Unix(timeout, 0).Format(time.DateTime))
+	}
 
 	for i, path := range outPaths {
 		jobs[i] = s.NewJob(cmd+path, repGrp, "wrstat-stat", depGroup, "", req)
-		jobs[i].LimitGroups = []string{"wrstat-stat"}
+		jobs[i].LimitGroups = limitGroups
 	}
 
 	addJobsToQueue(s, jobs)

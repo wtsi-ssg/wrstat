@@ -48,14 +48,15 @@ const (
 
 // options for this cmd.
 var (
-	workDir       string
-	finalDir      string
-	multiInodes   int
-	multiStatJobs int
-	multiCh       string
-	forcedQueue   string
-	queuesToAvoid string
-	maxMem        int
+	workDir       string //nolint:gochecknoglobals
+	finalDir      string //nolint:gochecknoglobals
+	multiInodes   int    //nolint:gochecknoglobals
+	multiStatJobs int    //nolint:gochecknoglobals
+	multiCh       string //nolint:gochecknoglobals
+	forcedQueue   string //nolint:gochecknoglobals
+	queuesToAvoid string //nolint:gochecknoglobals
+	maxMem        int    //nolint:gochecknoglobals
+	timeout       int64  //nolint:gochecknoglobals
 )
 
 // multiCmd represents the multi command.
@@ -129,6 +130,7 @@ func init() {
 	multiCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
 		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", defaultMaxRAM, "maximum MBs to reserve for any job")
+	multiCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "maximum number of hours to run")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -158,13 +160,17 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	scheduleWalkJobs(outputRoot, args, unique, finalDir, multiStatJobs,
 		multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
 
+	if timeout > 0 {
+		scheduleCleanupJob(s, timeout, outputRoot)
+	}
+
 	return nil
 }
 
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
-func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string,
+func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string, //nolint:funlen
 	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid string, s *scheduler.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
@@ -173,6 +179,17 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 	now := time.Now().Unix()
 	reqWalk, reqCombine := reqs()
 
+	var (
+		limit     []string
+		limitDate int64
+	)
+
+	if timeout > 0 {
+		maxStart := time.Now().Add(time.Duration(timeout) * time.Hour)
+		limitDate = maxStart.Unix()
+		limit = []string{"datetime<" + maxStart.Format(time.DateTime)}
+	}
+
 	for i, path := range desiredPaths {
 		walkUnique := scheduler.UniqueString()
 		combineUnique := scheduler.UniqueString()
@@ -180,12 +197,14 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 		finalDirName := fmt.Sprintf("%d_%s", now, encodePath(path))
 		finalOutput := filepath.Join(finalDirParent, finalDirName)
 
-		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -o %s -i %s %s",
-			cmd, walkUnique, outDir, statRepGrp(path, unique), path),
+		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -t %d -o %s -i %s %s",
+			cmd, walkUnique, limitDate, outDir, statRepGrp(path, unique), path),
 			walkRepGrp(path, unique), "wrstat-walk", walkUnique, "", reqWalk)
+		walkJobs[i].LimitGroups = limit
 
 		combineJobs[i] = s.NewJob(fmt.Sprintf("%s combine %q", s.Executable(), outDir),
 			combineRepGrp(path, unique), "wrstat-combine", combineUnique, walkUnique, reqCombine)
+		combineJobs[i].LimitGroups = limit
 
 		tidyJobs[i] = s.NewJob(fmt.Sprintf("%s tidy -f %q %q",
 			s.Executable(), finalOutput, outDir),
@@ -274,4 +293,12 @@ func combineRepGrp(dir, unique string) string {
 // create.
 func tidyRepGrp(dir, unique string) string {
 	return repGrp("tidy", dir, unique)
+}
+
+func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot string) {
+	job := s.NewJob(fmt.Sprintf("%s cleanup -w %q", s.Executable(), outputRoot),
+		"wrstat-cleanup", "wrstat-cleanup", "", "", scheduler.DefaultRequirements())
+	job.LimitGroups = []string{time.Now().Add(time.Hour*time.Duration(timeout)).Format(time.DateTime) + "<datetime"}
+
+	addJobsToQueue(s, []*jobqueue.Job{job})
 }

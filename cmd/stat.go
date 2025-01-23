@@ -127,6 +127,8 @@ func statPathsInFile(inputPath string, tsvPath string, debug bool) {
 		die("failed to open input file: %s", err)
 	}
 
+	go keepAliveCheck(inputPath, "input file no longer exists")
+
 	defer func() {
 		err = input.Close()
 		if err != nil {
