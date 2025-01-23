@@ -48,15 +48,15 @@ const (
 
 // options for this cmd.
 var (
-	workDir       string //nolint:gochecknoglobals
-	finalDir      string //nolint:gochecknoglobals
-	multiInodes   int    //nolint:gochecknoglobals
-	multiStatJobs int    //nolint:gochecknoglobals
-	multiCh       string //nolint:gochecknoglobals
-	forcedQueue   string //nolint:gochecknoglobals
-	queuesToAvoid string //nolint:gochecknoglobals
-	maxMem        int    //nolint:gochecknoglobals
-	timeout       int64  //nolint:gochecknoglobals
+	workDir       string
+	finalDir      string
+	multiInodes   int
+	multiStatJobs int
+	multiCh       string
+	forcedQueue   string
+	queuesToAvoid string
+	maxMem        int
+	timeout       int64
 )
 
 // multiCmd represents the multi command.
