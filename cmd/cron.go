@@ -116,6 +116,7 @@ func init() {
 		"0 17 * * *",
 		"crontab describing when to run, first 5 columns only")
 	cronCmd.Flags().BoolVar(&cronKill, "kill", false, "kill all wrstat processes on the system")
+	cronCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "maximum number of hours to run")
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.
