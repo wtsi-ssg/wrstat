@@ -422,11 +422,13 @@ func TestWalk(t *testing.T) {
 
 		walk2 := filepath.Join(out, "walk.2")
 
+		hundred := time.Unix(100, 0).Format(time.DateTime)
+
 		jobsExpectation = []*jobqueue.Job{
 			{
 				Cmd:         exe + " stat " + walk1,
 				CwdMatters:  true,
-				LimitGroups: []string{"wrstat-stat", "datetime<1970-01-01 01:01:40"},
+				LimitGroups: []string{"wrstat-stat", "datetime<" + hundred},
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
@@ -443,7 +445,7 @@ func TestWalk(t *testing.T) {
 			{
 				Cmd:         exe + " stat " + walk2,
 				CwdMatters:  true,
-				LimitGroups: []string{"wrstat-stat", "datetime<1970-01-01 01:01:40"},
+				LimitGroups: []string{"wrstat-stat", "datetime<" + hundred},
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
