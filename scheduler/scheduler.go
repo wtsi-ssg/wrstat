@@ -28,6 +28,8 @@ package scheduler
 import (
 	"context"
 	"os"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
@@ -243,6 +245,34 @@ func (s *Scheduler) SubmitJobs(jobs []*jobqueue.Job) error {
 	}
 
 	return nil
+}
+
+// FindJobsByRepGroupSuffix finds all of the jobs in wr whose rep group has the
+// supplied suffix.
+func (s *Scheduler) FindJobsByRepGroupSuffix(suffix string) ([]*jobqueue.Job, error) {
+	jobs, err := s.jq.GetByRepGroup(suffix, true, 0, "", true, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return slices.DeleteFunc(jobs, func(job *jobqueue.Job) bool {
+		return strings.HasSuffix(job.RepGroup, suffix)
+	}), nil
+}
+
+// RemoveJobs removes all of the supplied jobs from the wr queues.
+//
+// NB: Running jobs will not be removed.
+func (s *Scheduler) RemoveJobs(jobs ...*jobqueue.Job) error {
+	es := make([]*jobqueue.JobEssence, len(jobs))
+
+	for n, job := range jobs {
+		es[n].JobKey = job.Key()
+	}
+
+	_, err := s.jq.Delete(es)
+
+	return err
 }
 
 // Disconnect disconnects from the manager. You should defer this after New().

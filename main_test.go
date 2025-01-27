@@ -169,7 +169,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 		Convey("'wrstat multi' with a maximum run time produces jobs with the correct limit group", func() {
 			_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "-t", "13", "/some/path", "/some-other/path",
-				"-f", "final_output")...)
+				"-f", "final_output", "-l", "/path/for/logs", "-L", "/path/for/jobLogs")...)
 			So(err, ShouldBeNil)
 
 			expectation := createMultiJobExpectation(t, jobs, workingDir, date, 13)
@@ -221,6 +221,12 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 
 	var timeoutDate int64
 
+	var behaviours jobqueue.Behaviours
+
+	if timeout > 0 {
+		behaviours = jobqueue.Behaviours{{Do: jobqueue.Remove}}
+	}
+
 	if timeout > 0 {
 		timeoutStr := regexp.MustCompile(`-t (\d+) `).FindStringSubmatch(jobs[0].Cmd)
 		So(len(timeoutStr), ShouldEqual, 2)
@@ -242,6 +248,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Override:     1,
 			Retries:      30,
 			DepGroups:    []string{walk1DepGroup},
+			Behaviours:   behaviours,
 		},
 		{
 			Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
@@ -254,6 +261,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Override:     1,
 			Retries:      30,
 			DepGroups:    []string{walk2DepGroup},
+			Behaviours:   behaviours,
 		},
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk1DepGroup),
@@ -269,6 +277,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 					DepGroup: walk1DepGroup,
 				},
 			},
+			Behaviours: behaviours,
 		},
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk2DepGroup),
@@ -284,6 +293,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 					DepGroup: walk2DepGroup,
 				},
 			},
+			Behaviours: behaviours,
 		},
 		{
 			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome%%2Fpath\" \"%s/%s/path/%s\"",
@@ -299,6 +309,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 					DepGroup: combine1DepGroup,
 				},
 			},
+			Behaviours: behaviours,
 		},
 		{
 			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome-other%%2Fpath\" \"%s/%s/path/%s\"",
@@ -314,6 +325,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 					DepGroup: combine2DepGroup,
 				},
 			},
+			Behaviours: behaviours,
 		},
 	}
 
@@ -326,8 +338,9 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 		}
 
 		expectation = append(expectation, &jobqueue.Job{
-			Cmd: fmt.Sprintf("%s cleanup -w \"%s/%s\"",
-				exe, workingDir, repGroup),
+			Cmd: fmt.Sprintf("%[1]s cleanup -w \"%[2]s/%[3]s\" -j %[3]q -l \"/path/for/logs/%[4]s\" "+
+				"-L \"/path/for/jobLogs/%[4]s.log\"",
+				exe, workingDir, repGroup, time.Now().Format(time.DateOnly)+"_"+repGroup),
 			CwdMatters:   true,
 			RepGroup:     "wrstat-cleanup",
 			ReqGroup:     "wrstat-cleanup",
@@ -404,7 +417,7 @@ func TestWalk(t *testing.T) {
 
 		compareFileContents(t, walk1, expected)
 
-		_, _, jobs, err = runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "2")
+		_, _, jobs, err = runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "2", "--timeout", "100")
 		So(err, ShouldBeNil)
 
 		walk2 := filepath.Join(out, "walk.2")
@@ -413,7 +426,7 @@ func TestWalk(t *testing.T) {
 			{
 				Cmd:         exe + " stat " + walk1,
 				CwdMatters:  true,
-				LimitGroups: []string{"wrstat-stat"},
+				LimitGroups: []string{"wrstat-stat", "datetime<1970-01-01 01:01:40"},
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
@@ -422,14 +435,15 @@ func TestWalk(t *testing.T) {
 					Cores: 0.1,
 					Disk:  1,
 				},
-				Override:  1,
-				Retries:   30,
-				DepGroups: []string{depgroup},
+				Override:   1,
+				Retries:    30,
+				DepGroups:  []string{depgroup},
+				Behaviours: jobqueue.Behaviours{{Do: jobqueue.Remove}},
 			},
 			{
 				Cmd:         exe + " stat " + walk2,
 				CwdMatters:  true,
-				LimitGroups: []string{"wrstat-stat"},
+				LimitGroups: []string{"wrstat-stat", "datetime<1970-01-01 01:01:40"},
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
@@ -438,9 +452,10 @@ func TestWalk(t *testing.T) {
 					Cores: 0.1,
 					Disk:  1,
 				},
-				Override:  1,
-				Retries:   30,
-				DepGroups: []string{depgroup},
+				Override:   1,
+				Retries:    30,
+				DepGroups:  []string{depgroup},
+				Behaviours: jobqueue.Behaviours{{Do: jobqueue.Remove}},
 			},
 		}
 

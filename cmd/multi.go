@@ -131,6 +131,10 @@ func init() {
 		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", defaultMaxRAM, "maximum MBs to reserve for any job")
 	multiCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "maximum number of hours to run")
+	multiCmd.Flags().StringVarP(&logsDir, "logdir", "l", "", "when timeout is "+
+		"reached, copy logs to a unique subdirectory of the supplied directory")
+	multiCmd.Flags().StringVarP(&logJobs, "logjobs", "L", "", "when timeout is "+
+		"reached, log job status to a unique file (YYYY-MM-DD_unique.log) in the supplied directory")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -161,7 +165,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 		multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
 
 	if timeout > 0 {
-		scheduleCleanupJob(s, timeout, outputRoot)
+		scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs)
 	}
 
 	return nil
@@ -180,9 +184,14 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 	reqWalk, reqCombine := reqs()
 
 	var (
-		limit     []string
-		limitDate int64
+		limit           []string
+		limitDate       int64
+		removeAfterBury jobqueue.Behaviours
 	)
+
+	if timeout > 0 {
+		removeAfterBury = jobqueue.Behaviours{{Do: jobqueue.Remove}}
+	}
 
 	if timeout > 0 {
 		maxStart := time.Now().Add(time.Duration(timeout) * time.Hour)
@@ -201,14 +210,17 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 			cmd, walkUnique, limitDate, outDir, statRepGrp(path, unique), path),
 			walkRepGrp(path, unique), "wrstat-walk", walkUnique, "", reqWalk)
 		walkJobs[i].LimitGroups = limit
+		walkJobs[i].Behaviours = removeAfterBury
 
 		combineJobs[i] = s.NewJob(fmt.Sprintf("%s combine %q", s.Executable(), outDir),
 			combineRepGrp(path, unique), "wrstat-combine", combineUnique, walkUnique, reqCombine)
 		combineJobs[i].LimitGroups = limit
+		combineJobs[i].Behaviours = removeAfterBury
 
 		tidyJobs[i] = s.NewJob(fmt.Sprintf("%s tidy -f %q %q",
 			s.Executable(), finalOutput, outDir),
 			tidyRepGrp(path, unique), "wrstat-tidy", "", combineUnique, scheduler.DefaultRequirements())
+		tidyJobs[i].Behaviours = removeAfterBury
 	}
 
 	addJobsToQueue(s, walkJobs)
@@ -295,9 +307,19 @@ func tidyRepGrp(dir, unique string) string {
 	return repGrp("tidy", dir, unique)
 }
 
-func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot string) {
-	job := s.NewJob(fmt.Sprintf("%s cleanup -w %q", s.Executable(), outputRoot),
-		"wrstat-cleanup", "wrstat-cleanup", "", "", scheduler.DefaultRequirements())
+func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot, jobUnique, logOutput, jobOutput string) {
+	cmd := fmt.Sprintf("%s cleanup -w %q -j %q", s.Executable(), outputRoot, jobUnique)
+	nowUnique := time.Now().Format(time.DateOnly) + "_" + jobUnique
+
+	if logOutput != "" {
+		cmd += fmt.Sprintf(" -l %q", filepath.Join(logOutput, nowUnique))
+	}
+
+	if jobOutput != "" {
+		cmd += fmt.Sprintf(" -L %q", filepath.Join(jobOutput, nowUnique+".log"))
+	}
+
+	job := s.NewJob(cmd, "wrstat-cleanup", "wrstat-cleanup", "", "", scheduler.DefaultRequirements())
 	job.LimitGroups = []string{time.Now().Add(time.Hour*time.Duration(timeout)).Format(time.DateTime) + "<datetime"}
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

@@ -117,6 +117,10 @@ func init() {
 		"crontab describing when to run, first 5 columns only")
 	cronCmd.Flags().BoolVar(&cronKill, "kill", false, "kill all wrstat processes on the system")
 	cronCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "maximum number of hours to run")
+	cronCmd.Flags().StringVarP(&logsDir, "logdir", "l", "", "when timeout is "+
+		"reached, copy logs to a unique subdirectory of the supplied directory")
+	cronCmd.Flags().StringVarP(&logJobs, "logjobs", "L", "", "when timeout is "+
+		"reached, log job status to a unique file (YYYY-MM-DD_unique.log) in the supplied directory")
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.
