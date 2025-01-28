@@ -74,7 +74,7 @@ To preserve the logs before deletion, you can provide a directory via the
 suffix moved there before deletion.
 
 You can log the current state of the jobs of a 'wrstat multi' run by providing
-the --jobs flag with the unique string that is appended to the reg-group. The
+the --jobs flag with the unique string that is appended to the rep-group. The
 --logjobs flag provides the output file for the JSON encoded data.
 
 In addition, you can provide the --remove flag to have the jobs removed from
