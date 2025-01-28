@@ -62,6 +62,8 @@ you supplied 'wrstat walk'.`,
 			die("could not get the absolute path to [%s]: %s", args[0], err)
 		}
 
+		go keepAliveCheck(sourceDir, "source directory no longer exists")
+
 		var wg sync.WaitGroup
 
 		wg.Add(1)

@@ -27,7 +27,6 @@
 package cmd
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -42,7 +41,6 @@ const disableDeletion = false
 
 // options for this cmd.
 var tidyDir string
-var tidyDate string
 
 // tidyCmd represents the tidy command.
 var tidyCmd = &cobra.Command{
@@ -67,9 +65,8 @@ Final output files are named to include the given --date as follows:
 
 Where [suffix] is one of 'stats.gz' or 'logs.gz'.
 
-Finally, it creates or touches a file named '.updated' in the
---final_output directory, giving it an mtime matching the oldest mtime of the
-walk log files.
+Finally it sets the modtime of the --final_output directory to the mtime of the
+oldest log file in the source directory.
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -82,6 +79,7 @@ through; it won't clobber final outputs already moved.`,
 		if tidyDir == "" {
 			die("--final_output is required")
 		}
+
 		if len(args) != 1 {
 			die("exactly 1 unique working directory from 'wrstat multi' must be supplied")
 		}
@@ -89,11 +87,6 @@ through; it won't clobber final outputs already moved.`,
 		destDir, err := filepath.Abs(tidyDir)
 		if err != nil {
 			die("could not determine absolute path to --final_output dir: %s", err)
-		}
-
-		err = os.MkdirAll(destDir, userGroupPerm)
-		if err != nil {
-			die("failed to create --final_output dir [%s]: %s", destDir, err)
 		}
 
 		sourceDir, err := filepath.Abs(args[0])
@@ -104,21 +97,19 @@ through; it won't clobber final outputs already moved.`,
 		tidy := neaten.Tidy{
 			SrcDir:  sourceDir,
 			DestDir: destDir,
-			Date:    tidyDate,
 
 			CombineFileSuffixes: map[string]string{
 				combineStatsOutputFileBasename: "stats.gz",
 				combineLogOutputFileBasename:   "logs.gz",
 			},
 
-			CombineFileGlobPattern:  "%s/*/*/%s",
-			WalkFilePathGlobPattern: "%s/*/*/*%s",
+			CombineFileGlobPattern:  "%s/%s",
+			WalkFilePathGlobPattern: "%s/*%s",
 
 			DestDirPerms: destDirPerms,
 		}
 
-		err = tidy.Up(disableDeletion)
-		if err != nil {
+		if err = tidy.Up(disableDeletion); err != nil {
 			die("could not neaten dir: %s", err)
 		}
 	},
@@ -129,5 +120,4 @@ func init() {
 
 	// flags specific to this sub-command
 	tidyCmd.Flags().StringVarP(&tidyDir, "final_output", "f", "", "final output directory")
-	tidyCmd.Flags().StringVarP(&tidyDate, "date", "d", "", "datestamp of when 'wrstat multi' was called")
 }

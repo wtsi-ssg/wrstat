@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/jobqueue"
@@ -55,6 +56,7 @@ var (
 	forcedQueue   string
 	queuesToAvoid string
 	maxMem        int
+	timeout       int64
 )
 
 // multiCmd represents the multi command.
@@ -128,6 +130,11 @@ func init() {
 	multiCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
 		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", defaultMaxRAM, "maximum MBs to reserve for any job")
+	multiCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "maximum number of hours to run")
+	multiCmd.Flags().StringVarP(&logsDir, "logdir", "l", "", "when timeout is "+
+		"reached, copy logs to a unique subdirectory of the supplied directory")
+	multiCmd.Flags().StringVarP(&logJobs, "logjobs", "L", "", "when timeout is "+
+		"reached, log job status to a unique file (YYYY-MM-DD_unique.log) in the supplied directory")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -154,8 +161,12 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 		return err
 	}
 
-	scheduleWalkJobs(outputRoot, args, unique, multiStatJobs, multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
-	scheduleTidyJob(outputRoot, finalDir, unique, s)
+	scheduleWalkJobs(outputRoot, args, unique, finalDir, multiStatJobs,
+		multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
+
+	if timeout > 0 {
+		scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs)
+	}
 
 	return nil
 }
@@ -163,30 +174,58 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 // scheduleWalkJobs adds a 'wrstat walk' job to wr's queue for each desired
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
-func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique string,
-	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid string, s *scheduler.Scheduler,
-) {
+func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string, //nolint:funlen
+	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid string, s *scheduler.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
-
+	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
 	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid)
-
+	now := time.Now().Unix()
 	reqWalk, reqCombine := reqs()
 
+	var (
+		limit           []string
+		limitDate       int64
+		removeAfterBury jobqueue.Behaviours
+	)
+
+	if timeout > 0 {
+		removeAfterBury = jobqueue.Behaviours{{Do: jobqueue.Remove}}
+	}
+
+	if timeout > 0 {
+		maxStart := time.Now().Add(time.Duration(timeout) * time.Hour)
+		limitDate = maxStart.Unix()
+		limit = []string{"datetime<" + maxStart.Format(time.DateTime)}
+	}
+
 	for i, path := range desiredPaths {
-		thisUnique := scheduler.UniqueString()
-		outDir := filepath.Join(outputRoot, filepath.Base(path), thisUnique)
+		walkUnique := scheduler.UniqueString()
+		combineUnique := scheduler.UniqueString()
+		outDir := filepath.Join(outputRoot, filepath.Base(path), walkUnique)
+		finalDirName := fmt.Sprintf("%d_%s", now, encodePath(path))
+		finalOutput := filepath.Join(finalDirParent, finalDirName)
 
-		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -o %s -i %s %s",
-			cmd, thisUnique, outDir, statRepGrp(path, unique), path),
-			walkRepGrp(path, unique), "wrstat-walk", thisUnique, "", reqWalk)
+		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -t %d -o %s -i %s %s",
+			cmd, walkUnique, limitDate, outDir, statRepGrp(path, unique), path),
+			walkRepGrp(path, unique), "wrstat-walk", walkUnique, "", reqWalk)
+		walkJobs[i].LimitGroups = limit
+		walkJobs[i].Behaviours = removeAfterBury
 
-		combineJobs[i] = s.NewJob(fmt.Sprintf("%s combine %s", s.Executable(), outDir),
-			combineRepGrp(path, unique), "wrstat-combine", unique, thisUnique, reqCombine)
+		combineJobs[i] = s.NewJob(fmt.Sprintf("%s combine %q", s.Executable(), outDir),
+			combineRepGrp(path, unique), "wrstat-combine", combineUnique, walkUnique, reqCombine)
+		combineJobs[i].LimitGroups = limit
+		combineJobs[i].Behaviours = removeAfterBury
+
+		tidyJobs[i] = s.NewJob(fmt.Sprintf("%s tidy -f %q %q",
+			s.Executable(), finalOutput, outDir),
+			tidyRepGrp(path, unique), "wrstat-tidy", "", combineUnique, scheduler.DefaultRequirements())
+		tidyJobs[i].Behaviours = removeAfterBury
 	}
 
 	addJobsToQueue(s, walkJobs)
 	addJobsToQueue(s, combineJobs)
+	addJobsToQueue(s, tidyJobs)
 }
 
 // buildWalkCommand builds a wrstat walk command line based on the given n,
@@ -220,6 +259,23 @@ func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int,
 	return cmd
 }
 
+func encodePath(path string) string {
+	var sb strings.Builder
+
+	for i := 0; i < len(path); i++ {
+		switch path[i] {
+		case '%':
+			sb.WriteString("%25")
+		case '/':
+			sb.WriteString("%2F")
+		default:
+			sb.WriteByte(path[i])
+		}
+	}
+
+	return sb.String()
+}
+
 // reqs returns Requirements suitable for walk and combine jobs.
 func reqs() (*jqs.Requirements, *jqs.Requirements) {
 	req := scheduler.DefaultRequirements()
@@ -245,12 +301,26 @@ func combineRepGrp(dir, unique string) string {
 	return repGrp("combine", dir, unique)
 }
 
-// scheduleTidyJob adds a job to wr's queue that for each working directory
-// subdir moves the output to the final location and then deletes the working
-// directory.
-func scheduleTidyJob(outputRoot, finalDir, unique string, s *scheduler.Scheduler) {
-	job := s.NewJob(fmt.Sprintf("%s tidy -f %s -d %s %s", s.Executable(), finalDir, dateStamp(), outputRoot),
-		repGrp("tidy", finalDir, unique), "wrstat-tidy", "", unique, scheduler.DefaultRequirements())
+// tidyRepGrp returns a rep_grp that can be used for the tidy jobs multi will
+// create.
+func tidyRepGrp(dir, unique string) string {
+	return repGrp("tidy", dir, unique)
+}
+
+func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot, jobUnique, logOutput, jobOutput string) {
+	cmd := fmt.Sprintf("%s cleanup -w %q -j %q", s.Executable(), outputRoot, jobUnique)
+	nowUnique := time.Now().Format(time.DateOnly) + "_" + jobUnique
+
+	if logOutput != "" {
+		cmd += fmt.Sprintf(" -l %q", filepath.Join(logOutput, nowUnique))
+	}
+
+	if jobOutput != "" {
+		cmd += fmt.Sprintf(" -L %q", filepath.Join(jobOutput, nowUnique+".log"))
+	}
+
+	job := s.NewJob(cmd, "wrstat-cleanup", "wrstat-cleanup", "", "", scheduler.DefaultRequirements())
+	job.LimitGroups = []string{time.Now().Add(time.Hour*time.Duration(timeout)).Format(time.DateTime) + "<datetime"}
 
 	addJobsToQueue(s, []*jobqueue.Job{job})
 }
