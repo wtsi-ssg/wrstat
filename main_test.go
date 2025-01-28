@@ -786,20 +786,28 @@ export PATH="/build/bin:$PATH";
 
 stop() {
 	wr manager stop;
-
-	exit ${1:-0};
 }
 
-trap stop SIGINT;
 trap stop EXIT;
 
 waitForJobs() {
-	until [ $(wr status | wc -l) -le 1 ]; do
-		if [ $(wr status -b | wc -l ) -gt 1 ]; then
-			stop 1;
+	while sleep 1s; do
+		. <(wr status -o c -z -i "-" | sed -e '/^$/d' -e 's/: /=/' -e 's/^/declare /');
+		. <(wr status -o c -i "wrstat-cleanup" | sed -e '/^$/d' -e 's/: /=/' -e 's/^/declare cleanup_/');
+	
+		if [ "$buried" -gt 0 ]; then
+			echo "jobs failed";
+
+			exit 1;
 		fi;
 
-		sleep 1s;
+		if [ "$cleanup_complete" -eq 1 ]; then
+			echo "cleanup should not have run";
+
+			exit 1;
+		elif [ "$complete" -eq 20 ]; then
+			break;
+		fi;
 	done;
 }
 
@@ -822,7 +830,7 @@ export WR_ManagerWeb=0
 
 yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1;
 
-wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ /simple/* /objects/*;
+wrstat multi -t 1 -m 0 -w /tmp/working/complete/ -f /tmp/final/ /simple/* /objects/*;
 waitForJobs;`)
 		So(os.Chmod(buildScript, 0555), ShouldBeNil)
 		So(os.Chmod(runScript, 0555), ShouldBeNil)
@@ -831,7 +839,7 @@ waitForJobs;`)
 		So(err, ShouldBeNil)
 
 		build := exec.Command( //nolint:gosec
-			"singularity", "run", "-e",
+			"singularity", "exec", "-e",
 			"--bind", wrSrc+":/opt/wr,"+wd+":/opt/wrstat,"+binDir+":/build,"+buildScript+":/build.sh",
 			"--home", tmpHome, sif, "/build.sh")
 
@@ -924,7 +932,7 @@ waitForJobs;`)
 			"G%[10]d:x:%[10]d:U%[11]d::/:/bin/sh\n",
 			u.Gid, GroupA, UserA, GroupB, UserB, GroupC, UserC, GroupD, UserD, GroupE, UserE))
 
-		cmd := exec.Command("singularity", "run", "-p", "-e", //nolint:gosec
+		cmd := exec.Command("singularity", "exec", "-p", "-e", //nolint:gosec
 			"--bind", tmpTemp+":/tmp,"+users+":/etc/passwd,"+groups+":/etc/group,"+
 				binDir+":/build,"+runScript+":/run.sh",
 			"--home", tmpHome,
