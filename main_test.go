@@ -771,14 +771,14 @@ func TestEnd2End(t *testing.T) {
 		tmpTemp := t.TempDir()
 		tmpHome := t.TempDir()
 
-		buildSif := exec.Command("singularity", "build", sif, "docker://okteto/golang:1.23")
+		buildSif := exec.Command("singularity", "build", sif, "docker://golang:latest")
 		So(buildSif.Run(), ShouldBeNil)
 
 		writeFileString(t, buildScript, `#!/bin/bash
 set -euo pipefail
-git clone --depth 1 --branch v0.33.0 https://github.com/VertebrateResequencing/wr /opt/wr &&
-cd /opt/wr/ && GOPATH=/build/ make install;
-cd /opt/wrstat && GOPATH=/build/ make install;
+git clone --depth 1 --branch v0.34.0 https://github.com/VertebrateResequencing/wr /opt/wr &&
+cd /opt/wr/ && GOPATH=/build/ go install;
+cd /opt/wrstat && GOPATH=/build/ go install;
 chmod -R +w /build;`)
 		writeFileString(t, runScript, `#!/bin/bash
 
@@ -824,8 +824,8 @@ yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores
 
 wrstat multi -m 0 -w /tmp/working/complete/ -f /tmp/final/ /simple/* /objects/*;
 waitForJobs;`)
-		So(os.Chmod(buildScript, 0777), ShouldBeNil)
-		So(os.Chmod(runScript, 0777), ShouldBeNil)
+		So(os.Chmod(buildScript, 0555), ShouldBeNil)
+		So(os.Chmod(runScript, 0555), ShouldBeNil)
 
 		wd, err := os.Getwd()
 		So(err, ShouldBeNil)
