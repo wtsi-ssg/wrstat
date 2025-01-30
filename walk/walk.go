@@ -317,7 +317,7 @@ func (s *scanner) Get() ([]byte, uint8, uint64) {
 }
 
 func (s *scanner) getName() []byte {
-	name := unsafe.Slice(&s.Name, 256) //nolint:mnd
+	name := unsafe.Slice(&s.Name, maxFilenameLength)
 
 	l := bytes.IndexByte(name, 0)
 	if l <= 0 || string(name[:2]) == dot || string(name[:3]) == dotdot {
