@@ -103,8 +103,6 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 
 	go sortDirents(ctx, requestCh, sortedRequestCh)
 
-	r.markNotReady()
-
 	sortedRequestCh <- r
 
 	defer stop()
@@ -206,8 +204,6 @@ func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, childre
 		next := r.next
 
 		if r.IsDir() {
-			r.markNotReady()
-
 			select {
 			case <-ctx.Done():
 				return
@@ -234,10 +230,18 @@ func sortChildren(children *Dirent) *Dirent {
 	return root
 }
 
+type dirent struct {
+	Ino    uint64
+	_      int64
+	Reclen uint16
+	Type   uint8
+	Name   byte
+}
+
 type scanner struct {
 	buffer, read []byte
 	fh           int
-	*syscall.Dirent
+	*dirent
 	err error
 }
 
@@ -261,10 +265,10 @@ func (s *scanner) Next() bool {
 		s.read = s.buffer[:n]
 	}
 
-	s.Dirent = (*syscall.Dirent)(unsafe.Pointer(&s.read[0]))
+	s.dirent = (*dirent)(unsafe.Pointer(&s.read[0]))
 	s.read = s.read[s.Reclen:]
 
-	if s.Dirent.Type == syscall.DT_UNKNOWN {
+	if s.dirent.Type == syscall.DT_UNKNOWN {
 		return s.getType()
 	}
 
@@ -277,14 +281,14 @@ func (s *scanner) getType() bool {
 	var stat syscall.Stat_t
 
 	if _, _, err := syscall.Syscall6(statCall, uintptr(s.fh),
-		uintptr(unsafe.Pointer(&s.Dirent.Name[0])), uintptr(unsafe.Pointer(&stat)),
+		uintptr(unsafe.Pointer(&s.dirent.Name)), uintptr(unsafe.Pointer(&stat)),
 		symlinkNoFollow, 0, 0); err != 0 {
 		s.err = err
 
 		return false
 	}
 
-	s.Dirent.Type = modeToType(stat.Mode)
+	s.dirent.Type = modeToType(stat.Mode)
 
 	return true
 }
@@ -313,8 +317,7 @@ func (s *scanner) Get() ([]byte, uint8, uint64) {
 }
 
 func (s *scanner) getName() []byte {
-	n := s.Dirent.Name[:]
-	name := *(*[]byte)(unsafe.Pointer(&n))
+	name := unsafe.Slice(&s.Name, 256) //nolint:mnd
 
 	l := bytes.IndexByte(name, 0)
 	if l <= 0 || string(name[:2]) == dot || string(name[:3]) == dotdot {

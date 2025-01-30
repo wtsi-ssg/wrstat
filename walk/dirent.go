@@ -122,7 +122,7 @@ type Dirent struct {
 	len    uint8
 	typ    uint8
 	depth  int16
-	ready  uint32
+	ready  atomic.Uint32
 
 	// Inode is the file system inode number for this entry.
 	Inode uint64
@@ -196,16 +196,12 @@ func fsModeToType(mode fs.FileMode) uint8 {
 	}
 }
 
-func (d *Dirent) markNotReady() {
-	d.ready = 1
-}
-
 func (d *Dirent) markReady() {
-	atomic.StoreUint32(&d.ready, 0)
+	d.ready.Store(1)
 }
 
 func (d *Dirent) isReady() bool {
-	return atomic.LoadUint32(&d.ready) == 0
+	return d.ready.CompareAndSwap(1, 0)
 }
 
 func statNode(path string) (fs.FileMode, uint64, error) {
