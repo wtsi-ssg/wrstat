@@ -170,7 +170,8 @@ func sortDirents(ctx context.Context, requestCh <-chan *Dirent, //nolint:gocyclo
 func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh chan *Dirent,
 	errCB ErrorCallback, ignoreSymlinks bool,
 ) {
-	buffer := make([]byte, os.Getpagesize())
+	ps := os.Getpagesize()
+	buffer := make([]byte, os.Getpagesize()+int(unsafe.Sizeof(syscall.Dirent{})))[:ps]
 
 	var pathBuffer [maxPathLength + maxFilenameLength + 1]byte
 
@@ -230,18 +231,10 @@ func sortChildren(children *Dirent) *Dirent {
 	return root
 }
 
-type dirent struct {
-	Ino    uint64
-	_      int64
-	Reclen uint16
-	Type   uint8
-	Name   byte
-}
-
 type scanner struct {
 	buffer, read []byte
 	fh           int
-	*dirent
+	*syscall.Dirent
 	err error
 }
 
@@ -265,10 +258,10 @@ func (s *scanner) Next() bool {
 		s.read = s.buffer[:n]
 	}
 
-	s.dirent = (*dirent)(unsafe.Pointer(&s.read[0]))
+	s.Dirent = (*syscall.Dirent)(unsafe.Pointer(&s.read[0]))
 	s.read = s.read[s.Reclen:]
 
-	if s.dirent.Type == syscall.DT_UNKNOWN {
+	if s.Dirent.Type == syscall.DT_UNKNOWN {
 		return s.getType()
 	}
 
@@ -281,14 +274,14 @@ func (s *scanner) getType() bool {
 	var stat syscall.Stat_t
 
 	if _, _, err := syscall.Syscall6(statCall, uintptr(s.fh),
-		uintptr(unsafe.Pointer(&s.dirent.Name)), uintptr(unsafe.Pointer(&stat)),
+		uintptr(unsafe.Pointer(&s.Dirent.Name[0])), uintptr(unsafe.Pointer(&stat)),
 		symlinkNoFollow, 0, 0); err != 0 {
 		s.err = err
 
 		return false
 	}
 
-	s.dirent.Type = modeToType(stat.Mode)
+	s.Dirent.Type = modeToType(stat.Mode)
 
 	return true
 }
@@ -317,7 +310,8 @@ func (s *scanner) Get() ([]byte, uint8, uint64) {
 }
 
 func (s *scanner) getName() []byte {
-	name := unsafe.Slice(&s.Name, maxFilenameLength)
+	n := s.Dirent.Name[:]
+	name := *(*[]byte)(unsafe.Pointer(&n))
 
 	l := bytes.IndexByte(name, 0)
 	if l <= 0 || string(name[:2]) == dot || string(name[:3]) == dotdot {
