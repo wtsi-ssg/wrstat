@@ -293,6 +293,49 @@ func TestWalk(t *testing.T) {
 			So(os.Remove(fname), ShouldBeNil)
 		})
 	})
+
+	Convey("The race checker doesn't throw an allocation stradling error when "+
+		"the Dirent could theoretically cross an allocation boundary", t, func() {
+		tdir := t.TempDir()
+		fname := strings.Repeat("a", 200)
+
+		expectation := make([]string, 1, 19)
+
+		expectation[0] = strconv.Quote(tdir + "/")
+
+		for i := 0; i < 18; i++ {
+			p := filepath.Join(tdir, fname+strconv.Itoa(i))
+			expectation = append(expectation, strconv.Quote(p+"/"))
+
+			So(os.Mkdir(p, 0700), ShouldBeNil)
+		}
+
+		sort.Strings(expectation)
+
+		outDir := t.TempDir()
+
+		files, err := NewFiles(outDir, 1)
+		So(err, ShouldBeNil)
+
+		w := New(files.WritePaths(), true, false)
+
+		err = w.Walk(tdir, func(_ string, err error) {})
+		So(err, ShouldBeNil)
+
+		So(files.Close(), ShouldBeNil)
+
+		f, err := os.Open(filepath.Join(outDir, "walk.1"))
+		So(err, ShouldBeNil)
+
+		var buf strings.Builder
+
+		_, err = io.Copy(&buf, f)
+		So(err, ShouldBeNil)
+
+		expectedOutput := strings.Join(expectation, "\n") + "\n"
+
+		So(buf.String(), ShouldEqual, expectedOutput)
+	})
 }
 
 // prepareTestDirs creates a temporary directory filled with files to walk, and

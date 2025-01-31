@@ -103,8 +103,6 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 
 	go sortDirents(ctx, requestCh, sortedRequestCh)
 
-	r.markNotReady()
-
 	sortedRequestCh <- r
 
 	defer stop()
@@ -172,7 +170,8 @@ func sortDirents(ctx context.Context, requestCh <-chan *Dirent, //nolint:gocyclo
 func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh chan *Dirent,
 	errCB ErrorCallback, ignoreSymlinks bool,
 ) {
-	buffer := make([]byte, os.Getpagesize())
+	ps := os.Getpagesize()
+	buffer := make([]byte, os.Getpagesize()+int(unsafe.Sizeof(syscall.Dirent{})))[:ps]
 
 	var pathBuffer [maxPathLength + maxFilenameLength + 1]byte
 
@@ -206,8 +205,6 @@ func scanChildDirs(ctx context.Context, requestCh chan *Dirent, request, childre
 		next := r.next
 
 		if r.IsDir() {
-			r.markNotReady()
-
 			select {
 			case <-ctx.Done():
 				return
