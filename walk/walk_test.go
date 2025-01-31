@@ -294,7 +294,8 @@ func TestWalk(t *testing.T) {
 		})
 	})
 
-	Convey("many paths don't cause a race error", t, func() {
+	Convey("The race checker doesn't throw an allocation stradling error when "+
+		"the Dirent could theoretically cross an allocation boundary", t, func() {
 		tdir := t.TempDir()
 		fname := strings.Repeat("a", 200)
 
