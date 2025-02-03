@@ -163,6 +163,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 
 	unique := scheduler.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
+	now := time.Now().Format("20060102150405")
 
 	err := os.MkdirAll(outputRoot, userGroupPerm)
 	if err != nil {
@@ -170,10 +171,10 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	}
 
 	scheduleWalkJobs(outputRoot, args, unique, finalDir, multiStatJobs,
-		multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
+		multiInodes, multiCh, forcedQueue, queuesToAvoid, now, s)
 
 	if timeout > 0 {
-		scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs)
+		scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs, now)
 	}
 
 	return nil
@@ -183,12 +184,11 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string, //nolint:funlen
-	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid string, s *scheduler.Scheduler) {
+	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid, now string, s *scheduler.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
 	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid)
-	now := time.Now().Format("20060102150405")
 	reqWalk, reqCombine := reqs()
 	reqWalk.Cores = 3
 
@@ -303,7 +303,8 @@ func tidyRepGrp(dir, unique string) string {
 	return repGrp("tidy", dir, unique)
 }
 
-func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot, jobUnique, logOutput, jobOutput string) {
+func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot,
+	jobUnique, logOutput, jobOutput, now string) {
 	cmd := fmt.Sprintf("%s cleanup -w %q -j %q", s.Executable(), outputRoot, jobUnique)
 	nowUnique := time.Now().Format(time.DateOnly) + "_" + jobUnique
 
@@ -315,7 +316,7 @@ func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot, jobUn
 		cmd += fmt.Sprintf(" -L %q", filepath.Join(jobOutput, nowUnique+".log"))
 	}
 
-	job := s.NewJob(cmd, "wrstat-cleanup-"+time.Now().Format("20060102150405"),
+	job := s.NewJob(cmd, "wrstat-cleanup-"+now,
 		"wrstat-cleanup", "", "", scheduler.DefaultRequirements())
 	job.LimitGroups = []string{time.Now().Add(time.Hour*time.Duration(timeout)).Format(time.DateTime) + "<datetime"}
 
