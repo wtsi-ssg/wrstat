@@ -88,18 +88,18 @@ unique directory created for all of them.
 particular subsets of jobs took.)
 
 Once everything has completed, the final output files are moved to the given
---final_output directory by 'wrstat tidy', with a name that includes the date
-this command was started, the basename of the directory operated on, a unique
-string per directory of interest, and a unique string for this call of multi:
-[year][month][day]_[directory_basename]/[interest unique].[unique].[type]
+--final_output directory by 'wrstat tidy', within a subdirectory named for the
+start time of the command followed by an underscore and the path (with the
+slashes replaced with a unicode equivalent):
+YYMMDD-hhmmss_[path]/[file]
 eg. for 'wrstat multi -i foo -w /path/a -f /path/b /mnt/foo /mnt/bar /home/bar'
 It might produce: 
-/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.logs.gz
-/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.stats.gz
-/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.logs.gz
-/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.stats.gz
-/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
-/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617-200000_／mnt／foo/logs.gz
+/path/b/20210617-200000_／mnt／foo/stats.gz
+/path/b/20210617-200000_／mnt／bar/logs.gz
+/path/b/20210617-200000_／mnt／bar/stats.gz
+/path/b/20210617-200000_／home／bar/logs.gz
+/path/b/20210617-200000_／home／bar/stats.gz
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -163,7 +163,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 
 	unique := scheduler.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
-	now := time.Now().Format("20060102150405")
+	now := time.Now().Format("20060102-150405")
 
 	err := os.MkdirAll(outputRoot, userGroupPerm)
 	if err != nil {

@@ -210,11 +210,13 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 	combine2DepGroup := jobs[3].DepGroups[0]
 	repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
 
-	dateStr := regexp.MustCompile(`final_output/(\d+)_`).FindStringSubmatch(jobs[4].Cmd)
+	dateStr := regexp.MustCompile(`final_output/(\d\d\d\d\d\d\d\d-\d\d\d\d\d\d)_`).FindStringSubmatch(jobs[4].Cmd)
 	So(len(dateStr), ShouldEqual, 2)
 
-	now, err := strconv.ParseInt(dateStr[1], 10, 64)
+	_, err := time.Parse("20060201-150405", dateStr[1])
 	So(err, ShouldBeNil)
+
+	now := dateStr[1]
 
 	exe, err := filepath.Abs(app)
 	So(err, ShouldBeNil)
@@ -296,7 +298,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Behaviours: behaviours,
 		},
 		{
-			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_／some／path\" \"%s/%s/path/%s\"",
+			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some／path\" \"%s/%s/path/%s\"",
 				exe, now, workingDir, repGroup, walk1DepGroup),
 			CwdMatters:   true,
 			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
@@ -312,7 +314,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Behaviours: behaviours,
 		},
 		{
-			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_／some-other／path\" \"%s/%s/path/%s\"",
+			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some-other／path\" \"%s/%s/path/%s\"",
 				exe, now, workingDir, repGroup, walk2DepGroup),
 			CwdMatters:   true,
 			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
