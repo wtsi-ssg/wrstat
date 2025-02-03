@@ -951,7 +951,7 @@ waitForJobs;`)
 			"*_／objects／store1/logs.gz": "",
 			"*_／objects／store2/logs.gz": "",
 			"*_／objects／store3/logs.gz": "",
-			"*_／simple／FA/stats.gz": fmt.Sprintf(""+
+			"*_／simple／A/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/simple/A/")+"\t0\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\td\t\x00\t2\t32",
 				UserA, GroupA),

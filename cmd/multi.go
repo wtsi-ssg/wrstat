@@ -146,6 +146,14 @@ func checkMultiArgs() {
 	if finalDir == "" {
 		die("--final_output is required")
 	}
+
+	if logJobs == "" {
+		logJobs = finalDir
+	}
+
+	if logsDir == "" {
+		logsDir = finalDir
+	}
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
