@@ -118,6 +118,7 @@ func init() {
 
 	statCmd.Flags().StringVar(&statCh, "ch", "", "tsv file detailing paths to chmod & chown")
 	statCmd.Flags().BoolVar(&statDebug, "debug", false, "output Lstat timings")
+	walkCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record statistics on syscalls every n minutes to the log")
 }
 
 // statPathsInFile does the main work.
@@ -181,7 +182,14 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 		frequency = reportFrequency
 	}
 
-	statter := stat.WithTimeout(lstatTimeout, lstatAttempts, lstatConsecutiveFails, appLogger)
+	var statter stat.Statter = stat.WithTimeout(lstatTimeout, lstatAttempts, lstatConsecutiveFails, appLogger)
+
+	if recordStats > 0 {
+		statter = stat.RecordStats(statter, time.Duration(recordStats)*time.Minute, func(t time.Time, u uint64) {
+			info("syscalls (%s): stats; %d", t, u)
+		})
+	}
+
 	pConfig := stat.PathsConfig{Logger: appLogger, ReportFrequency: frequency, ScanTimeout: scanTimeout}
 	p := stat.NewPaths(statter, pConfig)
 

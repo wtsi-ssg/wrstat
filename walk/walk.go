@@ -36,6 +36,7 @@ import (
 	"os"
 	"slices"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -58,6 +59,7 @@ type Walker struct {
 	pathCB         PathCallback
 	sendDirs       bool
 	ignoreSymlinks bool
+	stats
 }
 
 // New creates a new Walker that can Walk() a filesystem and send all the
@@ -73,6 +75,11 @@ func New(cb PathCallback, includDirs, ignoreSymlinks bool) *Walker {
 		sendDirs:       includDirs,
 		ignoreSymlinks: ignoreSymlinks,
 	}
+}
+
+func (w *Walker) EnableStats(interval time.Duration, output StatsOutput) {
+	w.stats.interval = interval
+	w.stats.output = output
 }
 
 // ErrorCallback is a callback function you supply Walker.Walk(), and it
@@ -96,6 +103,10 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	requestCh := make(chan *Dirent)
 	sortedRequestCh := make(chan *Dirent)
 	ctx, stop := context.WithCancel(context.Background())
+
+	if w.stats.output != nil {
+		go w.stats.logStats(ctx)
+	}
 
 	for range walkers {
 		go w.handleDirReads(ctx, sortedRequestCh, requestCh, errCB, w.ignoreSymlinks)
@@ -170,8 +181,7 @@ func sortDirents(ctx context.Context, requestCh <-chan *Dirent, //nolint:gocyclo
 func (w *Walker) handleDirReads(ctx context.Context, sortedRequests, requestCh chan *Dirent,
 	errCB ErrorCallback, ignoreSymlinks bool,
 ) {
-	ps := os.Getpagesize()
-	buffer := make([]byte, os.Getpagesize()+int(unsafe.Sizeof(syscall.Dirent{})))[:ps]
+	buffer := make([]byte, os.Getpagesize())
 
 	var pathBuffer [maxPathLength + maxFilenameLength + 1]byte
 
@@ -184,7 +194,7 @@ Loop:
 			l := len(request.appendTo(pathBuffer[:0]))
 			pathBuffer[l] = 0
 
-			children, err := scan(buffer, &pathBuffer[0], ignoreSymlinks)
+			children, err := scan(buffer, &pathBuffer[0], ignoreSymlinks, &w.stats)
 			if err != nil {
 				errCB(string(pathBuffer[:l]), err)
 			}
@@ -231,16 +241,28 @@ func sortChildren(children *Dirent) *Dirent {
 	return root
 }
 
+type dirent struct {
+	Ino    uint64
+	Off    int64
+	Reclen uint16
+	Type   uint8
+	Name   uint8
+}
+
 type scanner struct {
 	buffer, read []byte
 	fh           int
-	*syscall.Dirent
+	stats        *stats
+	*dirent
 	err error
 }
 
 func (s *scanner) Next() bool {
 	for len(s.read) == 0 {
 		n, err := syscall.ReadDirent(s.fh, s.buffer)
+
+		s.stats.AddRead(n)
+
 		if err != nil {
 			if errors.Is(err, syscall.EINTR) {
 				continue
@@ -258,10 +280,10 @@ func (s *scanner) Next() bool {
 		s.read = s.buffer[:n]
 	}
 
-	s.Dirent = (*syscall.Dirent)(unsafe.Pointer(&s.read[0]))
+	s.dirent = (*dirent)(unsafe.Pointer(&s.read[0]))
 	s.read = s.read[s.Reclen:]
 
-	if s.Dirent.Type == syscall.DT_UNKNOWN {
+	if s.dirent.Type == syscall.DT_UNKNOWN {
 		return s.getType()
 	}
 
@@ -274,14 +296,16 @@ func (s *scanner) getType() bool {
 	var stat syscall.Stat_t
 
 	if _, _, err := syscall.Syscall6(statCall, uintptr(s.fh),
-		uintptr(unsafe.Pointer(&s.Dirent.Name[0])), uintptr(unsafe.Pointer(&stat)),
+		uintptr(unsafe.Pointer(&s.dirent.Name)), uintptr(unsafe.Pointer(&stat)),
 		symlinkNoFollow, 0, 0); err != 0 {
 		s.err = err
+
+		s.stats.AddStat()
 
 		return false
 	}
 
-	s.Dirent.Type = modeToType(stat.Mode)
+	s.dirent.Type = modeToType(stat.Mode)
 
 	return true
 }
@@ -310,8 +334,7 @@ func (s *scanner) Get() ([]byte, uint8, uint64) {
 }
 
 func (s *scanner) getName() []byte {
-	n := s.Dirent.Name[:]
-	name := *(*[]byte)(unsafe.Pointer(&n))
+	name := unsafe.Slice(&s.Name, uintptr(s.Reclen)-unsafe.Offsetof(s.dirent.Name))
 
 	l := bytes.IndexByte(name, 0)
 	if l <= 0 || string(name[:2]) == dot || string(name[:3]) == dotdot {
@@ -326,20 +349,17 @@ func (s *scanner) getName() []byte {
 	return name[:l]
 }
 
-func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
+func scan(buffer []byte, path *byte, ignoreSymlinks bool, stats *stats) (*Dirent, error) {
 	children := nullDirEnt
 
-	fh, err := open(path)
+	fh, err := open(path, stats)
 	if err != nil {
 		return children, err
 	}
 
-	defer syscall.Close(fh)
+	defer closeFH(fh, stats)
 
-	s := scanner{
-		buffer: buffer,
-		fh:     fh,
-	}
+	s := scanner{buffer: buffer, fh: fh, stats: stats}
 
 	for s.Next() {
 		name, mode, inode := s.Get()
@@ -359,7 +379,9 @@ func scan(buffer []byte, path *byte, ignoreSymlinks bool) (*Dirent, error) {
 	return children, s.err
 }
 
-func open(path *byte) (int, error) {
+func open(path *byte, stats *stats) (int, error) {
+	defer stats.AddOpen()
+
 	const atFDCWD = -0x64
 
 	dfd := atFDCWD
@@ -375,4 +397,10 @@ func open(path *byte) (int, error) {
 	}
 
 	return int(ifh), nil
+}
+
+func closeFH(fh int, stats *stats) {
+	defer stats.AddClose()
+
+	syscall.Close(fh)
 }

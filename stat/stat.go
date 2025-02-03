@@ -26,11 +26,13 @@
 package stat
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -55,6 +57,46 @@ type Statter interface {
 
 // LstatFunc matches the signature of os.Lstat.
 type LstatFunc func(string) (fs.FileInfo, error)
+
+type RecordStatFunc func(time.Time, uint64)
+
+type StatsRecorder struct {
+	statter  Statter
+	interval time.Duration
+	output   RecordStatFunc
+	stats    uint64
+}
+
+func RecordStats(statter Statter, interval time.Duration, output RecordStatFunc) *StatsRecorder {
+	return &StatsRecorder{
+		statter:  statter,
+		interval: interval,
+		output:   output,
+	}
+}
+
+func (s *StatsRecorder) Lstat(path string) (fs.FileInfo, error) {
+	atomic.AddUint64(&s.stats, 1)
+
+	return s.statter.Lstat(path)
+}
+
+func (s *StatsRecorder) get() uint64 {
+	return atomic.SwapUint64(&s.stats, 0)
+}
+
+func (s *StatsRecorder) Start(ctx context.Context) {
+	for {
+		select {
+		case t := <-time.After(s.interval):
+			s.output(t, s.get())
+		case <-ctx.Done():
+			s.output(time.Now(), s.get())
+
+			return
+		}
+	}
+}
 
 // StatterWithTimeout is a Statter implementation. NB: this is NOT thread safe;
 // you should only call Lstat() one at a time.

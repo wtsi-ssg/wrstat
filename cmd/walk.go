@@ -127,6 +127,7 @@ func init() {
 	walkCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
 		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 	walkCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "stat jobs should start running before this unix timestamp")
+	walkCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record statistics on syscalls every n minutes to the log")
 }
 
 // checkArgs checks we have required args and returns desired dir.
@@ -177,6 +178,13 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int,
 		}
 	}()
 
+	if recordStats > 0 {
+		walker.EnableStats(time.Duration(recordStats)*time.Minute, func(t time.Time, sd walk.StatData) {
+			info("syscalls (%s): opens: %d; reads: %d; bytes: %d; closes: %d; stats; %d",
+				t, sd.Open, sd.Read, sd.Bytes, sd.Close, sd.Stat)
+		})
+	}
+
 	err = walker.Walk(desiredDir, func(path string, err error) {
 		warn("error processing %s: %s", path, err)
 	})
@@ -226,6 +234,10 @@ func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath strin
 	cmd := s.Executable() + " stat "
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
+	}
+
+	if recordStats > 0 {
+		cmd += fmt.Sprintf("-s %d ", recordStats)
 	}
 
 	req := scheduler.DefaultRequirements()
