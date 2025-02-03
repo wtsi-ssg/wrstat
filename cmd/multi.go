@@ -260,20 +260,7 @@ func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int,
 }
 
 func encodePath(path string) string {
-	var sb strings.Builder
-
-	for i := 0; i < len(path); i++ {
-		switch path[i] {
-		case '%':
-			sb.WriteString("%25")
-		case '/':
-			sb.WriteString("%2F")
-		default:
-			sb.WriteByte(path[i])
-		}
-	}
-
-	return sb.String()
+	return strings.ReplaceAll(path, "/", "／")
 }
 
 // reqs returns Requirements suitable for walk and combine jobs.
