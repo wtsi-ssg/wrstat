@@ -180,7 +180,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
 	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid)
-	now := time.Now().Unix()
+	now := time.Now().Format("20060102150405")
 	reqWalk, reqCombine := reqs()
 
 	var (
@@ -203,7 +203,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 		walkUnique := scheduler.UniqueString()
 		combineUnique := scheduler.UniqueString()
 		outDir := filepath.Join(outputRoot, filepath.Base(path), walkUnique)
-		finalDirName := fmt.Sprintf("%d_%s", now, encodePath(path))
+		finalDirName := fmt.Sprintf("%s_%s", now, encodePath(path))
 		finalOutput := filepath.Join(finalDirParent, finalDirName)
 
 		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -t %d -o %s -i %s %s",
