@@ -190,6 +190,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid)
 	now := time.Now().Format("20060102150405")
 	reqWalk, reqCombine := reqs()
+	reqWalk.Cores = 3
 
 	var (
 		limit           []string
@@ -314,7 +315,8 @@ func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot, jobUn
 		cmd += fmt.Sprintf(" -L %q", filepath.Join(jobOutput, nowUnique+".log"))
 	}
 
-	job := s.NewJob(cmd, "wrstat-cleanup", "wrstat-cleanup", "", "", scheduler.DefaultRequirements())
+	job := s.NewJob(cmd, "wrstat-cleanup-"+time.Now().Format("20060102150405"),
+		"wrstat-cleanup", "", "", scheduler.DefaultRequirements())
 	job.LimitGroups = []string{time.Now().Add(time.Hour*time.Duration(timeout)).Format(time.DateTime) + "<datetime"}
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

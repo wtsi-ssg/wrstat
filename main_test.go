@@ -186,7 +186,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 	walkReqs := &scheduler.Requirements{
 		RAM:   16000,
 		Time:  19 * time.Hour,
-		Cores: 1,
+		Cores: 3,
 		Disk:  1,
 	}
 
