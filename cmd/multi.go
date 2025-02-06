@@ -136,7 +136,7 @@ func init() {
 		"reached, copy logs to a unique subdirectory of the supplied directory")
 	multiCmd.Flags().StringVarP(&logJobs, "logjobs", "L", "", "when timeout is "+
 		"reached, log job status to a unique file (YYYY-MM-DD_unique.log) in the supplied directory")
-	walkCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record statistics on syscalls every n minutes to the log")
+	multiCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record statistics on syscalls every n minutes to the log")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
