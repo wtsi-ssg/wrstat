@@ -118,7 +118,8 @@ func init() {
 
 	statCmd.Flags().StringVar(&statCh, "ch", "", "tsv file detailing paths to chmod & chown")
 	statCmd.Flags().BoolVar(&statDebug, "debug", false, "output Lstat timings")
-	statCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record statistics on syscalls every n minutes to the log")
+	statCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record "+
+		"statistics on syscalls every n minutes to the log")
 }
 
 // statPathsInFile does the main work.
