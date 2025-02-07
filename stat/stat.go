@@ -93,7 +93,22 @@ func (s *StatsRecorder) get() uint64 {
 	return atomic.SwapUint64(&s.stats, 0)
 }
 
-func (s *StatsRecorder) Start(ctx context.Context) {
+// Start will launch a goroutine that will periodically call the stored
+// RecordStatFunc. The supplied context will stop the goroutine.
+//
+// This function returns a function that will block until the goroutine has
+// stopped.
+func (s *StatsRecorder) Start(ctx context.Context) func() {
+	ch := make(chan struct{})
+
+	go s.start(ctx, ch)
+
+	return func() { <-ch }
+}
+
+func (s *StatsRecorder) start(ctx context.Context, ch chan struct{}) {
+	defer close(ch)
+
 	for {
 		select {
 		case t := <-time.After(s.interval):

@@ -26,6 +26,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -186,9 +187,16 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 	var statter stat.Statter = stat.WithTimeout(lstatTimeout, lstatAttempts, lstatConsecutiveFails, appLogger)
 
 	if recordStats > 0 {
-		statter = stat.RecordStats(statter, time.Duration(recordStats)*time.Minute, func(t time.Time, u uint64) {
+		rstatter := stat.RecordStats(statter, time.Duration(recordStats)*time.Minute, func(t time.Time, u uint64) {
 			info("syscalls (%s): stats; %d", t, u)
 		})
+
+		ctx, stop := context.WithCancel(context.Background())
+
+		defer rstatter.Start(ctx)()
+		defer stop()
+
+		statter = rstatter
 	}
 
 	pConfig := stat.PathsConfig{Logger: appLogger, ReportFrequency: frequency, ScanTimeout: scanTimeout}
