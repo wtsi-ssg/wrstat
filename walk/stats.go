@@ -74,7 +74,17 @@ func (s *stats) get() StatData {
 	}
 }
 
-func (s *stats) logStats(ctx context.Context) {
+func (s *stats) LogStats(ctx context.Context) func() {
+	ch := make(chan struct{})
+
+	go s.logStats(ctx, ch)
+
+	return func() { <-ch }
+}
+
+func (s *stats) logStats(ctx context.Context, ch chan struct{}) {
+	defer close(ch)
+
 	for {
 		select {
 		case t := <-time.After(s.interval):

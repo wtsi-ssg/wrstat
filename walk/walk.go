@@ -105,7 +105,7 @@ func (w *Walker) Walk(dir string, errCB ErrorCallback) error {
 	ctx, stop := context.WithCancel(context.Background())
 
 	if w.stats.output != nil {
-		go w.stats.logStats(ctx)
+		defer w.stats.LogStats(ctx)()
 	}
 
 	for range walkers {
