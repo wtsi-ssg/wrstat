@@ -48,7 +48,7 @@ type stats struct {
 }
 
 func (s *stats) AddOpen() {
-	atomic.AndUint64(&s.Open, 1)
+	atomic.AddUint64(&s.Open, 1)
 }
 
 func (s *stats) AddRead(count int) {
@@ -57,11 +57,11 @@ func (s *stats) AddRead(count int) {
 }
 
 func (s *stats) AddStat() {
-	atomic.AndUint64(&s.Stat, 1)
+	atomic.AddUint64(&s.Stat, 1)
 }
 
 func (s *stats) AddClose() {
-	atomic.AndUint64(&s.Close, 1)
+	atomic.AddUint64(&s.Close, 1)
 }
 
 func (s *stats) get() StatData {
