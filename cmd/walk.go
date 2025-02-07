@@ -43,7 +43,7 @@ const (
 	walkLogOutputBasename = "walk.log"
 	statTime              = 12 * time.Hour
 	statRAM               = 200
-	statCores             = 0.1
+	statCores             = 0.05
 	timeoutExitCode       = 128
 )
 

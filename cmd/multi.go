@@ -88,18 +88,18 @@ unique directory created for all of them.
 particular subsets of jobs took.)
 
 Once everything has completed, the final output files are moved to the given
---final_output directory by 'wrstat tidy', with a name that includes the date
-this command was started, the basename of the directory operated on, a unique
-string per directory of interest, and a unique string for this call of multi:
-[year][month][day]_[directory_basename]/[interest unique].[unique].[type]
+--final_output directory by 'wrstat tidy', within a subdirectory named for the
+start time of the command followed by an underscore and the path (with the
+slashes replaced with a unicode equivalent):
+YYMMDD-hhmmss_[path]/[file]
 eg. for 'wrstat multi -i foo -w /path/a -f /path/b /mnt/foo /mnt/bar /home/bar'
 It might produce: 
-/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.logs.gz
-/path/b/20210617_foo.clkdnfnd992nfksj1lld.c35m8359bnc8ni7dgphg.stats.gz
-/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.logs.gz
-/path/b/20210617_bar.f8bns3jkd92kds10k4ks.c35m8359bnc8ni7dgphg.stats.gz
-/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.logs.gz
-/path/b/20210617_bar.d498vhsk39fjh129djg8.c35m8359bnc8ni7dgphg.stats.gz
+/path/b/20210617-200000_／mnt／foo/logs.gz
+/path/b/20210617-200000_／mnt／foo/stats.gz
+/path/b/20210617-200000_／mnt／bar/logs.gz
+/path/b/20210617-200000_／mnt／bar/stats.gz
+/path/b/20210617-200000_／home／bar/logs.gz
+/path/b/20210617-200000_／home／bar/stats.gz
 
 The output files will be given the same user:group ownership and
 user,group,other read & write permissions as the --final_output directory.
@@ -146,6 +146,14 @@ func checkMultiArgs() {
 	if finalDir == "" {
 		die("--final_output is required")
 	}
+
+	if logJobs == "" {
+		logJobs = finalDir
+	}
+
+	if logsDir == "" {
+		logsDir = finalDir
+	}
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
@@ -155,6 +163,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 
 	unique := scheduler.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
+	now := time.Now().Format("20060102-150405")
 
 	err := os.MkdirAll(outputRoot, userGroupPerm)
 	if err != nil {
@@ -162,10 +171,10 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	}
 
 	scheduleWalkJobs(outputRoot, args, unique, finalDir, multiStatJobs,
-		multiInodes, multiCh, forcedQueue, queuesToAvoid, s)
+		multiInodes, multiCh, forcedQueue, queuesToAvoid, now, s)
 
 	if timeout > 0 {
-		scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs)
+		scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs, now)
 	}
 
 	return nil
@@ -175,13 +184,13 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string, //nolint:funlen
-	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid string, s *scheduler.Scheduler) {
+	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid, now string, s *scheduler.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
 	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid)
-	now := time.Now().Unix()
 	reqWalk, reqCombine := reqs()
+	reqWalk.Cores = 3
 
 	var (
 		limit           []string
@@ -203,7 +212,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 		walkUnique := scheduler.UniqueString()
 		combineUnique := scheduler.UniqueString()
 		outDir := filepath.Join(outputRoot, filepath.Base(path), walkUnique)
-		finalDirName := fmt.Sprintf("%d_%s", now, encodePath(path))
+		finalDirName := fmt.Sprintf("%s_%s", now, encodePath(path))
 		finalOutput := filepath.Join(finalDirParent, finalDirName)
 
 		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -t %d -o %s -i %s %s",
@@ -260,20 +269,7 @@ func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int,
 }
 
 func encodePath(path string) string {
-	var sb strings.Builder
-
-	for i := 0; i < len(path); i++ {
-		switch path[i] {
-		case '%':
-			sb.WriteString("%25")
-		case '/':
-			sb.WriteString("%2F")
-		default:
-			sb.WriteByte(path[i])
-		}
-	}
-
-	return sb.String()
+	return strings.ReplaceAll(path, "/", "／")
 }
 
 // reqs returns Requirements suitable for walk and combine jobs.
@@ -307,7 +303,8 @@ func tidyRepGrp(dir, unique string) string {
 	return repGrp("tidy", dir, unique)
 }
 
-func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot, jobUnique, logOutput, jobOutput string) {
+func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot,
+	jobUnique, logOutput, jobOutput, now string) {
 	cmd := fmt.Sprintf("%s cleanup -w %q -j %q", s.Executable(), outputRoot, jobUnique)
 	nowUnique := time.Now().Format(time.DateOnly) + "_" + jobUnique
 
@@ -319,7 +316,8 @@ func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot, jobUn
 		cmd += fmt.Sprintf(" -L %q", filepath.Join(jobOutput, nowUnique+".log"))
 	}
 
-	job := s.NewJob(cmd, "wrstat-cleanup", "wrstat-cleanup", "", "", scheduler.DefaultRequirements())
+	job := s.NewJob(cmd, "wrstat-cleanup-"+now,
+		"wrstat-cleanup", "", "", scheduler.DefaultRequirements())
 	job.LimitGroups = []string{time.Now().Add(time.Hour*time.Duration(timeout)).Format(time.DateTime) + "<datetime"}
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

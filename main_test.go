@@ -186,7 +186,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 	walkReqs := &scheduler.Requirements{
 		RAM:   16000,
 		Time:  19 * time.Hour,
-		Cores: 1,
+		Cores: 3,
 		Disk:  1,
 	}
 
@@ -210,11 +210,13 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 	combine2DepGroup := jobs[3].DepGroups[0]
 	repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
 
-	dateStr := regexp.MustCompile(`final_output/(\d+)_`).FindStringSubmatch(jobs[4].Cmd)
+	dateStr := regexp.MustCompile(`final_output/(\d\d\d\d\d\d\d\d-\d\d\d\d\d\d)_`).FindStringSubmatch(jobs[4].Cmd)
 	So(len(dateStr), ShouldEqual, 2)
 
-	now, err := strconv.ParseInt(dateStr[1], 10, 64)
+	_, err := time.Parse("20060201-150405", dateStr[1])
 	So(err, ShouldBeNil)
+
+	now := dateStr[1]
 
 	exe, err := filepath.Abs(app)
 	So(err, ShouldBeNil)
@@ -296,7 +298,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Behaviours: behaviours,
 		},
 		{
-			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome%%2Fpath\" \"%s/%s/path/%s\"",
+			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some／path\" \"%s/%s/path/%s\"",
 				exe, now, workingDir, repGroup, walk1DepGroup),
 			CwdMatters:   true,
 			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
@@ -312,7 +314,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Behaviours: behaviours,
 		},
 		{
-			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%d_%%2Fsome-other%%2Fpath\" \"%s/%s/path/%s\"",
+			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some-other／path\" \"%s/%s/path/%s\"",
 				exe, now, workingDir, repGroup, walk2DepGroup),
 			CwdMatters:   true,
 			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
@@ -342,7 +344,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 				"-L \"/path/for/jobLogs/%[4]s.log\"",
 				exe, workingDir, repGroup, time.Now().Format(time.DateOnly)+"_"+repGroup),
 			CwdMatters:   true,
-			RepGroup:     "wrstat-cleanup",
+			RepGroup:     "wrstat-cleanup-" + dateStr[1],
 			ReqGroup:     "wrstat-cleanup",
 			Requirements: tidyReqs,
 			LimitGroups:  []string{finishTime + "<datetime"},
@@ -394,7 +396,7 @@ func TestWalk(t *testing.T) {
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
 					Time:  12 * time.Hour,
-					Cores: 0.1,
+					Cores: 0.05,
 					Disk:  1,
 				},
 				Override:  1,
@@ -434,7 +436,7 @@ func TestWalk(t *testing.T) {
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
 					Time:  12 * time.Hour,
-					Cores: 0.1,
+					Cores: 0.05,
 					Disk:  1,
 				},
 				Override:   1,
@@ -451,7 +453,7 @@ func TestWalk(t *testing.T) {
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
 					Time:  12 * time.Hour,
-					Cores: 0.1,
+					Cores: 0.05,
 					Disk:  1,
 				},
 				Override:   1,
@@ -946,20 +948,20 @@ waitForJobs;`)
 		So(err, ShouldBeNil)
 
 		for file, contents := range map[string]string{
-			"*_%2Fsimple%2FA/logs.gz":       "",
-			"*_%2Fsimple%2FE/logs.gz":       "",
-			"*_%2Fobjects%2Fstore1/logs.gz": "",
-			"*_%2Fobjects%2Fstore2/logs.gz": "",
-			"*_%2Fobjects%2Fstore3/logs.gz": "",
-			"*_%2Fsimple%2FA/stats.gz": fmt.Sprintf(""+
+			"*_／simple／A/logs.gz":       "",
+			"*_／simple／E/logs.gz":       "",
+			"*_／objects／store1/logs.gz": "",
+			"*_／objects／store2/logs.gz": "",
+			"*_／objects／store3/logs.gz": "",
+			"*_／simple／A/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/simple/A/")+"\t0\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\td\t\x00\t2\t32",
 				UserA, GroupA),
-			"*_%2Fsimple%2FE/stats.gz": fmt.Sprintf(""+
+			"*_／simple／E/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\tf\t\x00\t2\t34\n"+
 				strconv.Quote("/simple/E/")+"\t0\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\td\t\x00\t3\t32",
 				UserE, GroupE),
-			"*_%2Fobjects%2Fstore1/stats.gz": fmt.Sprintf(""+ //nolint:dupl
+			"*_／objects／store1/stats.gz": fmt.Sprintf(""+ //nolint:dupl
 				strconv.Quote("/objects/store1/")+"\t0\t0\t0\t"+ct(10)+"\t"+
 				ct(10)+"\t"+ct(10)+"\td\t\x00\t3\t32\n"+
 				strconv.Quote("/objects/store1/data/")+"\t0\t0\t0\t"+ct(42)+"\t"+
@@ -991,7 +993,7 @@ waitForJobs;`)
 				strconv.Quote("/objects/store1/data/temp/b/")+"\t0\t%[1]d\t%[2]d\t"+
 				ct(64)+"\t"+ct(64)+"\t"+ct(64)+"\td\t\x00\t2\t32",
 				UserC, GroupA, UserB, UserA),
-			"*_%2Fobjects%2Fstore2/stats.gz": fmt.Sprintf(""+ //nolint:dupl
+			"*_／objects／store2/stats.gz": fmt.Sprintf(""+ //nolint:dupl
 				strconv.Quote("/objects/store2/")+"\t0\t0\t0\t"+ct(148)+"\t"+
 				ct(148)+"\t"+ct(148)+"\td\t\x00\t5\t32\n"+
 				strconv.Quote("/objects/store2/part1/other.bed")+"\t512\t%[1]d\t%[2]d\t"+
@@ -1030,7 +1032,7 @@ waitForJobs;`)
 				strconv.Quote("/objects/store2/part0/teams/team1/")+"\t0\t%[6]d\t%[2]d\t"+
 				ct(104)+"\t"+ct(104)+"\t"+ct(104)+"\td\t\x00\t2\t32",
 				UserD, GroupA, GroupD, UserB, GroupB, UserA, UserE),
-			"*_%2Fobjects%2Fstore3/stats.gz": fmt.Sprintf(""+
+			"*_／objects／store3/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/objects/store3/aFile")+"\t512\t%d\t%d\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/objects/store3/")+"\t0\t0\t0\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\td\t\x00\t2\t32",
 				UserA, GroupA),
