@@ -58,6 +58,9 @@ type Statter interface {
 // LstatFunc matches the signature of os.Lstat.
 type LstatFunc func(string) (fs.FileInfo, error)
 
+// RecordStatFunc is a function that will be periodically called by RecordStats,
+// given the current time and the number of stat calls that have occurred since
+// the last time this function was called.
 type RecordStatFunc func(time.Time, uint64)
 
 type StatsRecorder struct {
@@ -67,6 +70,10 @@ type StatsRecorder struct {
 	stats    uint64
 }
 
+// RecordStats adds stat syscall reporting to a Statter. The output function
+// will be called repeatedly with the interval being defined by the named param.
+//
+// The output func will also be called at the end of the run.
 func RecordStats(statter Statter, interval time.Duration, output RecordStatFunc) *StatsRecorder {
 	return &StatsRecorder{
 		statter:  statter,
@@ -75,6 +82,7 @@ func RecordStats(statter Statter, interval time.Duration, output RecordStatFunc)
 	}
 }
 
+// Lstat implements the Statter interface.
 func (s *StatsRecorder) Lstat(path string) (fs.FileInfo, error) {
 	atomic.AddUint64(&s.stats, 1)
 

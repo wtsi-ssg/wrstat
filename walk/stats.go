@@ -30,10 +30,15 @@ import (
 	"time"
 )
 
+// StatsData is a count of the various syscalls that have occurred and a count
+// of the bytes read.
 type StatData struct {
 	Open, Read, Stat, Close, Bytes uint64
 }
 
+// RecordStatFunc is a function that will be periodically called  given the
+// current time and the number of syscalls that have occurred since the last
+// time this function was called.
 type StatsOutput func(time.Time, StatData)
 
 type stats struct {
