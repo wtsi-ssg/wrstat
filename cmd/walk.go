@@ -181,8 +181,8 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int,
 
 	if recordStats > 0 {
 		walker.EnableStats(time.Duration(recordStats)*time.Minute, func(t time.Time, sd walk.StatData) {
-			info("syscalls (%s): opens: %d; reads: %d; bytes: %d; closes: %d; stats; %d",
-				t, sd.Open, sd.Read, sd.Bytes, sd.Close, sd.Stat)
+			appLogger.Info("syscalls", "time", t, "opens", sd.Open, "reads", sd.Read,
+				"bytes", sd.Bytes, "closes", sd.Close, "stats", sd.Stat)
 		})
 	}
 

@@ -188,7 +188,7 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 
 	if recordStats > 0 {
 		rstatter := stat.RecordStats(statter, time.Duration(recordStats)*time.Minute, func(t time.Time, u uint64) {
-			info("syscalls (%s): stats; %d", t, u)
+			appLogger.Info("syscalls", "time", t, "stats", u)
 		})
 
 		ctx, stop := context.WithCancel(context.Background())
