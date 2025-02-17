@@ -127,6 +127,8 @@ func init() {
 	walkCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
 		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 	walkCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "stat jobs should start running before this unix timestamp")
+	walkCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record "+
+		"statistics on syscalls every n minutes to the log")
 }
 
 // checkArgs checks we have required args and returns desired dir.
@@ -153,8 +155,8 @@ func statRepGrp(dir, unique string) string {
 }
 
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int, depGroup, repGroup,
-	yamlPath string, s *scheduler.Scheduler,
+func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int, //nolint:funlen
+	depGroup, repGroup, yamlPath string, s *scheduler.Scheduler,
 ) {
 	n := statJobs
 	if n == 0 {
@@ -176,6 +178,13 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int,
 			warn("failed to close walk output file: %s", err)
 		}
 	}()
+
+	if recordStats > 0 {
+		walker.EnableStats(time.Duration(recordStats)*time.Minute, func(t time.Time, sd walk.StatData) {
+			appLogger.Info("syscalls", "time", t, "opens", sd.Open, "reads", sd.Read,
+				"bytes", sd.Bytes, "closes", sd.Close, "stats", sd.Stat)
+		})
+	}
 
 	err = walker.Walk(desiredDir, func(path string, err error) {
 		warn("error processing %s: %s", path, err)
@@ -220,12 +229,17 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 // scheduleStatJobs adds a 'wrstat stat' job to wr's queue for each out path.
 // The jobs are added with the given dep and rep groups, and the given yaml for
 // the --ch arg if not blank.
-func scheduleStatJobs(outPaths []string, depGroup string, repGrp, yamlPath string, s *scheduler.Scheduler) {
+func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
+	repGrp, yamlPath string, s *scheduler.Scheduler) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
 	cmd := s.Executable() + " stat "
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
+	}
+
+	if recordStats > 0 {
+		cmd += fmt.Sprintf("-s %d ", recordStats)
 	}
 
 	req := scheduler.DefaultRequirements()

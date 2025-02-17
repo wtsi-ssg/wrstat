@@ -39,6 +39,7 @@ import (
 	"sync"
 	"syscall"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -62,7 +63,10 @@ func TestWalk(t *testing.T) {
 		}
 
 		Convey("You can output the paths to a file", func() {
-			ok := testOutputToFiles(true, false, walkDir, outDir, cb, expectedPaths)
+			ok := testOutputToFiles(true, false, walkDir, outDir, cb, expectedPaths, &StatData{
+				Open:  65,
+				Close: 65,
+			})
 			So(ok, ShouldBeTrue)
 			So(len(walkErrors), ShouldEqual, 0)
 		})
@@ -118,7 +122,7 @@ func TestWalk(t *testing.T) {
 
 		Convey("You can ignore symlinks", func() {
 			expectedPaths = slices.Delete(expectedPaths, 3, 4)
-			ok := testOutputToFiles(true, true, walkDir, outDir, cb, expectedPaths)
+			ok := testOutputToFiles(true, true, walkDir, outDir, cb, expectedPaths, nil)
 			So(ok, ShouldBeTrue)
 			So(len(walkErrors), ShouldEqual, 0)
 		})
@@ -213,7 +217,7 @@ func TestWalk(t *testing.T) {
 				}
 			}
 
-			ok := testOutputToFiles(false, false, walkDir, outDir, cb, expected)
+			ok := testOutputToFiles(false, false, walkDir, outDir, cb, expected, nil)
 			So(ok, ShouldBeTrue)
 			So(len(walkErrors), ShouldEqual, 0)
 		})
@@ -443,12 +447,18 @@ func removeAndSymlink(t *testing.T, path, dest string) {
 }
 
 func testOutputToFiles(includDirs, ignoreSymlinks bool, walkDir, outDir string, cb ErrorCallback,
-	expectedPaths []string,
-) bool {
+	expectedPaths []string, expectedStats *StatData) bool {
 	files, err := NewFiles(outDir, 1)
 	So(err, ShouldBeNil)
 
 	w := New(files.WritePaths(), includDirs, ignoreSymlinks)
+
+	var s StatData
+
+	w.EnableStats(time.Second, func(t time.Time, sd StatData) {
+		s.Open += sd.Open
+		s.Close += sd.Close
+	})
 
 	err = w.Walk(walkDir, cb)
 	So(err, ShouldBeNil)
@@ -460,6 +470,10 @@ func testOutputToFiles(includDirs, ignoreSymlinks bool, walkDir, outDir string, 
 	So(files.Paths[0], ShouldEqual, outPath)
 	content, err := os.ReadFile(outPath)
 	So(err, ShouldBeNil)
+
+	if expectedStats != nil {
+		So(s, ShouldResemble, *expectedStats)
+	}
 
 	return checkPaths(string(content), expectedPaths)
 }
