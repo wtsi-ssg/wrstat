@@ -63,6 +63,8 @@ type LstatFunc func(string) (fs.FileInfo, error)
 // the last time this function was called.
 type RecordStatFunc func(time.Time, uint64)
 
+// StatsRecorder keeps a record on the number of stat syscalls and periodically
+// passes that number to a function.
 type StatsRecorder struct {
 	statter  Statter
 	interval time.Duration
