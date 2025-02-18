@@ -955,86 +955,86 @@ waitForJobs;`)
 			"*_／objects／store3/logs.gz": "",
 			"*_／simple／A/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/simple/A/a.file")+"\t1\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/simple/A/")+"\t0\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\td\t\x00\t2\t32",
+				strconv.Quote("/simple/A/")+"\t29\t%[1]d\t%[2]d\t"+ct(166)+"\t"+ct(166)+"\t"+ct(166)+"\td\t\x00\t2\t32",
 				UserA, GroupA),
 			"*_／simple／E/stats.gz": fmt.Sprintf(""+
 				strconv.Quote("/simple/E/b.tmp")+"\t2\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\tf\t\x00\t2\t34\n"+
-				strconv.Quote("/simple/E/")+"\t0\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\td\t\x00\t3\t32",
+				strconv.Quote("/simple/E/")+"\t28\t%[1]d\t%[2]d\t"+ct(171)+"\t"+ct(171)+"\t"+ct(171)+"\td\t\x00\t3\t32",
 				UserE, GroupE),
 			"*_／objects／store1/stats.gz": fmt.Sprintf(""+ //nolint:dupl
-				strconv.Quote("/objects/store1/")+"\t0\t0\t0\t"+ct(10)+"\t"+
+				strconv.Quote("/objects/store1/")+"\t27\t0\t0\t"+ct(10)+"\t"+
 				ct(10)+"\t"+ct(10)+"\td\t\x00\t3\t32\n"+
-				strconv.Quote("/objects/store1/data/")+"\t0\t0\t0\t"+ct(42)+"\t"+
+				strconv.Quote("/objects/store1/data/")+"\t52\t0\t0\t"+ct(42)+"\t"+
 				ct(42)+"\t"+ct(42)+"\td\t\x00\t5\t32\n"+
-				strconv.Quote("/objects/store1/data/temp/")+"\t0\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/temp/")+"\t42\t%[1]d\t%[2]d\t"+
 				ct(69)+"\t"+ct(69)+"\t"+ct(69)+"\td\t\x00\t5\t32\n"+
-				strconv.Quote("/objects/store1/data/temp/c/c.bed")+"\t512\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/temp/c/c.bed")+"\t3000\t%[1]d\t%[2]d\t"+
 				ct(75)+"\t"+ct(75)+"\t"+ct(75)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/temp/c/")+"\t0\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/temp/c/")+"\t28\t%[1]d\t%[2]d\t"+
 				ct(75)+"\t"+ct(75)+"\t"+ct(75)+"\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store1/data/dbs/dbA.db")+"\t512\t%[3]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/dbs/dbA.db")+"\t12345\t%[3]d\t%[2]d\t"+
 				ct(33)+"\t"+ct(33)+"\t"+ct(33)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/dbs/dbB.db")+"\t512\t%[3]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/dbs/dbB.db")+"\t54321\t%[3]d\t%[2]d\t"+
 				ct(38)+"\t"+ct(38)+"\t"+ct(38)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/dbs/")+"\t0\t%[3]d\t%[2]d\t"+ct(38)+"\t"+
+				strconv.Quote("/objects/store1/data/dbs/")+"\t43\t%[3]d\t%[2]d\t"+ct(38)+"\t"+
 				ct(38)+"\t"+ct(38)+"\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store1/data/sheets/doc1.txt")+"\t512\t%[4]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/sheets/doc1.txt")+"\t2048\t%[4]d\t%[2]d\t"+
 				ct(19)+"\t"+ct(19)+"\t"+ct(19)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/sheets/doc2.txt")+"\t512\t%[4]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/sheets/doc2.txt")+"\t8192\t%[4]d\t%[2]d\t"+
 				ct(24)+"\t"+ct(24)+"\t"+ct(24)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/sheets/")+"\t0\t%[4]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/sheets/")+"\t47\t%[4]d\t%[2]d\t"+
 				ct(24)+"\t"+ct(24)+"\t"+ct(24)+"\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store1/data/temp/a/a.bed")+"\t512\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/temp/a/a.bed")+"\t1000\t%[1]d\t%[2]d\t"+
 				ct(53)+"\t"+ct(53)+"\t"+ct(53)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/temp/a/")+"\t0\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/temp/a/")+"\t28\t%[1]d\t%[2]d\t"+
 				ct(53)+"\t"+ct(53)+"\t"+ct(53)+"\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store1/data/temp/b/b.bed")+"\t512\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/temp/b/b.bed")+"\t2000\t%[1]d\t%[2]d\t"+
 				ct(64)+"\t"+ct(64)+"\t"+ct(64)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store1/data/temp/b/")+"\t0\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store1/data/temp/b/")+"\t28\t%[1]d\t%[2]d\t"+
 				ct(64)+"\t"+ct(64)+"\t"+ct(64)+"\td\t\x00\t2\t32",
 				UserC, GroupA, UserB, UserA),
 			"*_／objects／store2/stats.gz": fmt.Sprintf(""+ //nolint:dupl
-				strconv.Quote("/objects/store2/")+"\t0\t0\t0\t"+ct(148)+"\t"+
+				strconv.Quote("/objects/store2/")+"\t58\t0\t0\t"+ct(148)+"\t"+
 				ct(148)+"\t"+ct(148)+"\td\t\x00\t5\t32\n"+
-				strconv.Quote("/objects/store2/part1/other.bed")+"\t512\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store2/part1/other.bed")+"\t999\t%[1]d\t%[2]d\t"+
 				ct(119)+"\t"+ct(119)+"\t"+ct(119)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part1/")+"\t0\t0\t0\t"+ct(123)+"\t"+
+				strconv.Quote("/objects/store2/part1/")+"\t45\t0\t0\t"+ct(123)+"\t"+
 				ct(123)+"\t"+ct(123)+"\td\t\x00\t3\t32\n"+
-				strconv.Quote("/objects/store2/part1/other/my.tmp.gz")+"\t512\t%[1]d\t%[3]d\t"+
+				strconv.Quote("/objects/store2/part1/other/my.tmp.gz")+"\t1024\t%[1]d\t%[3]d\t"+
 				ct(128)+"\t"+ct(128)+"\t"+ct(128)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part1/other/")+"\t0\t%[1]d\t%[2]d\t"+
+				strconv.Quote("/objects/store2/part1/other/")+"\t46\t%[1]d\t%[2]d\t"+
 				ct(133)+"\t"+ct(133)+"\t"+ct(133)+"\td\t\x00\t3\t32\n"+
 				strconv.Quote("/objects/store2/part1/other/my\nDir/my.tmp.old")+
-				"\t512\t%[1]d\t%[2]d\t"+ct(139)+"\t"+ct(139)+"\t"+ct(139)+"\tf\t\x00\t1\t34\n"+
+				"\t2048\t%[1]d\t%[2]d\t"+ct(139)+"\t"+ct(139)+"\t"+ct(139)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/objects/store2/part1/other/my\nDir/another.file")+
-				"\t512\t%[7]d\t%[5]d\t"+ct(145)+"\t"+ct(145)+"\t"+ct(145)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part1/other/my\nDir/")+"\t0\t%[1]d\t%[2]d\t"+
+				"\t2048\t%[7]d\t%[5]d\t"+ct(145)+"\t"+ct(145)+"\t"+ct(145)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part1/other/my\nDir/")+"\t53\t%[1]d\t%[2]d\t"+
 				ct(145)+"\t"+ct(145)+"\t"+ct(145)+"\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store2/important/")+"\t0\t0\t0\t"+ct(152)+
+				strconv.Quote("/objects/store2/important/")+"\t28\t0\t0\t"+ct(152)+
 				"\t"+ct(152)+"\t"+ct(152)+"\td\t\x00\t3\t32\n"+
 				strconv.Quote("/objects/store2/important/docs\t/my.doc")+
-				"\t512\t%[4]d\t%[3]d\t"+ct(157)+"\t"+ct(157)+"\t"+ct(157)+
+				"\t1200\t%[4]d\t%[3]d\t"+ct(157)+"\t"+ct(157)+"\t"+ct(157)+
 				"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/important/docs\t/")+"\t0\t%[4]d\t%[3]d\t"+
+				strconv.Quote("/objects/store2/important/docs\t/")+"\t29\t%[4]d\t%[3]d\t"+
 				ct(157)+"\t"+ct(157)+"\t"+ct(157)+"\td\t\x00\t2\t32\n"+
-				strconv.Quote("/objects/store2/part0/")+"\t0\t0\t0\t"+ct(87)+"\t"+
+				strconv.Quote("/objects/store2/part0/")+"\t28\t0\t0\t"+ct(87)+"\t"+
 				ct(87)+"\t"+ct(87)+"\td\t\x00\t3\t32\n"+
-				strconv.Quote("/objects/store2/part0/teams/")+"\t0\t0\t0\t"+ct(109)+
+				strconv.Quote("/objects/store2/part0/teams/")+"\t41\t0\t0\t"+ct(109)+
 				"\t"+ct(109)+"\t"+ct(109)+"\td\t\x00\t4\t32\n"+
 				strconv.Quote("/objects/store2/part0/teams/team2/c.txt")+
-				"\t512\t%[4]d\t%[5]d\t"+ct(115)+"\t"+ct(115)+"\t"+ct(115)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part0/teams/team2/")+"\t0\t%[4]d\t%[5]d\t"+
+				"\t1000\t%[4]d\t%[5]d\t"+ct(115)+"\t"+ct(115)+"\t"+ct(115)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store2/part0/teams/team2/")+"\t28\t%[4]d\t%[5]d\t"+
 				ct(115)+"\t"+ct(115)+"\t"+ct(115)+"\td\t\x00\t2\t32\n"+
 				strconv.Quote("/objects/store2/part0/teams/team1/a.txt")+"\t100\t%[6]d\t%[2]d\t"+
 				ct(98)+"\t"+ct(98)+"\t"+ct(98)+"\tf\t\x00\t1\t34\n"+
 				strconv.Quote("/objects/store2/part0/teams/team1/b.txt")+
 				"\t200\t%[6]d\t%[5]d\t"+ct(104)+"\t"+ct(104)+"\t"+ct(104)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store2/part0/teams/team1/")+"\t0\t%[6]d\t%[2]d\t"+
+				strconv.Quote("/objects/store2/part0/teams/team1/")+"\t41\t%[6]d\t%[2]d\t"+
 				ct(104)+"\t"+ct(104)+"\t"+ct(104)+"\td\t\x00\t2\t32",
 				UserD, GroupA, GroupD, UserB, GroupB, UserA, UserE),
 			"*_／objects／store3/stats.gz": fmt.Sprintf(""+
-				strconv.Quote("/objects/store3/aFile")+"\t512\t%d\t%d\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\tf\t\x00\t1\t34\n"+
-				strconv.Quote("/objects/store3/")+"\t0\t0\t0\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\td\t\x00\t2\t32",
+				strconv.Quote("/objects/store3/aFile")+"\t1024\t%d\t%d\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\tf\t\x00\t1\t34\n"+
+				strconv.Quote("/objects/store3/")+"\t28\t0\t0\t"+ct(160)+"\t"+ct(160)+"\t"+ct(160)+"\td\t\x00\t2\t32",
 				UserA, GroupA),
 		} {
 			files, errr := fs.Glob(os.DirFS(tmpTemp), filepath.Join("final", file))
