@@ -165,9 +165,9 @@ func writeJobsToLog(jobs []*jobqueue.Job, logFile string) error {
 }
 
 func moveLogs(wg *sync.WaitGroup, cleanupDir, logsDir string) error {
-	if err := filepath.WalkDir(filepath.Clean(cleanupDir), func(path string, _ fs.DirEntry, _ error) error {
-		if strings.HasSuffix(path, ".log") {
-			if err := moveLog(wg, path, cleanupDir, logsDir); err != nil {
+	if err := filepath.WalkDir(filepath.Clean(cleanupDir), func(path string, info fs.DirEntry, _ error) error {
+		if !info.IsDir() && strings.HasSuffix(path, ".log") {
+			if err := moveLog(wg, logsDir, cleanupDir, path); err != nil {
 				return err
 			}
 		}
