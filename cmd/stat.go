@@ -63,10 +63,7 @@ paths. The new file is named after the input file with a ".stats" suffix.
 
 The output file format is 11 tab separated columns with the following contents:
 1. Quoted path to the file.
-2. File size in bytes. If this is greater than the number of bytes in blocks
-   allocated, this will be the number of bytes in allocated blocks. (This is to
-   account for files with holes in them; as a byproduct, symbolic links will
-   be reported as 0 size.)
+2. File size in bytes.
 3. UID.
 4. GID.
 5. Atime (time of most recent access expressed in seconds).

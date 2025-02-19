@@ -39,27 +39,6 @@ import (
 )
 
 func TestStatFile(t *testing.T) {
-	Convey("FileStats can correct its size", t, func() {
-		fstat := &FileStats{
-			Size: 10,
-		}
-
-		stat := &syscall.Stat_t{
-			Blocks:  1,
-			Blksize: 1024,
-		}
-		fstat.correctSize(stat)
-		So(fstat.Size, ShouldEqual, 10)
-
-		fstat.Size = 1025
-		fstat.correctSize(stat)
-		So(fstat.Size, ShouldEqual, 512)
-
-		stat.Blocks = 0
-		fstat.correctSize(stat)
-		So(fstat.Size, ShouldEqual, 0)
-	})
-
 	Convey("modeToType() works correctly", t, func() {
 		So(modeToType(fs.FileMode(0)), ShouldEqual, "f")
 		So(modeToType(fs.ModeDir), ShouldEqual, "d")
@@ -95,7 +74,7 @@ func TestStatFile(t *testing.T) {
 				err := os.Symlink(reg, link)
 				So(err, ShouldBeNil)
 
-				testFileStats(link, 0, "l")
+				testFileStats(link, int64(len(reg)), "l")
 			})
 		})
 	})
