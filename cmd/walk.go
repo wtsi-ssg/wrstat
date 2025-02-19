@@ -32,9 +32,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/VertebrateResequencing/wr/client"
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v6/scheduler"
 	"github.com/wtsi-ssg/wrstat/v6/walk"
 )
 
@@ -97,7 +97,7 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 		defer d()
 
 		if walkID == "" {
-			walkID = statRepGrp(desiredDir, scheduler.UniqueString())
+			walkID = statRepGrp(desiredDir, client.UniqueString())
 		}
 
 		logToFile(filepath.Join(outputDir, walkLogOutputBasename))
@@ -156,7 +156,7 @@ func statRepGrp(dir, unique string) string {
 
 // walkDirAndScheduleStats does the main work.
 func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int, //nolint:funlen
-	depGroup, repGroup, yamlPath string, s *scheduler.Scheduler,
+	depGroup, repGroup, yamlPath string, s *client.Scheduler,
 ) {
 	n := statJobs
 	if n == 0 {
@@ -230,7 +230,7 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 // The jobs are added with the given dep and rep groups, and the given yaml for
 // the --ch arg if not blank.
 func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
-	repGrp, yamlPath string, s *scheduler.Scheduler) {
+	repGrp, yamlPath string, s *client.Scheduler) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
 	cmd := s.Executable() + " stat "
@@ -242,7 +242,7 @@ func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
 		cmd += fmt.Sprintf("-s %d ", recordStats)
 	}
 
-	req := scheduler.DefaultRequirements()
+	req := client.DefaultRequirements()
 	req.Time = statTime
 	req.RAM = statRAM
 	req.Cores = statCores
