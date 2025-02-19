@@ -57,7 +57,8 @@ const app = "wrstat_test"
 func buildSelf() func() {
 	cmd := exec.Command(
 		"go", "build", "-tags", "netgo",
-		"-ldflags=-X github.com/wtsi-ssg/wrstat/v6/cmd.runJobs=0 -X github.com/wtsi-ssg/wrstat/v6/cmd.Version=TESTVERSION",
+		"-ldflags=-X github.com/VertebrateResequencing/wr/client.PretendSubmissions=3 "+
+			"-X github.com/wtsi-ssg/wrstat/v6/cmd.Version=TESTVERSION",
 		"-o", app,
 	)
 
@@ -244,6 +245,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 				" wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
 				workingDir, repGroup, date, exe, timeoutDate),
 			CwdMatters:   true,
+			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 			ReqGroup:     "wrstat-walk",
 			Requirements: walkReqs,
@@ -257,6 +259,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 				" wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
 				workingDir, repGroup, date, exe, timeoutDate),
 			CwdMatters:   true,
+			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
 			ReqGroup:     "wrstat-walk",
 			Requirements: walkReqs,
@@ -268,6 +271,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk1DepGroup),
 			CwdMatters:   true,
+			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
 			ReqGroup:     "wrstat-combine",
 			Requirements: combineReqs,
@@ -284,6 +288,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk2DepGroup),
 			CwdMatters:   true,
+			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
 			ReqGroup:     "wrstat-combine",
 			Requirements: combineReqs,
@@ -301,6 +306,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some／path\" \"%s/%s/path/%s\"",
 				exe, now, workingDir, repGroup, walk1DepGroup),
 			CwdMatters:   true,
+			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
 			ReqGroup:     "wrstat-tidy",
 			Requirements: tidyReqs,
@@ -317,6 +323,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some-other／path\" \"%s/%s/path/%s\"",
 				exe, now, workingDir, repGroup, walk2DepGroup),
 			CwdMatters:   true,
+			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
 			ReqGroup:     "wrstat-tidy",
 			Requirements: tidyReqs,
@@ -344,6 +351,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 				"-L \"/path/for/jobLogs/%[4]s.log\"",
 				exe, workingDir, repGroup, time.Now().Format(time.DateOnly)+"_"+repGroup),
 			CwdMatters:   true,
+			Cwd:          workingDir,
 			RepGroup:     "wrstat-cleanup-" + dateStr[1],
 			ReqGroup:     "wrstat-cleanup",
 			Requirements: tidyReqs,
@@ -366,6 +374,9 @@ func TestWalk(t *testing.T) {
 	Convey("wrstat prints the correct output for a directory", t, func() {
 		out := t.TempDir()
 		tmp := t.TempDir()
+
+		cwd, err := os.Getwd()
+		So(err, ShouldBeNil)
 
 		for _, dir := range [...]string{"/a/b/c/d/e", "/a/b/f", "/a/g/h"} {
 			err := os.MkdirAll(filepath.Join(tmp, dir), 0755)
@@ -390,6 +401,7 @@ func TestWalk(t *testing.T) {
 			{
 				Cmd:         exe + " stat " + walk1,
 				CwdMatters:  true,
+				Cwd:         cwd,
 				LimitGroups: []string{"wrstat-stat"},
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
@@ -430,6 +442,7 @@ func TestWalk(t *testing.T) {
 			{
 				Cmd:         exe + " stat " + walk1,
 				CwdMatters:  true,
+				Cwd:         cwd,
 				LimitGroups: []string{"wrstat-stat", "datetime<" + hundred},
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",
@@ -447,6 +460,7 @@ func TestWalk(t *testing.T) {
 			{
 				Cmd:         exe + " stat " + walk2,
 				CwdMatters:  true,
+				Cwd:         cwd,
 				LimitGroups: []string{"wrstat-stat", "datetime<" + hundred},
 				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
 				ReqGroup:    "wrstat-stat",

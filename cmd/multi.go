@@ -32,10 +32,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/VertebrateResequencing/wr/client"
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	jqs "github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v6/scheduler"
 )
 
 const (
@@ -164,7 +164,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
-	unique := scheduler.UniqueString()
+	unique := client.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
 	now := time.Now().Format("20060102-150405")
 
@@ -187,7 +187,7 @@ func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string, //nolint:funlen
-	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid, now string, s *scheduler.Scheduler) {
+	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid, now string, s *client.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
@@ -212,8 +212,8 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 	}
 
 	for i, path := range desiredPaths {
-		walkUnique := scheduler.UniqueString()
-		combineUnique := scheduler.UniqueString()
+		walkUnique := client.UniqueString()
+		combineUnique := client.UniqueString()
 		outDir := filepath.Join(outputRoot, filepath.Base(path), walkUnique)
 		finalDirName := fmt.Sprintf("%s_%s", now, encodePath(path))
 		finalOutput := filepath.Join(finalDirParent, finalDirName)
@@ -231,7 +231,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 
 		tidyJobs[i] = s.NewJob(fmt.Sprintf("%s tidy -f %q %q",
 			s.Executable(), finalOutput, outDir),
-			tidyRepGrp(path, unique), "wrstat-tidy", "", combineUnique, scheduler.DefaultRequirements())
+			tidyRepGrp(path, unique), "wrstat-tidy", "", combineUnique, client.DefaultRequirements())
 		tidyJobs[i].Behaviours = removeAfterBury
 	}
 
@@ -242,7 +242,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 
 // buildWalkCommand builds a wrstat walk command line based on the given n,
 // yaml path, queue, and if sudo is in effect.
-func buildWalkCommand(s *scheduler.Scheduler, numStatJobs, inodesPerStat int,
+func buildWalkCommand(s *client.Scheduler, numStatJobs, inodesPerStat int,
 	yamlPath, queue, queuesAvoid string) string {
 	cmd := s.Executable() + " walk "
 
@@ -281,7 +281,7 @@ func encodePath(path string) string {
 
 // reqs returns Requirements suitable for walk and combine jobs.
 func reqs() (*jqs.Requirements, *jqs.Requirements) {
-	req := scheduler.DefaultRequirements()
+	req := client.DefaultRequirements()
 	reqWalk := req.Clone()
 	reqWalk.Time = walkTime
 	reqWalk.RAM = min(walkRAM, maxMem)
@@ -310,7 +310,7 @@ func tidyRepGrp(dir, unique string) string {
 	return repGrp("tidy", dir, unique)
 }
 
-func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot,
+func scheduleCleanupJob(s *client.Scheduler, timeout int64, outputRoot,
 	jobUnique, logOutput, jobOutput, now string) {
 	cmd := fmt.Sprintf("%s cleanup -w %q -j %q", s.Executable(), outputRoot, jobUnique)
 	nowUnique := time.Now().Format(time.DateOnly) + "_" + jobUnique
@@ -324,7 +324,7 @@ func scheduleCleanupJob(s *scheduler.Scheduler, timeout int64, outputRoot,
 	}
 
 	job := s.NewJob(cmd, "wrstat-cleanup-"+now,
-		"wrstat-cleanup", "", "", scheduler.DefaultRequirements())
+		"wrstat-cleanup", "", "", client.DefaultRequirements())
 	job.LimitGroups = []string{time.Now().Add(time.Hour*time.Duration(timeout)).Format(time.DateTime) + "<datetime"}
 
 	addJobsToQueue(s, []*jobqueue.Job{job})

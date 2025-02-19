@@ -33,6 +33,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/VertebrateResequencing/wr/client"
 	"github.com/adhocore/gronx"
 	"github.com/adhocore/gronx/pkg/tasker"
 	"github.com/spf13/cobra"
@@ -85,7 +86,7 @@ invocations of cron, do 'sudo wrstsat cron --kill'.
 		taskr.Task(crontab, func(ctx context.Context) (int, error) {
 			err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, sudo)
 
-			if runJobs != "" {
+			if client.PretendSubmissions != "" {
 				os.Exit(0)
 			}
 

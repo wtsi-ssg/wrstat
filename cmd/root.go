@@ -29,16 +29,15 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/VertebrateResequencing/wr/client"
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/inconshreveable/log15"
 	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v6/scheduler"
 )
 
 const userGroupPerm = 0770
@@ -52,13 +51,7 @@ var (
 	sudo       bool
 )
 
-// a flag set by main tests to disable jobs being scheduled.
-var runJobs string
-
-const (
-	connectTimeout = 10 * time.Second
-	testOutputFD   = 3
-)
+const connectTimeout = 10 * time.Second
 
 // RootCmd represents the base command when called without any subcommands.
 var RootCmd = &cobra.Command{
@@ -148,12 +141,13 @@ func die(msg string, a ...interface{}) {
 // If you provide a non-blank queue, that queue will be used when scheduling. If
 // you provide a non-black queuesAvoid, queues including a substring from the
 // list will be avoided.
-func newScheduler(cwd, queue, queuesAvoid string, sudo bool) (*scheduler.Scheduler, func()) {
-	if runJobs != "" {
-		return testScheduler(sudo)
-	}
-
-	s, err := scheduler.New(deployment, cwd, queue, queuesAvoid, connectTimeout, appLogger)
+func newScheduler(cwd, queue, queuesAvoid string, sudo bool) (*client.Scheduler, func()) {
+	s, err := client.New(client.SchedulerSettings{
+		Deployment: deployment, Cwd: cwd,
+		Queue:       queue,
+		QueuesAvoid: queuesAvoid,
+		Timeout:     connectTimeout,
+		Logger:      appLogger})
 	if err != nil {
 		die("%s", err)
 	}
@@ -187,29 +181,8 @@ func dateStamp() string {
 }
 
 // addJobsToQueue adds the jobs to wr's queue.
-func addJobsToQueue(s *scheduler.Scheduler, jobs []*jobqueue.Job) {
-	if runJobs != "" {
-		testPrint(jobs)
-
-		return
-	}
-
+func addJobsToQueue(s *client.Scheduler, jobs []*jobqueue.Job) {
 	if err := s.SubmitJobs(jobs); err != nil {
 		die("failed to add jobs to wr's queue: %s", err)
 	}
-}
-
-func testPrint(jobs []*jobqueue.Job) {
-	w := os.NewFile(uintptr(testOutputFD), "/dev/stdout")
-
-	json.NewEncoder(w).Encode(jobs) //nolint:errcheck,errchkjson
-}
-
-func testScheduler(sudo bool) (*scheduler.Scheduler, func()) {
-	s := &scheduler.Scheduler{}
-	if sudo {
-		s.EnableSudo()
-	}
-
-	return s, func() {}
 }
