@@ -26,11 +26,13 @@
 package stat
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -55,6 +57,71 @@ type Statter interface {
 
 // LstatFunc matches the signature of os.Lstat.
 type LstatFunc func(string) (fs.FileInfo, error)
+
+// RecordStatFunc is a function that will be periodically called by RecordStats,
+// given the current time and the number of stat calls that have occurred since
+// the last time this function was called.
+type RecordStatFunc func(time.Time, uint64)
+
+// StatsRecorder keeps a record on the number of stat syscalls and periodically
+// passes that number to a function.
+type StatsRecorder struct {
+	statter  Statter
+	interval time.Duration
+	output   RecordStatFunc
+	stats    uint64
+}
+
+// RecordStats adds stat syscall reporting to a Statter. The output function
+// will be called repeatedly with the interval being defined by the named param.
+//
+// The output func will also be called at the end of the run.
+func RecordStats(statter Statter, interval time.Duration, output RecordStatFunc) *StatsRecorder {
+	return &StatsRecorder{
+		statter:  statter,
+		interval: interval,
+		output:   output,
+	}
+}
+
+// Lstat implements the Statter interface.
+func (s *StatsRecorder) Lstat(path string) (fs.FileInfo, error) {
+	atomic.AddUint64(&s.stats, 1)
+
+	return s.statter.Lstat(path)
+}
+
+func (s *StatsRecorder) get() uint64 {
+	return atomic.SwapUint64(&s.stats, 0)
+}
+
+// Start will launch a goroutine that will periodically call the stored
+// RecordStatFunc. The supplied context will stop the goroutine.
+//
+// This function returns a function that will block until the goroutine has
+// stopped.
+func (s *StatsRecorder) Start(ctx context.Context) func() {
+	ch := make(chan struct{})
+
+	go s.start(ctx, ch)
+
+	return func() { <-ch }
+}
+
+func (s *StatsRecorder) start(ctx context.Context, ch chan struct{}) {
+	defer close(ch)
+
+	for {
+		select {
+		case t := <-time.After(s.interval):
+			s.output(t, s.get())
+		case <-ctx.Done():
+			s.output(time.Now(), s.get())
+
+			return
+		}
+	}
+}
 
 // StatterWithTimeout is a Statter implementation. NB: this is NOT thread safe;
 // you should only call Lstat() one at a time.

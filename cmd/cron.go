@@ -121,6 +121,8 @@ func init() {
 		"reached, copy logs to a unique subdirectory of the supplied directory")
 	cronCmd.Flags().StringVarP(&logJobs, "logjobs", "L", "", "when timeout is "+
 		"reached, log job status to a unique file (YYYY-MM-DD_unique.log) in the supplied directory")
+	cronCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record "+
+		"statistics on syscalls every n minutes to the log")
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.

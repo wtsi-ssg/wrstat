@@ -213,7 +213,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 	dateStr := regexp.MustCompile(`final_output/(\d\d\d\d\d\d\d\d-\d\d\d\d\d\d)_`).FindStringSubmatch(jobs[4].Cmd)
 	So(len(dateStr), ShouldEqual, 2)
 
-	_, err := time.Parse("20060201-150405", dateStr[1])
+	_, err := time.Parse("20060102-150405", dateStr[1])
 	So(err, ShouldBeNil)
 
 	now := dateStr[1]
