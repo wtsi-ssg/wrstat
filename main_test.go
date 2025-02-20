@@ -831,6 +831,31 @@ func TestTidy(t *testing.T) {
 	})
 }
 
+func TestCleanup(t *testing.T) {
+	Convey("For the cleanup command, it moves logs and removes other artefacts", t, func() {
+		const unique = "aUniquelyLengthedDir"
+
+		working := t.TempDir()
+		logs := t.TempDir()
+		myDir := filepath.Join(working, unique)
+		runDir := filepath.Join(myDir, "myRun")
+
+		So(os.MkdirAll(runDir, 0755), ShouldBeNil)
+
+		writeFileString(t, filepath.Join(runDir, "1.log"), "some log data")
+		writeFileString(t, filepath.Join(runDir, "2.log"), "some more log data")
+
+		_, _, _, err := runWRStat("cleanup", "-l", logs, "-w", working)
+		So(err, ShouldBeNil)
+
+		compareFileContents(t, filepath.Join(logs, unique, "myRun", "1.log"), "some log data")
+		compareFileContents(t, filepath.Join(logs, unique, "myRun", "2.log"), "some more log data")
+
+		_, err = os.Stat(myDir)
+		So(os.IsNotExist(err), ShouldBeTrue)
+	})
+}
+
 const minimumDate = 315532801
 
 func ct(n uint64) string {
