@@ -124,6 +124,8 @@ func init() {
 		"reached, log job status to a unique file (YYYY-MM-DD_unique.log) in the supplied directory")
 	cronCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record "+
 		"statistics on syscalls every n minutes to the log")
+	cronCmd.Flags().BoolVarP(&statBlockSize, "blocks", "b", false, "record "+
+		"disk usage (blocks) instead of apparent byte size")
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.

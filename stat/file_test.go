@@ -34,11 +34,63 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+type fsInfo struct {
+	name string
+	syscall.Stat_t
+}
+
+func (f *fsInfo) IsDir() bool {
+	return f.Stat_t.Mode&uint32(fs.ModeDir) > 0
+}
+
+func (f *fsInfo) ModTime() time.Time {
+	return time.Unix(f.Mtim.Sec, f.Mtim.Nsec)
+}
+
+func (f *fsInfo) Mode() fs.FileMode {
+	return fs.FileMode(f.Stat_t.Mode)
+}
+
+func (f *fsInfo) Name() string {
+	return f.name
+}
+
+func (f *fsInfo) Size() int64 {
+	return f.Stat_t.Size
+}
+
+func (f *fsInfo) Sys() any {
+	return &f.Stat_t
+}
+
 func TestStatFile(t *testing.T) {
+	Convey("FileStats can correct its size", t, func() {
+		fstat := &fsInfo{
+			name: "something.txt",
+			Stat_t: syscall.Stat_t{
+				Size:   54321,
+				Blocks: 12,
+			},
+		}
+
+		So(File("/some/path/something", fstat, false), ShouldResemble, FileStats{
+			Path: "/some/path/something",
+			Size: 54321,
+			Type: "f",
+		})
+
+		So(File("/some/path/something", fstat, true), ShouldResemble, FileStats{
+			Path: "/some/path/something",
+			Size: 512 * 12,
+			Type: "f",
+		})
+	})
+
 	Convey("modeToType() works correctly", t, func() {
 		So(modeToType(fs.FileMode(0)), ShouldEqual, "f")
 		So(modeToType(fs.ModeDir), ShouldEqual, "d")
@@ -84,7 +136,7 @@ func testFileStats(path string, size int64, filetype string) {
 	info, err := os.Lstat(path)
 	So(err, ShouldBeNil)
 
-	stats := File("/abs/path/to/file", info)
+	stats := File("/abs/path/to/file", info, false)
 	So(stats, ShouldNotBeNil)
 	So(len(stats.Path), ShouldBeGreaterThan, 0)
 	So(stats.Size, ShouldEqual, size)

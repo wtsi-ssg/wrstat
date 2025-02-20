@@ -37,6 +37,8 @@ import (
 
 type FileType string
 
+const blockSize = 512
+
 const (
 	FileTypeRegular FileType = "f"
 	FileTypeLink    FileType = "l"
@@ -80,7 +82,7 @@ func (fs *FileStats) WriteTo(w io.Writer) (int64, error) {
 //
 // You provide the absolute path to the file so that QuotedPath can be
 // calculated correctly (the info only contains the basename).
-func File(absPath string, info os.FileInfo) FileStats {
+func File(absPath string, info os.FileInfo, statBlockSize bool) FileStats {
 	fs := FileStats{
 		Path: absPath,
 		Size: info.Size(),
@@ -96,6 +98,10 @@ func File(absPath string, info os.FileInfo) FileStats {
 		fs.Ino = stat.Ino
 		fs.Nlink = uint64(stat.Nlink) //nolint:unconvert
 		fs.Dev = stat.Dev
+
+		if statBlockSize {
+			fs.Size = stat.Blocks * blockSize
+		}
 	}
 
 	return fs
@@ -136,9 +142,9 @@ func nonRegularTypeToFileType(fileMode fs.FileMode) FileType {
 // FileOperation returns an Operation that can be used with Paths that calls
 // File() on each path the Operation receives and outputs the ToString() value
 // to the given output file.
-func FileOperation(output *os.File) Operation {
+func FileOperation(output *os.File, statBlockSize bool) Operation {
 	return func(path string, info fs.FileInfo) error {
-		f := File(path, info)
+		f := File(path, info, statBlockSize)
 		_, errw := f.WriteTo(output)
 
 		return errw

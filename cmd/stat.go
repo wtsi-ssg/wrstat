@@ -63,7 +63,8 @@ paths. The new file is named after the input file with a ".stats" suffix.
 
 The output file format is 11 tab separated columns with the following contents:
 1. Quoted path to the file.
-2. File size in bytes.
+2. File size in bytes. (By default this is apparent byte size, with the -b flag
+   this is disk usage, meaning the number of blocks used multiplied by 512 bytes)
 3. UID.
 4. GID.
 5. Atime (time of most recent access expressed in seconds).
@@ -118,6 +119,8 @@ func init() {
 	statCmd.Flags().BoolVar(&statDebug, "debug", false, "output Lstat timings")
 	statCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record "+
 		"statistics on syscalls every n minutes to the log")
+	statCmd.Flags().BoolVarP(&statBlockSize, "blocks", "b", false, "record "+
+		"disk usage (blocks) instead of apparent byte size")
 }
 
 // statPathsInFile does the main work.
@@ -199,7 +202,7 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 	pConfig := stat.PathsConfig{Logger: appLogger, ReportFrequency: frequency, ScanTimeout: scanTimeout}
 	p := stat.NewPaths(statter, pConfig)
 
-	if err := p.AddOperation("file", stat.FileOperation(output)); err != nil {
+	if err := p.AddOperation("file", stat.FileOperation(output, statBlockSize)); err != nil {
 		die("%s", err)
 	}
 

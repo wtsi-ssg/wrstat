@@ -58,6 +58,7 @@ var (
 	maxMem        int
 	timeout       int64
 	recordStats   int64
+	statBlockSize bool
 )
 
 // multiCmd represents the multi command.
@@ -138,6 +139,8 @@ func init() {
 		"reached, log job status to a unique file (YYYY-MM-DD_unique.log) in the supplied directory")
 	multiCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record "+
 		"statistics on syscalls every n minutes to the log")
+	multiCmd.Flags().BoolVarP(&statBlockSize, "blocks", "b", false, "record "+
+		"disk usage (blocks) instead of apparent byte size")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -218,7 +221,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 		finalDirName := fmt.Sprintf("%s_%s", now, encodePath(path))
 		finalOutput := filepath.Join(finalDirParent, finalDirName)
 
-		walkJobs[i] = s.NewJob(fmt.Sprintf("%s -d %s -t %d -o %s -i %s %s",
+		walkJobs[i] = s.NewJob(fmt.Sprintf("%s-d %s -t %d -o %s -i %s %s",
 			cmd, walkUnique, limitDate, outDir, statRepGrp(path, unique), path),
 			walkRepGrp(path, unique), "wrstat-walk", walkUnique, "", reqWalk)
 		walkJobs[i].LimitGroups = limit
@@ -242,7 +245,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 
 // buildWalkCommand builds a wrstat walk command line based on the given n,
 // yaml path, queue, and if sudo is in effect.
-func buildWalkCommand(s *client.Scheduler, numStatJobs, inodesPerStat int,
+func buildWalkCommand(s *client.Scheduler, numStatJobs, inodesPerStat int, //nolint:funlen,gocyclo
 	yamlPath, queue, queuesAvoid string) string {
 	cmd := s.Executable() + " walk "
 
@@ -270,6 +273,10 @@ func buildWalkCommand(s *client.Scheduler, numStatJobs, inodesPerStat int,
 
 	if sudo {
 		cmd += "--sudo "
+	}
+
+	if statBlockSize {
+		cmd += "-b "
 	}
 
 	return cmd
