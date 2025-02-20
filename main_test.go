@@ -164,7 +164,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		So(len(jobs[1].DepGroups), ShouldEqual, 1)
 		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
 
-		expectation := createMultiJobExpectation(t, jobs, workingDir, date, 0)
+		expectation := createMultiJobExpectation(t, jobs, workingDir, date, 0, false)
 
 		So(jobs, ShouldResemble, expectation)
 
@@ -173,15 +173,24 @@ func multiTests(t *testing.T, subcommand ...string) {
 				"-f", "final_output", "-l", "/path/for/logs", "-L", "/path/for/jobLogs")...)
 			So(err, ShouldBeNil)
 
-			expectation := createMultiJobExpectation(t, jobs, workingDir, date, 13)
+			expectation := createMultiJobExpectation(t, jobs, workingDir, date, 13, false)
 
+			So(jobs, ShouldResemble, expectation)
+		})
+
+		Convey("The -b flag gets passed through to the walk subcommand", func() {
+			_, _, jobs, err := runWRStat(append(subcommand, "-b", "-w", workingDir, "/some/path", "/some-other/path",
+				"-f", "final_output")...)
+			So(err, ShouldBeNil)
+
+			expectation := createMultiJobExpectation(t, jobs, workingDir, date, 0, true)
 			So(jobs, ShouldResemble, expectation)
 		})
 	})
 }
 
 func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
-	date string, timeout int) []*jobqueue.Job {
+	date string, timeout int, statBlockSize bool) []*jobqueue.Job {
 	t.Helper()
 
 	walkReqs := &scheduler.Requirements{
@@ -210,6 +219,11 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 	combine1DepGroup := jobs[2].DepGroups[0]
 	combine2DepGroup := jobs[3].DepGroups[0]
 	repGroup := jobs[0].RepGroup[len(jobs[0].RepGroup)-20:]
+	statBlocks := ""
+
+	if statBlockSize {
+		statBlocks = " -b"
+	}
 
 	dateStr := regexp.MustCompile(`final_output/(\d\d\d\d\d\d\d\d-\d\d\d\d\d\d)_`).FindStringSubmatch(jobs[4].Cmd)
 	So(len(dateStr), ShouldEqual, 2)
@@ -241,9 +255,9 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 
 	expectation := []*jobqueue.Job{
 		{
-			Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
+			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
 				" wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
-				workingDir, repGroup, date, exe, timeoutDate),
+				workingDir, repGroup, date, exe, timeoutDate, statBlocks),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
@@ -255,9 +269,9 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Behaviours:   behaviours,
 		},
 		{
-			Cmd: fmt.Sprintf("%[5]s walk -n 1000000  -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
+			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
 				" wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
-				workingDir, repGroup, date, exe, timeoutDate),
+				workingDir, repGroup, date, exe, timeoutDate, statBlocks),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
@@ -480,6 +494,18 @@ func TestWalk(t *testing.T) {
 		removeJobRepGroupSuffixes(jobs)
 
 		So(jobs, ShouldResemble, jobsExpectation)
+
+		Convey("The -b flag is passed through to the stat subcommand", func() {
+			_, _, jobs, err = runWRStat("walk", tmp, "-b", "-o", out, "-d", depgroup, "-j", "2", "--timeout", "100")
+			So(err, ShouldBeNil)
+
+			jobsExpectation[0].Cmd = exe + " stat -b " + walk1
+			jobsExpectation[1].Cmd = exe + " stat -b " + walk2
+
+			removeJobRepGroupSuffixes(jobs)
+
+			So(jobs, ShouldResemble, jobsExpectation)
+		})
 	})
 }
 
@@ -669,6 +695,50 @@ func TestStat(t *testing.T) {
 		f.Close()
 		So(err, ShouldBeNil)
 		So(string(data), ShouldEqual, statsExpectation)
+
+		Convey("The -b flag prints the disk usage instead of the apprarent byte size", func() {
+			_, _, jobs, err = runWRStat("stat", "-b", walkFilePath)
+			So(err, ShouldBeNil)
+
+			statsExpectation := fmt.Sprintf(""+ //nolint:dupl
+				"%[3]s\t4096\t%[1]s\t%[2]s\t%[14]d\t"+ct(271828)+"\t%[19]d\td\t%[8]d\t4\t%[13]d\n"+
+				"%[4]s\t4096\t%[1]s\t%[2]s\t%[15]d\t"+ct(133032)+"\t%[20]d\td\t%[9]d\t3\t%[13]d\n"+
+				"%[5]s\t4096\t%[1]s\t%[2]s\t%[16]d\t"+ct(7383773)+"\t%[21]d\tf\t%[10]d\t1\t%[13]d\n"+
+				"%[6]s\t4096\t%[1]s\t%[2]s\t%[17]d\t"+ct(314159)+"\t%[22]d\td\t%[11]d\t2\t%[13]d\n"+
+				"%[7]s\t4096\t%[1]s\t%[2]s\t%[18]d\t"+ct(282820)+"\t%[23]d\td\t%[12]d\t2\t%[13]d\n",
+				u.Uid,
+				u.Gid,
+				strconv.Quote(tmp),
+				strconv.Quote(filepath.Join(tmp, "aDirectory")),
+				strconv.Quote(filepath.Join(tmp, "aDirectory", "aFile\nfile")),
+				strconv.Quote(filepath.Join(tmp, "aDirectory", "aSubDirectory")),
+				strconv.Quote(filepath.Join(tmp, "anotherDirectory")),
+				inodes[4],
+				inodes[2],
+				inodes[0],
+				inodes[1],
+				inodes[3],
+				dev,
+				atimes[4],
+				atimes[3],
+				atimes[2],
+				atimes[0],
+				atimes[1],
+				ctimes[4],
+				ctimes[3],
+				ctimes[2],
+				ctimes[0],
+				ctimes[1],
+			)
+
+			f, err := os.Open(filepath.Join(workDir, "dir.walk.stats"))
+			So(err, ShouldBeNil)
+
+			data, err := io.ReadAll(f)
+			f.Close()
+			So(err, ShouldBeNil)
+			So(string(data), ShouldEqual, statsExpectation)
+		})
 	})
 }
 

@@ -129,6 +129,8 @@ func init() {
 	walkCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "stat jobs should start running before this unix timestamp")
 	walkCmd.Flags().Int64VarP(&recordStats, "syscalls", "s", 0, "record "+
 		"statistics on syscalls every n minutes to the log")
+	walkCmd.Flags().BoolVarP(&statBlockSize, "blocks", "b", false, "record "+
+		"disk usage (blocks) instead of apparent byte size")
 }
 
 // checkArgs checks we have required args and returns desired dir.
@@ -240,6 +242,10 @@ func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
 
 	if recordStats > 0 {
 		cmd += fmt.Sprintf("-s %d ", recordStats)
+	}
+
+	if statBlockSize {
+		cmd += "-b "
 	}
 
 	req := client.DefaultRequirements()
