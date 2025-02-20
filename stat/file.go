@@ -37,6 +37,9 @@ import (
 
 type FileType string
 
+// blockSize is the number of bytes in a block of st_blocks. st_blksize is
+// unrelated.
+// See http://www.gnu.org/software/libc/manual/html_node/Attribute-Meanings.html
 const blockSize = 512
 
 const (
