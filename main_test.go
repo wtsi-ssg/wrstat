@@ -490,7 +490,8 @@ func TestWalk(t *testing.T) {
 		So(jobs, ShouldResemble, jobsExpectation)
 
 		Convey("The -b flag is passed through to the stat subcommand", func() {
-			_, _, jobs, err = runWRStat("walk", tmp, "-b", "-o", out, "-d", depgroup, "-j", "2", "--timeout", "100", "-i", "some-rep-group")
+			_, _, jobs, err = runWRStat("walk", tmp, "-b", "-o", out, "-d",
+				depgroup, "-j", "2", "--timeout", "100", "-i", "some-rep-group")
 			So(err, ShouldBeNil)
 
 			jobsExpectation[0].Cmd = exe + " stat -b " + walk1
