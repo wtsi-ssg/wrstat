@@ -97,7 +97,7 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 		defer d()
 
 		if walkID == "" {
-			walkID = statRepGrp(desiredDir, client.UniqueString())
+			walkID = statRepGrp(desiredDir, client.UniqueString(), time.Now().Format("20060102-150405"))
 		}
 
 		logToFile(filepath.Join(outputDir, walkLogOutputBasename))
@@ -152,8 +152,8 @@ func checkArgs(out, dep string, args []string) string {
 
 // statRepGrp returns a rep_grp that can be used for the stat jobs walk will
 // create.
-func statRepGrp(dir, unique string) string {
-	return repGrp("stat", dir, unique)
+func statRepGrp(dir, unique, now string) string {
+	return repGrp("stat", dir, unique, now)
 }
 
 // walkDirAndScheduleStats does the main work.

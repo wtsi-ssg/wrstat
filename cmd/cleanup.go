@@ -26,7 +26,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -36,7 +35,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/spf13/cobra"
 	ifs "github.com/wtsi-ssg/wrstat/v6/internal/fs"
 	"github.com/wtsi-ssg/wrstat/v6/neaten"
@@ -121,47 +119,13 @@ func run() error { //nolint:gocognit,gocyclo
 	return nil
 }
 
-func removeOrLogJobs(suffix, log string, remove bool) {
+func removeOrLogJobs(jobSuffix, logJobs string, removeJob bool) {
 	s, d := newScheduler("", "", "", false)
 	defer d()
 
-	jobs, err := s.FindJobsByRepGroupSuffix("_" + suffix)
-	if err != nil {
-		warn("error getting jobs: %s", err)
-
-		return
+	if err := neaten.RemoveOrLogJobs(s, jobSuffix, logJobs, removeJob); err != nil {
+		warn("%s", err)
 	}
-
-	if remove {
-		if err = s.RemoveJobs(jobs...); err != nil {
-			warn("error removing jobs: %s", err)
-		}
-	}
-
-	if log != "" {
-		if err := writeJobsToLog(jobs, log); err != nil {
-			warn("error logging job data: %s", err)
-		}
-	}
-}
-
-func writeJobsToLog(jobs []*jobqueue.Job, logFile string) error {
-	if err := os.MkdirAll(filepath.Dir(logFile), ifs.DirPerms); err != nil {
-		return err
-	}
-
-	f, err := os.Create(logFile)
-	if err != nil {
-		return err
-	}
-
-	if err := json.NewEncoder(f).Encode(jobs); err != nil {
-		f.Close()
-
-		return err
-	}
-
-	return f.Close()
 }
 
 func moveLogs(wg *sync.WaitGroup, cleanupDir, logsDir string) error {
