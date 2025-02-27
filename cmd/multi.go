@@ -29,13 +29,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/client"
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	jqs "github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	"github.com/spf13/cobra"
+	"github.com/wtsi-ssg/wrstat/v6/neaten"
 )
 
 const (
@@ -163,20 +163,29 @@ func checkMultiArgs() {
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
-func doMultiScheduling(args []string, workDir, forcedQueue, queuesToAvoid string, sudo bool) error {
+func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid string, sudo bool) error {
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
+
+	var err error
+
+	for n, path := range paths {
+		paths[n], err = filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+	}
 
 	unique := client.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
 	now := time.Now().Format("20060102-150405")
 
-	err := os.MkdirAll(outputRoot, userGroupPerm)
+	err = os.MkdirAll(outputRoot, userGroupPerm)
 	if err != nil {
 		return err
 	}
 
-	scheduleWalkJobs(outputRoot, args, unique, finalDir, multiStatJobs,
+	scheduleWalkJobs(outputRoot, paths, unique, finalDir, multiStatJobs,
 		multiInodes, multiCh, forcedQueue, queuesToAvoid, now, s)
 
 	if timeout > 0 {
@@ -218,23 +227,23 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 		walkUnique := client.UniqueString()
 		combineUnique := client.UniqueString()
 		outDir := filepath.Join(outputRoot, filepath.Base(path), walkUnique)
-		finalDirName := fmt.Sprintf("%s_%s", now, encodePath(path))
+		finalDirName := fmt.Sprintf("%s_%s", now, neaten.EncodePath(path))
 		finalOutput := filepath.Join(finalDirParent, finalDirName)
 
 		walkJobs[i] = s.NewJob(fmt.Sprintf("%s-d %s -t %d -o %s -i %s %s",
-			cmd, walkUnique, limitDate, outDir, statRepGrp(path, unique), path),
-			walkRepGrp(path, unique), "wrstat-walk", walkUnique, "", reqWalk)
+			cmd, walkUnique, limitDate, outDir, statRepGrp(path, unique, now), path),
+			walkRepGrp(path, unique, now), "wrstat-walk", walkUnique, "", reqWalk)
 		walkJobs[i].LimitGroups = limit
 		walkJobs[i].Behaviours = removeAfterBury
 
 		combineJobs[i] = s.NewJob(fmt.Sprintf("%s combine %q", s.Executable(), outDir),
-			combineRepGrp(path, unique), "wrstat-combine", combineUnique, walkUnique, reqCombine)
+			combineRepGrp(path, unique, now), "wrstat-combine", combineUnique, walkUnique, reqCombine)
 		combineJobs[i].LimitGroups = limit
 		combineJobs[i].Behaviours = removeAfterBury
 
 		tidyJobs[i] = s.NewJob(fmt.Sprintf("%s tidy -f %q %q",
 			s.Executable(), finalOutput, outDir),
-			tidyRepGrp(path, unique), "wrstat-tidy", "", combineUnique, client.DefaultRequirements())
+			tidyRepGrp(path, unique, now), "wrstat-tidy", "", combineUnique, client.DefaultRequirements())
 		tidyJobs[i].Behaviours = removeAfterBury
 	}
 
@@ -282,10 +291,6 @@ func buildWalkCommand(s *client.Scheduler, numStatJobs, inodesPerStat int, //nol
 	return cmd
 }
 
-func encodePath(path string) string {
-	return strings.ReplaceAll(path, "/", "／")
-}
-
 // reqs returns Requirements suitable for walk and combine jobs.
 func reqs() (*jqs.Requirements, *jqs.Requirements) {
 	req := client.DefaultRequirements()
@@ -301,20 +306,20 @@ func reqs() (*jqs.Requirements, *jqs.Requirements) {
 
 // walkRepGrp returns a rep_grp that can be used for the walk jobs multi will
 // create.
-func walkRepGrp(dir, unique string) string {
-	return repGrp("walk", dir, unique)
+func walkRepGrp(dir, unique, now string) string {
+	return repGrp("walk", dir, unique, now)
 }
 
 // combineRepGrp returns a rep_grp that can be used for the combine jobs multi
 // will create.
-func combineRepGrp(dir, unique string) string {
-	return repGrp("combine", dir, unique)
+func combineRepGrp(dir, unique, now string) string {
+	return repGrp("combine", dir, unique, now)
 }
 
 // tidyRepGrp returns a rep_grp that can be used for the tidy jobs multi will
 // create.
-func tidyRepGrp(dir, unique string) string {
-	return repGrp("tidy", dir, unique)
+func tidyRepGrp(dir, unique, now string) string {
+	return repGrp("tidy", dir, unique, now)
 }
 
 func scheduleCleanupJob(s *client.Scheduler, timeout int64, outputRoot,

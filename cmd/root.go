@@ -31,7 +31,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/client"
@@ -165,19 +164,8 @@ func newScheduler(cwd, queue, queuesAvoid string, sudo bool) (*client.Scheduler,
 }
 
 // repGrp returns a rep_grp that can be used for a wrstat job we will create.
-func repGrp(cmd, dir, unique string) string {
-	if dir == "" {
-		return fmt.Sprintf("wrstat-%s-%s-%s", cmd, dateStamp(), unique)
-	}
-
-	return fmt.Sprintf("wrstat-%s-%s-%s-%s", cmd, filepath.Base(dir), dateStamp(), unique)
-}
-
-// dateStamp returns today's date in the form YYYYMMDD.
-func dateStamp() string {
-	t := time.Now()
-
-	return t.Format("20060102")
+func repGrp(cmd, dir, unique, now string) string {
+	return fmt.Sprintf("wrstat-%s-%s-%s-%s", cmd, dir, now, unique)
 }
 
 // addJobsToQueue adds the jobs to wr's queue.

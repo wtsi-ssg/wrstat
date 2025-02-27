@@ -151,8 +151,6 @@ func TestCron(t *testing.T) {
 func multiTests(t *testing.T, subcommand ...string) {
 	t.Helper()
 
-	date := time.Now().Format("20060102")
-
 	Convey("'wrstat multi' command produces the correct jobs to run", func() {
 		workingDir := t.TempDir()
 		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "/some/path", "/some-other/path",
@@ -164,7 +162,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		So(len(jobs[1].DepGroups), ShouldEqual, 1)
 		So(len(jobs[0].RepGroup), ShouldBeGreaterThan, 20)
 
-		expectation := createMultiJobExpectation(t, jobs, workingDir, date, 0, false)
+		expectation := createMultiJobExpectation(t, jobs, workingDir, 0, false)
 
 		So(jobs, ShouldResemble, expectation)
 
@@ -173,7 +171,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 				"-f", "final_output", "-l", "/path/for/logs", "-L", "/path/for/jobLogs")...)
 			So(err, ShouldBeNil)
 
-			expectation := createMultiJobExpectation(t, jobs, workingDir, date, 13, false)
+			expectation := createMultiJobExpectation(t, jobs, workingDir, 13, false)
 
 			So(jobs, ShouldResemble, expectation)
 		})
@@ -183,14 +181,14 @@ func multiTests(t *testing.T, subcommand ...string) {
 				"-f", "final_output")...)
 			So(err, ShouldBeNil)
 
-			expectation := createMultiJobExpectation(t, jobs, workingDir, date, 0, true)
+			expectation := createMultiJobExpectation(t, jobs, workingDir, 0, true)
 			So(jobs, ShouldResemble, expectation)
 		})
 	})
 }
 
-func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
-	date string, timeout int, statBlockSize bool) []*jobqueue.Job {
+func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir string,
+	timeout int, statBlockSize bool) []*jobqueue.Job {
 	t.Helper()
 
 	walkReqs := &scheduler.Requirements{
@@ -256,11 +254,11 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 	expectation := []*jobqueue.Job{
 		{
 			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
-				" wrstat-stat-path-%[4]s-%[3]s /some/path", walk1DepGroup,
-				workingDir, repGroup, date, exe, timeoutDate, statBlocks),
+				" wrstat-stat-/some/path-%[4]s-%[3]s /some/path", walk1DepGroup,
+				workingDir, repGroup, dateStr[1], exe, timeoutDate, statBlocks),
 			CwdMatters:   true,
 			Cwd:          workingDir,
-			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+			RepGroup:     fmt.Sprintf("wrstat-walk-/some/path-%s-%s", dateStr[1], repGroup),
 			ReqGroup:     "wrstat-walk",
 			Requirements: walkReqs,
 			Override:     1,
@@ -270,11 +268,11 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 		},
 		{
 			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/path/%[1]s -i"+
-				" wrstat-stat-path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
-				workingDir, repGroup, date, exe, timeoutDate, statBlocks),
+				" wrstat-stat-/some-other/path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
+				workingDir, repGroup, dateStr[1], exe, timeoutDate, statBlocks),
 			CwdMatters:   true,
 			Cwd:          workingDir,
-			RepGroup:     fmt.Sprintf("wrstat-walk-path-%s-%s", date, repGroup),
+			RepGroup:     fmt.Sprintf("wrstat-walk-/some-other/path-%s-%s", dateStr[1], repGroup),
 			ReqGroup:     "wrstat-walk",
 			Requirements: walkReqs,
 			Override:     1,
@@ -286,7 +284,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk1DepGroup),
 			CwdMatters:   true,
 			Cwd:          workingDir,
-			RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+			RepGroup:     fmt.Sprintf("wrstat-combine-/some/path-%s-%s", dateStr[1], repGroup),
 			ReqGroup:     "wrstat-combine",
 			Requirements: combineReqs,
 			Override:     1,
@@ -303,7 +301,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/path/%s\"", exe, workingDir, repGroup, walk2DepGroup),
 			CwdMatters:   true,
 			Cwd:          workingDir,
-			RepGroup:     fmt.Sprintf("wrstat-combine-path-%s-%s", date, repGroup),
+			RepGroup:     fmt.Sprintf("wrstat-combine-/some-other/path-%s-%s", dateStr[1], repGroup),
 			ReqGroup:     "wrstat-combine",
 			Requirements: combineReqs,
 			Override:     1,
@@ -321,7 +319,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 				exe, now, workingDir, repGroup, walk1DepGroup),
 			CwdMatters:   true,
 			Cwd:          workingDir,
-			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
+			RepGroup:     fmt.Sprintf("wrstat-tidy-/some/path-%s-%s", dateStr[1], repGroup),
 			ReqGroup:     "wrstat-tidy",
 			Requirements: tidyReqs,
 			Override:     1,
@@ -338,7 +336,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir,
 				exe, now, workingDir, repGroup, walk2DepGroup),
 			CwdMatters:   true,
 			Cwd:          workingDir,
-			RepGroup:     fmt.Sprintf("wrstat-tidy-path-%s-%s", date, repGroup),
+			RepGroup:     fmt.Sprintf("wrstat-tidy-/some-other/path-%s-%s", dateStr[1], repGroup),
 			ReqGroup:     "wrstat-tidy",
 			Requirements: tidyReqs,
 			Override:     1,
@@ -402,8 +400,7 @@ func TestWalk(t *testing.T) {
 		}
 
 		depgroup := "test-group"
-
-		_, _, jobs, err := runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "1")
+		_, _, jobs, err := runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "1", "-i", "some-rep-group")
 		So(err, ShouldBeNil)
 
 		walk1 := filepath.Join(out, "walk.1")
@@ -417,7 +414,7 @@ func TestWalk(t *testing.T) {
 				CwdMatters:  true,
 				Cwd:         cwd,
 				LimitGroups: []string{"wrstat-stat"},
-				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
+				RepGroup:    "some-rep-group",
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
@@ -431,8 +428,6 @@ func TestWalk(t *testing.T) {
 			},
 		}
 
-		removeJobRepGroupSuffixes(jobs)
-
 		So(jobs, ShouldResemble, jobsExpectation)
 
 		expected := ""
@@ -445,7 +440,8 @@ func TestWalk(t *testing.T) {
 
 		compareFileContents(t, walk1, expected)
 
-		_, _, jobs, err = runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "2", "--timeout", "100")
+		_, _, jobs, err = runWRStat("walk", tmp, "-o", out, "-d", depgroup,
+			"-j", "2", "--timeout", "100", "-i", "some-rep-group")
 		So(err, ShouldBeNil)
 
 		walk2 := filepath.Join(out, "walk.2")
@@ -458,7 +454,7 @@ func TestWalk(t *testing.T) {
 				CwdMatters:  true,
 				Cwd:         cwd,
 				LimitGroups: []string{"wrstat-stat", "datetime<" + hundred},
-				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
+				RepGroup:    "some-rep-group",
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
@@ -476,7 +472,7 @@ func TestWalk(t *testing.T) {
 				CwdMatters:  true,
 				Cwd:         cwd,
 				LimitGroups: []string{"wrstat-stat", "datetime<" + hundred},
-				RepGroup:    "wrstat-stat-" + filepath.Base(tmp) + "-" + time.Now().Format("20060102"),
+				RepGroup:    "some-rep-group",
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
@@ -491,18 +487,15 @@ func TestWalk(t *testing.T) {
 			},
 		}
 
-		removeJobRepGroupSuffixes(jobs)
-
 		So(jobs, ShouldResemble, jobsExpectation)
 
 		Convey("The -b flag is passed through to the stat subcommand", func() {
-			_, _, jobs, err = runWRStat("walk", tmp, "-b", "-o", out, "-d", depgroup, "-j", "2", "--timeout", "100")
+			_, _, jobs, err = runWRStat("walk", tmp, "-b", "-o", out, "-d",
+				depgroup, "-j", "2", "--timeout", "100", "-i", "some-rep-group")
 			So(err, ShouldBeNil)
 
 			jobsExpectation[0].Cmd = exe + " stat -b " + walk1
 			jobsExpectation[1].Cmd = exe + " stat -b " + walk2
-
-			removeJobRepGroupSuffixes(jobs)
 
 			So(jobs, ShouldResemble, jobsExpectation)
 		})
@@ -554,12 +547,6 @@ func compareFileContents(t *testing.T, filename, expectation string) {
 		}
 	} else {
 		So(lines, ShouldResemble, expectedLines)
-	}
-}
-
-func removeJobRepGroupSuffixes(jobs []*jobqueue.Job) {
-	for _, job := range jobs {
-		job.RepGroup = job.RepGroup[:len(job.RepGroup)-21]
 	}
 }
 
@@ -831,6 +818,31 @@ func TestTidy(t *testing.T) {
 	})
 }
 
+func TestCleanup(t *testing.T) {
+	Convey("For the cleanup command, it moves logs and removes other artefacts", t, func() {
+		const unique = "aUniquelyLengthedDir"
+
+		working := t.TempDir()
+		logs := t.TempDir()
+		myDir := filepath.Join(working, unique)
+		runDir := filepath.Join(myDir, "myRun")
+
+		So(os.MkdirAll(runDir, 0755), ShouldBeNil)
+
+		writeFileString(t, filepath.Join(runDir, "1.log"), "some log data")
+		writeFileString(t, filepath.Join(runDir, "2.log"), "some more log data")
+
+		_, _, _, err := runWRStat("cleanup", "-l", logs, "-w", working)
+		So(err, ShouldBeNil)
+
+		compareFileContents(t, filepath.Join(logs, unique, "myRun", "1.log"), "some log data")
+		compareFileContents(t, filepath.Join(logs, unique, "myRun", "2.log"), "some more log data")
+
+		_, err = os.Stat(myDir)
+		So(os.IsNotExist(err), ShouldBeTrue)
+	})
+}
+
 const minimumDate = 315532801
 
 func ct(n uint64) string {
@@ -904,7 +916,7 @@ getOpenPort() {
 		PORT="$(shuf -i $LOWERPORT-$UPPERPORT -n 1)";
 		cat /proc/net/tcp | grep -q ":$(printf "%04X" $PORT) " || break;
 	done;
-	echo $PORT
+	echo $PORT;
 }
 
 mkdir -p /tmp/working/partial/;
@@ -1133,6 +1145,7 @@ waitForJobs;`)
 			compareFileContents(t, filepath.Join(tmpTemp, files[0]), contents)
 		}
 	})
+
 }
 
 var pseudoNow = time.Unix(minimumDate, 0) //nolint:gochecknoglobals
