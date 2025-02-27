@@ -53,33 +53,39 @@ type Operation func(absPath string, info fs.FileInfo) error
 // Paths lets you get stats and carry out operations on those stats for many
 // file paths.
 type Paths struct {
-	statter         Statter
-	logger          log15.Logger
-	reportFrequency time.Duration
-	ops             map[string]Operation
-	ScanTimeout     time.Duration
-	reporters       map[string]*reporter.Reporter
+	statter            Statter
+	logger             log15.Logger
+	reportFrequency    time.Duration
+	ops                map[string]Operation
+	rollingLength      int
+	maxRollingDuration time.Duration
+	reporters          map[string]*reporter.Reporter
 }
 
 type PathsConfig struct {
-	Logger          log15.Logger
-	ReportFrequency time.Duration
-	ScanTimeout     time.Duration
+	Logger             log15.Logger
+	ReportFrequency    time.Duration
+	RollingLength      int
+	MaxRollingDuration time.Duration
 }
 
 // NewPaths returns a Paths that will use the given Statter to do the Lstat
 // calls and log issues to any configured logger. If you configure a
 // reportFrequency greater than 0, then timings for the lstats and your
-// operations will also be logged. You can also configure a MaxTime that a
-// Scan() can run for before it fails.
+// operations will also be logged.
+//
+// You can also configure the maximum time (MaxRollingDuration) you expect the
+// last n stats to take (RollingLength), causing Scan() to stop with an error if
+// it takes longer.
 func NewPaths(statter Statter, pathsConfig PathsConfig) *Paths {
 	return &Paths{
-		statter:         statter,
-		logger:          pathsConfig.Logger,
-		reportFrequency: pathsConfig.ReportFrequency,
-		ScanTimeout:     pathsConfig.ScanTimeout,
-		ops:             make(map[string]Operation),
-		reporters:       make(map[string]*reporter.Reporter),
+		statter:            statter,
+		logger:             pathsConfig.Logger,
+		reportFrequency:    pathsConfig.ReportFrequency,
+		rollingLength:      pathsConfig.RollingLength,
+		maxRollingDuration: pathsConfig.MaxRollingDuration,
+		ops:                make(map[string]Operation),
+		reporters:          make(map[string]*reporter.Reporter),
 	}
 }
 
@@ -112,7 +118,7 @@ func (p *Paths) AddOperation(name string, op Operation) error {
 // We wait for all operations to complete before they are all called again, so
 // it is safe to do something like write stat details to a file.
 //
-// If a MaxTime has been configured, Scan() will stop and return an error as
+// If a ScanTimeout has been configured, Scan() will stop and return an error as
 // soon as that amount of time has passed.
 func (p *Paths) Scan(paths io.Reader) error {
 	scanner := bufio.NewScanner(paths)
@@ -121,9 +127,7 @@ func (p *Paths) Scan(paths io.Reader) error {
 	p.reporters[lstatOpName] = r
 	p.startReporting()
 
-	endTime := time.Now().Add(p.ScanTimeout)
-
-	err := p.lstatEachPath(scanner, r, endTime)
+	err := p.lstatEachPath(scanner, r)
 	if err != nil {
 		return err
 	}
@@ -131,17 +135,45 @@ func (p *Paths) Scan(paths io.Reader) error {
 	return scanner.Err()
 }
 
-func (p *Paths) lstatEachPath(scanner *bufio.Scanner, r *reporter.Reporter, //nolint:funlen,gocognit
-	endTime time.Time) (err error) {
+type averageTimeout struct {
+	samples            []time.Duration
+	maxRollingDuration time.Duration
+	n                  int
+	sum                time.Duration
+}
+
+func (a *averageTimeout) AverageReached(now time.Time) error {
+	if len(a.samples) == 0 {
+		return nil
+	}
+
+	dt := time.Since(now)
+	a.sum = a.sum - a.samples[a.n] + dt
+	a.samples[a.n] = dt
+	a.n++
+
+	if a.n >= len(a.samples) {
+		a.n = 0
+	}
+
+	if a.sum > a.maxRollingDuration {
+		return errScanTimeout
+	}
+
+	return nil
+}
+
+func (p *Paths) lstatEachPath(scanner *bufio.Scanner, r *reporter.Reporter) (err error) { //nolint:funlen
 	var wg sync.WaitGroup
 	defer func() {
-		errw := p.waitUntilWGOrMaxTime(&wg, endTime)
-		if errw != nil {
-			err = errw
-		}
-
+		wg.Wait()
 		p.stopReporting()
 	}()
+
+	at := averageTimeout{
+		samples:            make([]time.Duration, p.rollingLength),
+		maxRollingDuration: p.maxRollingDuration,
+	}
 
 	for scanner.Scan() {
 		path, erru := strconv.Unquote(scanner.Text())
@@ -149,12 +181,14 @@ func (p *Paths) lstatEachPath(scanner *bufio.Scanner, r *reporter.Reporter, //no
 			return erru
 		}
 
+		now := time.Now()
 		info, errt := p.timeLstat(r, path)
 
-		errWg := p.waitUntilWGOrMaxTime(&wg, endTime)
-		if errWg != nil {
-			return errWg
+		if err = at.AverageReached(now); err != nil {
+			return err
 		}
+
+		wg.Wait()
 
 		if errors.Is(errt, errLstatConsecFails) {
 			return errt
@@ -166,29 +200,6 @@ func (p *Paths) lstatEachPath(scanner *bufio.Scanner, r *reporter.Reporter, //no
 	}
 
 	return err
-}
-
-func (p *Paths) waitUntilWGOrMaxTime(wg *sync.WaitGroup, endTime time.Time) error {
-	if p.ScanTimeout == 0 {
-		wg.Wait()
-
-		return nil
-	}
-
-	waitCh := make(chan bool)
-	timer := time.NewTimer(time.Until(endTime))
-
-	go func() {
-		wg.Wait()
-		close(waitCh)
-	}()
-
-	select {
-	case <-timer.C:
-		return errScanTimeout
-	case <-waitCh:
-		return nil
-	}
 }
 
 // startReporting calls StartReporting on all our reporters.

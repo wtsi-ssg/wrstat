@@ -199,7 +199,7 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 		statter = rstatter
 	}
 
-	pConfig := stat.PathsConfig{Logger: appLogger, ReportFrequency: frequency, ScanTimeout: scanTimeout}
+	pConfig := stat.PathsConfig{Logger: appLogger, ReportFrequency: frequency}
 	p := stat.NewPaths(statter, pConfig)
 
 	if err := p.AddOperation("file", stat.FileOperation(output, statBlockSize)); err != nil {
