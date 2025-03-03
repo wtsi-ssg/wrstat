@@ -43,7 +43,6 @@ const (
 	lstatTimeout            = 10 * time.Second
 	lstatAttempts           = 3
 	lstatConsecutiveFails   = 10
-	scanTimeout             = 2 * time.Hour
 )
 
 var (
