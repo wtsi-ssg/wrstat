@@ -29,6 +29,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -188,7 +189,7 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 
 	if recordStats > 0 {
 		rstatter := stat.RecordStats(statter, time.Duration(recordStats)*time.Minute, func(t time.Time, u uint64) {
-			appLogger.Info("syscalls", "time", t, "stats", u)
+			appLogger.Info("syscalls", "time", t, "file", filepath.Base(input.Name()), "stats", u)
 		})
 
 		ctx, stop := context.WithCancel(context.Background())
