@@ -138,8 +138,10 @@ func TestPaths(t *testing.T) {
 			fi, err := os.Lstat("/")
 			So(err, ShouldBeNil)
 
+			sleepTime := 10 * time.Millisecond
+
 			mockLstat := func(path string) (fs.FileInfo, error) {
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(sleepTime)
 
 				return fi, nil
 			}
@@ -154,6 +156,11 @@ func TestPaths(t *testing.T) {
 
 			err = p.Scan(strings.NewReader(strings.Repeat(strconv.Quote("/")+"\n", 10000)))
 			So(err, ShouldEqual, errScanTimeout)
+
+			sleepTime = 0
+
+			err = p.Scan(strings.NewReader(strings.Repeat(strconv.Quote("/")+"\n", 10000)))
+			So(err, ShouldBeNil)
 		})
 	})
 

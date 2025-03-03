@@ -75,7 +75,7 @@ type PathsConfig struct {
 // operations will also be logged.
 //
 // You can also configure the maximum time (MaxRollingDuration) you expect the
-// last n stats to take (RollingLength), causing Scan() to stop with an error if
+// last n (RollingLength) stats to take, causing Scan() to stop with an error if
 // it takes longer.
 func NewPaths(statter Statter, pathsConfig PathsConfig) *Paths {
 	return &Paths{
