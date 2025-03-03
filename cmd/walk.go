@@ -140,7 +140,7 @@ func checkArgs(out, dep string, args []string) string {
 	}
 
 	if dep == "" {
-		die("--dependecy_group is required")
+		die("--dependency_group is required")
 	}
 
 	if len(args) != 1 {
@@ -232,7 +232,8 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 // The jobs are added with the given dep and rep groups, and the given yaml for
 // the --ch arg if not blank.
 func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
-	repGrp, yamlPath string, s *client.Scheduler) {
+	repGrp, yamlPath string, s *client.Scheduler,
+) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
 	cmd := s.Executable() + " stat "
