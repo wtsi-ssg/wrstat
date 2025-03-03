@@ -101,8 +101,6 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 			walkID = statRepGrp(desiredDir, client.UniqueString(), time.Now().Format("20060102-150405"))
 		}
 
-		logToFile(filepath.Join(outputDir, walkLogOutputBasename))
-
 		walkDirAndScheduleStats(desiredDir, outputDir, walkNumOfJobs, walkInodesPerJob, maximumAverageStatTime,
 			depGroup, walkID, walkCh, s)
 	},
@@ -173,6 +171,8 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes, max
 	if err != nil {
 		die("failed to create walk output files: %s", err)
 	}
+
+	logToFile(filepath.Join(outputDir, walkLogOutputBasename))
 
 	go keepAliveCheck(outputDir, "output directory no longer exists")
 
