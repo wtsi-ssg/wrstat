@@ -203,7 +203,8 @@ func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid strin
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string, //nolint:funlen
-	numStatJobs, inodesPerStat, maximumAverageStatTime int, yamlPath, queue, queuesAvoid, now string, s *client.Scheduler) {
+	numStatJobs, inodesPerStat, maximumAverageStatTime int, yamlPath, queue,
+	queuesAvoid, now string, s *client.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
