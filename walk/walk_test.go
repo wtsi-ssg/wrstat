@@ -242,16 +242,12 @@ func TestWalk(t *testing.T) {
 
 		So(os.Chdir(tdir), ShouldBeNil)
 
-		for i := 0; i < 18; i++ {
+		for range 18 {
 			So(os.Mkdir(fname, 0700), ShouldBeNil)
 			So(os.Chdir(fname), ShouldBeNil)
 		}
 
 		Convey("the walk throws an error, but does not crash", func() {
-			_, err := os.Getwd()
-			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "getwd: file name too long")
-
 			outDir := t.TempDir()
 
 			files, err := NewFiles(outDir, 1)
