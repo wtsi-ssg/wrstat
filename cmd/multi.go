@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/client"
@@ -110,7 +111,7 @@ Finally, the unique subdirectory of --working_directory that was created is
 deleted.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		checkMultiArgs()
-		err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, sudo)
+		err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, maximumAverageStatTime, sudo)
 		if err != nil {
 			die("%s", err)
 		}
@@ -141,6 +142,8 @@ func init() {
 		"statistics on syscalls every n minutes to the log")
 	multiCmd.Flags().BoolVarP(&statBlockSize, "blocks", "b", false, "record "+
 		"disk usage (blocks) instead of apparent byte size")
+	multiCmd.Flags().IntVarP(&maximumAverageStatTime, "maximum_stat_time", "M", defaultMaximumAveerageStatTime,
+		"Maxiumum average stat time (seconds); will fail if the average (over 1000 stats) goes above this number")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -163,7 +166,8 @@ func checkMultiArgs() {
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
-func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid string, sudo bool) error {
+func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid string,
+	maximumAverageStatTime int, sudo bool) error {
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
@@ -186,7 +190,7 @@ func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid strin
 	}
 
 	scheduleWalkJobs(outputRoot, paths, unique, finalDir, multiStatJobs,
-		multiInodes, multiCh, forcedQueue, queuesToAvoid, now, s)
+		multiInodes, maximumAverageStatTime, multiCh, forcedQueue, queuesToAvoid, now, s)
 
 	if timeout > 0 {
 		scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs, now)
@@ -199,11 +203,11 @@ func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid strin
 // path. The second scheduler is used to add combine jobs, which need a memory
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string, //nolint:funlen
-	numStatJobs, inodesPerStat int, yamlPath, queue, queuesAvoid, now string, s *client.Scheduler) {
+	numStatJobs, inodesPerStat, maximumAverageStatTime int, yamlPath, queue, queuesAvoid, now string, s *client.Scheduler) {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
-	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid)
+	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid, maximumAverageStatTime)
 	reqWalk, reqCombine := reqs()
 	reqWalk.Cores = 3
 
@@ -255,7 +259,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 // buildWalkCommand builds a wrstat walk command line based on the given n,
 // yaml path, queue, and if sudo is in effect.
 func buildWalkCommand(s *client.Scheduler, numStatJobs, inodesPerStat int, //nolint:funlen,gocyclo
-	yamlPath, queue, queuesAvoid string) string {
+	yamlPath, queue, queuesAvoid string, maximumAverageStatTime int) string {
 	cmd := s.Executable() + " walk "
 
 	if numStatJobs > 0 {
@@ -286,6 +290,10 @@ func buildWalkCommand(s *client.Scheduler, numStatJobs, inodesPerStat int, //nol
 
 	if statBlockSize {
 		cmd += "-b "
+	}
+
+	if maximumAverageStatTime != defaultMaximumAveerageStatTime {
+		cmd += "-M " + strconv.Itoa(maximumAverageStatTime)
 	}
 
 	return cmd

@@ -37,17 +37,20 @@ import (
 )
 
 const (
-	reportFrequency         = 10 * time.Minute
-	statOutputFileSuffix    = ".stats"
-	statLogOutputFileSuffix = ".log"
-	lstatTimeout            = 10 * time.Second
-	lstatAttempts           = 3
-	lstatConsecutiveFails   = 10
+	reportFrequency                = 10 * time.Minute
+	statOutputFileSuffix           = ".stats"
+	statLogOutputFileSuffix        = ".log"
+	lstatTimeout                   = 10 * time.Second
+	lstatAttempts                  = 3
+	lstatConsecutiveFails          = 10
+	defaultMaximumAveerageStatTime = 10
+	rollingStatAverageLength       = 1000
 )
 
 var (
-	statDebug bool
-	statCh    string
+	statDebug              bool
+	statCh                 string
+	maximumAverageStatTime int
 )
 
 // statCmd represents the stat command.
@@ -120,6 +123,8 @@ func init() {
 		"statistics on syscalls every n minutes to the log")
 	statCmd.Flags().BoolVarP(&statBlockSize, "blocks", "b", false, "record "+
 		"disk usage (blocks) instead of apparent byte size")
+	statCmd.Flags().IntVarP(&maximumAverageStatTime, "maximum_stat_time", "M", defaultMaximumAveerageStatTime,
+		"Maxiumum average stat time (seconds); will fail if the average (over 1000 stats) goes above this number")
 }
 
 // statPathsInFile does the main work.
@@ -138,7 +143,7 @@ func statPathsInFile(inputPath string, tsvPath string, debug bool) {
 		}
 	}()
 
-	scanAndStatInput(input, createStatOutputFile(inputPath), tsvPath, debug)
+	scanAndStatInput(input, createStatOutputFile(inputPath), tsvPath, debug, maximumAverageStatTime)
 }
 
 // createStatOutputFile creates a file named input.stats.
@@ -177,7 +182,7 @@ func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
 // paths.
 //
 // If debug is true, outputs timings for Lstat calls and other operations.
-func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
+func scanAndStatInput(input, output *os.File, tsvPath string, debug bool, maximumAverageStatTime int) {
 	var frequency time.Duration
 	if debug {
 		frequency = reportFrequency
@@ -198,7 +203,16 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool) {
 		statter = rstatter
 	}
 
-	pConfig := stat.PathsConfig{Logger: appLogger, ReportFrequency: frequency}
+	pConfig := stat.PathsConfig{Logger: appLogger,
+		ReportFrequency:    frequency,
+		RollingLength:      rollingStatAverageLength,
+		MaxRollingDuration: time.Duration(rollingStatAverageLength*maximumAverageStatTime) * time.Second,
+	}
+
+	doScanAndStat(statter, pConfig, input, output, tsvPath)
+}
+
+func doScanAndStat(statter stat.Statter, pConfig stat.PathsConfig, input, output *os.File, tsvPath string) {
 	p := stat.NewPaths(statter, pConfig)
 
 	if err := p.AddOperation("file", stat.FileOperation(output, statBlockSize)); err != nil {
