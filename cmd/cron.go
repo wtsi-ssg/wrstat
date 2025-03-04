@@ -84,7 +84,8 @@ invocations of cron, do 'sudo wrstsat cron --kill'.
 
 		taskr := tasker.New(tasker.Option{})
 		taskr.Task(crontab, func(ctx context.Context) (int, error) {
-			err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, sudo)
+			err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid,
+				maximumAverageStatTime, sudo)
 
 			if client.PretendSubmissions != "" {
 				os.Exit(0)
@@ -126,6 +127,8 @@ func init() {
 		"statistics on syscalls every n minutes to the log")
 	cronCmd.Flags().BoolVarP(&statBlockSize, "blocks", "b", false, "record "+
 		"disk usage (blocks) instead of apparent byte size")
+	cronCmd.Flags().IntVarP(&maximumAverageStatTime, "maximum_stat_time", "M", defaultMaximumAveerageStatTime,
+		"Maxiumum average stat time (seconds); will fail if the average (over 1000 stats) goes above this number")
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.

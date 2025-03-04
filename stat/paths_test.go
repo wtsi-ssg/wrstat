@@ -132,24 +132,35 @@ func TestPaths(t *testing.T) {
 			So(err, ShouldBeNil)
 		})
 
-		Convey("Given a too-short MaxTime, Scan() fails", func() {
+		Convey("Given a stats that take too long, Scan() fails", func() {
 			s = WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
 
-			mockLstat := func(path string) (fs.FileInfo, error) {
-				time.Sleep(1 * time.Millisecond)
+			fi, err := os.Lstat("/")
+			So(err, ShouldBeNil)
 
-				return os.Lstat(path)
+			sleepTime := 10 * time.Millisecond
+
+			mockLstat := func(path string) (fs.FileInfo, error) {
+				time.Sleep(sleepTime)
+
+				return fi, nil
 			}
 
 			s.SetLstat(mockLstat)
 
-			pConfig.ScanTimeout = 3 * time.Millisecond
+			pConfig.RollingLength = 150
+			pConfig.MaxRollingDuration = time.Second
+
 			p = NewPaths(s, pConfig)
 			So(p, ShouldNotBeNil)
 
-			r := createScanInput(t)
-			err := p.Scan(r)
+			err = p.Scan(strings.NewReader(strings.Repeat(strconv.Quote("/")+"\n", 10000)))
 			So(err, ShouldEqual, errScanTimeout)
+
+			sleepTime = 0
+
+			err = p.Scan(strings.NewReader(strings.Repeat(strconv.Quote("/")+"\n", 10000)))
+			So(err, ShouldBeNil)
 		})
 	})
 

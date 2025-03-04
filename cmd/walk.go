@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -100,7 +101,8 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 			walkID = statRepGrp(desiredDir, client.UniqueString(), time.Now().Format("20060102-150405"))
 		}
 
-		walkDirAndScheduleStats(desiredDir, outputDir, walkNumOfJobs, walkInodesPerJob, depGroup, walkID, walkCh, s)
+		walkDirAndScheduleStats(desiredDir, outputDir, walkNumOfJobs, walkInodesPerJob, maximumAverageStatTime,
+			depGroup, walkID, walkCh, s)
 	},
 }
 
@@ -129,6 +131,8 @@ func init() {
 		"statistics on syscalls every n minutes to the log")
 	walkCmd.Flags().BoolVarP(&statBlockSize, "blocks", "b", false, "record "+
 		"disk usage (blocks) instead of apparent byte size")
+	walkCmd.Flags().IntVarP(&maximumAverageStatTime, "maximum_stat_time", "M", defaultMaximumAveerageStatTime,
+		"Maxiumum average stat time (seconds); will fail if the average (over 1000 stats) goes above this number")
 }
 
 // checkArgs checks we have required args and returns desired dir.
@@ -138,7 +142,7 @@ func checkArgs(out, dep string, args []string) string {
 	}
 
 	if dep == "" {
-		die("--dependecy_group is required")
+		die("--dependency_group is required")
 	}
 
 	if len(args) != 1 {
@@ -155,7 +159,7 @@ func statRepGrp(dir, unique, now string) string {
 }
 
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int, //nolint:funlen
+func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes, maximumAverageStatTime int, //nolint:funlen
 	depGroup, repGroup, yamlPath string, s *client.Scheduler,
 ) {
 	n := statJobs
@@ -195,7 +199,7 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes int,
 		die("failed to walk the filesystem: %s", err)
 	}
 
-	scheduleStatJobs(files.Paths, depGroup, repGroup, yamlPath, s)
+	scheduleStatJobs(files.Paths, depGroup, repGroup, yamlPath, maximumAverageStatTime, s)
 }
 
 func keepAliveCheck(required, msg string) {
@@ -232,7 +236,8 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 // The jobs are added with the given dep and rep groups, and the given yaml for
 // the --ch arg if not blank.
 func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
-	repGrp, yamlPath string, s *client.Scheduler) {
+	repGrp, yamlPath string, maximumAverageStatTime int, s *client.Scheduler,
+) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
 	cmd := s.Executable() + " stat "
@@ -246,6 +251,10 @@ func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
 
 	if statBlockSize {
 		cmd += "-b "
+	}
+
+	if maximumAverageStatTime != defaultMaximumAveerageStatTime {
+		cmd += "-M " + strconv.Itoa(maximumAverageStatTime)
 	}
 
 	req := client.DefaultRequirements()
