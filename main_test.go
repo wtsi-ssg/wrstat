@@ -359,9 +359,9 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 		}
 
 		expectation = append(expectation, &jobqueue.Job{
-			Cmd: fmt.Sprintf("%[1]s cleanup -w \"%[2]s/%[3]s\" -j %[3]q -l \"/path/for/logs/%[4]s\" "+
-				"-L \"/path/for/jobLogs/%[4]s.log\"",
-				exe, workingDir, repGroup, time.Now().Format(time.DateOnly)+"_"+repGroup),
+			Cmd: fmt.Sprintf("%[1]s cleanup -w \"%[2]s/%[3]s\" -j %[3]q -l \"/path/for/logs\" "+
+				"-L \"/path/for/jobLogs\"",
+				exe, workingDir, repGroup),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     "wrstat-cleanup-" + dateStr[1],

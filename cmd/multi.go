@@ -334,14 +334,13 @@ func tidyRepGrp(dir, unique, now string) string {
 func scheduleCleanupJob(s *client.Scheduler, timeout int64, outputRoot,
 	jobUnique, logOutput, jobOutput, now string) {
 	cmd := fmt.Sprintf("%s cleanup -w %q -j %q", s.Executable(), outputRoot, jobUnique)
-	nowUnique := time.Now().Format(time.DateOnly) + "_" + jobUnique
 
 	if logOutput != "" {
-		cmd += fmt.Sprintf(" -l %q", filepath.Join(logOutput, nowUnique))
+		cmd += fmt.Sprintf(" -l %q", logOutput)
 	}
 
 	if jobOutput != "" {
-		cmd += fmt.Sprintf(" -L %q", filepath.Join(jobOutput, nowUnique+".log"))
+		cmd += fmt.Sprintf(" -L %q", jobOutput)
 	}
 
 	job := s.NewJob(cmd, "wrstat-cleanup-"+now,
