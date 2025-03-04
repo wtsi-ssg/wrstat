@@ -118,8 +118,9 @@ func (p *Paths) AddOperation(name string, op Operation) error {
 // We wait for all operations to complete before they are all called again, so
 // it is safe to do something like write stat details to a file.
 //
-// If a ScanTimeout has been configured, Scan() will stop and return an error as
-// soon as that amount of time has passed.
+// If a RollingLength and MaxRollingDuration have been configured, Scan() will
+// stop and return an error as soon as the rolling average of the last
+// 'RollingLength' stats exceeds the 'MaxRollingDuration'.
 func (p *Paths) Scan(paths io.Reader) error {
 	scanner := bufio.NewScanner(paths)
 
