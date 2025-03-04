@@ -253,7 +253,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 
 	expectation := []*jobqueue.Job{
 		{
-			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s-path-%[1]s -i"+
+			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/%[4]s_／some／path -i"+
 				" wrstat-stat-/some/path-%[4]s-%[3]s /some/path", walk1DepGroup,
 				workingDir, repGroup, dateStr[1], exe, timeoutDate, statBlocks),
 			CwdMatters:   true,
@@ -267,7 +267,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Behaviours:   behaviours,
 		},
 		{
-			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s-path-%[1]s -i"+
+			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/%[4]s_／some-other／path -i"+
 				" wrstat-stat-/some-other/path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
 				workingDir, repGroup, dateStr[1], exe, timeoutDate, statBlocks),
 			CwdMatters:   true,
@@ -281,7 +281,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Behaviours:   behaviours,
 		},
 		{
-			Cmd:          fmt.Sprintf("%s combine \"%s/%s-path-%s\"", exe, workingDir, repGroup, walk1DepGroup),
+			Cmd:          fmt.Sprintf("%s combine \"%s/%s/%s_／some／path\"", exe, workingDir, repGroup, dateStr[1]),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-combine-/some/path-%s-%s", dateStr[1], repGroup),
@@ -298,7 +298,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Behaviours: behaviours,
 		},
 		{
-			Cmd:          fmt.Sprintf("%s combine \"%s/%s-path-%s\"", exe, workingDir, repGroup, walk2DepGroup),
+			Cmd:          fmt.Sprintf("%s combine \"%s/%s/%s_／some-other／path\"", exe, workingDir, repGroup, dateStr[1]),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-combine-/some-other/path-%s-%s", dateStr[1], repGroup),
@@ -315,8 +315,8 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Behaviours: behaviours,
 		},
 		{
-			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some／path\" \"%s/%s-path-%s\"",
-				exe, now, workingDir, repGroup, walk1DepGroup),
+			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some／path\" \"%s/%s/%s_／some／path\"",
+				exe, now, workingDir, repGroup, dateStr[1]),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-tidy-/some/path-%s-%s", dateStr[1], repGroup),
@@ -332,8 +332,8 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Behaviours: behaviours,
 		},
 		{
-			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some-other／path\" \"%s/%s-path-%s\"",
-				exe, now, workingDir, repGroup, walk2DepGroup),
+			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some-other／path\" \"%s/%s/%s_／some-other／path\"",
+				exe, now, workingDir, repGroup, dateStr[1]),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-tidy-/some-other/path-%s-%s", dateStr[1], repGroup),

@@ -231,8 +231,9 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 	for i, path := range desiredPaths {
 		walkUnique := client.UniqueString()
 		combineUnique := client.UniqueString()
-		outDir := outputRoot + "-" + filepath.Base(path) + "-" + walkUnique
-		finalOutput := filepath.Join(finalDirParent, fmt.Sprintf("%s_%s", now, neaten.EncodePath(path)))
+		finalDirBase := fmt.Sprintf("%s_%s", now, neaten.EncodePath(path))
+		outDir := filepath.Join(outputRoot, finalDirBase)
+		finalOutput := filepath.Join(finalDirParent, finalDirBase)
 
 		walkJobs[i] = s.NewJob(fmt.Sprintf("%s-d %s -t %d -o %s -i %s %s",
 			cmd, walkUnique, limitDate, outDir, statRepGrp(path, unique, now), path),
