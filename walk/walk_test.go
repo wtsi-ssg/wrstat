@@ -248,6 +248,10 @@ func TestWalk(t *testing.T) {
 		}
 
 		Convey("the walk throws an error, but does not crash", func() {
+			pwd, err := os.Getwd()
+			So(err, ShouldBeNil)
+			So(len(pwd), ShouldBeGreaterThan, maxPathLength)
+
 			outDir := t.TempDir()
 
 			files, err := NewFiles(outDir, 1)

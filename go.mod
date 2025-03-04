@@ -1,6 +1,6 @@
 module github.com/wtsi-ssg/wrstat/v6
 
-go 1.23.5
+go 1.24
 
 require (
 	github.com/VertebrateResequencing/wr v0.35.0
