@@ -32,9 +32,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/VertebrateResequencing/wr/client"
+	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/spf13/cobra"
 	ifs "github.com/wtsi-ssg/wrstat/v6/internal/fs"
 	"github.com/wtsi-ssg/wrstat/v6/neaten"
@@ -95,7 +99,7 @@ func run() error { //nolint:gocognit,gocyclo
 	defer wg.Wait()
 
 	if jobSuffix != "" {
-		removeOrLogJobs(jobSuffix, logJobs, removeJob)
+		removeOrLogJobs(&wg, jobSuffix, logJobs, removeJob)
 	}
 
 	if cleanupPerms {
@@ -111,7 +115,7 @@ func run() error { //nolint:gocognit,gocyclo
 	}
 
 	if !cleanupPerms {
-		if err := cleanup(cleanupDir); err != nil {
+		if err := os.RemoveAll(cleanupDir); err != nil {
 			return fmt.Errorf("could not cleanup dir: %w", err)
 		}
 	}
@@ -119,12 +123,65 @@ func run() error { //nolint:gocognit,gocyclo
 	return nil
 }
 
-func removeOrLogJobs(jobSuffix, logJobs string, removeJob bool) {
+func removeOrLogJobs(wg *sync.WaitGroup, jobSuffix, logJobs string, removeJob bool) {
 	s, d := newScheduler("", "", "", false)
-	defer d()
 
 	if err := neaten.RemoveOrLogJobs(s, jobSuffix, logJobs, removeJob); err != nil {
 		warn("%s", err)
+	}
+
+	if removeJob {
+		wg.Add(1)
+
+		go repeatRemove(s, wg, jobSuffix, d)
+	} else {
+		d()
+	}
+}
+
+func repeatRemove(s *client.Scheduler, wg *sync.WaitGroup, jobSuffix string, d func()) {
+	defer wg.Done()
+	defer d()
+
+	jobSuffix = "-" + jobSuffix
+
+	for range 5 {
+		jobs, err := getIncompleteJobs(s, jobSuffix)
+		if err != nil {
+			warn("error getting jobs: %s", err)
+		} else if len(jobs) == 0 {
+			return
+		}
+
+		time.Sleep(time.Minute)
+		warnIfErr(s.RemoveJobs(jobs...), "error removing jobs: %s")
+	}
+
+	for range 5 {
+		jobs, err := getIncompleteJobs(s, jobSuffix)
+		if err != nil {
+			continue
+		} else if len(jobs) == 0 {
+			return
+		}
+
+		warnIfErr(s.KillJobs(jobs...), "error killing jobs: %s")
+		time.Sleep(time.Minute)
+		warnIfErr(s.RemoveJobs(jobs...), "error removing jobs: %s")
+	}
+}
+
+func getIncompleteJobs(s *client.Scheduler, jobSuffix string) ([]*jobqueue.Job, error) {
+	jobs, err := s.FindJobsByRepGroupSuffix(jobSuffix)
+
+	return slices.DeleteFunc(jobs, func(j *jobqueue.Job) bool {
+		return j.State == jobqueue.JobStateComplete
+	}), err
+}
+
+func warnIfErr(err error, fmt string) {
+	if err != nil {
+		warn(fmt, err)
 	}
 }
 
@@ -242,19 +299,4 @@ func getWorkingSubDirs(workDir string) ([]string, error) {
 	}
 
 	return paths, nil
-}
-
-func cleanup(workDir string) error {
-	subDirs, err := getWorkingSubDirs(workDir)
-	if err != nil {
-		return err
-	}
-
-	for _, path := range subDirs {
-		if err = os.RemoveAll(path); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

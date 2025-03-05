@@ -204,7 +204,8 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool, maximu
 		statter = rstatter
 	}
 
-	pConfig := stat.PathsConfig{Logger: appLogger,
+	pConfig := stat.PathsConfig{
+		Logger:             appLogger,
 		ReportFrequency:    frequency,
 		RollingLength:      rollingStatAverageLength,
 		MaxRollingDuration: time.Duration(rollingStatAverageLength*maximumAverageStatTime) * time.Second,

@@ -263,12 +263,6 @@ func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
 	req.Cores = statCores
 	limitGroups := []string{"wrstat-stat"}
 
-	var removeAfterBury jobqueue.Behaviours
-
-	if timeout > 0 {
-		removeAfterBury = jobqueue.Behaviours{{Do: jobqueue.Remove}}
-	}
-
 	if timeout > 0 {
 		limitGroups = append(limitGroups, "datetime<"+time.Unix(timeout, 0).Format(time.DateTime))
 	}
@@ -276,7 +270,6 @@ func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
 	for i, path := range outPaths {
 		jobs[i] = s.NewJob(cmd+path, repGrp, "wrstat-stat", depGroup, "", req)
 		jobs[i].LimitGroups = limitGroups
-		jobs[i].Behaviours = removeAfterBury
 	}
 
 	addJobsToQueue(s, jobs)
