@@ -111,7 +111,7 @@ func run() error { //nolint:gocognit,gocyclo
 	}
 
 	if !cleanupPerms {
-		if err := cleanup(cleanupDir); err != nil {
+		if err := os.RemoveAll(cleanupDir); err != nil {
 			return fmt.Errorf("could not cleanup dir: %w", err)
 		}
 	}
@@ -242,19 +242,4 @@ func getWorkingSubDirs(workDir string) ([]string, error) {
 	}
 
 	return paths, nil
-}
-
-func cleanup(workDir string) error {
-	subDirs, err := getWorkingSubDirs(workDir)
-	if err != nil {
-		return err
-	}
-
-	for _, path := range subDirs {
-		if err = os.RemoveAll(path); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
