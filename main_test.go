@@ -236,12 +236,6 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 
 	var timeoutDate int64
 
-	var behaviours jobqueue.Behaviours
-
-	if timeout > 0 {
-		behaviours = jobqueue.Behaviours{{Do: jobqueue.Remove}}
-	}
-
 	if timeout > 0 {
 		timeoutStr := regexp.MustCompile(`-t (\d+) `).FindStringSubmatch(jobs[0].Cmd)
 		So(len(timeoutStr), ShouldEqual, 2)
@@ -264,7 +258,6 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Override:     1,
 			Retries:      30,
 			DepGroups:    []string{walk1DepGroup},
-			Behaviours:   behaviours,
 		},
 		{
 			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/%[4]s_／some-other／path -i"+
@@ -278,7 +271,6 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Override:     1,
 			Retries:      30,
 			DepGroups:    []string{walk2DepGroup},
-			Behaviours:   behaviours,
 		},
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/%s_／some／path\"", exe, workingDir, repGroup, dateStr[1]),
@@ -295,7 +287,6 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 					DepGroup: walk1DepGroup,
 				},
 			},
-			Behaviours: behaviours,
 		},
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/%s_／some-other／path\"", exe, workingDir, repGroup, dateStr[1]),
@@ -312,7 +303,6 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 					DepGroup: walk2DepGroup,
 				},
 			},
-			Behaviours: behaviours,
 		},
 		{
 			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some／path\" \"%s/%s/%s_／some／path\"",
@@ -329,7 +319,6 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 					DepGroup: combine1DepGroup,
 				},
 			},
-			Behaviours: behaviours,
 		},
 		{
 			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some-other／path\" \"%s/%s/%s_／some-other／path\"",
@@ -346,7 +335,6 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 					DepGroup: combine2DepGroup,
 				},
 			},
-			Behaviours: behaviours,
 		},
 	}
 
@@ -360,7 +348,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 
 		expectation = append(expectation, &jobqueue.Job{
 			Cmd: fmt.Sprintf("%[1]s cleanup -w \"%[2]s/%[3]s\" -j %[3]q -l \"/path/for/logs\" "+
-				"-L \"/path/for/jobLogs\"",
+				"-r -L \"/path/for/jobLogs\"",
 				exe, workingDir, repGroup),
 			CwdMatters:   true,
 			Cwd:          workingDir,
@@ -462,10 +450,9 @@ func TestWalk(t *testing.T) {
 					Cores: 0.05,
 					Disk:  1,
 				},
-				Override:   1,
-				Retries:    30,
-				DepGroups:  []string{depgroup},
-				Behaviours: jobqueue.Behaviours{{Do: jobqueue.Remove}},
+				Override:  1,
+				Retries:   30,
+				DepGroups: []string{depgroup},
 			},
 			{
 				Cmd:         exe + " stat " + walk2,
@@ -480,10 +467,9 @@ func TestWalk(t *testing.T) {
 					Cores: 0.05,
 					Disk:  1,
 				},
-				Override:   1,
-				Retries:    30,
-				DepGroups:  []string{depgroup},
-				Behaviours: jobqueue.Behaviours{{Do: jobqueue.Remove}},
+				Override:  1,
+				Retries:   30,
+				DepGroups: []string{depgroup},
 			},
 		}
 

@@ -213,14 +213,9 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 	reqWalk.Cores = 3
 
 	var (
-		limit           []string
-		limitDate       int64
-		removeAfterBury jobqueue.Behaviours
+		limit     []string
+		limitDate int64
 	)
-
-	if timeout > 0 {
-		removeAfterBury = jobqueue.Behaviours{{Do: jobqueue.Remove}}
-	}
 
 	if timeout > 0 {
 		maxStart := time.Now().Add(time.Duration(timeout) * time.Hour)
@@ -239,17 +234,14 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 			cmd, walkUnique, limitDate, outDir, statRepGrp(path, unique, now), path),
 			walkRepGrp(path, unique, now), "wrstat-walk", walkUnique, "", reqWalk)
 		walkJobs[i].LimitGroups = limit
-		walkJobs[i].Behaviours = removeAfterBury
 
 		combineJobs[i] = s.NewJob(fmt.Sprintf("%s combine %q", s.Executable(), outDir),
 			combineRepGrp(path, unique, now), "wrstat-combine", combineUnique, walkUnique, reqCombine)
 		combineJobs[i].LimitGroups = limit
-		combineJobs[i].Behaviours = removeAfterBury
 
 		tidyJobs[i] = s.NewJob(fmt.Sprintf("%s tidy -f %q %q",
 			s.Executable(), finalOutput, outDir),
 			tidyRepGrp(path, unique, now), "wrstat-tidy", "", combineUnique, client.DefaultRequirements())
-		tidyJobs[i].Behaviours = removeAfterBury
 	}
 
 	addJobsToQueue(s, walkJobs)
@@ -340,7 +332,7 @@ func scheduleCleanupJob(s *client.Scheduler, timeout int64, outputRoot,
 	}
 
 	if jobOutput != "" {
-		cmd += fmt.Sprintf(" -L %q", jobOutput)
+		cmd += fmt.Sprintf(" -r -L %q", jobOutput)
 	}
 
 	job := s.NewJob(cmd, "wrstat-cleanup-"+now,

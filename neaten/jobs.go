@@ -40,7 +40,7 @@ import (
 
 const jobsFile = "jobs"
 
-var repGrpRegexp = regexp.MustCompile(`^wrstat-[^-]+\-(.*)-(\d{8})-(\d{6})-[^-]+$`)
+var repGrpRegexp = regexp.MustCompile(`^wrstat-[^-]+\-(.*)-(\d{8}-\d{6})-[^-]+$`)
 
 // RemoveOrLogJobs will find WR jobs in the scheduler that have IDs with the
 // given suffix. The jobs will be sorted by mount point and their data written
@@ -87,7 +87,7 @@ func splitJobsByMountpoint(jobs []*jobqueue.Job) map[string][]*jobqueue.Job {
 			continue
 		}
 
-		key := ms[2] + ms[3] + "-" + ms[1]
+		key := ms[2] + "_" + ms[1]
 
 		mpJobs[key] = append(mpJobs[key], job)
 	}

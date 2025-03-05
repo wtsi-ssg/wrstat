@@ -69,7 +69,7 @@ func TestRemoveOrLogJobs(t *testing.T) {
 
 		So(len(s.SubmittedJobs()), ShouldEqual, 1)
 
-		f, err := os.Open(filepath.Join(tmp, "20200102151413-"+EncodePath(mountA), jobsFile))
+		f, err := os.Open(filepath.Join(tmp, "20200102-151413_"+EncodePath(mountA), jobsFile))
 		So(err, ShouldBeNil)
 
 		var loggedJobs []*jobqueue.Job
@@ -78,7 +78,7 @@ func TestRemoveOrLogJobs(t *testing.T) {
 		So(f.Close(), ShouldBeNil)
 		So(loggedJobs, ShouldResemble, jobs[1:3])
 
-		f, err = os.Open(filepath.Join(tmp, "20200102151413-"+EncodePath(mountB), jobsFile))
+		f, err = os.Open(filepath.Join(tmp, "20200102-151413_"+EncodePath(mountB), jobsFile))
 		So(err, ShouldBeNil)
 
 		So(json.NewDecoder(f).Decode(&loggedJobs), ShouldBeNil)
