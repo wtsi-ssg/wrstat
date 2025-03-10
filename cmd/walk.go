@@ -186,6 +186,13 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes, max
 	}()
 
 	if recordStats > 0 {
+		host, errr := os.Hostname()
+		if errr != nil {
+			die("failed to get hostname: %s", errr)
+		}
+
+		appLogger.Info("syscall logging", "host", host)
+
 		walker.EnableStats(time.Duration(recordStats)*time.Minute, func(t time.Time, sd walk.StatData) {
 			appLogger.Info("syscalls", "time", t, "opens", sd.Open, "reads", sd.Read,
 				"bytes", sd.Bytes, "closes", sd.Close, "stats", sd.Stat)

@@ -867,6 +867,7 @@ chmod -R +w /build;`)
 		writeFileString(t, runScript, `#!/bin/bash
 
 export PATH="/build/bin:$PATH";
+export WR_MANAGERCERTDOMAIN="localhost";
 
 stop() {
 	wr manager stop;
