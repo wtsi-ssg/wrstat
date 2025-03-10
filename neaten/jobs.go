@@ -88,7 +88,6 @@ func splitJobsByMountpoint(jobs []*jobqueue.Job) map[string][]*jobqueue.Job {
 		}
 
 		key := ms[2] + "_" + ms[1]
-
 		mpJobs[key] = append(mpJobs[key], job)
 	}
 
@@ -109,7 +108,7 @@ func writeJobsToLog(jobs []*jobqueue.Job, logFile string) error {
 		return err
 	}
 
-	f, err := os.Create(logFile)
+	f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666) //nolint:mnd
 	if err != nil {
 		return err
 	}
