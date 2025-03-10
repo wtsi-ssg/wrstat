@@ -631,11 +631,11 @@ func TestStat(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		statsExpectation := fmt.Sprintf(""+
-			"%[3]s\t4096\t%[1]s\t%[2]s\t%[14]d\t"+ct(271828)+"\t%[19]d\td\t%[8]d\t4\t%[13]d\n"+
-			"%[4]s\t4096\t%[1]s\t%[2]s\t%[15]d\t"+ct(133032)+"\t%[20]d\td\t%[9]d\t3\t%[13]d\n"+
-			"%[5]s\t10\t%[1]s\t%[2]s\t%[16]d\t"+ct(7383773)+"\t%[21]d\tf\t%[10]d\t1\t%[13]d\n"+
-			"%[6]s\t4096\t%[1]s\t%[2]s\t%[17]d\t"+ct(314159)+"\t%[22]d\td\t%[11]d\t2\t%[13]d\n"+
-			"%[7]s\t4096\t%[1]s\t%[2]s\t%[18]d\t"+ct(282820)+"\t%[23]d\td\t%[12]d\t2\t%[13]d\n",
+			"%[3]s\t4096\t%[1]s\t%[2]s\t%[14]d\t"+ct(271828)+"\t%[19]d\td\t%[8]d\t4\t%[13]d\t4096\n"+
+			"%[4]s\t4096\t%[1]s\t%[2]s\t%[15]d\t"+ct(133032)+"\t%[20]d\td\t%[9]d\t3\t%[13]d\t4096\n"+
+			"%[5]s\t10\t%[1]s\t%[2]s\t%[16]d\t"+ct(7383773)+"\t%[21]d\tf\t%[10]d\t1\t%[13]d\t10\n"+
+			"%[6]s\t4096\t%[1]s\t%[2]s\t%[17]d\t"+ct(314159)+"\t%[22]d\td\t%[11]d\t2\t%[13]d\t4096\n"+
+			"%[7]s\t4096\t%[1]s\t%[2]s\t%[18]d\t"+ct(282820)+"\t%[23]d\td\t%[12]d\t2\t%[13]d\t4096\n",
 			u.Uid,
 			u.Gid,
 			strconv.Quote(tmp),
@@ -674,11 +674,11 @@ func TestStat(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			statsExpectation := fmt.Sprintf(""+ //nolint:dupl
-				"%[3]s\t4096\t%[1]s\t%[2]s\t%[14]d\t"+ct(271828)+"\t%[19]d\td\t%[8]d\t4\t%[13]d\n"+
-				"%[4]s\t4096\t%[1]s\t%[2]s\t%[15]d\t"+ct(133032)+"\t%[20]d\td\t%[9]d\t3\t%[13]d\n"+
-				"%[5]s\t4096\t%[1]s\t%[2]s\t%[16]d\t"+ct(7383773)+"\t%[21]d\tf\t%[10]d\t1\t%[13]d\n"+
-				"%[6]s\t4096\t%[1]s\t%[2]s\t%[17]d\t"+ct(314159)+"\t%[22]d\td\t%[11]d\t2\t%[13]d\n"+
-				"%[7]s\t4096\t%[1]s\t%[2]s\t%[18]d\t"+ct(282820)+"\t%[23]d\td\t%[12]d\t2\t%[13]d\n",
+				"%[3]s\t4096\t%[1]s\t%[2]s\t%[14]d\t"+ct(271828)+"\t%[19]d\td\t%[8]d\t4\t%[13]d\t4096\n"+
+				"%[4]s\t4096\t%[1]s\t%[2]s\t%[15]d\t"+ct(133032)+"\t%[20]d\td\t%[9]d\t3\t%[13]d\t4096\n"+
+				"%[5]s\t4096\t%[1]s\t%[2]s\t%[16]d\t"+ct(7383773)+"\t%[21]d\tf\t%[10]d\t1\t%[13]d\t10\n"+
+				"%[6]s\t4096\t%[1]s\t%[2]s\t%[17]d\t"+ct(314159)+"\t%[22]d\td\t%[11]d\t2\t%[13]d\t4096\n"+
+				"%[7]s\t4096\t%[1]s\t%[2]s\t%[18]d\t"+ct(282820)+"\t%[23]d\td\t%[12]d\t2\t%[13]d\t4096\n",
 				u.Uid,
 				u.Gid,
 				strconv.Quote(tmp),

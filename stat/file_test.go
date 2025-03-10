@@ -79,15 +79,17 @@ func TestStatFile(t *testing.T) {
 		}
 
 		So(File("/some/path/something", fstat, false), ShouldResemble, FileStats{
-			Path: "/some/path/something",
-			Size: 54321,
-			Type: "f",
+			Path:  "/some/path/something",
+			Size:  54321,
+			ASize: 54321,
+			Type:  "f",
 		})
 
 		So(File("/some/path/something", fstat, true), ShouldResemble, FileStats{
-			Path: "/some/path/something",
-			Size: 512 * 12,
-			Type: "f",
+			Path:  "/some/path/something",
+			Size:  512 * 12,
+			ASize: 54321,
+			Type:  "f",
 		})
 	})
 
@@ -160,8 +162,8 @@ func testFileStats(path string, size int64, filetype string) {
 	So(n, ShouldNotBeZeroValue)
 
 	So(sb.String(), ShouldEqual, fmt.Sprintf(
-		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
+		"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\n",
 		strconv.Quote("/abs/path/to/file"), size, stat.Uid, stat.Gid,
 		stat.Atim.Sec, stat.Mtim.Sec, stat.Ctim.Sec,
-		filetype, stat.Ino, stat.Nlink, stat.Dev))
+		filetype, stat.Ino, stat.Nlink, stat.Dev, size))
 }

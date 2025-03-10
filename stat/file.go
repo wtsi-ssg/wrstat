@@ -58,6 +58,7 @@ const (
 type FileStats struct {
 	Path  string
 	Size  int64
+	ASize int64
 	UID   uint32
 	GID   uint32
 	Atim  int64
@@ -73,10 +74,10 @@ type FileStats struct {
 // is \n terminated and writes to the given Writer.
 func (fs *FileStats) WriteTo(w io.Writer) (int64, error) {
 	n, err := fmt.Fprintf(w,
-		"%q\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
+		"%q\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\n",
 		fs.Path, fs.Size, fs.UID, fs.GID,
 		fs.Atim, fs.Mtim, fs.Ctim,
-		fs.Type, fs.Ino, fs.Nlink, fs.Dev)
+		fs.Type, fs.Ino, fs.Nlink, fs.Dev, fs.ASize)
 
 	return int64(n), err
 }
@@ -87,9 +88,10 @@ func (fs *FileStats) WriteTo(w io.Writer) (int64, error) {
 // calculated correctly (the info only contains the basename).
 func File(absPath string, info os.FileInfo, statBlockSize bool) FileStats {
 	fs := FileStats{
-		Path: absPath,
-		Size: info.Size(),
-		Type: modeToType(info.Mode()),
+		Path:  absPath,
+		Size:  info.Size(),
+		ASize: info.Size(),
+		Type:  modeToType(info.Mode()),
 	}
 
 	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
