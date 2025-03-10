@@ -79,17 +79,17 @@ func TestStatFile(t *testing.T) {
 		}
 
 		So(File("/some/path/something", fstat, false), ShouldResemble, FileStats{
-			Path:  "/some/path/something",
-			Size:  54321,
-			ASize: 54321,
-			Type:  "f",
+			Path:         "/some/path/something",
+			Size:         54321,
+			ApparentSize: 54321,
+			Type:         "f",
 		})
 
 		So(File("/some/path/something", fstat, true), ShouldResemble, FileStats{
-			Path:  "/some/path/something",
-			Size:  512 * 12,
-			ASize: 54321,
-			Type:  "f",
+			Path:         "/some/path/something",
+			Size:         512 * 12,
+			ApparentSize: 54321,
+			Type:         "f",
 		})
 	})
 
