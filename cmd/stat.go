@@ -84,6 +84,7 @@ The output file format is 11 tab separated columns with the following contents:
 9. Inode number (on unix).
 10. Number of hard links.
 11. Identifier of the device on which this file resides.
+12. Apparent file size in bytes (ignores the -b flag).
 
 If you supply a tsv file to --ch with the following columns:
 directory user group fileperms dirperms
