@@ -32,6 +32,10 @@ be run as the root user, because `wrstat` will generate `sudo` commands that
 attempt to connect to a port number based on the user, which will be the root
 user, not the running user.
 
+NB: When running with sudo that is configured to not pass through environmental
+variables, you must have a wr config file, accessible from the working
+directory, with ManagerHost, ManagerPort, and ManagerCertDomain set.
+
 To do certain chmod and chown operations on desired paths to bring them in to
 line with desired unix groups, create a YAML file like the example ch.yml in the
 git repository, and supply it as the --ch option to `wrstat multi`.

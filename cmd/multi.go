@@ -76,6 +76,10 @@ For full access to all files, either start wr manager as root, or start it as a
 user that can sudo without a password when running wrstat, and supply the --sudo
 option to this command.
 
+NB: When running with sudo that is configured to not pass through environmental
+variables, you must have a wr config file, accessible from the working
+directory, with ManagerHost, ManagerPort, and ManagerCertDomain set.
+
 This calls 'wrstat walk' and 'wrstat combine' on each of the given directories
 of interest. Their outputs go to a unique subdirectory of the given
 --working_directory, which means you can start running this before a previous
