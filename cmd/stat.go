@@ -216,14 +216,18 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool, maximu
 	doScanAndStat(statter, pConfig, input, output, tsvPath)
 }
 
-func startSyscallLogging(statter stat.Statter, file string) (*stat.StatsRecorder, error) {
+func logSyscallHost(file string) error {
 	host, err := os.Hostname()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get hostname: %w", err)
+		return fmt.Errorf("failed to get hostname: %w", err)
 	}
 
 	appLogger.Info("syscall logging", "host", host, "file", file)
 
+	return nil
+}
+
+func startSyscallLogging(statter stat.Statter, file string) (*stat.StatsRecorder, error) {
 	return stat.RecordStats(statter, time.Duration(recordStats)*time.Minute, func(t time.Time, u uint64) {
 		appLogger.Info("syscalls", "time", t, "file", file, "stats", u)
 	}), nil
@@ -241,6 +245,10 @@ func doScanAndStat(statter stat.Statter, pConfig stat.PathsConfig, input, output
 	}
 
 	logToFile(input.Name() + statLogOutputFileSuffix)
+
+	if err := logSyscallHost(input.Name()); err != nil {
+		die("%s", err)
+	}
 
 	if err := p.Scan(input); err != nil {
 		die("%s", err)
