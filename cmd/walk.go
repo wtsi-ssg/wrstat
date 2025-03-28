@@ -183,6 +183,10 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes, max
 		if err != nil {
 			warn("failed to close walk output file: %s", err)
 		}
+
+		if recordStats > 0 {
+			appLogger.Info("syscalls", "time", time.Now(), "writes", walker.Write, "writeBytes", walker.WriteBytes)
+		}
 	}()
 
 	if recordStats > 0 {
@@ -195,8 +199,11 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes, max
 
 		walker.EnableStats(time.Duration(recordStats)*time.Minute, func(t time.Time, sd walk.StatData) {
 			appLogger.Info("syscalls", "time", t, "opens", sd.Open, "reads", sd.Read,
-				"bytes", sd.Bytes, "closes", sd.Close, "stats", sd.Stat)
+				"bytes", sd.Bytes, "closes", sd.Close, "stats", sd.Stat,
+				"writes", sd.Write, "writeBytes", sd.WriteBytes)
 		})
+
+		files.SetLogger(walker.AddWrite)
 	}
 
 	err = walker.Walk(desiredDir, func(path string, err error) {

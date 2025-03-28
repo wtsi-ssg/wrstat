@@ -147,10 +147,14 @@ func nonRegularTypeToFileType(fileMode fs.FileMode) FileType {
 // FileOperation returns an Operation that can be used with Paths that calls
 // File() on each path the Operation receives and outputs the ToString() value
 // to the given output file.
-func FileOperation(output *os.File, statBlockSize bool) Operation {
+func FileOperation(output *os.File, statBlockSize bool, logWrites func(int64)) Operation {
 	return func(path string, info fs.FileInfo) error {
 		f := File(path, info, statBlockSize)
-		_, errw := f.WriteTo(output)
+		b, errw := f.WriteTo(output)
+
+		if logWrites != nil {
+			logWrites(b)
+		}
 
 		return errw
 	}

@@ -61,15 +61,17 @@ type LstatFunc func(string) (fs.FileInfo, error)
 // RecordStatFunc is a function that will be periodically called by RecordStats,
 // given the current time and the number of stat calls that have occurred since
 // the last time this function was called.
-type RecordStatFunc func(time.Time, uint64)
+type RecordStatFunc func(time.Time, uint64, uint64, uint64)
 
 // StatsRecorder keeps a record on the number of stat syscalls and periodically
 // passes that number to a function.
 type StatsRecorder struct {
-	statter  Statter
-	interval time.Duration
-	output   RecordStatFunc
-	stats    uint64
+	statter    Statter
+	interval   time.Duration
+	output     RecordStatFunc
+	stats      uint64
+	write      uint64
+	writeBytes uint64
 }
 
 // RecordStats adds stat syscall reporting to a Statter. The output function
@@ -84,6 +86,13 @@ func RecordStats(statter Statter, interval time.Duration, output RecordStatFunc)
 	}
 }
 
+// AddWrite records the number of bytes given to the rolling written byte count,
+// and increase the number of write by one.
+func (s *StatsRecorder) AddWrite(count int64) {
+	atomic.AddUint64(&s.write, 1)
+	atomic.AddUint64(&s.writeBytes, uint64(count)) //nolint:gosec
+}
+
 // Lstat implements the Statter interface.
 func (s *StatsRecorder) Lstat(path string) (fs.FileInfo, error) {
 	atomic.AddUint64(&s.stats, 1)
@@ -91,8 +100,10 @@ func (s *StatsRecorder) Lstat(path string) (fs.FileInfo, error) {
 	return s.statter.Lstat(path)
 }
 
-func (s *StatsRecorder) get() uint64 {
-	return atomic.SwapUint64(&s.stats, 0)
+func (s *StatsRecorder) get() (uint64, uint64, uint64) {
+	return atomic.SwapUint64(&s.stats, 0),
+		atomic.SwapUint64(&s.write, 0),
+		atomic.SwapUint64(&s.writeBytes, 0)
 }
 
 // Start will launch a goroutine that will periodically call the stored
@@ -114,9 +125,13 @@ func (s *StatsRecorder) start(ctx context.Context, ch chan struct{}) {
 	for {
 		select {
 		case t := <-time.After(s.interval):
-			s.output(t, s.get())
+			stats, writes, writeBytes := s.get()
+
+			s.output(t, stats, writes, writeBytes)
 		case <-ctx.Done():
-			s.output(time.Now(), s.get())
+			stats, writes, writeBytes := s.get()
+
+			s.output(time.Now(), stats, writes, writeBytes)
 
 			return
 		}

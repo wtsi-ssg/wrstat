@@ -33,7 +33,7 @@ import (
 // StatsData is a count of the various syscalls that have occurred and a count
 // of the bytes read.
 type StatData struct {
-	Open, Read, Stat, Close, Bytes uint64
+	Open, Read, Stat, Close, Bytes, Write, WriteBytes uint64
 }
 
 // RecordStatFunc is a function that will be periodically called  given the
@@ -54,6 +54,11 @@ func (s *stats) AddOpen() {
 func (s *stats) AddRead(count int) {
 	atomic.AddUint64(&s.Read, 1)
 	atomic.AddUint64(&s.Bytes, uint64(count)) //nolint:gosec
+}
+
+func (s *stats) AddWrite(count int) {
+	atomic.AddUint64(&s.Write, 1)
+	atomic.AddUint64(&s.WriteBytes, uint64(count)) //nolint:gosec
 }
 
 func (s *stats) AddStat() {
