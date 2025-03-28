@@ -59,8 +59,8 @@ type Statter interface {
 type LstatFunc func(string) (fs.FileInfo, error)
 
 // RecordStatFunc is a function that will be periodically called by RecordStats,
-// given the current time and the number of stat calls that have occurred since
-// the last time this function was called.
+// given the current time and the number of stat calls, write calls, and bytes
+// written that have occurred since the last time this function was called.
 type RecordStatFunc func(time.Time, uint64, uint64, uint64)
 
 // StatsRecorder keeps a record on the number of stat syscalls and periodically
@@ -87,7 +87,7 @@ func RecordStats(statter Statter, interval time.Duration, output RecordStatFunc)
 }
 
 // AddWrite records the number of bytes given to the rolling written byte count,
-// and increase the number of write by one.
+// and increase the number of writes by one.
 func (s *StatsRecorder) AddWrite(count int64) {
 	atomic.AddUint64(&s.write, 1)
 	atomic.AddUint64(&s.writeBytes, uint64(count)) //nolint:gosec

@@ -147,6 +147,13 @@ func nonRegularTypeToFileType(fileMode fs.FileMode) FileType {
 // FileOperation returns an Operation that can be used with Paths that calls
 // File() on each path the Operation receives and outputs the ToString() value
 // to the given output file.
+//
+// statBlockSize set to true will cause the primary size column to be the
+// on-disk block size instead of the apparent byte size of the file. Regardless
+// of the value, the apparent size is also stored in a later column.
+//
+// logWrites is a function that will be called on each write to an output put
+// with the number of bytes written.
 func FileOperation(output *os.File, statBlockSize bool, logWrites func(int64)) Operation {
 	return func(path string, info fs.FileInfo) error {
 		f := File(path, info, statBlockSize)
