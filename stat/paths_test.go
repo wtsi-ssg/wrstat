@@ -205,7 +205,7 @@ func TestPaths(t *testing.T) {
 			out, err := os.Create(outPath)
 			So(err, ShouldBeNil)
 
-			err = p.AddOperation("file", FileOperation(out, false))
+			err = p.AddOperation("file", FileOperation(out, false, nil))
 			So(err, ShouldBeNil)
 
 			err = p.Scan(r)

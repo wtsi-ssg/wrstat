@@ -224,15 +224,22 @@ func logSyscallHost(file string) error {
 }
 
 func startSyscallLogging(statter stat.Statter, file string) *stat.StatsRecorder {
-	return stat.RecordStats(statter, time.Duration(recordStats)*time.Minute, func(t time.Time, u uint64) {
-		appLogger.Info("syscalls", "time", t, "file", file, "stats", u)
+	return stat.RecordStats(statter, time.Duration(recordStats)*time.Minute, func(t time.Time,
+		stats, writes, writeBytes uint64) {
+		appLogger.Info("syscalls", "time", t, "file", file, "stats", stats, "writes", writes, "writeBytes", writeBytes)
 	})
 }
 
 func doScanAndStat(statter stat.Statter, pConfig stat.PathsConfig, input, output *os.File, tsvPath string) {
 	p := stat.NewPaths(statter, pConfig)
 
-	if err := p.AddOperation("file", stat.FileOperation(output, statBlockSize)); err != nil {
+	var logWrites func(int64)
+
+	if rstatter, ok := statter.(*stat.StatsRecorder); ok {
+		logWrites = rstatter.AddWrite
+	}
+
+	if err := p.AddOperation("file", stat.FileOperation(output, statBlockSize, logWrites)); err != nil {
 		die("%s", err)
 	}
 
@@ -242,8 +249,10 @@ func doScanAndStat(statter stat.Statter, pConfig stat.PathsConfig, input, output
 
 	logToFile(input.Name() + statLogOutputFileSuffix)
 
-	if err := logSyscallHost(input.Name()); err != nil {
-		die("%s", err)
+	if logWrites != nil {
+		if err := logSyscallHost(input.Name()); err != nil {
+			die("%s", err)
+		}
 	}
 
 	if err := p.Scan(input); err != nil {

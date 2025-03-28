@@ -58,7 +58,7 @@ func (e *WriteError) Unwrap() error { return e.Err }
 
 type bufferedFile struct {
 	*bufio.Writer
-	io.Closer
+	aw *asyncWriter
 }
 
 func (b *bufferedFile) Close() error {
@@ -66,14 +66,15 @@ func (b *bufferedFile) Close() error {
 		return err
 	}
 
-	return b.Closer.Close()
+	return b.aw.Close()
 }
 
 type asyncWriter struct {
-	mu     sync.Mutex
-	buffer [bufferSize]byte
-	len    int
-	err    error
+	mu          sync.Mutex
+	buffer      [bufferSize]byte
+	len         int
+	err         error
+	writeLogger func(int)
 	io.WriteCloser
 }
 
@@ -91,7 +92,13 @@ func (a *asyncWriter) Write(p []byte) (int, error) {
 	go func() {
 		defer a.mu.Unlock()
 
-		_, a.err = a.WriteCloser.Write(a.buffer[:a.len])
+		var b int
+
+		b, a.err = a.WriteCloser.Write(a.buffer[:a.len])
+
+		if a.writeLogger != nil {
+			a.writeLogger(b)
+		}
 	}()
 
 	return len(p), nil
@@ -147,7 +154,7 @@ func NewFiles(outDir string, n int) (*Files, error) {
 		f := &asyncWriter{WriteCloser: file}
 
 		files[i].Writer = bufio.NewWriterSize(f, bufferSize)
-		files[i].Closer = f
+		files[i].aw = f
 
 		outPaths[i] = path
 	}
@@ -158,6 +165,14 @@ func NewFiles(outDir string, n int) (*Files, error) {
 		filesMax: len(files),
 		mus:      make([]sync.Mutex, len(files)),
 	}, nil
+}
+
+// Set logger takes a callback fn that will be given the number of bytes written
+// after each write.
+func (f *Files) SetLogger(fn func(int)) {
+	for _, file := range f.files {
+		file.aw.writeLogger = fn
+	}
 }
 
 // WritePaths returns a PathCallback function suitable for passing to New().
