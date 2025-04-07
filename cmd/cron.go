@@ -129,6 +129,7 @@ func init() {
 		"disk usage (blocks) instead of apparent byte size")
 	cronCmd.Flags().IntVarP(&maximumAverageStatTime, "maximum_stat_time", "M", defaultMaximumAveerageStatTime,
 		"Maxiumum average stat time (seconds); will fail if the average (over 1000 stats) goes above this number")
+	cronCmd.Flags().BoolVarP(&multiRun, "multirun", "S", false, "allow multiple runs to occur at the same time")
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.
