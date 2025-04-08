@@ -60,6 +60,7 @@ var (
 	timeout       int64
 	recordStats   int64
 	statBlockSize bool
+	multiRun      bool
 )
 
 // multiCmd represents the multi command.
@@ -93,6 +94,9 @@ unique directory created for all of them.
 --rep_grp of wrstat-[cmd]-[directory_basename]-[date]-[unique], so you can use
 'wr status -i wrstat -z -o s' to get information on how long everything or
 particular subsets of jobs took.)
+
+If an existing run is in progress, a new run will not start unless the
+--multirun/-S flag is specified.
 
 Once everything has completed, the final output files are moved to the given
 --final_output directory by 'wrstat tidy', within a subdirectory named for the
@@ -148,6 +152,7 @@ func init() {
 		"disk usage (blocks) instead of apparent byte size")
 	multiCmd.Flags().IntVarP(&maximumAverageStatTime, "maximum_stat_time", "M", defaultMaximumAveerageStatTime,
 		"Maxiumum average stat time (seconds); will fail if the average (over 1000 stats) goes above this number")
+	multiCmd.Flags().BoolVarP(&multiRun, "multirun", "S", false, "allow multiple runs to occur at the same time")
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
@@ -170,10 +175,21 @@ func checkMultiArgs() {
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
-func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid string,
+func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid string, //nolint:gocognit,gocyclo,funlen
 	maximumAverageStatTime int, sudo bool) error {
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
+
+	if !multiRun { //nolint:nestif
+		jobs, err := s.FindJobsByRepGroupPrefixAndState("wrstat-tidy", jobqueue.JobStateDependent)
+		if err != nil {
+			return err
+		}
+
+		if len(jobs) != 0 {
+			return nil
+		}
+	}
 
 	var err error
 

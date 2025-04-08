@@ -3,7 +3,7 @@ module github.com/wtsi-ssg/wrstat/v6
 go 1.24
 
 require (
-	github.com/VertebrateResequencing/wr v0.35.2
+	github.com/VertebrateResequencing/wr v0.35.3
 	github.com/adhocore/gronx v1.19.5
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v2.16.0+incompatible

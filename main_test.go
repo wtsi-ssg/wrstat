@@ -258,6 +258,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Override:     1,
 			Retries:      30,
 			DepGroups:    []string{walk1DepGroup},
+			State:        "delayed",
 		},
 		{
 			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/%[4]s_／some-other／path -i"+
@@ -271,6 +272,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Override:     1,
 			Retries:      30,
 			DepGroups:    []string{walk2DepGroup},
+			State:        "delayed",
 		},
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/%s_／some／path\"", exe, workingDir, repGroup, dateStr[1]),
@@ -287,6 +289,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 					DepGroup: walk1DepGroup,
 				},
 			},
+			State: "delayed",
 		},
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/%s_／some-other／path\"", exe, workingDir, repGroup, dateStr[1]),
@@ -303,6 +306,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 					DepGroup: walk2DepGroup,
 				},
 			},
+			State: "delayed",
 		},
 		{
 			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some／path\" \"%s/%s/%s_／some／path\"",
@@ -319,6 +323,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 					DepGroup: combine1DepGroup,
 				},
 			},
+			State: "delayed",
 		},
 		{
 			Cmd: fmt.Sprintf("%s tidy -f \"final_output/%s_／some-other／path\" \"%s/%s/%s_／some-other／path\"",
@@ -335,6 +340,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 					DepGroup: combine2DepGroup,
 				},
 			},
+			State: "delayed",
 		},
 	}
 
@@ -358,6 +364,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			LimitGroups:  []string{finishTime + "<datetime"},
 			Override:     1,
 			Retries:      30,
+			State:        "delayed",
 		})
 	}
 
@@ -413,6 +420,7 @@ func TestWalk(t *testing.T) {
 				Override:  1,
 				Retries:   30,
 				DepGroups: []string{depgroup},
+				State:     "delayed",
 			},
 		}
 
@@ -453,6 +461,7 @@ func TestWalk(t *testing.T) {
 				Override:  1,
 				Retries:   30,
 				DepGroups: []string{depgroup},
+				State:     "delayed",
 			},
 			{
 				Cmd:         exe + " stat " + walk2,
@@ -470,6 +479,7 @@ func TestWalk(t *testing.T) {
 				Override:  1,
 				Retries:   30,
 				DepGroups: []string{depgroup},
+				State:     "delayed",
 			},
 		}
 
@@ -915,6 +925,8 @@ export WR_ManagerWeb=0
 
 yes y | WR_RunnerExecShell=sh wr manager start -s local --max_ram -1 --max_cores -1;
 
+wrstat multi -t 1 -m 0 -w /tmp/working/complete/ -f /tmp/final/ /simple/* /objects/*;
+sleep 1s;
 wrstat multi -t 1 -m 0 -w /tmp/working/complete/ -f /tmp/final/ /simple/* /objects/*;
 waitForJobs;`)
 		So(os.Chmod(buildScript, 0555), ShouldBeNil)
