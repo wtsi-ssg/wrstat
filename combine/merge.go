@@ -142,7 +142,7 @@ func (u *unquoter) readHex(n int) rune { //nolint:gocyclo
 	var r rune
 
 	for range n {
-		r <<= 8
+		r <<= 4
 
 		x := u.next()
 		if '0' <= x && x <= '9' { //nolint:gocritic,nestif
