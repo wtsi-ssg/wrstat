@@ -76,6 +76,15 @@ func TestMergeSortedFiles(t *testing.T) {
 					"\"/a/b/c/dz\"\t3\t2\t1\t3\n\"/a/b/cz/\"\t0\t10\t2\t3\n",
 				UnquoteComparison: true,
 			},
+			{
+				Inputs: []string{
+					"\"/a/b/c/d\"\t3\t2\t1\t3\n\"/a/b/c/\\x1b[0m\\x1b[01\"\t0\t10\t2\t3",
+					"\"/a/b/c/dz\"\t3\t2\t1\t3\n\"/a/b/cz/\"\t0\t10\t2\t3",
+				},
+				Output: "\"/a/b/c/d\"\t3\t2\t1\t3\n\"/a/b/c/\\x1b[0m\\x1b[01\"\t0\t10\t2\t3\n" +
+					"\"/a/b/c/dz\"\t3\t2\t1\t3\n\"/a/b/cz/\"\t0\t10\t2\t3\n",
+				UnquoteComparison: true,
+			},
 		} {
 			files := make([]*os.File, len(test.Inputs))
 
