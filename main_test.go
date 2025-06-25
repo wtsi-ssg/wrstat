@@ -52,7 +52,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-const app = "wrstat_test"
+const (
+	app      = "wrstat_test"
+	walkTime = 3 * time.Hour
+	statTime = 3 * time.Hour
+)
 
 func buildSelf() func() {
 	cmd := exec.Command(
@@ -193,7 +197,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 
 	walkReqs := &scheduler.Requirements{
 		RAM:   16000,
-		Time:  19 * time.Hour,
+		Time:  walkTime,
 		Cores: 3,
 		Disk:  1,
 	}
@@ -413,7 +417,7 @@ func TestWalk(t *testing.T) {
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
-					Time:  12 * time.Hour,
+					Time:  statTime,
 					Cores: 0.05,
 					Disk:  1,
 				},
@@ -454,7 +458,7 @@ func TestWalk(t *testing.T) {
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
-					Time:  12 * time.Hour,
+					Time:  statTime,
 					Cores: 0.05,
 					Disk:  1,
 				},
@@ -472,7 +476,7 @@ func TestWalk(t *testing.T) {
 				ReqGroup:    "wrstat-stat",
 				Requirements: &scheduler.Requirements{
 					RAM:   200,
-					Time:  12 * time.Hour,
+					Time:  statTime,
 					Cores: 0.05,
 					Disk:  1,
 				},
