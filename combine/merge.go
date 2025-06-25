@@ -33,14 +33,25 @@ import (
 	"io"
 	"os"
 	"slices"
-	"unicode/utf8"
 )
 
-var newline = []byte{'\n'} //nolint:gochecknoglobals
+var (
+	newline = []byte{'\n'} //nolint:gochecknoglobals
+
+	ErrMissingOpeningSpeechMark = errors.New("missing opening speech mark")
+	ErrMissingClosingSpeechMark = errors.New("missing closing speech mark")
+	ErrInvalidQuote             = errors.New("invalid quote")
+	ErrInvalidOctal             = errors.New("invalid octal escape")
+	ErrInvalidHex               = errors.New("invalid hex escape")
+)
 
 type fileLine struct {
-	line  []byte
-	index int
+	line, unquotedLine []byte
+	index              int
+}
+
+func compare(a, b fileLine) int {
+	return bytes.Compare(b.unquotedLine, a.unquotedLine)
 }
 
 type readerHeap struct {
@@ -55,126 +66,119 @@ func (rh *readerHeap) Len() int {
 }
 
 func (rh *readerHeap) Push(fl fileLine) {
-	cmp := compareLines
-
-	if rh.unquoteComparison {
-		cmp = compareQuotedPaths
-	}
-
-	pos, _ := slices.BinarySearchFunc(rh.heap, fl, cmp)
+	pos, _ := slices.BinarySearchFunc(rh.heap, fl, compare)
 
 	rh.heap = slices.Insert(rh.heap, pos, fl)
 }
 
-func compareLines(a, b fileLine) int {
-	return bytes.Compare(b.line, a.line)
-}
+func unquote(str []byte) ([]byte, error) { //nolint:gocognit,gocyclo,cyclop,funlen
+	if len(str) < 2 || str[0] != '"' {
+		return nil, ErrMissingOpeningSpeechMark
+	}
 
-type unquoter []byte
+	var dst []byte
 
-func (u *unquoter) Next() rune { //nolint:gocyclo,funlen,cyclop
-	switch b := u.next(); b {
-	case '\\':
-		switch v := u.next(); v {
-		case '\'':
-			return '\''
+	str = str[1:]
+
+	for len(str) != 0 {
+		c := str[0]
+		str = str[1:]
+
+		switch c {
+		case '\\':
+			d := str[0]
+			str = str[1:]
+
+			var err error
+
+			switch d {
+			case '\'', '"':
+				dst = append(dst, d)
+			case 'a':
+				dst = append(dst, '\a')
+			case 'b':
+				dst = append(dst, '\b')
+			case 'f':
+				dst = append(dst, '\f')
+			case 'n':
+				dst = append(dst, '\n')
+			case 'r':
+				dst = append(dst, '\r')
+			case 't':
+				dst = append(dst, '\t')
+			case '0', '1', '2', '3', '4', '5', '6', '7':
+				dst, str, err = appendOctal(dst, str, d)
+			case 'x':
+				dst, str, err = appendHex(dst, str)
+			case 'u':
+				dst, str, err = appendHexes(dst, str, 2) //nolint:mnd
+			case 'U':
+				dst, str, err = appendHexes(dst, str, 4) //nolint:mnd
+			default:
+				err = ErrInvalidQuote
+			}
+
+			if err != nil {
+				return nil, err
+			}
 		case '"':
-			return '"'
-		case 'a':
-			return '\a'
-		case 'b':
-			return '\b'
-		case 'f':
-			return '\f'
-		case 'n':
-			return '\n'
-		case 'r':
-			return '\r'
-		case 't':
-			return '\t'
-		case '0', '1', '2', '3', '4', '5', '6', '7':
-			return u.readOctal(v)
-		case 'x':
-			return u.readHex(2) //nolint:mnd
-		case 'u':
-			return u.readHex(4) //nolint:mnd
-		case 'U':
-			return u.readHex(8) //nolint:mnd
+			return dst, nil
 		default:
-			return -1
+			dst = append(dst, c)
 		}
-	case '"':
-		*u = (*u)[:0]
-
-		return 0
-	default:
-		return b
 	}
+
+	return nil, ErrMissingClosingSpeechMark
 }
 
-func (u *unquoter) next() rune {
-	if len(*u) == 0 {
-		return -1
+func appendOctal(dst, str []byte, c byte) ([]byte, []byte, error) {
+	if len(str) < 2 || str[0] < '0' || str[0] >= '8' || str[1] < '0' || str[1] >= '8' {
+		return nil, nil, ErrInvalidOctal
 	}
 
-	r, l := utf8.DecodeRune(*u)
-
-	*u = (*u)[l:]
-
-	return r
+	return append(dst, ((c-'0')<<6)|((str[0]-'0')<<3)|(str[1]-'0')), str[2:], nil //nolint:mnd
 }
 
-func (u *unquoter) readOctal(v rune) rune {
-	w := u.next()
-	if w < '0' || w > '9' {
-		return -1
+func appendHex(dst, str []byte) ([]byte, []byte, error) {
+	if len(str) < 2 { //nolint:mnd
+		return nil, nil, ErrInvalidHex
 	}
 
-	x := u.next()
-	if x < '0' || x > '9' {
-		return -1
+	a, err := readHexNibble(str[0])
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return (v - '0'<<6) | (w - '0'<<3) | (x - '0')
+	b, err := readHexNibble(str[1])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return append(dst, a<<4|b), str[2:], nil
 }
 
-func (u *unquoter) readHex(n int) rune { //nolint:gocyclo
-	var r rune
+func appendHexes(dst, str []byte, n int) ([]byte, []byte, error) {
+	var err error
 
 	for range n {
-		r <<= 4
-
-		x := u.next()
-		if '0' <= x && x <= '9' { //nolint:gocritic,nestif
-			r |= x - '0'
-		} else if 'A' <= x && x <= 'F' {
-			r |= x - 'A' + 10 //nolint:mnd
-		} else if 'a' <= x && x <= 'f' {
-			r |= x - 'a' + 10 //nolint:mnd
-		} else {
-			*u = (*u)[:0]
-
-			return -1
+		if dst, str, err = appendHex(dst, str); err != nil {
+			return nil, nil, err
 		}
 	}
 
-	return r
+	return dst, str, nil
 }
 
-func compareQuotedPaths(a, b fileLine) int {
-	una := unquoter(a.line[1:])
-	unb := unquoter(b.line[1:])
-
-	for {
-		a := una.Next()
-		b := unb.Next()
-
-		if a != b {
-			return int(b - a)
-		} else if a == -1 && b == -1 {
-			return 0
-		}
+func readHexNibble(x byte) (byte, error) {
+	if '0' <= x && x <= '9' { //nolint:gocritic,nestif
+		return x - '0', nil
+	} else if 'A' <= x && x <= 'F' {
+		return x - 'A' + 10, nil //nolint:mnd
+	} else if 'a' <= x && x <= 'f' {
+		return x - 'a' + 10, nil //nolint:mnd
 	}
+
+	return 0, ErrInvalidHex
 }
 
 func (rh *readerHeap) Pop() fileLine {
@@ -226,10 +230,19 @@ func (rh *readerHeap) pushToHeap(index int) error {
 		line = append(line, '\n')
 	}
 
-	rh.Push(fileLine{
-		line:  line,
-		index: index,
-	})
+	fl := fileLine{
+		line:         line,
+		unquotedLine: line,
+		index:        index,
+	}
+
+	if rh.unquoteComparison {
+		if fl.unquotedLine, err = unquote(line); err != nil {
+			return err
+		}
+	}
+
+	rh.Push(fl)
 
 	return nil
 }
