@@ -42,7 +42,7 @@ import (
 const (
 	defaultInodesPerJob   = 1000000
 	walkLogOutputBasename = "walk.log"
-	statTime              = 12 * time.Hour
+	statTime              = 3 * time.Hour
 	statRAM               = 200
 	statCores             = 0.05
 	timeoutExitCode       = 128
