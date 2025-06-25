@@ -35,7 +35,7 @@ import (
 )
 
 func TestMergeSortedFiles(t *testing.T) {
-	Convey("", t, func() {
+	Convey("Lines are correctly merge sorted", t, func() {
 		for _, test := range [...]struct {
 			Inputs            []string
 			Output            string
@@ -55,8 +55,8 @@ func TestMergeSortedFiles(t *testing.T) {
 				UnquoteComparison: true,
 			},
 			{
-				Inputs:            []string{"\"ab\\nc\"\n\"def\"", "\"ab d\"\n\"cba\""},
-				Output:            "\"ab\\nc\"\n\"ab d\"\n\"cba\"\n\"def\"\n",
+				Inputs:            []string{"\"ab\\nc\"\n\"de\\\\f\"", "\"ab d\"\n\"cba\""},
+				Output:            "\"ab\\nc\"\n\"ab d\"\n\"cba\"\n\"de\\\\f\"\n",
 				UnquoteComparison: true,
 			},
 			{

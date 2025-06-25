@@ -92,7 +92,7 @@ func unquote(str []byte) ([]byte, error) { //nolint:gocognit,gocyclo,cyclop,funl
 			var err error
 
 			switch d {
-			case '\'', '"':
+			case '\'', '"', '\\':
 				dst = append(dst, d)
 			case 'a':
 				dst = append(dst, '\a')
@@ -106,6 +106,8 @@ func unquote(str []byte) ([]byte, error) { //nolint:gocognit,gocyclo,cyclop,funl
 				dst = append(dst, '\r')
 			case 't':
 				dst = append(dst, '\t')
+			case 'v':
+				dst = append(dst, '\v')
 			case '0', '1', '2', '3', '4', '5', '6', '7':
 				dst, str, err = appendOctal(dst, str, d)
 			case 'x':
