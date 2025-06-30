@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/client"
@@ -184,36 +185,47 @@ func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid strin
 	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
 	defer d()
 
-	if !multiRun { //nolint:nestif
-		jobs, err := s.FindJobsByRepGroupPrefixAndState("wrstat-tidy", jobqueue.JobStateDependent)
+	desiredPaths := make([]string, 0, len(paths))
+
+	for _, path := range paths {
+		absPath, err := filepath.Abs(path)
 		if err != nil {
 			return err
 		}
 
-		if len(jobs) != 0 {
-			return nil
+		if !multiRun { //nolint:nestif
+			repGrp := tidyRepGrp(absPath, "", "")
+			repGrp = strings.TrimSuffix(repGrp, "--")
+
+			jobs, err := s.FindJobsByRepGroupPrefixAndState(repGrp, jobqueue.JobStateDependent)
+			if err != nil {
+				return err
+			}
+
+			if len(jobs) != 0 {
+				warn("there is already a queued job for %s", absPath)
+
+				continue
+			}
 		}
+
+		desiredPaths = append(desiredPaths, absPath)
 	}
 
-	var err error
-
-	for n, path := range paths {
-		paths[n], err = filepath.Abs(path)
-		if err != nil {
-			return err
-		}
+	if len(desiredPaths) == 0 {
+		return nil
 	}
 
 	unique := client.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
 	now := time.Now().Format("20060102-150405")
 
-	err = os.MkdirAll(outputRoot, userGroupPerm)
+	err := os.MkdirAll(outputRoot, userGroupPerm)
 	if err != nil {
 		return err
 	}
 
-	scheduleWalkJobs(outputRoot, paths, unique, finalDir, multiStatJobs,
+	scheduleWalkJobs(outputRoot, desiredPaths, unique, finalDir, multiStatJobs,
 		multiInodes, maximumAverageStatTime, multiCh, forcedQueue, queuesToAvoid, now, s)
 
 	if timeout > 0 {
