@@ -235,7 +235,7 @@ func (fakeDir) ModTime() time.Time {
 }
 
 func (fakeDir) Mode() fs.FileMode {
-	return 0
+	return fs.ModeDir
 }
 
 func (fakeDir) IsDir() bool {
