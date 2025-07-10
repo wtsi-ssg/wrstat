@@ -47,9 +47,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/VertebrateResequencing/wr/client"
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/spf13/pflag"
+	"github.com/wtsi-ssg/wrstat/v6/cmd"
 )
 
 const (
@@ -125,34 +128,45 @@ func runWRStat(app string, args ...string) (string, string, []*jobqueue.Job, err
 		jobs           []*jobqueue.Job
 	)
 
+	cmd.RootCmd.SetOut(&stdout)
+	cmd.RootCmd.SetErr(&stderr)
+	cmd.RootCmd.SetArgs(args)
+
+	for _, cmd := range cmd.RootCmd.Commands() {
+		cmd.Flags().VisitAll(func(f *pflag.Flag) {
+			f.Changed = false
+			f.Value.Set(f.DefValue) //nolint:errcheck
+			f.Changed = false
+		})
+	}
+
+	cmd.InitLogger()
+
 	pr, pw, err := os.Pipe()
 	if err != nil {
 		return "", "", nil, err
 	}
 
-	cmd := exec.Command("./"+app, args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	cmd.ExtraFiles = append(cmd.ExtraFiles, pw)
-
 	jd := json.NewDecoder(pr)
 	done := make(chan struct{})
 
 	go func() {
+		defer pr.Close()
+		defer close(done)
+
 		for {
 			var j []*jobqueue.Job
 
 			if errr := jd.Decode(&j); errr != nil {
-				break
+				return
 			}
 
 			jobs = append(jobs, j...)
 		}
-
-		close(done)
 	}()
 
-	err = cmd.Run()
+	client.PretendSubmissions = strconv.FormatInt(int64(pw.Fd()), 10)
+	err = cmd.RootCmd.Execute()
 
 	pw.Close()
 
@@ -165,7 +179,7 @@ func TestVersion(t *testing.T) {
 	Convey("wrstat prints the correct version", t, func() {
 		output, stderr, _, err := runWRStat(app, "version")
 		So(err, ShouldBeNil)
-		So(strings.TrimSpace(output), ShouldEqual, "TESTVERSION")
+		So(strings.TrimSpace(output), ShouldEqual, cmd.Version)
 		So(stderr, ShouldBeBlank)
 	})
 }
@@ -210,6 +224,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 			So(err, ShouldBeNil)
 
 			expectation := createMultiJobExpectation(t, jobs, workingDir, 0, true)
+
 			So(jobs, ShouldResemble, expectation)
 		})
 	})
@@ -260,7 +275,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 
 	now := dateStr[1]
 
-	exe, err := filepath.Abs(app)
+	exe, err := os.Executable()
 	So(err, ShouldBeNil)
 
 	exeWalk, err := filepath.Abs(appWalk)

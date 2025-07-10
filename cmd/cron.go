@@ -27,6 +27,8 @@ package cmd
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,6 +45,11 @@ import (
 var (
 	crontab  string
 	cronKill bool
+)
+
+var (
+	ErrRequiredCronTab = errors.New("--crontab must be supplied")
+	ErrInvalidCronTab  = errors.New("--crontab is invalid")
 )
 
 // cronCmd represents the cron command.
@@ -63,23 +70,21 @@ If you can run this with sudo, but don't have full root privileges yourself, you
 won't be able to kill the root processes yourself directly. To kill off prior
 invocations of cron, do 'sudo wrstsat cron --kill'.
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		if cronKill {
-			killCronProcesses()
-
-			return
+			return killCronProcesses()
 		}
 
-		checkMultiArgs()
+		if err := checkMultiArgs(); err != nil {
+			return err
+		}
 
 		if crontab == "" {
-			die("--crontab must be supplied")
+			return ErrRequiredCronTab
 		}
 
-		gron := gronx.New()
-
-		if !gron.IsValid(crontab) {
-			die("--crontab is invalid")
+		if !gronx.New().IsValid(crontab) {
+			return ErrInvalidCronTab
 		}
 
 		taskr := tasker.New(tasker.Option{})
@@ -88,13 +93,15 @@ invocations of cron, do 'sudo wrstsat cron --kill'.
 				maximumAverageStatTime, sudo)
 
 			if client.PretendSubmissions != "" {
-				os.Exit(0)
+				taskr.Stop()
 			}
 
 			return 0, err
 		})
 
 		taskr.Run()
+
+		return nil
 	},
 }
 
@@ -137,25 +144,26 @@ func init() {
 }
 
 // killCronProcesses tries to kill all 'wrstat' processes on the system.
-func killCronProcesses() {
+func killCronProcesses() error {
 	exePath, err := os.Executable()
 	if err != nil {
-		die("could not get own exe: %s", err)
+		return fmt.Errorf("could not get own exe: %w", err)
 	}
 
 	exe := filepath.Base(exePath)
-
 	cmd := exec.Command("bash", "-c", `ps ax | grep "`+exe+ //nolint: gosec
 		`" | grep -v grep | grep -v '\--kill' | grep -o '^[ ]*[0-9]*'`)
 
 	out, err := cmd.Output()
 	if err != nil {
-		die("could not find any %s processes: %s", exe, err)
+		return fmt.Errorf("could not find any %s processes: %w", exe, err)
 	}
 
 	pids := strings.Fields(string(out))
 
 	killPIDs(pids)
+
+	return nil
 }
 
 // killPIDs kills the given pids.

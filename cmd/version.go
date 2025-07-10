@@ -41,7 +41,7 @@ var versionCmd = &cobra.Command{
 	Short: "Print wrstat version",
 	Long:  `Print wrstat version.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(Version)
+		fmt.Fprintln(RootCmd.OutOrStdout(), Version)
 	},
 }
 

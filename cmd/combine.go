@@ -26,9 +26,10 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/v6/combine"
@@ -37,6 +38,8 @@ import (
 
 const combineStatsOutputFileBasename = "combine.stats.gz"
 const combineLogOutputFileBasename = "combine.log.gz"
+
+var ErrOutputDirRequired = errors.New("exactly 1 'wrstat walk' output directory must be supplied")
 
 // combineCmd represents the combine command.
 var combineCmd = &cobra.Command{
@@ -52,35 +55,33 @@ The same applies to the *.log files, being called 'combine.log.gz'.
 
 NB: only call this by adding it to wr with a dependency on the dependency group
 you supplied 'wrstat walk'.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		if len(args) != 1 {
-			die("exactly 1 'wrstat walk' output directory must be supplied")
+			return ErrOutputDirRequired
 		}
 
 		sourceDir, err := filepath.Abs(args[0])
 		if err != nil {
-			die("could not get the absolute path to [%s]: %s", args[0], err)
+			return fmt.Errorf("could not get the absolute path to [%s]: %w", args[0], err)
 		}
 
 		go keepAliveCheck(sourceDir, "source directory no longer exists")
 
-		var wg sync.WaitGroup
+		errCh := make(chan error)
 
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
-
-			concatenateAndCompressStatsFiles(sourceDir)
+			errCh <- concatenateAndCompressStatsFiles(sourceDir)
 		}()
 
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
-
-			concatenateAndCompressLogFiles(sourceDir)
+			errCh <- concatenateAndCompressLogFiles(sourceDir)
 		}()
 
-		wg.Wait()
+		if err := <-errCh; err != nil {
+			return err
+		}
+
+		return <-errCh
 	},
 }
 
@@ -94,42 +95,44 @@ func init() {
 
 // concatenateAndCompressStatsFiles finds and concatenates the stats files and
 // compresses the output.
-func concatenateAndCompressStatsFiles(sourceDir string) {
+func concatenateAndCompressStatsFiles(sourceDir string) error {
 	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir, sourceDir, statOutputFileSuffix,
 		combineStatsOutputFileBasename)
 	if err != nil {
-		die("failed to find, open or create stats files: %s", err)
+		return fmt.Errorf("failed to find, open or create stats files: %w", err)
 	}
 
 	if err = combine.StatFiles(inputFiles, outputFile); err != nil {
-		die("failed to concatenate and compress stats files (err: %s)", err)
+		return fmt.Errorf("failed to concatenate and compress stats files (err: %w)", err)
 	}
 
-	closeFiles(inputFiles, outputFile)
+	return closeFiles(inputFiles, outputFile)
 }
 
-func closeFiles(inputFiles []*os.File, outputFile *os.File) {
+func closeFiles(inputFiles []*os.File, outputFile *os.File) error {
 	for _, file := range inputFiles {
 		file.Close()
 	}
 
 	if err := outputFile.Close(); err != nil {
-		die("failed to close compressed stats file (err: %s)", err)
+		return fmt.Errorf("failed to close compressed stats file (err: %w)", err)
 	}
+
+	return nil
 }
 
 // concatenateAndCompressLogFiles finds and merges the log files and compresses the
 // output.
-func concatenateAndCompressLogFiles(sourceDir string) {
+func concatenateAndCompressLogFiles(sourceDir string) error {
 	inputFiles, outputFile, err := fs.FindOpenAndCreate(sourceDir,
 		sourceDir, statLogOutputFileSuffix, combineLogOutputFileBasename)
 	if err != nil {
-		die("failed to find, open or create log files: %s", err)
+		return fmt.Errorf("failed to find, open or create log files: %w", err)
 	}
 
 	if err := combine.LogFiles(inputFiles, outputFile); err != nil {
-		die("failed to merge the log files: %s", err)
+		return fmt.Errorf("failed to merge the log files: %w", err)
 	}
 
-	closeFiles(inputFiles, outputFile)
+	return closeFiles(inputFiles, outputFile)
 }

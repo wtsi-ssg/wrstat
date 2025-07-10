@@ -28,11 +28,15 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/wtsi-ssg/wrstat/v6/ch"
 )
+
+var ErrNeedChTSV = errors.New("need to supply location of ch.tsv file")
 
 // chtsvCmd represents the chtsv command.
 var chtsvCmd = &cobra.Command{
@@ -43,14 +47,14 @@ var chtsvCmd = &cobra.Command{
 This command is used to test the formatting of a ch.tsv file, and will inform of
 a successful parsing, or report where the (first) error is located.
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		if len(args) != 1 {
-			die("need to supply location of ch.tsv file.")
+			return ErrNeedChTSV
 		}
 
 		f, err := os.Open(args[0])
 		if err != nil {
-			die("failed to open file: %s", err)
+			return fmt.Errorf("failed to open file: %w", err)
 		}
 
 		defer f.Close()
@@ -61,10 +65,12 @@ a successful parsing, or report where the (first) error is located.
 		}
 
 		if err = tr.Error(); err != nil {
-			die("failed to parse file: %s", err)
+			return fmt.Errorf("failed to parse file: %w", err)
 		}
 
 		info("TSV parsed successfully.")
+
+		return nil
 	},
 }
 

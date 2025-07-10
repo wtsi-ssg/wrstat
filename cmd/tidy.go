@@ -27,6 +27,8 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"path/filepath"
 
 	"github.com/spf13/cobra"
@@ -41,6 +43,8 @@ const disableDeletion = false
 
 // options for this cmd.
 var tidyDir string
+
+var ErrWorkingDirRequired = errors.New("exactly 1 unique working directory from 'wrstat multi' must be supplied")
 
 // tidyCmd represents the tidy command.
 var tidyCmd = &cobra.Command{
@@ -75,23 +79,23 @@ Once all output files have been moved, the "multi unique" directory is deleted.
 
 It is safe to call this multiple times if it was, for example, killed half way
 through; it won't clobber final outputs already moved.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		if tidyDir == "" {
-			die("--final_output is required")
+			return ErrFinalOutputRequired
 		}
 
 		if len(args) != 1 {
-			die("exactly 1 unique working directory from 'wrstat multi' must be supplied")
+			return ErrWorkingDirRequired
 		}
 
 		destDir, err := filepath.Abs(tidyDir)
 		if err != nil {
-			die("could not determine absolute path to --final_output dir: %s", err)
+			return fmt.Errorf("could not determine absolute path to --final_output dir: %w", err)
 		}
 
 		sourceDir, err := filepath.Abs(args[0])
 		if err != nil {
-			die("could not determine absolute path to source dir: %s", err)
+			return fmt.Errorf("could not determine absolute path to source dir: %w", err)
 		}
 
 		tidy := neaten.Tidy{
@@ -110,8 +114,10 @@ through; it won't clobber final outputs already moved.`,
 		}
 
 		if err = tidy.Up(disableDeletion); err != nil {
-			die("could not neaten dir: %s", err)
+			return fmt.Errorf("could not neaten dir: %w", err)
 		}
+
+		return nil
 	},
 }
 

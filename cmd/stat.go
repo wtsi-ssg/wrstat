@@ -27,6 +27,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,11 +49,14 @@ const (
 	rollingStatAverageLength       = 1000
 )
 
+//nolint:gochecknoglobals
 var (
 	statDebug              bool
 	statCh                 string
 	maximumAverageStatTime int
 )
+
+var ErrRequiredInputFile = errors.New("exactly 1 input file should be provided")
 
 // statCmd represents the stat command.
 var statCmd = &cobra.Command{
@@ -107,12 +111,12 @@ Finally, log messages (including things like warnings and errors while working
 on the above) are stored in another file named after the input file with a
 ".log" suffix.
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, args []string) error {
 		if len(args) != 1 {
-			die("exactly 1 input file should be provided")
+			return ErrRequiredInputFile
 		}
 
-		statPathsInFile(args[0], statCh, statDebug)
+		return statPathsInFile(args[0], statCh, statDebug)
 	},
 }
 
@@ -134,10 +138,10 @@ func init() {
 }
 
 // statPathsInFile does the main work.
-func statPathsInFile(inputPath string, tsvPath string, debug bool) {
+func statPathsInFile(inputPath string, tsvPath string, debug bool) error {
 	input, err := os.Open(inputPath)
 	if err != nil {
-		die("failed to open input file: %s", err)
+		return fmt.Errorf("failed to open input file: %w", err)
 	}
 
 	go keepAliveCheck(inputPath, "input file no longer exists")
@@ -149,36 +153,38 @@ func statPathsInFile(inputPath string, tsvPath string, debug bool) {
 		}
 	}()
 
-	scanAndStatInput(input, createStatOutputFile(inputPath), tsvPath, debug, maximumAverageStatTime)
+	outFile, err := createStatOutputFile(inputPath)
+
+	return scanAndStatInput(input, outFile, tsvPath, debug, maximumAverageStatTime)
 }
 
 // createStatOutputFile creates a file named input.stats.
-func createStatOutputFile(input string) *os.File {
+func createStatOutputFile(input string) (*os.File, error) {
 	return createOutputFileWithSuffix(input, statOutputFileSuffix)
 }
 
 // createOutputFileWithSuffix creates an output file named after prefixPath
 // appended with suffix.
-func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
+func createOutputFileWithSuffix(prefixPath, suffix string) (*os.File, error) {
 	fname := prefixPath + suffix
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		die("failed to get hostname: %s", err)
+		return nil, fmt.Errorf("failed to get hostname: %w", err)
 	}
 
 	output, err := os.Create(fmt.Sprintf("%s.%s.%d", fname, hostname, os.Getpid()))
 	if err != nil {
-		die("failed to create output file: %s", err)
+		return nil, fmt.Errorf("failed to create output file: %w", err)
 	}
 
 	os.Remove(fname)
 
 	if err = os.Symlink(output.Name(), fname); err != nil {
-		die("failed to create symlink: %s", err)
+		return nil, fmt.Errorf("failed to create symlink: %w", err)
 	}
 
-	return output
+	return output, nil
 }
 
 // scanAndStatInput scans through the input, stats each path, and outputs the
@@ -188,7 +194,7 @@ func createOutputFileWithSuffix(prefixPath, suffix string) *os.File {
 // paths.
 //
 // If debug is true, outputs timings for Lstat calls and other operations.
-func scanAndStatInput(input, output *os.File, tsvPath string, debug bool, maximumAverageStatTime int) {
+func scanAndStatInput(input, output *os.File, tsvPath string, debug bool, maximumAverageStatTime int) error {
 	var frequency time.Duration
 	if debug {
 		frequency = reportFrequency
@@ -213,7 +219,7 @@ func scanAndStatInput(input, output *os.File, tsvPath string, debug bool, maximu
 		MaxRollingDuration: time.Duration(rollingStatAverageLength*maximumAverageStatTime) * time.Second,
 	}
 
-	doScanAndStat(statter, pConfig, input, output, tsvPath)
+	return doScanAndStat(statter, pConfig, input, output, tsvPath)
 }
 
 func logSyscallHost(file string) error {
@@ -234,7 +240,7 @@ func startSyscallLogging(statter stat.Statter, file string) *stat.StatsRecorder 
 	})
 }
 
-func doScanAndStat(statter stat.Statter, pConfig stat.PathsConfig, input, output *os.File, tsvPath string) {
+func doScanAndStat(statter stat.Statter, pConfig stat.PathsConfig, input, output *os.File, tsvPath string) error {
 	p := stat.NewPaths(statter, pConfig)
 
 	var logWrites func(int64)
@@ -244,24 +250,22 @@ func doScanAndStat(statter stat.Statter, pConfig stat.PathsConfig, input, output
 	}
 
 	if err := p.AddOperation("file", stat.FileOperation(output, statBlockSize, logWrites)); err != nil {
-		die("%s", err)
+		return err
 	}
 
 	if err := addChOperation(tsvPath, p); err != nil {
-		die("%s", err)
+		return err
 	}
 
 	logToFile(input.Name() + statLogOutputFileSuffix)
 
 	if logWrites != nil {
 		if err := logSyscallHost(input.Name()); err != nil {
-			die("%s", err)
+			return err
 		}
 	}
 
-	if err := p.Scan(input); err != nil {
-		die("%s", err)
-	}
+	return p.Scan(input)
 }
 
 // addChOperation adds the chmod&chown operation to the Paths if the tsv file
