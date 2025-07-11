@@ -28,9 +28,17 @@
 package main
 
 import (
+	"time"
+
 	"github.com/wtsi-ssg/wrstat/v6/cmd"
 )
 
+var inTests bool //nolint:gochecknoglobals
+
 func main() {
+	if inTests {
+		time.Sleep(time.Hour)
+	}
+
 	cmd.Execute()
 }

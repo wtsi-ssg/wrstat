@@ -49,7 +49,7 @@ const (
 	defaultMaxRAM = 42000
 )
 
-//nolint:gochecknoglobals // options for this cmd.
+// options for this cmd.
 var (
 	workDir       string
 	finalDir      string

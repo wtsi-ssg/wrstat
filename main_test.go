@@ -30,6 +30,7 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -48,10 +49,13 @@ import (
 	"time"
 
 	"github.com/VertebrateResequencing/wr/client"
+	wrcmd "github.com/VertebrateResequencing/wr/cmd"
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
+	"github.com/inconshreveable/log15"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/pflag"
+	"github.com/wtsi-ssg/wr/clog"
 	"github.com/wtsi-ssg/wrstat/v6/cmd"
 )
 
@@ -171,6 +175,8 @@ func runWRStat(app string, args ...string) (string, string, []*jobqueue.Job, err
 	pw.Close()
 
 	<-done
+
+	client.PretendSubmissions = ""
 
 	return stdout.String(), stderr.String(), jobs, err
 }
@@ -422,6 +428,76 @@ func TestMulti(t *testing.T) {
 	Convey("For the multi subcommand", t, func() {
 		multiTests(t, "multi")
 	})
+}
+
+func TestMultiSingleRun(t *testing.T) {
+	inTests = true
+
+	Convey("For the multi subcommand when it disallows running multiple jobs for the same path", t, func() {
+		temp := t.TempDir()
+
+		t.Setenv("HOME", temp)
+
+		wrcmd.RootCmd.SetArgs([]string{"manager", "start", "--deployment", "development", "-f"})
+
+		go wrcmd.Execute()
+
+		wrPath := filepath.Join(temp, ".wr_development")
+
+		So(waitFor(10*time.Second, func() bool {
+			_, err := os.Stat(wrPath)
+
+			return err == nil
+		}), ShouldBeTrue)
+
+		var (
+			c   *jobqueue.Client
+			err error
+		)
+
+		waitFor(10*time.Second, func() bool {
+			c, err = jobqueue.ConnectUsingConfig(clog.ContextWithLogHandler(context.Background(),
+				log15.New().GetHandler()), "development", 10*time.Second)
+
+			return err == nil
+		})
+
+		So(err, ShouldBeNil)
+
+		Reset(func() { c.ShutdownServer() })
+
+		testJobs := func(numJobs int, args ...string) {
+			cmd.RootCmd.SetArgs(append([]string{
+				"multi", "--deployment", "development", "-w", temp, "-f", "final_output",
+			}, args...))
+
+			So(cmd.RootCmd.Execute(), ShouldBeNil)
+
+			jobs, err := c.GetIncomplete(100, "", false, false)
+			So(err, ShouldBeNil)
+			So(len(jobs), ShouldEqual, numJobs)
+		}
+
+		testJobs(3, "/some/path")
+		testJobs(6, "/some/other/path")
+		testJobs(6, "/some/path")
+		testJobs(9, "/some/path", "/yet/another/path")
+		testJobs(15, "-S", "/some/path", "/yet/another/path")
+	})
+}
+
+func waitFor(wait time.Duration, fn func() bool) bool {
+	start := time.Now()
+
+	for time.Now().Add(-wait).Before(start) {
+		if fn() {
+			return true
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	return false
 }
 
 func TestWalk(t *testing.T) {

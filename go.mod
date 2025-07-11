@@ -3,14 +3,16 @@ module github.com/wtsi-ssg/wrstat/v6
 go 1.24
 
 require (
-	github.com/VertebrateResequencing/wr v0.36.1-0.20250710143846-bfc9da0a21e7
+	github.com/VertebrateResequencing/wr v0.36.1-0.20250711091036-d0fba7432fea
 	github.com/adhocore/gronx v1.19.5
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v2.16.0+incompatible
 	github.com/klauspost/pgzip v1.2.6
 	github.com/smartystreets/goconvey v1.7.2
 	github.com/spf13/cobra v1.9.1
+	github.com/spf13/pflag v1.0.6
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
+	github.com/wtsi-ssg/wr v0.5.12
 )
 
 require (
@@ -102,12 +104,10 @@ require (
 	github.com/sevlyar/go-daemon v0.1.6 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/smartystreets/assertions v1.13.0 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/ugorji/go/codec v1.2.14 // indirect
-	github.com/wtsi-ssg/wr v0.5.12 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.etcd.io/bbolt v1.4.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect

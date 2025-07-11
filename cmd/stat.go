@@ -49,7 +49,6 @@ const (
 	rollingStatAverageLength       = 1000
 )
 
-//nolint:gochecknoglobals
 var (
 	statDebug              bool
 	statCh                 string

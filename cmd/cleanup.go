@@ -44,7 +44,7 @@ import (
 
 const uniqueLen = 20
 
-//nolint:gochecknoglobals // options for this cmd.
+// options for this cmd.
 var (
 	cleanupDir         string
 	logsDir            string
