@@ -15,6 +15,12 @@ build: export CGO_ENABLED = 1
 build:
 	go build -tags netgo ${LDFLAGS}
 
+buildsplit: export CGO_ENABLED = 1
+buildsplit:
+	go build -tags walk ${LDFLAGS} -o wrstat
+	go build -tags walk,stat ${LDFLAGS} -o wrstat-walk
+	go build -tags netgo,stat ${LDFLAGS} -o wrstat-stat
+
 install: export CGO_ENABLED = 1
 install:
 	@rm -f ${GOPATH}/bin/wrstat

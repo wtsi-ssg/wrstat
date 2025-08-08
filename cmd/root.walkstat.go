@@ -1,9 +1,10 @@
+//go:build walk && stat
+// +build walk,stat
+
 /*******************************************************************************
- * Copyright (c) 2022, 2023 Genome Research Ltd.
+ * Copyright (c) 2025 Genome Research Ltd.
  *
- * Authors:
- *   Sendu Bala <sb10@sanger.ac.uk>
- *   Michael Woolnough <mw31@sanger.ac.uk>
+ * Author: Michael Woolnough <mw31@sanger.ac.uk>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -28,50 +29,21 @@
 package cmd
 
 import (
-	"os"
+	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/wtsi-ssg/wrstat/v6/ch"
+	"github.com/VertebrateResequencing/wr/client"
 )
 
-// chtsvCmd represents the chtsv command.
-var chtsvCmd = &cobra.Command{
-	Use:   "chtsv",
-	Short: "Check format of ch.tsv.",
-	Long: `Check format of ch.tsv.
+const (
+	initCmds    = false
+	initWalkCmd = true
+	initStatCmd = false
+)
 
-This command is used to test the formatting of a ch.tsv file, and will inform of
-a successful parsing, or report where the (first) error is located.
-`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			die("need to supply location of ch.tsv file.")
-		}
-
-		f, err := os.Open(args[0])
-		if err != nil {
-			die("failed to open file: %s", err)
-		}
-
-		defer f.Close()
-
-		tr := ch.NewTSVReader(f)
-
-		for tr.Next() {
-		}
-
-		if err = tr.Error(); err != nil {
-			die("failed to parse file: %s", err)
-		}
-
-		info("TSV parsed successfully.")
-	},
+func walkExecutable(s *client.Scheduler) string {
+	return ""
 }
 
-func init() {
-	if !initCmds {
-		return
-	}
-
-	RootCmd.AddCommand(chtsvCmd)
+func statExecutable(s *client.Scheduler) string {
+	return strings.TrimSuffix(s.Executable(), "-walk") + "-stat"
 }

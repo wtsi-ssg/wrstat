@@ -230,6 +230,10 @@ func copyLog(wg *sync.WaitGroup, r io.ReadCloser, w io.WriteCloser) {
 }
 
 func init() {
+	if !initCmds {
+		return
+	}
+
 	RootCmd.AddCommand(cleanupCmd)
 
 	// flags specific to this sub-command

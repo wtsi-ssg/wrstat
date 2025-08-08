@@ -117,6 +117,10 @@ on the above) are stored in another file named after the input file with a
 }
 
 func init() {
+	if !initStatCmd {
+		return
+	}
+
 	RootCmd.AddCommand(statCmd)
 
 	statCmd.Flags().StringVar(&statCh, "ch", "", "tsv file detailing paths to chmod & chown")
