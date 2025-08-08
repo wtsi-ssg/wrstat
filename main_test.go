@@ -60,8 +60,8 @@ const (
 const app = "wrstat_test"
 
 var (
-	appWalk = app
-	appStat = app
+	appWalk = app //nolint:gochecknoglobals
+	appStat = app //nolint:gochecknoglobals
 )
 
 func buildSelf() func() {
@@ -77,7 +77,6 @@ func buildSelf() func() {
 			appWalk: "walk,stat",
 			appStat: "netgo,stat",
 		}
-
 	}
 
 	for out, tags := range builds {
