@@ -107,6 +107,10 @@ your own job that depends on that group, such as a 'wrstat combine' call).`,
 }
 
 func init() {
+	if !initWalkCmd {
+		return
+	}
+
 	RootCmd.AddCommand(walkCmd)
 
 	// flags specific to this sub-command
@@ -254,7 +258,7 @@ func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
 ) {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
-	cmd := s.Executable() + " stat "
+	cmd := statExecutable(s) + " stat "
 	if yamlPath != "" {
 		cmd += fmt.Sprintf("--ch %s ", yamlPath)
 	}

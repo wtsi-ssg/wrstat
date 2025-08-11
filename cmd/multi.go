@@ -127,6 +127,10 @@ deleted.`,
 }
 
 func init() {
+	if !initCmds {
+		return
+	}
+
 	RootCmd.AddCommand(multiCmd)
 
 	// flags specific to this sub-command
@@ -273,7 +277,7 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 // yaml path, queue, and if sudo is in effect.
 func buildWalkCommand(s *client.Scheduler, numStatJobs, inodesPerStat int, //nolint:funlen,gocyclo
 	yamlPath, queue, queuesAvoid string, maximumAverageStatTime int) string {
-	cmd := s.Executable() + " walk "
+	cmd := walkExecutable(s) + " walk "
 
 	if numStatJobs > 0 {
 		cmd += fmt.Sprintf("-j %d ", numStatJobs)

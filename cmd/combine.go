@@ -85,6 +85,10 @@ you supplied 'wrstat walk'.`,
 }
 
 func init() {
+	if !initCmds {
+		return
+	}
+
 	RootCmd.AddCommand(combineCmd)
 }
 

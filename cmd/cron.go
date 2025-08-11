@@ -99,6 +99,10 @@ invocations of cron, do 'sudo wrstsat cron --kill'.
 }
 
 func init() {
+	if !initCmds {
+		return
+	}
+
 	RootCmd.AddCommand(cronCmd)
 
 	// flags specific to this sub-command

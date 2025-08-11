@@ -53,31 +53,55 @@ import (
 )
 
 const (
-	app      = "wrstat_test"
 	walkTime = 3 * time.Hour
 	statTime = 3 * time.Hour
 )
 
+const app = "wrstat_test"
+
+var (
+	appWalk = app //nolint:gochecknoglobals
+	appStat = app //nolint:gochecknoglobals
+)
+
 func buildSelf() func() {
-	cmd := exec.Command(
-		"go", "build", "-tags", "netgo",
-		"-ldflags=-X github.com/VertebrateResequencing/wr/client.PretendSubmissions=3 "+
-			"-X github.com/wtsi-ssg/wrstat/v6/cmd.Version=TESTVERSION",
-		"-o", app,
-	)
 
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=1")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	builds := map[string]string{app: "netgo"}
 
-	if err := cmd.Run(); err != nil {
-		failMainTest(err.Error())
+	if os.Getenv("WRSTAT_TEST_SPLIT") != "" {
+		appWalk = app + "-walk"
+		appStat = app + "-stat"
 
-		return nil
+		builds = map[string]string{
+			app:     "walk",
+			appWalk: "walk,stat",
+			appStat: "netgo,stat",
+		}
+	}
+
+	for out, tags := range builds {
+		cmd := exec.Command(
+			"go", "build", "-tags", tags,
+			"-ldflags=-X github.com/VertebrateResequencing/wr/client.PretendSubmissions=3 "+
+				"-X github.com/wtsi-ssg/wrstat/v6/cmd.Version=TESTVERSION",
+			"-o", out,
+		)
+
+		cmd.Env = append(os.Environ(), "CGO_ENABLED=1")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+
+		if err := cmd.Run(); err != nil {
+			failMainTest(err.Error())
+
+			return nil
+		}
 	}
 
 	return func() {
-		os.Remove(app)
+		for out := range builds {
+			os.Remove(out)
+		}
 	}
 }
 
@@ -95,7 +119,7 @@ func TestMain(m *testing.M) {
 	defer d1()
 }
 
-func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
+func runWRStat(app string, args ...string) (string, string, []*jobqueue.Job, error) {
 	var (
 		stdout, stderr strings.Builder
 		jobs           []*jobqueue.Job
@@ -139,7 +163,7 @@ func runWRStat(args ...string) (string, string, []*jobqueue.Job, error) {
 
 func TestVersion(t *testing.T) {
 	Convey("wrstat prints the correct version", t, func() {
-		output, stderr, _, err := runWRStat("version")
+		output, stderr, _, err := runWRStat(app, "version")
 		So(err, ShouldBeNil)
 		So(strings.TrimSpace(output), ShouldEqual, "TESTVERSION")
 		So(stderr, ShouldBeBlank)
@@ -157,7 +181,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 	Convey("'wrstat multi' command produces the correct jobs to run", func() {
 		workingDir := t.TempDir()
-		_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "/some/path", "/some-other/path",
+		_, _, jobs, err := runWRStat(app, append(subcommand, "-w", workingDir, "/some/path", "/some-other/path",
 			"-f", "final_output")...)
 		So(err, ShouldBeNil)
 
@@ -171,7 +195,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		So(jobs, ShouldResemble, expectation)
 
 		Convey("'wrstat multi' with a maximum run time produces jobs with the correct limit group", func() {
-			_, _, jobs, err := runWRStat(append(subcommand, "-w", workingDir, "-t", "13", "/some/path", "/some-other/path",
+			_, _, jobs, err := runWRStat(app, append(subcommand, "-w", workingDir, "-t", "13", "/some/path", "/some-other/path",
 				"-f", "final_output", "-l", "/path/for/logs", "-L", "/path/for/jobLogs")...)
 			So(err, ShouldBeNil)
 
@@ -181,7 +205,7 @@ func multiTests(t *testing.T, subcommand ...string) {
 		})
 
 		Convey("The -b flag gets passed through to the walk subcommand", func() {
-			_, _, jobs, err := runWRStat(append(subcommand, "-b", "-w", workingDir, "/some/path", "/some-other/path",
+			_, _, jobs, err := runWRStat(app, append(subcommand, "-b", "-w", workingDir, "/some/path", "/some-other/path",
 				"-f", "final_output")...)
 			So(err, ShouldBeNil)
 
@@ -192,7 +216,8 @@ func multiTests(t *testing.T, subcommand ...string) {
 }
 
 func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir string,
-	timeout int, statBlockSize bool) []*jobqueue.Job {
+	timeout int, statBlockSize bool,
+) []*jobqueue.Job {
 	t.Helper()
 
 	walkReqs := &scheduler.Requirements{
@@ -238,6 +263,9 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 	exe, err := filepath.Abs(app)
 	So(err, ShouldBeNil)
 
+	exeWalk, err := filepath.Abs(appWalk)
+	So(err, ShouldBeNil)
+
 	var timeoutDate int64
 
 	if timeout > 0 {
@@ -253,7 +281,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 		{
 			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/%[4]s_／some／path -i"+
 				" wrstat-stat-/some/path-%[4]s-%[3]s /some/path", walk1DepGroup,
-				workingDir, repGroup, dateStr[1], exe, timeoutDate, statBlocks),
+				workingDir, repGroup, dateStr[1], exeWalk, timeoutDate, statBlocks),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-walk-/some/path-%s-%s", dateStr[1], repGroup),
@@ -267,7 +295,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 		{
 			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/%[4]s_／some-other／path -i"+
 				" wrstat-stat-/some-other/path-%[4]s-%[3]s /some-other/path", walk2DepGroup,
-				workingDir, repGroup, dateStr[1], exe, timeoutDate, statBlocks),
+				workingDir, repGroup, dateStr[1], exeWalk, timeoutDate, statBlocks),
 			CwdMatters:   true,
 			Cwd:          workingDir,
 			RepGroup:     fmt.Sprintf("wrstat-walk-/some-other/path-%s-%s", dateStr[1], repGroup),
@@ -399,12 +427,12 @@ func TestWalk(t *testing.T) {
 		}
 
 		depgroup := "test-group"
-		_, _, jobs, err := runWRStat("walk", tmp, "-o", out, "-d", depgroup, "-j", "1", "-i", "some-rep-group")
+		_, _, jobs, err := runWRStat(appWalk, "walk", tmp, "-o", out, "-d", depgroup, "-j", "1", "-i", "some-rep-group")
 		So(err, ShouldBeNil)
 
 		walk1 := filepath.Join(out, "walk.1")
 
-		exe, err := filepath.Abs(app)
+		exe, err := filepath.Abs(appStat)
 		So(err, ShouldBeNil)
 
 		jobsExpectation := []*jobqueue.Job{
@@ -440,7 +468,7 @@ func TestWalk(t *testing.T) {
 
 		compareFileContents(t, walk1, expected)
 
-		_, _, jobs, err = runWRStat("walk", tmp, "-o", out, "-d", depgroup,
+		_, _, jobs, err = runWRStat(appWalk, "walk", tmp, "-o", out, "-d", depgroup,
 			"-j", "2", "--timeout", "100", "-i", "some-rep-group")
 		So(err, ShouldBeNil)
 
@@ -490,7 +518,7 @@ func TestWalk(t *testing.T) {
 		So(jobs, ShouldResemble, jobsExpectation)
 
 		Convey("The -b flag is passed through to the stat subcommand", func() {
-			_, _, jobs, err = runWRStat("walk", tmp, "-b", "-o", out, "-d",
+			_, _, jobs, err = runWRStat(appWalk, "walk", tmp, "-b", "-o", out, "-d",
 				depgroup, "-j", "2", "--timeout", "100", "-i", "some-rep-group")
 			So(err, ShouldBeNil)
 
@@ -636,7 +664,7 @@ func TestStat(t *testing.T) {
 		err = walkFile.Close()
 		So(err, ShouldBeNil)
 
-		_, _, jobs, err := runWRStat("stat", walkFilePath)
+		_, _, jobs, err := runWRStat(appStat, "stat", walkFilePath)
 
 		So(err, ShouldBeNil)
 		So(len(jobs), ShouldEqual, 0)
@@ -684,7 +712,7 @@ func TestStat(t *testing.T) {
 		So(string(data), ShouldEqual, statsExpectation)
 
 		Convey("The -b flag prints the disk usage instead of the apprarent byte size", func() {
-			_, _, jobs, err = runWRStat("stat", "-b", walkFilePath)
+			_, _, jobs, err = runWRStat(appStat, "stat", "-b", walkFilePath)
 			So(err, ShouldBeNil)
 
 			statsExpectation := fmt.Sprintf(""+ //nolint:dupl
@@ -744,7 +772,7 @@ func TestCombine(t *testing.T) {
 			writeFileString(t, filepath.Join(tmp, file), contents)
 		}
 
-		_, _, jobs, err := runWRStat("combine", tmp)
+		_, _, jobs, err := runWRStat(app, "combine", tmp)
 		So(err, ShouldBeNil)
 		So(len(jobs), ShouldEqual, 0)
 
@@ -792,7 +820,7 @@ func TestTidy(t *testing.T) {
 			writeFileString(t, fp, file)
 		}
 
-		_, _, jobs, err := runWRStat("tidy", "-f", finalDir, srcDir)
+		_, _, jobs, err := runWRStat(app, "tidy", "-f", finalDir, srcDir)
 		So(err, ShouldBeNil)
 
 		So(len(jobs), ShouldEqual, 0)
@@ -832,7 +860,7 @@ func TestCleanup(t *testing.T) {
 		writeFileString(t, filepath.Join(runDir, "1.log"), "some log data")
 		writeFileString(t, filepath.Join(runDir, "2.log"), "some more log data")
 
-		_, _, _, err := runWRStat("cleanup", "-l", logs, "-w", working)
+		_, _, _, err := runWRStat(app, "cleanup", "-l", logs, "-w", working)
 		So(err, ShouldBeNil)
 
 		compareFileContents(t, filepath.Join(logs, unique, "myRun", "1.log"), "some log data")
@@ -1148,7 +1176,6 @@ waitForJobs;`)
 			compareFileContents(t, filepath.Join(tmpTemp, files[0]), contents)
 		}
 	})
-
 }
 
 var pseudoNow = time.Unix(minimumDate, 0) //nolint:gochecknoglobals

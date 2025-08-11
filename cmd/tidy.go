@@ -116,6 +116,10 @@ through; it won't clobber final outputs already moved.`,
 }
 
 func init() {
+	if !initCmds {
+		return
+	}
+
 	RootCmd.AddCommand(tidyCmd)
 
 	// flags specific to this sub-command
