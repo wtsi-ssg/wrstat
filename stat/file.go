@@ -154,7 +154,7 @@ func nonRegularTypeToFileType(fileMode fs.FileMode) FileType {
 //
 // logWrites is a function that will be called on each write to an output put
 // with the number of bytes written.
-func FileOperation(output *os.File, statBlockSize bool, logWrites func(int64)) Operation {
+func FileOperation(output io.Writer, statBlockSize bool, logWrites func(int64)) Operation {
 	return func(path string, info fs.FileInfo) error {
 		f := File(path, info, statBlockSize)
 		b, errw := f.WriteTo(output)
