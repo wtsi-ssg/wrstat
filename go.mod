@@ -3,7 +3,7 @@ module github.com/wtsi-ssg/wrstat/v6
 go 1.24
 
 require (
-	github.com/VertebrateResequencing/wr v0.36.1-0.20250711091036-d0fba7432fea
+	github.com/VertebrateResequencing/wr v0.36.1
 	github.com/adhocore/gronx v1.19.5
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v2.16.0+incompatible
@@ -72,6 +72,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/kr/fs v0.1.0 // indirect
