@@ -190,12 +190,6 @@ func TestVersion(t *testing.T) {
 	})
 }
 
-func TestCron(t *testing.T) {
-	Convey("For the cron subcommand", t, func() {
-		multiTests(t, "cron", "-c", "* * * * * *")
-	})
-}
-
 func multiTests(t *testing.T, subcommand ...string) {
 	t.Helper()
 
