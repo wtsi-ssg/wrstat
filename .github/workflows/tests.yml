@@ -26,4 +26,4 @@ jobs:
       run: make test
 
     - name: Run tests with race detection
-      run: make race
+      run: make race && make racesplit
