@@ -65,7 +65,7 @@ you supplied 'wrstat walk'.`,
 			return fmt.Errorf("could not get the absolute path to [%s]: %w", args[0], err)
 		}
 
-		go keepAliveCheck(sourceDir, "source directory no longer exists")
+		keepAliveCheck(sourceDir, "source directory no longer exists")
 
 		errCh := make(chan error)
 

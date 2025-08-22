@@ -195,7 +195,7 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, //nolint:funlen,gocog
 
 	logToFile(filepath.Join(outputDir, walkLogOutputBasename))
 
-	go keepAliveCheck(outputDir, "output directory no longer exists")
+	keepAliveCheck(outputDir, "output directory no longer exists")
 
 	walker := walk.New(files.WritePaths(), true, false)
 
@@ -241,14 +241,16 @@ func keepAliveCheck(required, msg string) {
 		return
 	}
 
-	for {
-		time.Sleep(time.Minute)
+	go func() {
+		for {
+			time.Sleep(time.Minute)
 
-		if _, err := os.Stat(required); err != nil {
-			appLogger.Error(msg)
-			os.Exit(timeoutExitCode)
+			if _, err := os.Stat(required); err != nil {
+				appLogger.Error(msg)
+				os.Exit(timeoutExitCode)
+			}
 		}
-	}
+	}()
 }
 
 // calculateSplitBasedOnInodes sees how many used inodes are on the given path
