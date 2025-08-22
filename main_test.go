@@ -64,26 +64,17 @@ const (
 	statTime = 3 * time.Hour
 )
 
-const app = "wrstat_test"
-
-var (
-	appWalk = app //nolint:gochecknoglobals
-	appStat = app //nolint:gochecknoglobals
-)
+var app, appWalk, appStat string //nolint:gochecknoglobals
 
 func buildSelf() func() {
+	app = "wrstat_test"
+	appWalk = app + "-walk"
+	appStat = app + "-stat"
 
-	builds := map[string]string{app: "netgo"}
-
-	if os.Getenv("WRSTAT_TEST_SPLIT") != "" {
-		appWalk = app + "-walk"
-		appStat = app + "-stat"
-
-		builds = map[string]string{
-			app:     "walk",
-			appWalk: "walk,stat",
-			appStat: "netgo,stat",
-		}
+	builds := map[string]string{
+		app:     "walk",
+		appWalk: "walk,stat",
+		appStat: "netgo,stat",
 	}
 
 	for out, tags := range builds {
@@ -105,6 +96,8 @@ func buildSelf() func() {
 		}
 	}
 
+	runCmd = runExe
+
 	return func() {
 		for out := range builds {
 			os.Remove(out)
@@ -117,6 +110,16 @@ func failMainTest(err string) {
 }
 
 func TestMain(m *testing.M) {
+	cmd.Version = "TESTVERSION"
+
+	if os.Getenv("WRSTAT_TEST_SPLIT") == "" {
+		app, _ = os.Executable() //nolint:errcheck
+		appWalk = app
+		appStat = app
+
+		os.Exit(m.Run())
+	}
+
 	d1 := buildSelf()
 	if d1 == nil {
 		return
@@ -126,14 +129,9 @@ func TestMain(m *testing.M) {
 	defer d1()
 }
 
-func runWRStat(app string, args ...string) (string, string, []*jobqueue.Job, error) {
-	var (
-		stdout, stderr strings.Builder
-		jobs           []*jobqueue.Job
-	)
-
-	cmd.RootCmd.SetOut(&stdout)
-	cmd.RootCmd.SetErr(&stderr)
+func runCobra(_ string, args []string, stdout, stderr io.Writer, stdin *os.File) (func() error, func()) {
+	cmd.RootCmd.SetOut(stdout)
+	cmd.RootCmd.SetErr(stderr)
 	cmd.RootCmd.SetArgs(args)
 
 	for _, cmd := range cmd.RootCmd.Commands() {
@@ -146,11 +144,34 @@ func runWRStat(app string, args ...string) (string, string, []*jobqueue.Job, err
 
 	cmd.InitLogger()
 
+	client.PretendSubmissions = strconv.FormatInt(int64(stdin.Fd()), 10)
+
+	return cmd.RootCmd.Execute, func() { client.PretendSubmissions = "" }
+}
+
+var runCmd = runCobra //nolint:gochecknoglobals
+
+func runExe(app string, args []string, stdout, stderr io.Writer, stdin *os.File) (func() error, func()) {
+	cmd := exec.Command("./"+app, args...) //nolint:gosec
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.ExtraFiles = append(cmd.ExtraFiles, stdin)
+
+	return cmd.Run, func() {}
+}
+
+func runWRStat(app string, args ...string) (string, string, []*jobqueue.Job, error) {
+	var (
+		stdout, stderr strings.Builder
+		jobs           []*jobqueue.Job
+	)
+
 	pr, pw, err := os.Pipe()
 	if err != nil {
 		return "", "", nil, err
 	}
 
+	start, stop := runCmd(app, args, &stdout, &stderr, pw)
 	jd := json.NewDecoder(pr)
 	done := make(chan struct{})
 
@@ -169,14 +190,13 @@ func runWRStat(app string, args ...string) (string, string, []*jobqueue.Job, err
 		}
 	}()
 
-	client.PretendSubmissions = strconv.FormatInt(int64(pw.Fd()), 10)
-	err = cmd.RootCmd.Execute()
+	err = start()
 
 	pw.Close()
 
 	<-done
 
-	client.PretendSubmissions = ""
+	stop()
 
 	return stdout.String(), stderr.String(), jobs, err
 }
@@ -275,7 +295,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 
 	now := dateStr[1]
 
-	exe, err := os.Executable()
+	exe, err := filepath.Abs(app)
 	So(err, ShouldBeNil)
 
 	exeWalk, err := filepath.Abs(appWalk)
