@@ -86,13 +86,14 @@ $ wrstat multi -w [/working/directory] -f [/final/output/dir] [/a /b /c]`,
 // the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		die("%s", err.Error())
+		appLogger.Error(err.Error())
+
+		os.Exit(1)
 	}
 }
 
 func init() {
-	// set up logging to stderr
-	appLogger.SetHandler(log15.LvlFilterHandler(log15.LvlInfo, log15.StderrHandler))
+	InitLogger()
 
 	// global flags
 	RootCmd.PersistentFlags().StringVar(&deployment,
@@ -104,6 +105,14 @@ func init() {
 		"sudo",
 		false,
 		"created jobs will run with sudo")
+}
+
+func InitLogger() {
+	// set up logging to stderr
+	appLogger.SetHandler(log15.LvlFilterHandler(
+		log15.LvlInfo,
+		log15.StreamHandler(RootCmd.ErrOrStderr(), log15.LogfmtFormat()),
+	))
 }
 
 // logToFile logs to the given file.
@@ -128,27 +137,22 @@ func warn(msg string, a ...interface{}) {
 	appLogger.Warn(fmt.Sprintf(msg, a...))
 }
 
-// die is a convenience to log a message at the Error level and exit non zero.
-func die(msg string, a ...interface{}) {
-	appLogger.Error(fmt.Sprintf(msg, a...))
-	os.Exit(1)
-}
-
 // newScheduler returns a new Scheduler, exiting on error. It also returns a
 // function you should defer.
 //
 // If you provide a non-blank queue, that queue will be used when scheduling. If
 // you provide a non-black queuesAvoid, queues including a substring from the
 // list will be avoided.
-func newScheduler(cwd, queue, queuesAvoid string, sudo bool) (*client.Scheduler, func()) {
+func newScheduler(cwd, queue, queuesAvoid string, sudo bool) (*client.Scheduler, func(), error) {
 	s, err := client.New(client.SchedulerSettings{
 		Deployment: deployment, Cwd: cwd,
 		Queue:       queue,
 		QueuesAvoid: queuesAvoid,
 		Timeout:     connectTimeout,
-		Logger:      appLogger})
+		Logger:      appLogger,
+	})
 	if err != nil {
-		die("%s", err)
+		return nil, nil, err
 	}
 
 	if sudo {
@@ -160,7 +164,7 @@ func newScheduler(cwd, queue, queuesAvoid string, sudo bool) (*client.Scheduler,
 		if err != nil {
 			warn("failed to disconnect from wr manager: %s", err)
 		}
-	}
+	}, nil
 }
 
 // repGrp returns a rep_grp that can be used for a wrstat job we will create.
@@ -169,8 +173,10 @@ func repGrp(cmd, dir, unique, now string) string {
 }
 
 // addJobsToQueue adds the jobs to wr's queue.
-func addJobsToQueue(s *client.Scheduler, jobs []*jobqueue.Job) {
+func addJobsToQueue(s *client.Scheduler, jobs []*jobqueue.Job) error {
 	if err := s.SubmitJobs(jobs); err != nil {
-		die("failed to add jobs to wr's queue: %s", err)
+		return fmt.Errorf("failed to add jobs to wr's queue: %w", err)
 	}
+
+	return nil
 }

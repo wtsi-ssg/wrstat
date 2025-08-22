@@ -3,14 +3,15 @@ module github.com/wtsi-ssg/wrstat/v6
 go 1.24
 
 require (
-	github.com/VertebrateResequencing/wr v0.36.0
-	github.com/adhocore/gronx v1.19.5
+	github.com/VertebrateResequencing/wr v0.36.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v2.16.0+incompatible
 	github.com/klauspost/pgzip v1.2.6
 	github.com/smartystreets/goconvey v1.7.2
 	github.com/spf13/cobra v1.9.1
+	github.com/spf13/pflag v1.0.6
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
+	github.com/wtsi-ssg/wr v0.5.12
 )
 
 require (
@@ -22,6 +23,7 @@ require (
 	github.com/VertebrateResequencing/muxfys/v4 v4.0.3 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/alexflint/go-filemutex v1.3.0 // indirect
+	github.com/carbocation/runningvariance v0.0.0-20221016154922-fd8c026dff91 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/creasty/defaults v1.8.0 // indirect
@@ -34,6 +36,7 @@ require (
 	github.com/docker/spdystream v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fanatic/go-infoblox v0.0.0-20190709161059-e25f3820238c // indirect
+	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
@@ -67,6 +70,8 @@ require (
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jtolds/gls v4.20.0+incompatible // indirect
+	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/kr/fs v0.1.0 // indirect
@@ -96,14 +101,13 @@ require (
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/sb10/l15h v0.0.0-20170510122137-64c488bf8e22 // indirect
 	github.com/sb10/waitgroup v0.0.0-20200305124406-7ed665007efa // indirect
+	github.com/sevlyar/go-daemon v0.1.6 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/smartystreets/assertions v1.13.0 // indirect
-	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/ugorji/go/codec v1.2.14 // indirect
-	github.com/wtsi-ssg/wr v0.5.12 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.etcd.io/bbolt v1.4.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect

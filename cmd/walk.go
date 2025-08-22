@@ -26,6 +26,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -56,6 +57,11 @@ var (
 	walkNumOfJobs    int
 	walkID           string
 	walkCh           string
+)
+
+var (
+	ErrDirectoryOfInterestRequired = errors.New("exactly 1 directory of interest must be supplied")
+	ErrDependencyGroupRequired     = errors.New("--dependency_group is required")
 )
 
 // walkCmd represents the walk command.
@@ -91,17 +97,24 @@ particular subsets of jobs took.)
 NB: when this exits, that does not mean stats have been retrieved. You should
 wait until all jobs in the given dependency group have completed (eg. by adding
 your own job that depends on that group, such as a 'wrstat combine' call).`,
-	Run: func(cmd *cobra.Command, args []string) {
-		desiredDir := checkArgs(outputDir, depGroup, args)
+	RunE: func(_ *cobra.Command, args []string) error {
+		desiredDir, err := checkArgs(outputDir, depGroup, args)
+		if err != nil {
+			return err
+		}
 
-		s, d := newScheduler("", forcedQueue, queuesToAvoid, sudo)
+		s, d, err := newScheduler("", forcedQueue, queuesToAvoid, sudo)
+		if err != nil {
+			return err
+		}
+
 		defer d()
 
 		if walkID == "" {
 			walkID = statRepGrp(desiredDir, client.UniqueString(), time.Now().Format("20060102-150405"))
 		}
 
-		walkDirAndScheduleStats(desiredDir, outputDir, walkNumOfJobs, walkInodesPerJob, maximumAverageStatTime,
+		return walkDirAndScheduleStats(desiredDir, outputDir, walkNumOfJobs, walkInodesPerJob, maximumAverageStatTime,
 			depGroup, walkID, walkCh, s)
 	},
 }
@@ -140,20 +153,20 @@ func init() {
 }
 
 // checkArgs checks we have required args and returns desired dir.
-func checkArgs(out, dep string, args []string) string {
+func checkArgs(out, dep string, args []string) (string, error) {
 	if out == "" {
-		die("--output_directory is required")
+		return "", ErrOutputDirRequired
 	}
 
 	if dep == "" {
-		die("--dependency_group is required")
+		return "", ErrDependencyGroupRequired
 	}
 
 	if len(args) != 1 {
-		die("exactly 1 directory of interest must be supplied")
+		return "", ErrDirectoryOfInterestRequired
 	}
 
-	return args[0]
+	return args[0], nil
 }
 
 // statRepGrp returns a rep_grp that can be used for the stat jobs walk will
@@ -163,28 +176,31 @@ func statRepGrp(dir, unique, now string) string {
 }
 
 // walkDirAndScheduleStats does the main work.
-func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes, maximumAverageStatTime int, //nolint:funlen
-	depGroup, repGroup, yamlPath string, s *client.Scheduler,
-) {
+func walkDirAndScheduleStats(desiredDir, outputDir string, //nolint:funlen,gocognit,gocyclo
+	statJobs, inodes, maximumAverageStatTime int, depGroup, repGroup, yamlPath string, s *client.Scheduler,
+) error {
 	n := statJobs
 	if n == 0 {
-		n = calculateSplitBasedOnInodes(inodes, desiredDir)
+		var err error
+
+		if n, err = calculateSplitBasedOnInodes(inodes, desiredDir); err != nil {
+			return err
+		}
 	}
 
 	files, err := walk.NewFiles(outputDir, n)
 	if err != nil {
-		die("failed to create walk output files: %s", err)
+		return fmt.Errorf("failed to create walk output files: %w", err)
 	}
 
 	logToFile(filepath.Join(outputDir, walkLogOutputBasename))
 
-	go keepAliveCheck(outputDir, "output directory no longer exists")
+	keepAliveCheck(outputDir, "output directory no longer exists")
 
 	walker := walk.New(files.WritePaths(), true, false)
 
 	defer func() {
-		err = files.Close()
-		if err != nil {
+		if err = files.Close(); err != nil {
 			warn("failed to close walk output file: %s", err)
 		}
 
@@ -196,7 +212,7 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes, max
 	if recordStats > 0 {
 		host, errr := os.Hostname()
 		if errr != nil {
-			die("failed to get hostname: %s", errr)
+			return fmt.Errorf("failed to get hostname: %w", errr)
 		}
 
 		appLogger.Info("syscall logging", "host", host)
@@ -214,29 +230,35 @@ func walkDirAndScheduleStats(desiredDir, outputDir string, statJobs, inodes, max
 		warn("error processing %s: %s", path, err)
 	})
 	if err != nil {
-		die("failed to walk the filesystem: %s", err)
+		return fmt.Errorf("failed to walk the filesystem: %w", err)
 	}
 
-	scheduleStatJobs(files.Paths, depGroup, repGroup, yamlPath, maximumAverageStatTime, s)
+	return scheduleStatJobs(files.Paths, depGroup, repGroup, yamlPath, maximumAverageStatTime, s)
 }
 
 func keepAliveCheck(required, msg string) {
-	for {
-		time.Sleep(time.Minute)
-
-		if _, err := os.Stat(required); err != nil {
-			appLogger.Error(msg)
-			os.Exit(timeoutExitCode)
-		}
+	if client.PretendSubmissions != "" {
+		return
 	}
+
+	go func() {
+		for {
+			time.Sleep(time.Minute)
+
+			if _, err := os.Stat(required); err != nil {
+				appLogger.Error(msg)
+				os.Exit(timeoutExitCode)
+			}
+		}
+	}()
 }
 
 // calculateSplitBasedOnInodes sees how many used inodes are on the given path
 // and provides the number of jobs such that each job would do inodes paths.
-func calculateSplitBasedOnInodes(n int, mount string) int {
+func calculateSplitBasedOnInodes(n int, mount string) (int, error) {
 	var statfs syscall.Statfs_t
 	if err := syscall.Statfs(mount, &statfs); err != nil {
-		die("failed to stat the filesystem at %s: %s", mount, err)
+		return 0, fmt.Errorf("failed to stat the filesystem at %s: %w", mount, err)
 	}
 
 	inodes := statfs.Files - statfs.Ffree
@@ -247,7 +269,7 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 		jobs = 1
 	}
 
-	return jobs
+	return jobs, nil
 }
 
 // scheduleStatJobs adds a 'wrstat stat' job to wr's queue for each out path.
@@ -255,7 +277,7 @@ func calculateSplitBasedOnInodes(n int, mount string) int {
 // the --ch arg if not blank.
 func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
 	repGrp, yamlPath string, maximumAverageStatTime int, s *client.Scheduler,
-) {
+) error {
 	jobs := make([]*jobqueue.Job, len(outPaths))
 
 	cmd := statExecutable(s) + " stat "
@@ -290,5 +312,5 @@ func scheduleStatJobs(outPaths []string, depGroup string, //nolint:funlen
 		jobs[i].LimitGroups = limitGroups
 	}
 
-	addJobsToQueue(s, jobs)
+	return addJobsToQueue(s, jobs)
 }

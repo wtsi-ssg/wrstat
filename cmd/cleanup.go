@@ -45,12 +45,15 @@ import (
 const uniqueLen = 20
 
 // options for this cmd.
-var cleanupDir string
-var logsDir string
-var jobSuffix string
-var removeJob bool
-var logJobs string
-var cleanupPerms bool
+var (
+	cleanupDir         string
+	logsDir            string
+	jobSuffix          string
+	removeJob          bool
+	logJobs            string
+	cleanupPerms       bool
+	ErrWorkDirRequired = errors.New("--working_directory is required")
+)
 
 // cleanupCmd represents the cleanup command.
 var cleanupCmd = &cobra.Command{
@@ -80,14 +83,12 @@ the --jobs flag with the unique string that is appended to the rep-group. The
 In addition, you can provide the --remove flag to have the jobs removed from
 'wr'.
 `,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if cleanupDir == "" {
-			die("--working_directory is required")
+			return ErrWorkDirRequired
 		}
 
-		if err := run(); err != nil {
-			die("%s", err)
-		}
+		return run()
 	},
 }
 
@@ -97,7 +98,9 @@ func run() error { //nolint:gocognit,gocyclo
 	defer wg.Wait()
 
 	if jobSuffix != "" {
-		removeOrLogJobs(&wg, jobSuffix, logJobs, removeJob)
+		if err := removeOrLogJobs(&wg, jobSuffix, logJobs, removeJob); err != nil {
+			return err
+		}
 	}
 
 	if cleanupPerms {
@@ -121,8 +124,11 @@ func run() error { //nolint:gocognit,gocyclo
 	return nil
 }
 
-func removeOrLogJobs(wg *sync.WaitGroup, jobSuffix, logJobs string, removeJob bool) {
-	s, d := newScheduler("", "", "", false)
+func removeOrLogJobs(wg *sync.WaitGroup, jobSuffix, logJobs string, removeJob bool) error {
+	s, d, err := newScheduler("", "", "", false)
+	if err != nil {
+		return err
+	}
 
 	if err := neaten.RemoveOrLogJobs(s, jobSuffix, logJobs, removeJob); err != nil {
 		warn("%s", err)
@@ -135,6 +141,8 @@ func removeOrLogJobs(wg *sync.WaitGroup, jobSuffix, logJobs string, removeJob bo
 	} else {
 		d()
 	}
+
+	return nil
 }
 
 func repeatRemove(s *client.Scheduler, wg *sync.WaitGroup, jobSuffix string, d func()) {

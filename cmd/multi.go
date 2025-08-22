@@ -26,10 +26,12 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/VertebrateResequencing/wr/client"
@@ -62,6 +64,8 @@ var (
 	statBlockSize bool
 	multiRun      bool
 )
+
+var ErrFinalOutputRequired = errors.New("--final_output is required")
 
 // multiCmd represents the multi command.
 var multiCmd = &cobra.Command{
@@ -117,12 +121,12 @@ user,group,other read & write permissions as the --final_output directory.
 
 Finally, the unique subdirectory of --working_directory that was created is
 deleted.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		checkMultiArgs()
-		err := doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, maximumAverageStatTime, sudo)
-		if err != nil {
-			die("%s", err)
+	RunE: func(_ *cobra.Command, args []string) error {
+		if err := checkMultiArgs(); err != nil {
+			return err
 		}
+
+		return doMultiScheduling(args, workDir, forcedQueue, queuesToAvoid, maximumAverageStatTime, sudo)
 	},
 }
 
@@ -160,13 +164,13 @@ func init() {
 }
 
 // checkMultiArgs ensures we have the required args for the multi sub-command.
-func checkMultiArgs() {
+func checkMultiArgs() error {
 	if workDir == "" {
-		die("--working_directory is required")
+		return ErrWorkDirRequired
 	}
 
 	if finalDir == "" {
-		die("--final_output is required")
+		return ErrFinalOutputRequired
 	}
 
 	if logJobs == "" {
@@ -176,48 +180,68 @@ func checkMultiArgs() {
 	if logsDir == "" {
 		logsDir = finalDir
 	}
+
+	return nil
 }
 
 // doMultiScheduling does the main work of the multi sub-command.
-func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid string, //nolint:gocognit,gocyclo,funlen
-	maximumAverageStatTime int, sudo bool) error {
-	s, d := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
-	defer d()
-
-	if !multiRun { //nolint:nestif
-		jobs, err := s.FindJobsByRepGroupPrefixAndState("wrstat-tidy", jobqueue.JobStateDependent)
-		if err != nil {
-			return err
-		}
-
-		if len(jobs) != 0 {
-			return nil
-		}
+func doMultiScheduling(paths []string, workDir, //nolint:gocognit,gocyclo,cyclop,funlen
+	forcedQueue, queuesToAvoid string, maximumAverageStatTime int, sudo bool) error {
+	s, d, err := newScheduler(workDir, forcedQueue, queuesToAvoid, sudo)
+	if err != nil {
+		return err
 	}
 
-	var err error
+	defer d()
 
-	for n, path := range paths {
-		paths[n], err = filepath.Abs(path)
-		if err != nil {
-			return err
+	desiredPaths := make([]string, 0, len(paths))
+
+	for _, path := range paths {
+		absPath, errr := filepath.Abs(path)
+		if errr != nil {
+			return errr
 		}
+
+		if !multiRun { //nolint:nestif
+			repGrp := tidyRepGrp(absPath, "", "")
+			repGrp = strings.TrimSuffix(repGrp, "--")
+
+			jobs, errrr := s.FindJobsByRepGroupPrefixAndState(repGrp, jobqueue.JobStateDependent)
+			if errrr != nil {
+				return errrr
+			}
+
+			if len(jobs) != 0 {
+				warn("there is already a queued job for %s", absPath)
+
+				continue
+			}
+		}
+
+		desiredPaths = append(desiredPaths, absPath)
+	}
+
+	if len(desiredPaths) == 0 {
+		return nil
 	}
 
 	unique := client.UniqueString()
 	outputRoot := filepath.Join(workDir, unique)
 	now := time.Now().Format("20060102-150405")
 
-	err = os.MkdirAll(outputRoot, userGroupPerm)
-	if err != nil {
+	if err = os.MkdirAll(outputRoot, userGroupPerm); err != nil {
 		return err
 	}
 
-	scheduleWalkJobs(outputRoot, paths, unique, finalDir, multiStatJobs,
-		multiInodes, maximumAverageStatTime, multiCh, forcedQueue, queuesToAvoid, now, s)
+	if err := scheduleWalkJobs(outputRoot, desiredPaths, unique, finalDir, multiStatJobs,
+		multiInodes, maximumAverageStatTime, multiCh, forcedQueue, queuesToAvoid, now, s); err != nil {
+		return err
+	}
 
 	if timeout > 0 {
-		scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs, now)
+		if err := scheduleCleanupJob(s, timeout, outputRoot, unique, logsDir, logJobs, now); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -228,7 +252,7 @@ func doMultiScheduling(paths []string, workDir, forcedQueue, queuesToAvoid strin
 // override.
 func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDirParent string, //nolint:funlen
 	numStatJobs, inodesPerStat, maximumAverageStatTime int, yamlPath, queue,
-	queuesAvoid, now string, s *client.Scheduler) {
+	queuesAvoid, now string, s *client.Scheduler) error {
 	walkJobs := make([]*jobqueue.Job, len(desiredPaths))
 	combineJobs := make([]*jobqueue.Job, len(desiredPaths))
 	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
@@ -268,9 +292,13 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 			tidyRepGrp(path, unique, now), "wrstat-tidy", "", combineUnique, client.DefaultRequirements())
 	}
 
-	addJobsToQueue(s, walkJobs)
-	addJobsToQueue(s, combineJobs)
-	addJobsToQueue(s, tidyJobs)
+	for _, jobs := range [...][]*jobqueue.Job{walkJobs, combineJobs, tidyJobs} {
+		if err := addJobsToQueue(s, jobs); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // buildWalkCommand builds a wrstat walk command line based on the given n,
@@ -348,7 +376,7 @@ func tidyRepGrp(dir, unique, now string) string {
 }
 
 func scheduleCleanupJob(s *client.Scheduler, timeout int64, outputRoot,
-	jobUnique, logOutput, jobOutput, now string) {
+	jobUnique, logOutput, jobOutput, now string) error {
 	cmd := fmt.Sprintf("%s cleanup -w %q -j %q", s.Executable(), outputRoot, jobUnique)
 
 	if logOutput != "" {
@@ -363,5 +391,5 @@ func scheduleCleanupJob(s *client.Scheduler, timeout int64, outputRoot,
 		"wrstat-cleanup", "", "", client.DefaultRequirements())
 	job.LimitGroups = []string{time.Now().Add(time.Hour*time.Duration(timeout)).Format(time.DateTime) + "<datetime"}
 
-	addJobsToQueue(s, []*jobqueue.Job{job})
+	return addJobsToQueue(s, []*jobqueue.Job{job})
 }
