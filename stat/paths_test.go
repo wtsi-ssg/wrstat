@@ -221,12 +221,13 @@ func TestPaths(t *testing.T) {
 			So(string(output), ShouldContainSubstring, "\tf\t")
 		})
 
-		Convey("can stat files and non-existent directories", func() {
+		Convey("with a standard print operation", func() {
 			dir := t.TempDir()
 
 			existingDir := filepath.Join(dir, "existingDir") + "/"
 			notExistingDir := filepath.Join(dir, "notExistingDir") + "/"
 			existingFile := filepath.Join(dir, "existingFile")
+			notExistingFile := filepath.Join(dir, "notExistingFile")
 
 			err := os.Mkdir(existingDir, 0755)
 			So(err, ShouldBeNil)
@@ -242,26 +243,49 @@ func TestPaths(t *testing.T) {
 
 			r := strings.NewReader(strconv.Quote(existingDir) + "\n" +
 				strconv.Quote(notExistingDir) + "\n" +
-				strconv.Quote(filepath.Join(dir, "notExistingFile")) + "\n" +
+				strconv.Quote(notExistingFile) + "\n" +
 				strconv.Quote(existingFile) + "\n")
 
-			stats := make([]string, 0, 3)
+			stats := make([]string, 0, 4)
 
 			err = p.AddOperation("file", func(absPath string, info fs.FileInfo) error {
-				stats = append(stats, fmt.Sprintf("%s\t%d", absPath, info.Size()))
+				stats = append(stats, fmt.Sprintf("%s\t%d\t%v", absPath, info.Size(), info.Mode().IsDir()))
 
 				return nil
 			})
-
 			So(err, ShouldBeNil)
 
-			err = p.Scan(r)
-			So(err, ShouldBeNil)
+			Convey("you can stat files and non-existent directories", func() {
+				err = p.Scan(r)
+				So(err, ShouldBeNil)
 
-			So(stats, ShouldResemble, []string{
-				existingDir + "\t4096",
-				notExistingDir + "\t0",
-				existingFile + "\t1",
+				So(stats, ShouldResemble, []string{
+					existingDir + "\t4096\ttrue",
+					notExistingDir + "\t0\ttrue",
+					existingFile + "\t1\tfalse",
+				})
+			})
+
+			Convey("your statter will correct incorrect directory modes", func() {
+				s = WithTimeout(statterTimeout, statterRetries, statterConsecutiveFails, l)
+
+				mockLstat := func(path string) (fs.FileInfo, error) {
+					return &fsInfo{}, nil
+				}
+
+				s.SetLstat(mockLstat)
+
+				p.statter = s
+
+				err = p.Scan(r)
+				So(err, ShouldBeNil)
+
+				So(stats, ShouldResemble, []string{
+					existingDir + "\t0\ttrue",
+					notExistingDir + "\t0\ttrue",
+					notExistingFile + "\t0\tfalse",
+					existingFile + "\t0\tfalse",
+				})
 			})
 		})
 	})

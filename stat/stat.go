@@ -249,7 +249,7 @@ func (f *fakeDir) Sys() any {
 // doLstat does the actual Lstat call and sends results on the given channels.
 func (s *StatterWithTimeout) doLstat(path string, infoCh chan fs.FileInfo, errCh chan error) {
 	info, err := s.lstat(path)
-	if errors.Is(err, fs.ErrNotExist) && strings.HasSuffix(path, "/") {
+	if (errors.Is(err, fs.ErrNotExist) || info != nil && !info.IsDir()) && strings.HasSuffix(path, "/") {
 		err = nil
 		info = &fakeDir{name: filepath.Base(path)}
 	}
