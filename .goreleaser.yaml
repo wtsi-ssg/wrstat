@@ -28,9 +28,9 @@ builds:
       - "{{ .Env.WRSTAT_LDFLAGS }}"
     tags:
       - walk
-  - id: wrstat-walk
+  - id: wrstat-split-walk
     main: .
-    binary: wrstat-walk
+    binary: wrstat-split-walk
     env:
       - CGO_ENABLED=1
     goos:
@@ -42,9 +42,9 @@ builds:
     tags:
       - walk
       - stat
-  - id: wrstat-stat
+  - id: wrstat-split-stat
     main: .
-    binary: wrstat-stat
+    binary: wrstat-split-stat
     env:
       - CGO_ENABLED=1
     goos:
@@ -61,8 +61,8 @@ archives:
   - ids:
       - wrstat
       - wrstat-split
-      - wrstat-walk
-      - wrstat-stat
+      - wrstat-split-walk
+      - wrstat-split-stat
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_

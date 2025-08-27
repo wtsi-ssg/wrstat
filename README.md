@@ -10,10 +10,21 @@ of its work.
 
 ## Build
 
+For normal use with a single executable:
+
 ```
 git clone https://github.com/wtsi-ssg/wrstat/
 cd wrstat
-make
+make install
+```
+
+To create 3 split executables so you can have particular permissions on each:
+
+```
+git clone https://github.com/wtsi-ssg/wrstat/
+cd wrstat
+make buildsplit
+[then mv the executables to your PATH]
 ```
 
 ## Usage

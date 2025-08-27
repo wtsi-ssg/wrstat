@@ -16,9 +16,9 @@ build:
 	go build -tags netgo ${LDFLAGS}
 
 buildsplit:
-	go build -tags walk -ldflags "${LDFLAGS}" -o wrstat
-	go build -tags walk,stat -ldflags "${LDFLAGS}" -o wrstat-walk
-	go build -tags netgo,stat -ldflags "${LDFLAGS}" -o wrstat-stat
+	go build -tags walk -ldflags "${LDFLAGS}" -o wrstat-split
+	go build -tags walk,stat -ldflags "${LDFLAGS}" -o wrstat-split-walk
+	go build -tags netgo,stat -ldflags "${LDFLAGS}" -o wrstat-split-stat
 
 install:
 	@rm -f ${GOPATH}/bin/wrstat
