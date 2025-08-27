@@ -49,7 +49,6 @@ clean:
 # go install github.com/goreleaser/goreleaser/v2@2.9.0
 dist: export WRSTAT_LDFLAGS = $(LDFLAGS)
 dist:
-	goreleaser build --clean --skip validate
-#goreleaser release --clean
+	goreleaser release --clean
 
 .PHONY: test race bench lint build install clean dist

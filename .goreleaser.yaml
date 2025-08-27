@@ -15,10 +15,54 @@ builds:
       - "{{ .Env.WRSTAT_LDFLAGS }}"
     tags:
       - netgo
+  - id: wrstat-split
+    main: .
+    binary: wrstat-split
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - "{{ .Env.WRSTAT_LDFLAGS }}"
+    tags:
+      - walk
+  - id: wrstat-walk
+    main: .
+    binary: wrstat-walk
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - "{{ .Env.WRSTAT_LDFLAGS }}"
+    tags:
+      - walk
+      - stat
+  - id: wrstat-stat
+    main: .
+    binary: wrstat-stat
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - "{{ .Env.WRSTAT_LDFLAGS }}"
+    tags:
+      - netgo
+      - stat
 
 archives:
   - ids:
       - wrstat
+      - wrstat-split
+      - wrstat-walk
+      - wrstat-stat
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -30,7 +74,6 @@ archives:
     files:
       - LICENSE
       - README.md
-      - CHANGELOG.md
 
 changelog:
   sort: asc
