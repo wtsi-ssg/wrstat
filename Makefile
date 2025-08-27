@@ -46,12 +46,9 @@ clean:
 	@rm -f ./wrstat
 	@rm -f ./dist.zip
 
-# go get -u github.com/gobuild/gopack
-# go get -u github.com/aktau/github-release
+# go install github.com/goreleaser/goreleaser/v2@2.9.0
+dist: export WRSTAT_LDFLAGS = $(LDFLAGS)
 dist:
-	gopack pack --os linux --arch amd64 -o linux-dist.zip
-	github-release release --tag ${TAG} --pre-release
-	github-release upload --tag ${TAG} --name wrstat-linux-x86-64.zip --file linux-dist.zip
-	@rm -f wrstat linux-dist.zip
+	goreleaser release --clean
 
 .PHONY: test race bench lint build install clean dist
