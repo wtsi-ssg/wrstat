@@ -13,6 +13,8 @@ builds:
       - amd64
     ldflags:
       - "{{ .Env.WRSTAT_LDFLAGS }}"
+    tags:
+      - netgo
 
 archives:
   - ids:
