@@ -1,7 +1,7 @@
 PKG := github.com/wtsi-ssg/wrstat/v6
 VERSION := $(shell git describe --tags --always --long --dirty)
 TAG := $(shell git describe --abbrev=0 --tags)
-LDFLAGS = -ldflags "-X ${PKG}/cmd.Version=${VERSION}"
+LDFLAGS = -X ${PKG}/cmd.Version=${VERSION}
 export GOPATH := $(shell go env GOPATH)
 PATH := $(PATH):${GOPATH}/bin
 
@@ -16,13 +16,13 @@ build:
 	go build -tags netgo ${LDFLAGS}
 
 buildsplit:
-	go build -tags walk ${LDFLAGS} -o wrstat
-	go build -tags walk,stat ${LDFLAGS} -o wrstat-walk
-	go build -tags netgo,stat ${LDFLAGS} -o wrstat-stat
+	go build -tags walk -ldflags "${LDFLAGS}" -o wrstat-split
+	go build -tags walk,stat -ldflags "${LDFLAGS}" -o wrstat-split-walk
+	go build -tags netgo,stat -ldflags "${LDFLAGS}" -o wrstat-split-stat
 
 install:
 	@rm -f ${GOPATH}/bin/wrstat
-	@go install -tags netgo ${LDFLAGS}
+	@go install -tags netgo -ldflags "${LDFLAGS}"
 	@echo installed to ${GOPATH}/bin/wrstat
 
 test:
@@ -46,12 +46,9 @@ clean:
 	@rm -f ./wrstat
 	@rm -f ./dist.zip
 
-# go get -u github.com/gobuild/gopack
-# go get -u github.com/aktau/github-release
+# go install github.com/goreleaser/goreleaser/v2@2.9.0
+dist: export WRSTAT_LDFLAGS = $(LDFLAGS)
 dist:
-	gopack pack --os linux --arch amd64 -o linux-dist.zip
-	github-release release --tag ${TAG} --pre-release
-	github-release upload --tag ${TAG} --name wrstat-linux-x86-64.zip --file linux-dist.zip
-	@rm -f wrstat linux-dist.zip
+	goreleaser release --clean
 
 .PHONY: test race bench lint build install clean dist
