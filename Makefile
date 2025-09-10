@@ -13,7 +13,7 @@ default: install
 export CGO_ENABLED = 1
 
 build:
-	go build -tags netgo ${LDFLAGS}
+	go build -tags netgo -ldflags "${LDFLAGS}"
 
 buildsplit:
 	go build -tags walk -ldflags "${LDFLAGS}" -o wrstat-split
