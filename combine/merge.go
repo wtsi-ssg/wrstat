@@ -156,7 +156,11 @@ func appendHex(dst, str []byte) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	return append(dst, a<<4|b), str[2:], nil
+	if v := a<<4 | b; v != 0 { //nolint:mnd
+		dst = append(dst, v)
+	}
+
+	return dst, str[2:], nil
 }
 
 func appendHexes(dst, str []byte, n int) ([]byte, []byte, error) {
