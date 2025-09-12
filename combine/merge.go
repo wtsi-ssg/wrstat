@@ -111,7 +111,7 @@ func unquote(str []byte) ([]byte, error) { //nolint:gocognit,gocyclo,cyclop,funl
 			case '0', '1', '2', '3', '4', '5', '6', '7':
 				dst, str, err = appendOctal(dst, str, d)
 			case 'x':
-				dst, str, err = appendHex(dst, str)
+				dst, str, err = appendHexes(dst, str, 1)
 			case 'u':
 				dst, str, err = appendHexes(dst, str, 2) //nolint:mnd
 			case 'U':
@@ -156,23 +156,21 @@ func appendHex(dst, str []byte) ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	if v := a<<4 | b; v != 0 { //nolint:mnd
-		dst = append(dst, v)
-	}
-
-	return dst, str[2:], nil
+	return append(dst, a<<4|b), str[2:], nil
 }
 
 func appendHexes(dst, str []byte, n int) ([]byte, []byte, error) {
-	var err error
+	orig := dst
 
 	for range n {
+		var err error
+
 		if dst, str, err = appendHex(dst, str); err != nil {
 			return nil, nil, err
 		}
 	}
 
-	return dst, str, nil
+	return append(orig, bytes.TrimLeft(dst[len(orig):], "\x00")...), str, nil
 }
 
 func readHexNibble(x byte) (byte, error) {
