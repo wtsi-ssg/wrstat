@@ -34,6 +34,8 @@ import (
 	"strconv"
 	"sync"
 	"unsafe"
+
+	"github.com/wtsi-hgi/walk"
 )
 
 const userOnlyPerm = 0700
@@ -115,6 +117,19 @@ func (a *asyncWriter) Close() error {
 	return a.WriteCloser.Close()
 }
 
+type StatData = walk.StatData
+
+// New creates a new walk.Walker that can Walk() a filesystem and send all the
+// encountered paths to the given PathCallback.
+//
+// Set includeDirs to true to have your PathCallback receive directory paths in
+// addition to file paths.
+//
+// Set ignoreSymlinks to true to have symlinks not be sent do your PathCallback.
+func New(cb walk.PathCallback, includeDirs, ignoreSymlinks bool) *walk.Walker {
+	return walk.New(cb, includeDirs, ignoreSymlinks)
+}
+
 // Files represents a collection of output files that can be written to in a
 // round-robin.
 type Files struct {
@@ -180,16 +195,16 @@ func (f *Files) SetLogger(fn func(int)) {
 // Paths are written quoted 1 per line to our output files in a round-robin.
 //
 // It will terminate the walk if writes to our output files fail.
-func (f *Files) WritePaths() PathCallback {
+func (f *Files) WritePaths() walk.PathCallback {
 	var (
 		quoted  [maxQuotedPathLength]byte
 		tmpPath [maxPathLength + maxFilenameLength]byte
 	)
 
-	return func(entry *Dirent) error {
+	return func(entry *walk.Dirent) error {
 		return f.writePath(append(
 			strconv.AppendQuote(
-				quoted[:0], unsafe.String(&tmpPath[0], len(entry.appendTo(tmpPath[:0]))),
+				quoted[:0], unsafe.String(&tmpPath[0], len(entry.AppendTo(tmpPath[:0]))),
 			), '\n'))
 	}
 }

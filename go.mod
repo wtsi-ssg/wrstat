@@ -1,16 +1,17 @@
 module github.com/wtsi-ssg/wrstat/v6
 
-go 1.24
+go 1.25.5
 
 require (
 	github.com/VertebrateResequencing/wr v0.36.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/inconshreveable/log15 v2.16.0+incompatible
 	github.com/klauspost/pgzip v1.2.6
-	github.com/smartystreets/goconvey v1.7.2
+	github.com/smartystreets/goconvey v1.8.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
+	github.com/wtsi-hgi/walk v1.0.1
 	github.com/wtsi-ssg/wr v0.5.12
 )
 
@@ -103,7 +104,7 @@ require (
 	github.com/sb10/waitgroup v0.0.0-20200305124406-7ed665007efa // indirect
 	github.com/sevlyar/go-daemon v0.1.6 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
-	github.com/smartystreets/assertions v1.13.0 // indirect
+	github.com/smarty/assertions v1.15.0 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
