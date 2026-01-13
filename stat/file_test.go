@@ -94,14 +94,14 @@ func TestStatFile(t *testing.T) {
 	})
 
 	Convey("modeToType() works correctly", t, func() {
-		So(modeToType(fs.FileMode(0)), ShouldEqual, "f")
-		So(modeToType(fs.ModeDir), ShouldEqual, "d")
-		So(modeToType(fs.ModeSymlink), ShouldEqual, "l")
-		So(modeToType(fs.ModeSocket), ShouldEqual, "s")
-		So(modeToType(fs.ModeDevice), ShouldEqual, "b")
-		So(modeToType(fs.ModeCharDevice), ShouldEqual, "c")
-		So(modeToType(fs.ModeNamedPipe), ShouldEqual, "F")
-		So(modeToType(fs.ModeIrregular), ShouldEqual, "X")
+		So(modeToType(fs.FileMode(0)), ShouldEqual, FileType("f"))
+		So(modeToType(fs.ModeDir), ShouldEqual, FileType("d"))
+		So(modeToType(fs.ModeSymlink), ShouldEqual, FileType("l"))
+		So(modeToType(fs.ModeSocket), ShouldEqual, FileType("s"))
+		So(modeToType(fs.ModeDevice), ShouldEqual, FileType("b"))
+		So(modeToType(fs.ModeCharDevice), ShouldEqual, FileType("c"))
+		So(modeToType(fs.ModeNamedPipe), ShouldEqual, FileType("F"))
+		So(modeToType(fs.ModeIrregular), ShouldEqual, FileType("X"))
 	})
 
 	Convey("File() returns the correct interpretation of FileInfo", t, func() {
@@ -134,7 +134,7 @@ func TestStatFile(t *testing.T) {
 	})
 }
 
-func testFileStats(path string, size int64, filetype string) {
+func testFileStats(path string, size int64, filetype FileType) {
 	info, err := os.Lstat(path)
 	So(err, ShouldBeNil)
 
