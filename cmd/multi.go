@@ -44,9 +44,12 @@ import (
 const (
 	walkTime      = 3 * time.Hour
 	walkRAM       = 16000
+	walkCPU       = 3.0
 	combineTime   = 40 * time.Minute
 	combineRAM    = 800
+	combineCPU    = 1.0
 	defaultMaxRAM = 42000
+	defaultMaxCPU = walkCPU
 )
 
 // options for this cmd.
@@ -59,6 +62,7 @@ var (
 	forcedQueue   string
 	queuesToAvoid string
 	maxMem        int
+	maxCPU        float64
 	timeout       int64
 	recordStats   int64
 	statBlockSize bool
@@ -149,6 +153,7 @@ func init() {
 	multiCmd.Flags().StringVar(&queuesToAvoid, "queues_avoid", "",
 		"force queues that include a substring from this comma-separated list to be avoided when scheduling jobs")
 	multiCmd.Flags().IntVarP(&maxMem, "max_mem", "m", defaultMaxRAM, "maximum MBs to reserve for any job")
+	multiCmd.Flags().Float64Var(&maxCPU, "max_cpu", defaultMaxCPU, "maximum CPU cores to reserve for any job")
 	multiCmd.Flags().Int64VarP(&timeout, "timeout", "t", 0, "maximum number of hours to run")
 	multiCmd.Flags().StringVarP(&logsDir, "logdir", "l", "", "when timeout is "+
 		"reached, copy logs to a unique subdirectory of the supplied directory")
@@ -258,7 +263,6 @@ func scheduleWalkJobs(outputRoot string, desiredPaths []string, unique, finalDir
 	tidyJobs := make([]*jobqueue.Job, len(desiredPaths))
 	cmd := buildWalkCommand(s, numStatJobs, inodesPerStat, yamlPath, queue, queuesAvoid, maximumAverageStatTime)
 	reqWalk, reqCombine := reqs()
-	reqWalk.Cores = 3
 
 	var (
 		limit     []string
@@ -350,9 +354,11 @@ func reqs() (*jqs.Requirements, *jqs.Requirements) {
 	reqWalk := req.Clone()
 	reqWalk.Time = walkTime
 	reqWalk.RAM = min(walkRAM, maxMem)
+	reqWalk.Cores = min(walkCPU, maxCPU)
 	reqCombine := req.Clone()
 	reqCombine.Time = combineTime
 	reqCombine.RAM = min(combineRAM, maxMem)
+	reqCombine.Cores = min(combineCPU, maxCPU)
 
 	return reqWalk, reqCombine
 }

@@ -60,8 +60,10 @@ import (
 )
 
 const (
-	walkTime = 3 * time.Hour
-	statTime = 3 * time.Hour
+	walkTime   = 3 * time.Hour
+	walkCPU    = 3.0
+	combineCPU = 1.0
+	statTime   = 3 * time.Hour
 )
 
 var app, appWalk, appStat string //nolint:gochecknoglobals
@@ -258,14 +260,14 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 	walkReqs := &scheduler.Requirements{
 		RAM:   16000,
 		Time:  walkTime,
-		Cores: 3,
+		Cores: walkCPU,
 		Disk:  1,
 	}
 
 	combineReqs := &scheduler.Requirements{
 		RAM:   800,
 		Time:  40 * time.Minute,
-		Cores: 1,
+		Cores: combineCPU,
 		Disk:  1,
 	}
 
