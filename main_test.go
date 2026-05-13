@@ -249,6 +249,18 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 			So(jobs, ShouldResemble, expectation)
 		})
+
+		Convey("The --max_cpu flag can reduce walk cores from 3 to 1", func() {
+			So(jobs[0].Requirements.Cores, ShouldEqual, 3.0)
+			So(jobs[1].Requirements.Cores, ShouldEqual, 3.0)
+
+			_, _, jobs, err := runWRStat(app, append(subcommand, "-w", workingDir,
+				"--max_cpu", "1", "/some/path", "/some-other/path", "-f", "final_output")...)
+			So(err, ShouldBeNil)
+
+			So(jobs[0].Requirements.Cores, ShouldEqual, 1.0)
+			So(jobs[1].Requirements.Cores, ShouldEqual, 1.0)
+		})
 	})
 }
 
