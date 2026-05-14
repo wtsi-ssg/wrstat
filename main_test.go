@@ -60,8 +60,10 @@ import (
 )
 
 const (
-	walkTime = 3 * time.Hour
-	statTime = 3 * time.Hour
+	walkTime   = 3 * time.Hour
+	walkCPU    = 3.0
+	combineCPU = 1.0
+	statTime   = 3 * time.Hour
 )
 
 var app, appWalk, appStat string //nolint:gochecknoglobals
@@ -247,6 +249,18 @@ func multiTests(t *testing.T, subcommand ...string) {
 
 			So(jobs, ShouldResemble, expectation)
 		})
+
+		Convey("The --max_cpu flag can reduce walk cores from 3 to 1", func() {
+			So(jobs[0].Requirements.Cores, ShouldEqual, 3.0)
+			So(jobs[1].Requirements.Cores, ShouldEqual, 3.0)
+
+			_, _, jobs, err := runWRStat(app, append(subcommand, "-w", workingDir,
+				"--max_cpu", "1", "/some/path", "/some-other/path", "-f", "final_output")...)
+			So(err, ShouldBeNil)
+
+			So(jobs[0].Requirements.Cores, ShouldEqual, 1.0)
+			So(jobs[1].Requirements.Cores, ShouldEqual, 1.0)
+		})
 	})
 }
 
@@ -258,14 +272,14 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 	walkReqs := &scheduler.Requirements{
 		RAM:   16000,
 		Time:  walkTime,
-		Cores: 3,
+		Cores: walkCPU,
 		Disk:  1,
 	}
 
 	combineReqs := &scheduler.Requirements{
 		RAM:   800,
 		Time:  40 * time.Minute,
-		Cores: 1,
+		Cores: combineCPU,
 		Disk:  1,
 	}
 
