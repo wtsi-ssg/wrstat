@@ -29,7 +29,10 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
+	"time"
+	"unsafe"
 
 	"github.com/VertebrateResequencing/wr/client"
 	"github.com/VertebrateResequencing/wr/jobqueue"
@@ -76,6 +79,8 @@ func TestRemoveOrLogJobs(t *testing.T) {
 
 		So(json.NewDecoder(f).Decode(&loggedJobs), ShouldBeNil)
 		So(f.Close(), ShouldBeNil)
+
+		resetValues(jobs)
 		So(loggedJobs, ShouldResemble, jobs[1:3])
 
 		f, err = os.Open(filepath.Join(tmp, "20200102-151413_"+EncodePath(mountB), jobsFile))
@@ -85,4 +90,53 @@ func TestRemoveOrLogJobs(t *testing.T) {
 		So(f.Close(), ShouldBeNil)
 		So(loggedJobs, ShouldResemble, jobs[3:])
 	})
+}
+
+type Job struct {
+	_, _                   string
+	_, _                   bool
+	_, _, _                string
+	_, _                   *struct{}
+	_, _, _                uint8
+	_                      time.Duration
+	_, _, _, _, _, _, _, _ []string
+	_, _, _, _, _          string
+	_                      bool
+	_                      string
+	_                      int
+	_                      int64
+	_                      bool
+	_                      int
+	_                      bool
+	_                      string
+	_, _                   int
+	_, _, _                string
+	_, _                   time.Time
+	_                      time.Duration
+	_, _, _                []byte
+	_                      bool
+	_                      []byte
+	_                      string
+	_                      uint32
+	_                      uint8
+	_                      [16]byte
+	_                      bool
+	_                      uint64
+	_                      string
+	_                      int
+	_                      string
+	_                      uint64
+	_                      time.Duration
+	_                      time.Time
+	_                      string
+	_                      *struct{}
+	_                      uint32
+	keyMemo                atomic.Pointer[struct{}]
+}
+
+func resetValues(jobs []*jobqueue.Job) {
+	for _, job := range jobs {
+		job.Dependencies = jobqueue.Dependencies{}
+		(*Job)(unsafe.Pointer(job)).keyMemo.Store(nil)
+	}
 }
