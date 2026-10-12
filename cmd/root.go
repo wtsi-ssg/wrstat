@@ -35,7 +35,7 @@ import (
 
 	"github.com/VertebrateResequencing/wr/client"
 	"github.com/VertebrateResequencing/wr/jobqueue"
-	"github.com/inconshreveable/log15"
+	"github.com/inconshreveable/log15/v3"
 	"github.com/spf13/cobra"
 )
 

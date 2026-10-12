@@ -34,7 +34,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/inconshreveable/log15"
+	"github.com/inconshreveable/log15/v3"
 	"github.com/wtsi-ssg/wrstat/v6/reporter"
 )
 

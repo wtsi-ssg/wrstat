@@ -49,13 +49,13 @@ import (
 	"time"
 
 	"github.com/VertebrateResequencing/wr/client"
+	"github.com/VertebrateResequencing/wr/clog"
 	wrcmd "github.com/VertebrateResequencing/wr/cmd"
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
-	"github.com/inconshreveable/log15"
+	"github.com/inconshreveable/log15/v3"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/pflag"
-	"github.com/wtsi-ssg/wr/clog"
 	"github.com/wtsi-ssg/wrstat/v6/cmd"
 )
 

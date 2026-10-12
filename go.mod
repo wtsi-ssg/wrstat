@@ -5,14 +5,13 @@ go 1.26.3
 require (
 	github.com/VertebrateResequencing/wr v0.39.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/inconshreveable/log15 v2.16.0+incompatible
+	github.com/inconshreveable/log15/v3 v3.2.1
 	github.com/klauspost/pgzip v1.2.6
 	github.com/smartystreets/goconvey v1.8.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae
 	github.com/wtsi-hgi/walk v1.0.1
-	github.com/wtsi-ssg/wr v0.5.12
 )
 
 require (
@@ -41,7 +40,6 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/gofrs/uuid/v5 v5.4.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
@@ -53,7 +51,6 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.7 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
-	github.com/inconshreveable/log15/v3 v3.2.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jinzhu/configor v1.2.2 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
@@ -89,7 +86,6 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/ricochet2200/go-disk-usage/du v0.0.0-20210707232629-ac9918953285 // indirect
 	github.com/rs/xid v1.6.0 // indirect
-	github.com/sb10/l15h v0.0.0-20170510122137-64c488bf8e22 // indirect
 	github.com/sb10/l15h/v2 v2.0.0 // indirect
 	github.com/sb10/waitgroup v0.0.0-20200305124406-7ed665007efa // indirect
 	github.com/sevlyar/go-daemon v0.1.6 // indirect

@@ -36,7 +36,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/inconshreveable/log15"
+	"github.com/inconshreveable/log15/v3"
 )
 
 type Error string

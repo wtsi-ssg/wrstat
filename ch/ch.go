@@ -37,7 +37,7 @@ import (
 	"syscall"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/inconshreveable/log15"
+	"github.com/inconshreveable/log15/v3"
 )
 
 // Ch is used to chmod and chown files such that they match their desired group.
