@@ -49,13 +49,13 @@ import (
 	"time"
 
 	"github.com/VertebrateResequencing/wr/client"
+	"github.com/VertebrateResequencing/wr/clog"
 	wrcmd "github.com/VertebrateResequencing/wr/cmd"
 	"github.com/VertebrateResequencing/wr/jobqueue"
 	"github.com/VertebrateResequencing/wr/jobqueue/scheduler"
-	"github.com/inconshreveable/log15"
+	"github.com/inconshreveable/log15/v3"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/pflag"
-	"github.com/wtsi-ssg/wr/clog"
 	"github.com/wtsi-ssg/wrstat/v6/cmd"
 )
 
@@ -340,6 +340,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Retries:      30,
 			DepGroups:    []string{walk1DepGroup},
 			State:        "delayed",
+			Dependencies: jobqueue.Dependencies{},
 		},
 		{
 			Cmd: fmt.Sprintf("%[5]s walk -n 1000000%[7]s -d %[1]s -t %[6]d -o %[2]s/%[3]s/%[4]s_／some-other／path -i"+
@@ -354,6 +355,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Retries:      30,
 			DepGroups:    []string{walk2DepGroup},
 			State:        "delayed",
+			Dependencies: jobqueue.Dependencies{},
 		},
 		{
 			Cmd:          fmt.Sprintf("%s combine \"%s/%s/%s_／some／path\"", exe, workingDir, repGroup, dateStr[1]),
@@ -446,6 +448,7 @@ func createMultiJobExpectation(t *testing.T, jobs []*jobqueue.Job, workingDir st
 			Override:     1,
 			Retries:      30,
 			State:        "delayed",
+			Dependencies: jobqueue.Dependencies{},
 		})
 	}
 
@@ -568,10 +571,11 @@ func TestWalk(t *testing.T) {
 					Cores: 0.05,
 					Disk:  1,
 				},
-				Override:  1,
-				Retries:   30,
-				DepGroups: []string{depgroup},
-				State:     "delayed",
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{depgroup},
+				State:        "delayed",
+				Dependencies: jobqueue.Dependencies{},
 			},
 		}
 
@@ -609,10 +613,11 @@ func TestWalk(t *testing.T) {
 					Cores: 0.05,
 					Disk:  1,
 				},
-				Override:  1,
-				Retries:   30,
-				DepGroups: []string{depgroup},
-				State:     "delayed",
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{depgroup},
+				State:        "delayed",
+				Dependencies: jobqueue.Dependencies{},
 			},
 			{
 				Cmd:         exe + " stat " + walk2,
@@ -627,10 +632,11 @@ func TestWalk(t *testing.T) {
 					Cores: 0.05,
 					Disk:  1,
 				},
-				Override:  1,
-				Retries:   30,
-				DepGroups: []string{depgroup},
-				State:     "delayed",
+				Override:     1,
+				Retries:      30,
+				DepGroups:    []string{depgroup},
+				State:        "delayed",
+				Dependencies: jobqueue.Dependencies{},
 			},
 		}
 
